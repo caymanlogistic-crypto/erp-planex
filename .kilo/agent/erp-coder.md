@@ -277,7 +277,11 @@ BLOCKED: NEEDS_UI_DESIGN_HANDOFF
 - хардкод цветов;
 - inline styles, кроме динамических PHP-значений;
 - большие скругления и декоративные тени;
-- превращать ERP в SaaS-dashboard.
+- превращать ERP в SaaS-dashboard;
+- **demo-placeholder UI**: псевдоиконки `[=]`, `[#]`, `[~]`, `[v]`; emoji/символы как временные иконки; карточный SaaS-dashboard там, где нужна ERP/settings/admin страница; большие пустоты; blue/white corporate UI; случайные цвета; debug badges как основной визуальный элемент;
+- `border-radius > 4px` (новые элементы);
+- `box-shadow blur > 8px` (новые элементы);
+- Bootstrap/Tailwind/Material классы.
 
 Использовать только существующий UI-фундамент:
 

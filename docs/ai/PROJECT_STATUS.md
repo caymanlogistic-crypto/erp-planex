@@ -6,7 +6,7 @@
 
 ## Текущий фокус
 
-SUPERADMIN Stage 4a — CLI migration runner создан (2026-06-12): `scripts/migrate.php` применяет SQL-миграции, отслеживает через `schema_migrations`, SHA256 checksum, idempotent. Успешно протестирован на dev БД: первый запуск — 4 applied, повторный — 4 skipped. Следующий шаг: commit после разрешения владельца.
+**Исправление системной проблемы UI-процесса ERP PLANEX** — правила агентов и MD-документация приводятся к утверждённому дизайн-коду TransportERP / ERP PLANEX. Причина: текущий `/superadmin` (Stage 1) отклонён владельцем визуально. После исправления правил следующий этап: **переделка /superadmin по обновлённому handoff**.
 
 ## Уже принято
 
@@ -84,7 +84,7 @@ SUPERADMIN Stage 4a — CLI migration runner создан (2026-06-12): `scripts
 
 ## Заблокировано
 
-Нет блокеров. SUPERADMIN Stage 4a — migration runner создан, QA пройден (ACCEPTED), архитектор принял. Следующий шаг: commit после разрешения владельца.
+Текущий `/superadmin` (Stage 1) — **REJECTED BY OWNER** (визуально). Причина: не соответствует утверждённому дизайн-коду (SaaS-dashboard demo с псевдоиконками). Требуется переделка по обновлённому handoff `docs/ui/pages/superadmin-dashboard.md`. Правила агентов исправлены (2026-06-12), проект готов к следующему этапу.
 
 ## Следующий рекомендуемый шаг
 
@@ -120,4 +120,4 @@ SUPERADMIN Stage 4a — CLI migration runner создан (2026-06-12): `scripts
 
 ## Последнее обновление
 
-2026-06-12 01:20 — erp-architect: SUPERADMIN Stage 4a принят. Migration runner создан (erp-coder), QA пройден (ACCEPTED, 44/44 PASS). Скрипт `scripts/migrate.php` + документация `docs/architecture/MIGRATION_RUNNER.md`. Первый запуск: 4 applied, повторный: 4 skipped. Следующий шаг: commit после разрешения владельца.
+2026-06-12 01:35 — erp-architect: **системное исправление UI-процесса**. Зафиксирована корневая причина UI-провала /superadmin. Добавлены 6 системных правил. Обновлены 4 агента, QA_CHECKLIST, TASK_TEMPLATE, KILO_PROJECT_RULES, ERP_PLANEX_CONTEXT_FOR_NEW_CHAT, _PAGE_TEMPLATE, superadmin-dashboard.md, DESIGN_CODE_INTEGRATION, PAGE_PATTERN. Проект готов к переделке /superadmin.

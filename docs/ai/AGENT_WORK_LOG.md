@@ -2123,3 +2123,51 @@ Commit SUPERADMIN Stage 4a после разрешения владельца.
 ### Статус
 
 DONE
+
+---
+
+## 2026-06-12 01:35 — erp-architect / Системное исправление UI-процесса ERP PLANEX
+
+### Задача
+
+Исправить системную проблему UI-процесса: привести правила агентов и MD-документацию к утверждённому дизайн-коду. Причина: `/superadmin` отклонён владельцем визуально (SaaS-dashboard demo с псевдоиконками). На этом этапе PHP/CSS/view НЕ менять.
+
+### Что сделано
+
+- Зафиксирована корневая причина UI-провала (слабый handoff, отсутствие visual review, формальный QA).
+- Добавлено 6 системных правил: фактическая проверка файлов, DeepSeek не vision, manual visual review, запрет demo-placeholder, качество handoff, Formal UI QA.
+- Обновлены 4 файла агентов, 10 MD-документов.
+- `superadmin-dashboard.md` полностью переписан: REJECTED + новый handoff (strict admin/settings).
+- Принято DECISION-0023.
+
+### Изменённые файлы
+
+- `.kilo/agent/erp-architect.md`, `.kilo/agent/erp-uiux-designer.md`, `.kilo/agent/erp-coder.md`, `.kilo/agent/erp-qa-tester.md`
+- `docs/ai/QA_CHECKLIST.md`, `docs/ai/TASK_TEMPLATE.md`, `docs/ai/KILO_PROJECT_RULES.md`, `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`, `docs/ui/pages/superadmin-dashboard.md`, `docs/ui/DESIGN_CODE_INTEGRATION.md`, `docs/ui/PAGE_PATTERN.md`
+- `docs/ai/PROJECT_STATUS.md`, `docs/ai/AGENT_WORK_LOG.md`, `docs/ai/DECISIONS_LOG.md`
+
+### Принятые решения
+
+DECISION-0023: 6 системных правил UI-процесса.
+
+### Что НЕ сделано
+
+- `/superadmin` НЕ изменялся (PHP/CSS/view).
+- Auth, CRUD, миграции, runner — не трогались.
+- Commit не делался.
+
+### Проверки
+
+- PHP/CSS/view не изменялись: ✅
+- Auth/CRUD/backend не трогались: ✅
+- `.env` и секреты: чисто. ✅
+- Все 6 правил явно внесены в target-файлы: ✅
+
+### Следующий шаг
+
+Commit после разрешения владельца. Затем отдельный этап: переделка /superadmin по обновлённому handoff.
+
+### Статус
+
+DONE

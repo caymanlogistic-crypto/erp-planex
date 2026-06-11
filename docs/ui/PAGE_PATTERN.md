@@ -64,3 +64,22 @@ Error state
 ## Опасные действия
 
 Удаление, отклонение, сброс, архивирование и изменение критичного статуса должны иметь подтверждение.
+
+---
+
+## SUPERADMIN UI pattern
+
+SUPERADMIN — центральная административная панель ERP PLANEX. Использует строгий **admin/settings pattern**:
+
+- sidebar 224px с текстовой навигацией;
+- topbar 38px;
+- page-head;
+- settings/admin sections;
+- reserved modules as system sections;
+- tables/forms/panels когда появляются данные;
+- **запрещены** KPI dashboard cards (если явно не approved владельцем);
+- **запрещены** псевдоиконки `[=]`, `[#]`, `[~]`, `[v]` и emoji как иконки;
+- **запрещены** debug badges как основной визуальный элемент;
+- **запрещён** SaaS-dashboard/card-grid подход;
+- **запрещены** большие пустоты;
+- плотная рабочая композиция без декоративных элементов.

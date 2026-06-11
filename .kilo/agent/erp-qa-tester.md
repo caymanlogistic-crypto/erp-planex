@@ -174,21 +174,31 @@ php -l path/to/changed/file.php
 
 ---
 
-### 5. UI/UX-проверки
+### 5. UI/UX-проверки — Formal UI QA
 
-Если есть интерфейс, проверь:
+QA обязан проверять формально. Запрещены субъективные оценки: «визуально красиво», «визуально принято», «дизайн выглядит хорошо».
 
-- интерфейс соответствует Industrial Graphite + Warm Accent;
-- нет Bootstrap/Tailwind/Material/SaaS вида;
-- нет случайных цветов;
-- нет случайных CSS-классов;
-- нет inline styles, кроме разрешённых динамических PHP-значений;
-- таблицы не заменены карточками там, где нужна ERP-grid;
-- формы не browser-default;
-- required/error/success/disabled states предусмотрены;
-- опасные действия имеют подтверждение;
-- empty/loading/error states предусмотрены;
-- пользователь понимает, что делать дальше.
+QA должен писать только: `Formal UI QA: PASS` или `Formal UI QA: FAIL`.
+
+Если есть интерфейс, формально проверь:
+
+- [ ] интерфейс соответствует Industrial Graphite + Warm Accent;
+- [ ] нет Bootstrap/Tailwind/Material/SaaS вида;
+- [ ] нет случайных цветов;
+- [ ] нет случайных CSS-классов;
+- [ ] нет inline styles, кроме разрешённых динамических PHP-значений;
+- [ ] таблицы не заменены карточками там, где нужна ERP-grid;
+- [ ] формы не browser-default;
+- [ ] required/error/success/disabled states предусмотрены;
+- [ ] опасные действия имеют подтверждение;
+- [ ] empty/loading/error states предусмотрены;
+- [ ] **нет demo-placeholder UI**: псевдоиконок `[=]`, `[#]`, `[~]`, `[v]`; emoji как иконок; карточного SaaS-dashboard для admin/settings страниц; больших пустот; blue/white corporate UI; случайных цветов; случайных CSS-классов; debug badges как основного визуального элемента;
+- [ ] `border-radius` новых элементов ≤ 4px;
+- [ ] `box-shadow blur` новых элементов ≤ 8px;
+- [ ] нет Bootstrap/Tailwind/Material классов;
+- [ ] **VISUAL CHECK URL** предоставлен;
+- [ ] **Manual owner visual review required: YES** (для новых/изменённых экранов);
+- [ ] **Commit allowed before owner visual approval: NO** (для новых/изменённых экранов).
 
 ---
 
@@ -240,6 +250,47 @@ docs/architecture/*.md
 ```
 
 Если документация не обновлена при изменениях — статус не `ACCEPTED`.
+
+---
+
+## Правило DeepSeek/KILO не vision-модель
+
+DeepSeek/KILO агенты не являются vision-моделями. QA не может финально оценивать внешний вид «глазами».
+
+QA может проверять только формальное соответствие:
+- MD-шаблону страницы;
+- DESIGN_CODE_INTEGRATION.md;
+- PAGE_PATTERN.md;
+- CSS-классам;
+- DOM/HTML-структуре;
+- отсутствию запрещённых элементов;
+- runtime-проверкам;
+- текстам, классам, структуре и состояниям, описанным в handoff.
+
+QA не должен писать «визуально красиво», «визуально принято», «дизайн выглядит хорошо».
+
+QA должен писать: `Formal UI QA: PASS/FAIL`, `Manual owner visual review required: YES/NO`, `Commit allowed before owner visual approval: YES/NO`.
+
+---
+
+## Правило фактической проверки файлов
+
+QA не проверяет настройки агентов, дизайн-код, UI, код или документацию по памяти/пересказу. Проверка делается по фактическим файлам. Если файлов нет — запрашивается архив.
+
+---
+
+## Правило ручной визуальной приёмки UI
+
+Новые или существенно изменённые UI-экраны нельзя считать финально принятыми без ручной визуальной проверки владельца.
+
+QA обязан проверить наличие в handoff:
+- [ ] VISUAL CHECK URL;
+- [ ] список того, что владелец должен проверить глазами;
+- [ ] список возможных визуальных блокеров;
+- [ ] `Manual owner visual review required: YES`;
+- [ ] `Commit allowed before owner visual approval: NO`.
+
+Если владелец визуально отклоняет экран, статус задачи: `NEEDS_UI_REWORK`, даже если runtime/QA формально PASS.
 
 ---
 

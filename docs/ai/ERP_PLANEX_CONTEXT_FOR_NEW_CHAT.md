@@ -192,7 +192,15 @@ docs/ui/pages/[page-name].md
 
 ## Текущий фокус
 
-Текущий фокус: SUPERADMIN Stage 4a — CLI migration runner создан и протестирован (2026-06-12): `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md`. Первый запуск на dev БД: 4 applied, повторный: 4 skipped. Следующий шаг: commit после разрешения владельца.
+Текущий фокус: **Исправление системной UI-проблемы** — правила агентов и MD-документация приводятся к утверждённому дизайн-коду TransportERP / ERP PLANEX. Причина: текущий `/superadmin` (Stage 1) отклонён владельцем визуально — не соответствует design code (выглядит как SaaS-dashboard demo с псевдоиконками). Следующий этап после исправления правил: **переделка /superadmin по обновлённому handoff**.
+
+Причина UI-провала зафиксирована:
+- erp-uiux-designer выдал слабый handoff с псевдоиконками `[=]`, `[#]`, `[~]`, `[v]` и карточным SaaS-dashboard подходом;
+- erp-coder реализовал handoff буквально, усилив demo-вид;
+- erp-qa-tester принял формально ("ACCEPTED") без visual review;
+- erp-architect принял как DONE без визуальной проверки владельца.
+
+Корень проблемы: отсутствие в правилах агентов запрета на demo-placeholder UI, отсутствие правила manual visual review, отсутствие formal UI QA.
 
 Ближайший порядок:
 
@@ -240,19 +248,20 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: SUPERADMIN Stage 4a — CLI migration runner создан и протестирован (2026-06-12). `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md` готовы. Тесты на dev БД: первый запуск 4 applied, повторный 4 skipped. SHA256 checksum, idempotent. Следующий шаг: commit после разрешения владельца.
+Активная задача: **Исправление системной проблемы UI-процесса ERP PLANEX** — приведение правил агентов и MD-документации к утверждённому дизайн-коду TransportERP / ERP PLANEX.
+
+Причина: текущий `/superadmin` (Stage 1, commit `acd5009`) отклонён владельцем визуально — не соответствует design code (SaaS-dashboard demo с псевдоиконками).
 
 Следующий рабочий шаг:
 1. ~~Проверить/утвердить UI-фундамент.~~ **DONE.**
 2. ~~Создать PDO-обёртку и роутер.~~ **DONE.**
-3. ~~SUPERADMIN Stage 1: архитектура, UI-шаблон, реализация.~~ **DONE (2026-06-12).**
-4. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
+3. ~~SUPERADMIN Stage 1: архитектура, UI-шаблон, реализация.~~ **REJECTED BY OWNER (визуально).**
+4. ~~QA-проверка и исправление замечаний.~~ **DONE (формально, но визуально не принято).**
 5. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
-6. Commit (после разрешения владельца).
-7. ~~SUPERADMIN Stage 3: создание миграций (erp-coder).~~ **DONE (2026-06-12).**
-8. ~~SUPERADMIN Stage 3 dry-run на MySQL 8.4.9 (erp-architect).~~ **DONE (2026-06-12).**
-9. ~~SUPERADMIN Stage 4a: migration runner (erp-coder).~~ **DONE (2026-06-12).**
-10. Commit (после разрешения владельца).
+6. ~~SUPERADMIN Stage 3: создание миграций.~~ **DONE (2026-06-12).**
+7. ~~SUPERADMIN Stage 4a: migration runner.~~ **DONE (2026-06-12).**
+8. **Исправить системные правила UI-процесса (текущая задача).**
+9. **Переделать /superadmin по обновлённому handoff (следующий этап).**
 
 ## Утверждённая архитектура ERP PLANEX
 
@@ -291,13 +300,25 @@ SUPERADMIN должен в будущем управлять:
 
 SUPERADMIN не является обычным пользователем локальной ERP.
 
-SUPERADMIN Stage 1: принят (2026-06-12). Созданы: `docs/architecture/SUPERADMIN.md`, `docs/ui/pages/superadmin-dashboard.md` (UI-шаблон), `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php` (страница), 14 CSS-классов в `app.css`, маршрут `/superadmin`, sidebar обновлён.
+### Правило SUPERADMIN UI
 
-SUPERADMIN Stage 2: документация выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц: `companies`, `features`, `company_features`, `superadmin_users`. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Решения DECISION-0021, DECISION-0022.
+SUPERADMIN — центральная административная панель ERP PLANEX. Она должна использовать строгий **admin/settings pattern**, а не decorative dashboard.
 
-SUPERADMIN Stage 3: SQL-миграции созданы (2026-06-12). 4 migration-файла в `database/migrations/`. Исправлен `.gitignore` для трекинга миграций.
+Для SUPERADMIN по умолчанию:
+- sidebar 224px с текстовой навигацией;
+- topbar 38px;
+- page-head;
+- settings/admin sections;
+- reserved modules as system sections;
+- tables/forms/panels когда появляются данные;
+- **запрещены** KPI dashboard cards (если явно не approved владельцем);
+- **запрещены** псевдоиконки `[=]`, `[#]`, `[~]`, `[v]` и emoji как иконки;
+- **запрещены** debug badges как основной визуальный элемент;
+- **запрещён** SaaS-dashboard/card-grid подход.
 
-Следующий этап: QA-проверка миграций erp-qa-tester.
+### Статус SUPERADMIN
+
+SUPERADMIN Stage 1: **REJECTED BY OWNER** (2026-06-12). Текущий визуальный вариант (`/superadmin`) не соответствует утверждённому дизайн-коду. Новый handoff создан в `docs/ui/pages/superadmin-dashboard.md`. Следующий этап: **переделка /superadmin по обновлённому handoff**.
 
 ## Модель локальной ERP
 
@@ -632,29 +653,41 @@ FINAL REPORT должен содержать:
 - Не придумывать неподтверждённые бизнес-правила.
 - Не давать KILO размытые задачи типа "делай ERP".
 - **Не использовать Linux-style команды в Windows PowerShell** (curl, grep и т.д. с Linux-флагами). Все команды должны быть PowerShell-совместимыми. Полные правила: `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`.
+- **Не принимать UI-экран как финально approved без ручной визуальной проверки владельца.**
+- **Не коммитить UI-экран до получения Manual owner visual approval.**
+- **Не проверять файлы/UI/код/документацию по памяти или пересказу — только через фактические файлы/архив.**
+- **Не использовать demo-placeholder UI** (псевдоиконки `[=]`, `[#]`, `[~]`, `[v]`, emoji как иконки, карточный SaaS-dashboard для admin/settings, большие пустоты, blue/white corporate UI, debug badges).
+
+---
+
+## Системные правила UI-процесса (добавлены 2026-06-12 после UI-провала /superadmin)
+
+### 1. Правило фактической проверки файлов
+
+Если агент должен проверить настройки агентов, дизайн-код, UI, код, документацию или соответствие реализации правилам, проверка не делается по памяти или пересказу. Нужно запросить реальные файлы/архив и дать владельцу готовую cmd/PowerShell-команду для сборки ZIP из нужных файлов.
+
+### 2. Правило DeepSeek/KILO не vision-модель
+
+DeepSeek/KILO агенты не являются vision-моделями. Они не могут финально оценивать внешний вид «глазами». Агенты проверяют только формальное соответствие MD-шаблону, DESIGN_CODE_INTEGRATION.md, PAGE_PATTERN.md, CSS-классам, DOM/HTML-структуре, отсутствию запрещённых элементов и runtime-проверкам. Финальную визуальную приёмку UI делает владелец по скриншоту или в браузере.
+
+### 3. Правило ручной визуальной приёмки UI
+
+Новые или существенно изменённые UI-экраны нельзя считать финально принятыми и нельзя коммитить как UI-approved, пока владелец не выполнит ручную визуальную проверку. Handoff обязан содержать: VISUAL CHECK URL, список проверок глазами, визуальные блокеры, `Manual owner visual review required: YES`, `Commit allowed before owner visual approval: NO`. При визуальном отклонении — статус `NEEDS_UI_REWORK`, даже если runtime/QA формально PASS.
+
+### 4. Правило запрета demo-placeholder UI
+
+UI handoff и реализация не должны допускать: demo-placeholder вид, псевдоиконки `[=]`, `[#]`, `[~]`, `[v]`, emoji/символы как временные иконки, карточный SaaS-dashboard для admin/settings страниц, большие пустоты, blue/white corporate UI, случайные цвета/классы, `border-radius > 4px`, `box-shadow blur > 8px`, inline styles, Bootstrap/Tailwind/Material классы.
+
+### 5. Правило качества handoff дизайнера
+
+Дизайнер обязан выдавать handoff так, чтобы кодер не искал примеры и не придумывал. В handoff обязательно: exact route/view, layout pattern, exact text, exact components, exact classes, prohibited elements, states, owner visual check, visual blockers, runtime URL, acceptance checklist. Неоднозначность — задача дизайнера не DONE.
+
+### 6. Правило Formal UI QA
+
+QA обязан проверять UI формально. Запрещены субъективные оценки: «визуально красиво», «визуально принято», «дизайн выглядит хорошо». QA пишет: `Formal UI QA: PASS/FAIL`, `Manual owner visual review required: YES/NO`, `Commit allowed before owner visual approval: YES/NO`. Обязателен чеклист: MD-шаблон, DESIGN_CODE, PAGE_PATTERN, отсутствие псевдоиконок, demo-placeholder, случайных классов/цветов, Bootstrap/Tailwind/Material, radius ≤ 4px, shadow ≤ 8px, VISUAL CHECK URL.
 
 ## Последнее обновление этого файла
 
-2026-06-11 — ChatGPT: файл пересобран как единый самодостаточный переносимый контекст для нового ChatGPT-чата. Добавлены полные сведения по роли ChatGPT, рабочей папке, KILO + DeepSeek, обязательным MD, правилам обновления файла, статусу, архитектуре, SUPERADMIN, локальной ERP, роли "Руководитель", клиентам, подрядчикам, экипажам, документам, версионности, feature toggles, бизнес-блокам, линейной перевозке, черновой БД, структуре проекта, Git-правилам, KILO-промтам и приёмке FINAL REPORT.
+2026-06-11 — ChatGPT: файл пересобран как единый самодостаточный переносимый контекст для нового ChatGPT-чата.
 
-2026-06-11 23:50 — KILO/erp-architect: PDO-обёртка и роутер созданы через agent workflow (coder → QA → architect), QA ACCEPTED. Техническое ядро готово, следующий шаг — SUPERADMIN. Предыдущее: 2026-06-11 23:35 — UI-фундамент проверен и утверждён.
-
-2026-06-11 23:57 — KILO/erp-uiux-designer: создан MD-шаблон `docs/ui/pages/superadmin-dashboard.md` для SUPERADMIN Stage 1. Обновлены: текущая задача, статус SUPERADMIN.
-
-2026-06-11 23:45 — KILO/erp-coder: PDO-обёртка Database и простой GET-роутер Router созданы, проверены, интегрированы в `public/index.php`. Обновлены: текущий фокус, текущая задача, структура, статус проекта.
-
-2026-06-12 00:01 — KILO/erp-coder: SUPERADMIN Stage 1 реализован. Созданы `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php`, 13 новых CSS-классов в `app.css`, маршрут `/superadmin` в `index.php`, sidebar обновлён. Все проверки пройдены.
-
-2026-06-12 00:37 — KILO/erp-architect: зафиксированы Windows PowerShell command rules (DECISION-0020). Создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`. Обновлены 4 проектных MD-документа. Правила добавлены в главные запреты и список обязательного чтения.
-
-2026-06-12 00:44 — KILO/erp-architect: SUPERADMIN Stage 1 принят. Исправлены 3 QA-замечания (`.module-card-status` CSS, `&mdash;` в заголовке). PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404. Все PHP-файлы `php -l` OK. Секретов нет. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.
-
-2026-06-12 01:00 — KILO/erp-coder: SUPERADMIN Stage 3 — SQL-миграции созданы. 4 migration-файла в `database/migrations/`. Исправлен `.gitignore` для трекинга миграций. Обновлены: текущий фокус, текущая задача, статус проекта.
-
-2026-06-12 00:48 — KILO/erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` (~450 строк) с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Обновлены: `SUPERADMIN.md`, `DECISIONS_LOG.md`, `PROJECT_STATUS.md`, `AGENT_WORK_LOG.md`. Commit `c50b942`. Следующий шаг: создание миграций.
-
-2026-06-12 01:10 — KILO/erp-architect: SUPERADMIN Stage 3 — SQL-миграции созданы, проверены dry-run на MySQL 8.4.9, закоммичены. 4 таблицы созданы корректно, JSON/FK/21 индекс подтверждены. Принято решение DECISION-0022 (MySQL 5.7+). Commit `3d7cae3`. Следующий шаг: SUPERADMIN auth / migration runner.
-
-2026-06-12 01:18 — KILO/erp-coder: SUPERADMIN Stage 4a — CLI migration runner создан и протестирован. `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md`. Тесты на dev БД: первый запуск 4 applied, повторный 4 skipped. Таблица schema_migrations с SHA256 checksum. Idempotent. Следующий шаг: commit после разрешения владельца.
-
-2026-06-12 01:27 — KILO/erp-architect: SUPERADMIN Stage 4a принят и закоммичен. Commit `be55198`. Runner, документация, QA (44/44), идемпотентность — всё пройдено. Следующий шаг: решение владельца — вернуться к визуальной проблеме /superadmin и правилам дизайнера или другой фронт работ.
+2026-06-12 01:35 — KILO/erp-architect: **системное исправление UI-процесса**. Причина: `/superadmin` отклонён владельцем визуально. Зафиксирована корневая причина (слабый handoff, отсутствие visual review, формальный QA без запрета demo-placeholder). Добавлены 6 новых системных правил: фактическая проверка файлов, DeepSeek/KILO не vision, manual visual review, запрет demo-placeholder, качество handoff, Formal UI QA. Обновлены 4 файла агентов, 10+ MD-документов. Следующий этап: переделка /superadmin по обновлённому handoff.

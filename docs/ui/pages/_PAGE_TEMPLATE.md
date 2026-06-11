@@ -129,11 +129,34 @@
 - Не использовать Bootstrap/Tailwind/React/Vue/Material.
 - Не добавлять inline styles, кроме разрешённых динамических PHP values.
 - Не менять этот шаблон без дизайнера.
-- `border-radius` не больше 4px.
-- `box-shadow` blur не больше 8px.
+- `border-radius` не больше 4px (новые элементы).
+- `box-shadow` blur не больше 8px (новые элементы).
 - Не использовать browser-default input/select.
+- **Не использовать demo-placeholder UI**: псевдоиконки `[=]`, `[#]`, `[~]`, `[v]`; emoji как иконки; карточный SaaS-dashboard для admin/settings; большие пустоты; blue/white corporate UI; случайные цвета/классы; debug badges как основной визуальный элемент.
 
-## 15. Acceptance checklist
+## 15. Owner visual check (обязательно для новых/изменённых экранов)
+
+- **VISUAL CHECK URL**: [указать URL страницы]
+- **Что владелец должен проверить глазами**:
+  - [ ] Industrial Graphite + Warm Accent сохранён.
+  - [ ] Нет псевдоиконок `[=]`, `[#]`, `[~]`, `[v]`.
+  - [ ] Нет emoji как иконок.
+  - [ ] Нет demo-placeholder/SaaS-dashboard вида (для admin/settings страниц).
+  - [ ] Нет больших пустот.
+  - [ ] Sidebar тёмный 224px, nav текст светлый.
+  - [ ] Topbar 38px.
+  - [ ] Плотная рабочая композиция.
+  - [ ] Нет случайных цветов вне утверждённой палитры.
+  - [ ] Нет случайных CSS-классов.
+  - [ ] Нет blue/white corporate UI.
+  - [ ] `border-radius` в пределах design code.
+  - [ ] `box-shadow` blur в пределах design code.
+- **Возможные визуальные блокеры**:
+  - [перечислить]
+- **Manual owner visual review required**: YES
+- **Commit allowed before owner visual approval**: NO
+
+## 16. Acceptance checklist
 
 - [ ] Industrial Graphite + Warm Accent сохранён.
 - [ ] Страница соответствует `DESIGN_CODE_INTEGRATION.md`.
@@ -147,4 +170,13 @@
 - [ ] Нет случайных CSS-классов.
 - [ ] Нет хардкода цветов.
 - [ ] Нет inline styles, кроме динамических PHP.
+- [ ] Нет псевдоиконок `[=]`, `[#]`, `[~]`, `[v]`, emoji как иконок.
+- [ ] Нет demo-placeholder/SaaS-dashboard UI.
+- [ ] Нет Bootstrap/Tailwind/Material классов.
+- [ ] `border-radius` новых элементов ≤ 4px.
+- [ ] `box-shadow blur` новых элементов ≤ 8px.
 - [ ] Runtime/browser check выполнен.
+- [ ] Formal UI QA: PASS.
+- [ ] VISUAL CHECK URL предоставлен.
+- [ ] Manual owner visual review required: YES (для новых/изменённых экранов).
+- [ ] Commit allowed before owner visual approval: NO (для новых/изменённых экранов).

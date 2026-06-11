@@ -320,8 +320,8 @@ QA проверяет страницу по этому шаблону.
 - Не менять бизнес-логику.
 - Не использовать Bootstrap/Tailwind/React/Vue.
 - Не добавлять inline styles, кроме динамических PHP values.
-- Не делать border-radius > 4px.
-- Не делать decorative shadow blur > 8px.
+- Не делать border-radius > 4px для новых элементов (стандарт 2px).
+- Не делать decorative shadow blur > 8px для новых элементов.
 
 ## 15. Acceptance checklist
 - [ ] Industrial Graphite + Warm Accent сохранён
@@ -551,13 +551,56 @@ planned_route
 - heavy admin templates;
 - случайные CSS-классы вне системы;
 - inline styles, кроме динамических PHP-значений вида `style="width: <?= $pct ?>%"`;
-- `border-radius > 4px`;
-- `box-shadow` с blur больше `8px`;
+- `border-radius > 4px` — стандарт 2px, максимум 4px для всех новых UI-элементов. Существующие переменные `--radius-sm: 6px` и `--radius-md: 8px` в `app.css` являются legacy debt и не являются разрешением использовать такие значения для новых экранов;
+- `box-shadow` с blur больше `8px` — максимум 8px для новых элементов. Существующие legacy shadows в `app.css` не являются разрешением для новых экранов;
 - кислотные Bootstrap-цвета;
 - изменение routes/controllers/business logic ради UI;
 - превращать ERP в лендинг;
 - превращать ERP в SaaS-dashboard;
-- делать карточки вместо таблиц для списков сущностей.
+- делать карточки вместо таблиц для списков сущностей;
+- **demo-placeholder UI**: псевдоиконки вида `[=]`, `[#]`, `[~]`, `[v]`; emoji/символы как временные иконки; карточный SaaS-dashboard там, где нужна ERP/settings/admin страница; большие пустоты; blue/white corporate UI; случайные цвета; случайные CSS-классы; debug badges как основной визуальный элемент;
+- использовать `border-radius > 4px` или `box-shadow blur > 8px` для новых элементов;
+- использовать Bootstrap/Tailwind/Material классы.
+
+---
+
+## Правило DeepSeek/KILO не vision-модель
+
+DeepSeek/KILO агенты не являются vision-моделями. Они не могут финально оценивать внешний вид «глазами». Дизайнер может проверять только формальное соответствие MD-шаблону, DESIGN_CODE_INTEGRATION.md, PAGE_PATTERN.md, CSS-классам, DOM/HTML-структуре, отсутствию запрещённых элементов.
+
+Финальную визуальную приёмку UI делает владелец по скриншоту или в браузере.
+
+---
+
+## Правило ручной визуальной приёмки UI
+
+Каждый handoff обязан содержать:
+- VISUAL CHECK URL;
+- список того, что владелец должен проверить глазами;
+- список возможных визуальных блокеров;
+- `Manual owner visual review required: YES`;
+- `Commit allowed before owner visual approval: NO`.
+
+---
+
+## Правило качества handoff дизайнера
+
+Дизайнер обязан выдавать handoff так, чтобы кодер не искал примеры и не придумывал.
+
+В handoff обязательно должны быть:
+- exact route/view;
+- layout pattern;
+- exact text;
+- exact components;
+- exact classes;
+- prohibited elements;
+- states;
+- owner visual check;
+- visual blockers;
+- runtime URL;
+- acceptance checklist.
+
+Если handoff допускает неоднозначность, задача дизайнера не DONE.
 
 ---
 
