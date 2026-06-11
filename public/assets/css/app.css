@@ -344,6 +344,116 @@ tr:last-child td {
     border-bottom: 0;
 }
 
+/* ── SUPERADMIN Dashboard (Stage 1) ── */
+
+.summary-cards {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-top: var(--space-5);
+}
+
+.summary-card {
+    min-width: 200px;
+    flex: 1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+}
+
+.summary-card-icon {
+    font-size: 20px;
+    color: var(--color-muted);
+    margin-bottom: var(--space-2);
+}
+
+.summary-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+}
+
+.summary-card-label {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-top: var(--space-1);
+}
+
+.placeholder-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+}
+
+.placeholder-nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-muted);
+}
+
+.placeholder-nav-icon {
+    font-size: 16px;
+    opacity: 0.5;
+}
+
+.badge-soon {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #eef2f7;
+    color: var(--color-muted);
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5);
+    margin-bottom: var(--space-5);
+}
+
+.module-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+}
+
+.module-card-icon {
+    font-size: 28px;
+    margin-bottom: var(--space-3);
+    opacity: 0.6;
+}
+
+.module-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: var(--space-2);
+    color: var(--color-text);
+}
+
+.module-card-status {
+    display: inline-block;
+    margin-bottom: var(--space-3);
+}
+
+.module-card-desc {
+    font-size: 13px;
+    color: var(--color-muted);
+    line-height: 1.5;
+}
+
 @media (max-width: 860px) {
     .app-shell {
         grid-template-columns: 1fr;

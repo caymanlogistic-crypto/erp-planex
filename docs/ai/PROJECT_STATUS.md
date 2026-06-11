@@ -6,7 +6,7 @@
 
 ## Текущий фокус
 
-PDO-обёртка и роутер созданы и проверены (2026-06-11). Техническое ядро готово: Database PDO wrapper, простой GET-роутер с параметрами, интеграция в точку входа. SUPERADMIN Stage 1 реализован: страница-заглушка `/superadmin` создана, маршрут зарегистрирован, sidebar обновлён. Workflow MD-шаблонов страниц закреплён и готов к использованию.
+SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка `/superadmin`, UI-шаблон, CSS, маршрут, sidebar — всё проверено, QA-замечания исправлены. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД. Workflow MD-шаблонов страниц закреплён и готов к использованию.
 
 ## Уже принято
 
@@ -84,7 +84,7 @@ PDO-обёртка и роутер созданы и проверены (2026-06
 
 ## Заблокировано
 
-Нет блокеров. SUPERADMIN Stage 1 реализован: страница-заглушка, CSS, маршрут, sidebar. Ожидает QA-проверки.
+Нет блокеров. SUPERADMIN Stage 1 принят. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.
 
 ## Следующий рекомендуемый шаг
 
@@ -93,8 +93,9 @@ PDO-обёртка и роутер созданы и проверены (2026-06
 3. ~~Создать простой роутер.~~ **DONE (2026-06-11).**
 4. ~~Создать MD-шаблон SUPERADMIN dashboard.~~ **DONE (2026-06-11).**
 5. ~~Реализовать страницу `/superadmin` по шаблону (erp-coder).~~ **DONE (2026-06-12).**
-6. QA-проверка страницы (erp-qa-tester).
-7. Приёмка архитектором (erp-architect).
+6. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
+7. ~~Приёмка архитектором (erp-architect).~~ **DONE (2026-06-12).**
+8. SUPERADMIN Stage 2: документация центральной БД.
 
 - Проведена верификация обновлённой папки `docs`. Удалён физически оставшийся `docs/ui/UI_UX_RULES.md`. Исправлены 3 устаревшие ссылки на него в агентах. Удалён временный `docs/_DOCS_AUDIT_AND_CLEANUP.md`. Папка `docs/ui/ui/` отсутствует. Ссылки в документации синхронизированы. Commit `bc8e2e9`.
 - Проверен и утверждён UI-фундамент: документация синхронизирована, `_PAGE_TEMPLATE.md` обновлён под формат handoff дизайнера, runtime/syntax checks пройдены. UI готов к использованию в business-coding workflow.
@@ -105,10 +106,12 @@ PDO-обёртка и роутер созданы и проверены (2026-06
 - Все 17 PHP-файлов проходят `php -l`. Runtime-проверки всех маршрутов пройдены.
 
 - Создан MD-шаблон `docs/ui/pages/superadmin-dashboard.md` (272 строки) для SUPERADMIN Stage 1 dashboard (2026-06-11, агент: erp-uiux-designer).
-- SUPERADMIN Stage 1 реализован (2026-06-12, агент: erp-coder): создана страница `app/View/pages/superadmin_dashboard.php`, добавлены 13 CSS-классов в `app.css`, зарегистрирован маршрут `/superadmin`, обновлён sidebar `main.php`. Все синтаксические и runtime проверки пройдены.
+- SUPERADMIN Stage 1 реализован (2026-06-12, агент: erp-coder): создана страница `app/View/pages/superadmin_dashboard.php`, добавлены 14 CSS-классов в `app.css`, зарегистрирован маршрут `/superadmin`, обновлён sidebar `main.php`.
+- QA-замечания исправлены (2026-06-12, агент: erp-architect): `.module-card-status` CSS, `&mdash;` в заголовке. PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404.
+- SUPERADMIN Stage 1 принят. Все синтаксические и runtime проверки пройдены.
 
-- Зафиксированы обязательные правила Windows PowerShell для агентов (2026-06-12, агент: erp-architect): создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`, обновлены `KILO_PROJECT_RULES.md`, `QA_CHECKLIST.md`, `DEEPSEEK_CODER_RULES.md`, `TASK_TEMPLATE.md`, зафиксировано решение DECISION-0020.
+- Зафиксированы обязательные правила Windows PowerShell для агентов (2026-06-12, агент: erp-architect): создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`, обновлены 4 проектных MD-документа, зафиксировано решение DECISION-0020. Commit: `f36ba81`.
 
 ## Последнее обновление
 
-2026-06-12 00:37 — erp-architect: зафиксированы Windows PowerShell command rules (DECISION-0020). Создан `WINDOWS_POWERSHELL_COMMAND_RULES.md`. Обновлены 4 проектных MD-документа. Следующий шаг: вернуться к QA SUPERADMIN Stage 1 с учётом новых правил.
+2026-06-12 00:44 — erp-architect: SUPERADMIN Stage 1 принят. QA-замечания исправлены (.module-card-status CSS, &mdash;). PowerShell-safe HTTP-проверки пройдены. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.

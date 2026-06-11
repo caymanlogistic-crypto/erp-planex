@@ -33,7 +33,10 @@ $appName = $config['app']['app_name'] ?? 'ERP PLANEX';
                     UI foundation
                 </a>
                 <span class="nav-section">Будущие модули</span>
-                <span class="nav-item is-disabled">SUPERADMIN</span>
+                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/superadmin') ? ' is-active' : '' ?>" href="/superadmin">
+                    <span class="nav-dot"></span>
+                    SUPERADMIN
+                </a>
                 <span class="nav-item is-disabled">Клиенты</span>
                 <span class="nav-item is-disabled">Рейсы</span>
             </nav>

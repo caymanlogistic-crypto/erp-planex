@@ -183,13 +183,13 @@ docs/ui/pages/[page-name].md
 - правила логирования, QA, KILO и переносимого контекста закреплены;
 - бизнес-код ещё не пишется;
 - БД и миграции ещё не созданы;
-- SUPERADMIN Stage 1 реализован (страница-заглушка);
+- SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка, UI-шаблон, CSS (14 классов), маршрут `/superadmin`, sidebar. QA пройден.
 - авторизация, роли в коде ещё не реализованы;
-- Windows PowerShell command rules зафиксированы (DECISION-0020).
+- Windows PowerShell command rules зафиксированы (DECISION-0020, commit f36ba81).
 
 ## Текущий фокус
 
-Текущий фокус: SUPERADMIN Stage 1 реализован (страница-заглушка). Следующий шаг — QA-проверка.
+Текущий фокус: SUPERADMIN Stage 1 принят (2026-06-12). Следующий шаг — SUPERADMIN Stage 2: документация центральной БД.
 
 Ближайший порядок:
 
@@ -231,15 +231,15 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: SUPERADMIN Stage 1 реализован (2026-06-12, erp-coder). QA-проверка была начата, но зависла из-за использования Linux-style curl в Windows PowerShell. Зафиксированы Windows PowerShell Command Rules (DECISION-0020, 2026-06-12). Требуется повторная QA-проверка с использованием PowerShell-совместимых команд.
+Активная задача: SUPERADMIN Stage 1 принят (2026-06-12). Страница-заглушка `/superadmin` создана, QA-замечания исправлены, HTTP-проверки пройдены. Незакоммиченные файлы ожидают commit после разрешения владельца.
 
 Следующий рабочий шаг:
 1. ~~Проверить/утвердить UI-фундамент.~~ **DONE.**
-2. ~~Отдельной задачей перейти к PDO-обёртке и простому роутеру.~~ **DONE.**
-3. ~~Реализовать страницу `/superadmin` по MD-шаблону (erp-coder).~~ **DONE (2026-06-12).**
-4. ~~Зафиксировать Windows PowerShell command rules.~~ **DONE (2026-06-12).**
-5. Повторная QA-проверка страницы (erp-qa-tester) с PowerShell-совместимыми командами.
-6. Приёмка архитектором (erp-architect).
+2. ~~Создать PDO-обёртку и роутер.~~ **DONE.**
+3. ~~SUPERADMIN Stage 1: архитектура, UI-шаблон, реализация.~~ **DONE (2026-06-12).**
+4. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
+5. Commit (после разрешения владельца).
+6. SUPERADMIN Stage 2: документация центральной БД.
 
 ## Утверждённая архитектура ERP PLANEX
 
@@ -278,7 +278,7 @@ SUPERADMIN должен в будущем управлять:
 
 SUPERADMIN не является обычным пользователем локальной ERP.
 
-SUPERADMIN Stage 1: UI-шаблон `docs/ui/pages/superadmin-dashboard.md` создан (2026-06-11). Код реализован (2026-06-12): страница, CSS, маршрут, sidebar.
+SUPERADMIN Stage 1: принят (2026-06-12). Созданы: `docs/architecture/SUPERADMIN.md`, `docs/ui/pages/superadmin-dashboard.md` (UI-шаблон), `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php` (страница), 14 CSS-классов в `app.css`, маршрут `/superadmin`, sidebar обновлён. Следующий этап: Stage 2 — центральная БД.
 
 ## Модель локальной ERP
 
@@ -489,13 +489,14 @@ app/
     Database.php
   Http/
     Router.php
-  Support/helpers.php
   Superadmin/
     .gitkeep
+  Support/helpers.php
   View/
     layouts/main.php
     components/
     pages/ui_demo.php
+    pages/superadmin_dashboard.php
     pages/superadmin_dashboard.php
 bootstrap/app.php
 config/app.php
@@ -617,4 +618,6 @@ FINAL REPORT должен содержать:
 
 2026-06-12 00:01 — KILO/erp-coder: SUPERADMIN Stage 1 реализован. Созданы `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php`, 13 новых CSS-классов в `app.css`, маршрут `/superadmin` в `index.php`, sidebar обновлён. Все проверки пройдены.
 
-2026-06-12 00:37 — KILO/erp-architect: зафиксированы Windows PowerShell command rules (DECISION-0020). Создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`. Обновлены `KILO_PROJECT_RULES.md`, `QA_CHECKLIST.md`, `DEEPSEEK_CODER_RULES.md`, `TASK_TEMPLATE.md`. Правила добавлены в главные запреты и список обязательного чтения.
+2026-06-12 00:37 — KILO/erp-architect: зафиксированы Windows PowerShell command rules (DECISION-0020). Создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`. Обновлены 4 проектных MD-документа. Правила добавлены в главные запреты и список обязательного чтения.
+
+2026-06-12 00:44 — KILO/erp-architect: SUPERADMIN Stage 1 принят. Исправлены 3 QA-замечания (`.module-card-status` CSS, `&mdash;` в заголовке). PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404. Все PHP-файлы `php -l` OK. Секретов нет. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.

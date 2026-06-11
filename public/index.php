@@ -53,4 +53,14 @@ $router->get('/test-db', function () use ($db) {
     }
 });
 
+$router->get('/superadmin', function () use ($config) {
+    $pageTitle = 'SUPERADMIN';
+
+    ob_start();
+    require base_path('app/View/pages/superadmin_dashboard.php');
+    $content = ob_get_clean();
+
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

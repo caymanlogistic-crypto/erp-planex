@@ -1510,3 +1510,55 @@ PowerShell воспринял `curl` как alias для `Invoke-WebRequest`, к
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-12 00:44 — KILO/erp-architect / SUPERADMIN Stage 1 — QA fixes и финальная приёмка
+
+### Задача
+Верифицировать и исправить QA-замечания SUPERADMIN Stage 1, выполнить повторную проверку с PowerShell-совместимыми командами, принять Stage 1.
+
+### Исходный контекст
+SUPERADMIN Stage 1 реализован erp-coder (2026-06-12). Предыдущий QA-прогон завис из-за Linux-style curl в PowerShell. Зафиксированы Windows PowerShell Command Rules (DECISION-0020). В рабочем дереве — незакоммиченные файлы Stage 1.
+
+Выявлены 3 QA-замечания:
+1. `.module-card-status` отсутствует в `app.css` (используется в HTML, но не определён в CSS)
+2. `&mdash;` в `ui_page_header()` проходит через `e()` → двойное экранирование → отображается как текст
+3. Расхождение UI-шаблона и реализации по CSS-классам
+
+### Что сделано
+- Верифицированы все 3 QA-замечания — подтверждены.
+- **Исправление 1**: добавлен CSS-класс `.module-card-status` в `public/assets/css/app.css`.
+- **Исправление 2**: `&mdash;` заменён на символ `—` (U+2014) в `ui_page_header()` — больше не экранируется через `e()`.
+- **Исправление 3**: синхронизация UI-шаблона и реализации через исправления 1 и 2.
+- Запущен PHP dev server на порту 8025.
+- Выполнены PowerShell-safe HTTP-проверки (`Invoke-WebRequest`): `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404.
+- `.env` git-ignored: OK. Секреты в новых файлах: чисто.
+
+### Изменённые файлы
+- `app/View/pages/superadmin_dashboard.php` (`&mdash;` → `—`)
+- `public/assets/css/app.css` (добавлен `.module-card-status`)
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+
+### Проверки
+- `php -l` для всех изменённых PHP-файлов: ошибок нет.
+- HTTP 200: `/superadmin`, `/`, `/test`, `/test-db` — OK.
+- HTTP 404: `/nonexistent` — OK.
+- `.env` git-ignored: OK.
+- Секреты: не обнаружены.
+- CSS-классы из шаблона → в `app.css`: все присутствуют.
+- Git status: 3 modified + 4 untracked.
+
+### Что НЕ сделано
+- Бизнес-код, авторизация, БД, миграции, CRUD, commit.
+
+### Риски
+- Все изменения в рабочем дереве. Commit — после разрешения владельца.
+
+### Следующий шаг
+SUPERADMIN Stage 2: документация центральной БД.
+
+### Статус
+DONE
