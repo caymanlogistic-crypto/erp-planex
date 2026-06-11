@@ -208,6 +208,8 @@ docs/ui/pages/[page-name].md
 Актуальные последние commits на момент начала этой задачи:
 
 ```text
+be55198 Create SUPERADMIN Stage 4a migration runner
+9513b78 Update portable context after SUPERADMIN Stage 3 migrations commit
 3d7cae3 Create SUPERADMIN Stage 3 database migrations
 c50b942 Document SUPERADMIN central database schema
 acd5009 Create SUPERADMIN stage 1 skeleton
@@ -654,3 +656,5 @@ FINAL REPORT должен содержать:
 2026-06-12 01:10 — KILO/erp-architect: SUPERADMIN Stage 3 — SQL-миграции созданы, проверены dry-run на MySQL 8.4.9, закоммичены. 4 таблицы созданы корректно, JSON/FK/21 индекс подтверждены. Принято решение DECISION-0022 (MySQL 5.7+). Commit `3d7cae3`. Следующий шаг: SUPERADMIN auth / migration runner.
 
 2026-06-12 01:18 — KILO/erp-coder: SUPERADMIN Stage 4a — CLI migration runner создан и протестирован. `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md`. Тесты на dev БД: первый запуск 4 applied, повторный 4 skipped. Таблица schema_migrations с SHA256 checksum. Idempotent. Следующий шаг: commit после разрешения владельца.
+
+2026-06-12 01:27 — KILO/erp-architect: SUPERADMIN Stage 4a принят и закоммичен. Commit `be55198`. Runner, документация, QA (44/44), идемпотентность — всё пройдено. Следующий шаг: решение владельца — вернуться к визуальной проблеме /superadmin и правилам дизайнера или другой фронт работ.
