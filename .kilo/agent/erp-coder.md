@@ -1,6 +1,6 @@
 ---
 description: Исполнитель разработки ERP PLANEX. Пишет PHP/MySQL/HTML/CSS/JS только по точному ТЗ. Не придумывает бизнес-логику.
-mode: subagent
+mode: primary
 color: "#F59E0B"
 steps: 75
 permission:

@@ -718,3 +718,76 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-11 21:02 — ChatGPT/Codex / Исправление видимости KILO-агентов
+
+### Задача
+Пользователь сообщил, что в выпадающем списке KILO появился только 1 агент (`Erp Architect`), хотя проектная агентская сеть должна содержать 4 агента.
+
+### Исходный контекст
+Прочитаны:
+- `.kilo/agent/erp-architect.md`
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+- `kilo.jsonc`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+
+### Что сделано
+- Найдена причина: `erp-uiux-designer`, `erp-coder`, `erp-qa-tester` были настроены как `mode: subagent`, поэтому не отображались в выпадающем списке KILO.
+- Исправлены режимы:
+  - `.kilo/agent/erp-architect.md` — `mode: primary`
+  - `.kilo/agent/erp-uiux-designer.md` — `mode: primary`
+  - `.kilo/agent/erp-coder.md` — `mode: primary`
+  - `.kilo/agent/erp-qa-tester.md` — `mode: primary`
+- `erp-architect` оставлен `default_agent` в `kilo.jsonc`.
+- Обновлены MD-документы: теперь все 4 агента описаны как `primary/selectable`.
+- Обновлён `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+
+### Изменённые файлы
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+
+### Принятые решения
+Для проектных ролей ERP PLANEX не использовать `mode: subagent`, если агент должен быть доступен в выпадающем списке KILO. Все 4 проектных агента должны быть `mode: primary`.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД, миграции, SUPERADMIN не создавались.
+
+### Причина невыполнения
+Задача касалась только настройки KILO-агентов и документации.
+
+### Проверки
+- Проверить, что во всех `.kilo/agent/*.md` стоит `mode: primary`.
+- Проверить отсутствие `mode: subagent` в актуальных настройках агентов.
+- Проверить `git status`.
+
+### Результат проверок
+- Все `.kilo/agent/*.md` имеют `mode: primary`: OK.
+- `mode: subagent` в `.kilo/agent/` не найден: OK.
+- `kilo.jsonc` оставляет `default_agent: erp-architect`: OK.
+- `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` обновлён: OK.
+
+### Риски
+- Интерфейс KILO может потребовать `Reload Window` / перезапуск вкладки KILO, чтобы перечитать `.kilo/agent/*.md`.
+
+### Следующий шаг
+Перезапустить/обновить окно KILO и проверить, что в выпадающем списке видны 4 агента: `Erp Architect`, `Erp Uiux Designer`, `Erp Coder`, `Erp Qa Tester`.
+
+### Статус
+DONE

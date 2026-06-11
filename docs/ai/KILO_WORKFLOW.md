@@ -8,9 +8,11 @@ KILO должен работать строго по MD-документации
 
 В проекте настроены 4 проектных KILO-режима (агента):
 - `erp-architect` — главный координатор (primary, default_agent);
-- `erp-uiux-designer` — UI/UX-дизайнер (subagent);
-- `erp-coder` — исполнитель разработки (subagent);
-- `erp-qa-tester` — тестировщик (subagent).
+- `erp-uiux-designer` — UI/UX-дизайнер (primary/selectable);
+- `erp-coder` — исполнитель разработки (primary/selectable);
+- `erp-qa-tester` — тестировщик (primary/selectable).
+
+Важно: все 4 проектных агента должны быть видны в списке выбора KILO. Для этого в `.kilo/agent/*.md` используется `mode: primary`.
 
 Определения агентов находятся в `.kilo/agent/`. Главный режим — `erp-architect`.
 

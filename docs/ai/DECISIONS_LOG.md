@@ -244,9 +244,11 @@ active
 Агентская сеть ERP PLANEX перенесена внутрь KILO. Вместо внешнего ChatGPT-координатора используются 4 проектных KILO-агента:
 
 - `erp-architect` (primary, default_agent) — главный координатор;
-- `erp-uiux-designer` (subagent) — UI/UX-дизайнер;
-- `erp-coder` (subagent) — исполнитель разработки;
-- `erp-qa-tester` (subagent) — тестировщик.
+- `erp-uiux-designer` (primary/selectable) — UI/UX-дизайнер;
+- `erp-coder` (primary/selectable) — исполнитель разработки;
+- `erp-qa-tester` (primary/selectable) — тестировщик.
+
+Все 4 агента должны быть доступны в выпадающем списке KILO. `subagent`-режим не используется для этих ролей, потому что интерфейс KILO показывает только primary/selectable agents.
 
 Все агенты определены в `.kilo/agent/*.md`. Главный режим — `erp-architect` (установлен как `default_agent` в `kilo.jsonc`).
 

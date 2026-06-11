@@ -22,9 +22,9 @@ ERP PLANEX разрабатывается ИИ-агентами.
 
 В проекте настроены 4 проектных KILO-режима (агента):
 - `erp-architect` (primary, default_agent) — главный координатор;
-- `erp-uiux-designer` (subagent) — UI/UX-дизайнер;
-- `erp-coder` (subagent) — исполнитель разработки;
-- `erp-qa-tester` (subagent) — тестировщик.
+- `erp-uiux-designer` (primary/selectable) — UI/UX-дизайнер;
+- `erp-coder` (primary/selectable) — исполнитель разработки;
+- `erp-qa-tester` (primary/selectable) — тестировщик.
 
 Определения агентов: `.kilo/agent/*.md`. Конфигурация: `kilo.jsonc` (`default_agent: erp-architect`).
 
@@ -231,9 +231,11 @@ SUPERADMIN ещё не начат.
 
 Проектные KILO-агенты (4 режима):
 - `erp-architect` — главный координатор (primary, default_agent);
-- `erp-uiux-designer` — UI/UX-дизайнер (subagent);
-- `erp-coder` — исполнитель разработки (subagent);
-- `erp-qa-tester` — тестировщик (subagent).
+- `erp-uiux-designer` — UI/UX-дизайнер (primary/selectable);
+- `erp-coder` — исполнитель разработки (primary/selectable);
+- `erp-qa-tester` — тестировщик (primary/selectable).
+
+Все 4 агента должны быть видны в выпадающем списке KILO. Если виден только `erp-architect`, нужно проверить, что в `.kilo/agent/erp-uiux-designer.md`, `.kilo/agent/erp-coder.md`, `.kilo/agent/erp-qa-tester.md` указано `mode: primary`, а не `mode: subagent`, и перезапустить/обновить окно KILO.
 
 Определения агентов: `.kilo/agent/erp-architect.md`, `.kilo/agent/erp-uiux-designer.md`, `.kilo/agent/erp-coder.md`, `.kilo/agent/erp-qa-tester.md`.
 
@@ -392,6 +394,8 @@ FINAL REPORT должен содержать:
 - Не придумывать неподтверждённые бизнес-правила.
 
 ## Последнее обновление этого файла
+
+2026-06-11 21:02 — ChatGPT/Codex: исправлена видимость KILO-агентов. `erp-uiux-designer`, `erp-coder`, `erp-qa-tester` переведены с `mode: subagent` на `mode: primary`, потому что в выпадающем списке KILO отображались только primary-агенты. Все 4 проектных агента должны быть selectable; `erp-architect` остаётся `default_agent`.
 
 2026-06-11 20:23 — KILO/erp-coder: настроены 4 проектных KILO-агента (`.kilo/agent/`); создан `kilo.jsonc` с `default_agent: erp-architect`; обновлены AGENTS.md, AGENT_NETWORK.md, KILO_WORKFLOW.md, DECISIONS_LOG.md (DECISION-0016), AGENT_WORK_LOG.md. Агентская сеть перенесена внутрь KILO, внешний ChatGPT-координатор исключён из цикла.
 

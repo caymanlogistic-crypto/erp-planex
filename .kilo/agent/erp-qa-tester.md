@@ -1,6 +1,6 @@
 ---
 description: QA-тестировщик ERP PLANEX. Проверяет реализованный функционал, ищет баги, проверяет соответствие ТЗ, пишет понятный отчёт. Не меняет архитектуру.
-mode: subagent
+mode: primary
 color: "#EF4444"
 steps: 50
 permission:

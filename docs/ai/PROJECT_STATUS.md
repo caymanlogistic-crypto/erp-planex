@@ -65,9 +65,10 @@
 - Commit `473f748` — агентская сеть и UI-фундамент зафиксированы.
 - Настроены 4 проектных KILO-агента:
   - `.kilo/agent/erp-architect.md` — главный координатор (primary).
-  - `.kilo/agent/erp-uiux-designer.md` — UI/UX-дизайнер (subagent).
-  - `.kilo/agent/erp-coder.md` — исполнитель разработки (subagent).
-  - `.kilo/agent/erp-qa-tester.md` — тестировщик (subagent).
+  - `.kilo/agent/erp-uiux-designer.md` — UI/UX-дизайнер (primary/selectable).
+  - `.kilo/agent/erp-coder.md` — исполнитель разработки (primary/selectable).
+  - `.kilo/agent/erp-qa-tester.md` — тестировщик (primary/selectable).
+- Исправлена настройка KILO: все 4 проектных агента теперь имеют `mode: primary`, потому что в UI KILO `subagent`-роли не отображались в списке выбора.
   - `kilo.jsonc` с `default_agent: erp-architect`.
 - Агентская сеть теперь внутри KILO; внешний ChatGPT-координатор исключён из агентного цикла.
 
@@ -84,4 +85,4 @@
 
 ## Последнее обновление
 
-2026-06-11 20:23 — KILO/erp-coder: настроены 4 проектных KILO-агента (`.kilo/agent/`); создан `kilo.jsonc` с `default_agent: erp-architect`; обновлены AGENTS.md, AGENT_NETWORK.md, KILO_WORKFLOW.md, DECISIONS_LOG.md, AGENT_WORK_LOG.md, ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md. Добавлено решение DECISION-0016.
+2026-06-11 21:02 — ChatGPT/Codex: исправлена настройка видимости KILO-агентов. Все 4 проектных агента в `.kilo/agent/*.md` переведены в `mode: primary`, потому что `subagent`-роли не отображались в выпадающем списке KILO.

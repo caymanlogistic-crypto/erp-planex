@@ -1,6 +1,6 @@
 ---
 description: UI/UX-дизайнер ERP PLANEX. Проектирует интерфейсы, следит за удобством, готовит понятные требования для кодера. Не пишет backend-логику.
-mode: subagent
+mode: primary
 color: "#10B981"
 steps: 50
 permission:
