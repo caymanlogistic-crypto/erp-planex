@@ -90,3 +90,65 @@ migrations
 checks
 MD documentation
 ```
+
+
+---
+
+## UI-задачи через дизайнера
+
+Перед передачей задачи кодеру `erp-architect` обязан определить, затрагивает ли задача интерфейс.
+
+Если UI затрагивается, порядок обязателен:
+
+```text
+erp-architect
+→ erp-uiux-designer
+→ erp-coder
+→ erp-qa-tester
+→ erp-architect
+```
+
+`erp-uiux-designer` создаёт или обновляет MD-шаблон страницы в:
+
+```text
+docs/ui/pages/
+```
+
+`erp-coder` реализует только по актуальному MD-шаблону страницы.
+
+`erp-qa-tester` проверяет соответствие реализации этому шаблону.
+
+`erp-architect` не принимает UI-задачу без:
+
+- актуального MD-шаблона страницы;
+- реализации по шаблону;
+- QA-проверки по шаблону;
+- обновлённого `AGENT_WORK_LOG.md`;
+- проверки необходимости обновить `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+
+## Актуальный workflow после настройки 4 агентов
+
+### UI-задача
+
+```text
+Владелец
+→ erp-architect
+→ erp-uiux-designer создаёт/обновляет docs/ui/pages/[page-name].md
+→ erp-coder реализует строго по шаблону
+→ erp-qa-tester проверяет по шаблону
+→ erp-architect принимает или запускает второй круг
+```
+
+### Техническая задача без UI
+
+```text
+Владелец
+→ erp-architect
+→ erp-coder
+→ erp-qa-tester
+→ erp-architect
+```
+
+### Правило
+
+Если есть сомнение, затрагивает ли задача UI, дизайнер подключается.

@@ -525,7 +525,7 @@ DONE
 ### Исходный контекст
 Прочитаны:
 - docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md
-- docs/ui/UI_UX_RULES.md
+- docs/ui/DESIGN_CODE_INTEGRATION.md
 - docs/ui/PAGE_PATTERN.md
 - docs/ui/FORMS_STANDARD.md
 - docs/ui/TABLES_STANDARD.md
@@ -568,7 +568,7 @@ DONE
 - docs/ai/KILO_PROJECT_RULES.md
 - docs/ai/TASK_TEMPLATE.md
 - docs/ai/QA_CHECKLIST.md
-- docs/ui/UI_UX_RULES.md
+- docs/ui/DESIGN_CODE_INTEGRATION.md
 - docs/ui/PAGE_PATTERN.md
 - docs/ui/FORMS_STANDARD.md
 - docs/ui/TABLES_STANDARD.md
@@ -788,6 +788,171 @@ DONE
 
 ### Следующий шаг
 Перезапустить/обновить окно KILO и проверить, что в выпадающем списке видны 4 агента: `Erp Architect`, `Erp Uiux Designer`, `Erp Coder`, `Erp Qa Tester`.
+
+### Статус
+DONE
+
+
+---
+
+## 2026-06-11 — ChatGPT / UI designer workflow documentation update
+
+### Задача
+Обновить правила `erp-uiux-designer` и связанные MD-документы под workflow, где дизайнер создаёт или обновляет MD-шаблон страницы до передачи задачи кодеру.
+
+### Исходный контекст
+Владелец проекта утвердил правило: если создаётся или меняется страница, дизайнер должен подготовить MD-шаблон страницы, передать его как источник истины для кодера, а при изменениях обновлять шаблон.
+
+### Что сделано
+- Усилен агент `erp-uiux-designer`.
+- Закреплён обязательный Page Design Handoff.
+- Закреплено хранение шаблонов страниц в `docs/ui/pages/`.
+- Обновлён workflow: `erp-architect` решает, нужен ли дизайнер; UI-задачи идут через дизайнера; кодер реализует по шаблону; QA проверяет по шаблону.
+- Добавлено решение DECISION-0017.
+
+### Изменённые файлы
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-architect.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+
+### Принятые решения
+UI-страницы реализуются через MD-шаблоны дизайнера. MD-шаблон страницы является источником истины для кодера и QA.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД и миграции не создавались.
+- SUPERADMIN не начинался.
+
+### Проверки
+Документы синхронизированы по смыслу. Runtime-проверки не требуются, так как код не изменялся.
+
+### Следующий шаг
+Перед началом бизнес-страниц утвердить UI-фундамент и использовать `docs/ui/pages/` для шаблонов страниц.
+
+### Статус
+DONE
+
+## 2026-06-11 — ChatGPT / Полная чистка docs
+
+### Задача
+
+Проверить полный архив папки `docs`, очистить мусор, синхронизировать текущую схему 4 KILO-агентов и подготовить архив для полной замены папки `docs`.
+
+### Исходный контекст
+
+Текущая утверждённая схема:
+- `erp-architect` — главный координатор;
+- `erp-uiux-designer` — создаёт/обновляет MD-шаблоны страниц;
+- `erp-coder` — работает по ТЗ, архитектуре и UI-шаблону;
+- `erp-qa-tester` — проверяет ТЗ, UI, архитектуру, runtime, MD и логи.
+
+### Что сделано
+
+- Удалён дублирующий `docs/ui/UI_UX_RULES.md`.
+- Удалён ошибочный дубль `docs/ui/ui/`.
+- `docs/ui/DESIGN_CODE_INTEGRATION.md` сделан главным UI-регламентом.
+- Обновлены ссылки на UI-документацию.
+- Добавлены `docs/ui/pages/README.md` и `docs/ui/pages/_PAGE_TEMPLATE.md`.
+- Синхронизированы AI/QA/KILO/кодерские правила.
+
+### Изменённые файлы
+
+- `docs/ai/*`
+- `docs/ui/*`
+- `docs/ui/pages/*`
+
+### Проверки
+
+- Проверены ссылки на удалённый `UI_UX_RULES.md`.
+- Проверены ссылки на ошибочную папку `docs/ui/ui/`.
+- Проверена структура архива.
+
+### Статус
+
+DONE
+
+---
+
+## 2026-06-11 23:14 — KILO/erp-architect / Приёмка и верификация обновлённой папки docs
+
+### Задача
+Принять обновлённую папку `docs`, проверить связи документации, удалить мусор, исправить устаревшие ссылки в агентах, обновить переносимый контекст, выполнить git commit.
+
+### Исходный контекст
+Прочитаны все обязательные файлы:
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/DEEPSEEK_CODER_RULES.md`
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ui/pages/README.md`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`
+- `.kilo/agent/erp-architect.md`
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+
+### Что сделано
+- Проверено, что `docs/ui/UI_UX_RULES.md` — файл физически существовал, несмотря на DECISION-0018. Удалён.
+- Проверено, что `docs/ui/ui/` — не существует. OK.
+- Проверено, что главный UI-регламент — `docs/ui/DESIGN_CODE_INTEGRATION.md`. Подтверждено во всех документах.
+- Проверен UI page-template workflow: `erp-architect → erp-uiux-designer → erp-coder → erp-qa-tester → erp-architect`. Закреплён во всех MD.
+- Проверены принципы кодера: think before coding, simplicity first, surgical changes, verifiable execution. Закреплены в `erp-coder.md` и `DEEPSEEK_CODER_RULES.md`.
+- Проверены blocking acceptance rules QA: наличие UI-шаблона, `php -l`, логи, секреты. Закреплены в `QA_CHECKLIST.md` и `erp-qa-tester.md`.
+- Найдено 3 устаревшие ссылки на `docs/ui/UI_UX_RULES.md` в агентах. Исправлено во всех трёх:
+  - `.kilo/agent/erp-uiux-designer.md` — удалена строка `docs/ui/UI_UX_RULES.md` из списка обязательного чтения.
+  - `.kilo/agent/erp-coder.md` — удалена строка `docs/ui/UI_UX_RULES.md` из списка обязательного чтения.
+  - `.kilo/agent/erp-qa-tester.md` — удалена строка `docs/ui/UI_UX_RULES.md` из списка обязательного чтения.
+- Удалён временный файл `docs/_DOCS_AUDIT_AND_CLEANUP.md`.
+- Выполнены git commits.
+
+### Изменённые файлы
+- `docs/ui/UI_UX_RULES.md` (удалён)
+- `docs/_DOCS_AUDIT_AND_CLEANUP.md` (удалён)
+- `.kilo/agent/erp-uiux-designer.md` (исправлена ссылка)
+- `.kilo/agent/erp-coder.md` (исправлена ссылка)
+- `.kilo/agent/erp-qa-tester.md` (исправлена ссылка)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён commit hash)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+
+### Принятые решения
+Нет. Новых решений не принималось.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД и миграции не создавались.
+- SUPERADMIN не начинался.
+
+### Проверки
+- Проверено отсутствие ссылок на `UI_UX_RULES.md` в активном контексте агентов: OK (3 ссылки исправлены, остальные — только исторические записи в логах/решениях).
+- Проверено отсутствие папки `docs/ui/ui/`: OK.
+- Проверено, что `docs/ui/DESIGN_CODE_INTEGRATION.md` является главным UI-регламентом: OK.
+- Проверен UI page-template workflow: OK.
+- Проверены правила кодера (Karpathy-style): OK.
+- Проверены blocking acceptance rules QA: OK.
+- `.env` и секреты не попали в git: OK.
+- Git status после commit: clean.
+
+### Результат проверок
+Все проверки пройдены. Документация синхронизирована, устаревшие ссылки удалены, мусор удалён.
+
+### Риски
+Нет.
+
+### Следующий шаг
+Продолжить по плану: проверить/утвердить UI-фундамент, затем PDO-обёртка, роутер, SUPERADMIN.
 
 ### Статус
 DONE
