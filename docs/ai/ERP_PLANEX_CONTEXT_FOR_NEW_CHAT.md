@@ -182,15 +182,16 @@ docs/ui/pages/[page-name].md
 - KILO-агенты настроены;
 - правила логирования, QA, KILO и переносимого контекста закреплены;
 - бизнес-код ещё не пишется;
-- БД и миграции ещё не созданы;
 - SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка, UI-шаблон, CSS (14 классов), маршрут `/superadmin`, sidebar. QA пройден.
 - SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021.
+- SUPERADMIN Stage 3 — SQL-миграции созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12): 4 таблицы созданы корректно, JSON/FK/индексы подтверждены, временная БД удалена.
+- Целевая версия MySQL: 5.7+ (DECISION-0022, 2026-06-12). Тип JSON используется для `companies.settings_json`.
 - авторизация, роли в коде ещё не реализованы;
 - Windows PowerShell command rules зафиксированы (DECISION-0020, commit f36ba81).
 
 ## Текущий фокус
 
-Текущий фокус: SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц. Следующий шаг: SUPERADMIN Stage 2 implementation — создание миграций.
+Текущий фокус: SUPERADMIN Stage 3 — SQL-миграции центральной БД созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12). Следующий шаг: commit после разрешения владельца.
 
 Ближайший порядок:
 
@@ -235,7 +236,7 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md`. Решение DECISION-0021 зафиксировано. Незакоммиченные MD-файлы ожидают commit после разрешения владельца.
+Активная задача: SUPERADMIN Stage 3 — SQL-миграции центральной БД созданы и проверены dry-run (2026-06-12). 4 migration-файла применены к временной БД MySQL 8.4.9 без ошибок. JSON/FK/21 индекс подтверждены. Временная БД удалена. Следующий шаг: commit после разрешения владельца.
 
 Следующий рабочий шаг:
 1. ~~Проверить/утвердить UI-фундамент.~~ **DONE.**
@@ -244,7 +245,9 @@ dc75ab4 Create minimal PHP application skeleton
 4. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
 5. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
 6. Commit (после разрешения владельца).
-7. SUPERADMIN Stage 2 implementation: создание миграций.
+7. ~~SUPERADMIN Stage 3: создание миграций (erp-coder).~~ **DONE (2026-06-12).**
+8. ~~SUPERADMIN Stage 3 dry-run на MySQL 8.4.9 (erp-architect).~~ **DONE (2026-06-12).**
+9. Commit (после разрешения владельца).
 
 ## Утверждённая архитектура ERP PLANEX
 
@@ -285,9 +288,11 @@ SUPERADMIN не является обычным пользователем ло�
 
 SUPERADMIN Stage 1: принят (2026-06-12). Созданы: `docs/architecture/SUPERADMIN.md`, `docs/ui/pages/superadmin-dashboard.md` (UI-шаблон), `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php` (страница), 14 CSS-классов в `app.css`, маршрут `/superadmin`, sidebar обновлён.
 
-SUPERADMIN Stage 2: документация выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц: `companies`, `features`, `company_features`, `superadmin_users`. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Решение DECISION-0021.
+SUPERADMIN Stage 2: документация выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц: `companies`, `features`, `company_features`, `superadmin_users`. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Решения DECISION-0021, DECISION-0022.
 
-Следующий этап: Stage 2 implementation — создание миграций на основе `SUPERADMIN_DATABASE.md`.
+SUPERADMIN Stage 3: SQL-миграции созданы (2026-06-12). 4 migration-файла в `database/migrations/`. Исправлен `.gitignore` для трекинга миграций.
+
+Следующий этап: QA-проверка миграций erp-qa-tester.
 
 ## Модель локальной ERP
 
@@ -514,6 +519,10 @@ config/app.php
 config/database.php
 database/
   migrations/.gitkeep
+  migrations/001_create_superadmin_companies.sql
+  migrations/002_create_superadmin_features.sql
+  migrations/003_create_superadmin_company_features.sql
+  migrations/004_create_superadmin_users.sql
   seeds/.gitkeep
 docs/
   ai/
@@ -632,5 +641,7 @@ FINAL REPORT должен содержать:
 2026-06-12 00:37 — KILO/erp-architect: зафиксированы Windows PowerShell command rules (DECISION-0020). Создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`. Обновлены 4 проектных MD-документа. Правила добавлены в главные запреты и список обязательного чтения.
 
 2026-06-12 00:44 — KILO/erp-architect: SUPERADMIN Stage 1 принят. Исправлены 3 QA-замечания (`.module-card-status` CSS, `&mdash;` в заголовке). PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404. Все PHP-файлы `php -l` OK. Секретов нет. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.
+
+2026-06-12 01:00 — KILO/erp-coder: SUPERADMIN Stage 3 — SQL-миграции созданы. 4 migration-файла в `database/migrations/`. Исправлен `.gitignore` для трекинга миграций. Обновлены: текущий фокус, текущая задача, статус проекта.
 
 2026-06-12 00:48 — KILO/erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` (~450 строк) с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Обновлены: `SUPERADMIN.md`, `DECISIONS_LOG.md`, `PROJECT_STATUS.md`, `AGENT_WORK_LOG.md`. Commit `c50b942`. Следующий шаг: создание миграций.

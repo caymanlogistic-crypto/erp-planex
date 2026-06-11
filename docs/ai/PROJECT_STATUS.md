@@ -6,7 +6,7 @@
 
 ## Текущий фокус
 
-SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): точная спецификация 4 таблиц (`companies`, `features`, `company_features`, `superadmin_users`) создана в `docs/architecture/SUPERADMIN_DATABASE.md`. Закреплён безопасный подход к DB credentials, default-deny модель feature toggles, конвенция кодов feature. Следующий шаг: SUPERADMIN Stage 2 implementation — создание миграций. Workflow MD-шаблонов страниц закреплён и готов к использованию.
+SUPERADMIN Stage 3 — SQL-миграции центральной БД созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12): 4 таблицы созданы корректно, JSON/FK/21 индекс подтверждены, временная БД удалена. Следующий шаг: commit после разрешения владельца. Workflow MD-шаблонов страниц закреплён и готов к использованию.
 
 ## Уже принято
 
@@ -84,7 +84,7 @@ SUPERADMIN Stage 2 — документация центральной БД вы
 
 ## Заблокировано
 
-Нет блокеров. SUPERADMIN Stage 2 — документация выполнена. Следующий шаг: SUPERADMIN Stage 2 implementation — создание миграций.
+Нет блокеров. SUPERADMIN Stage 3 — миграции созданы и проверены dry-run. Следующий шаг: commit после разрешения владельца.
 
 ## Следующий рекомендуемый шаг
 
@@ -96,7 +96,9 @@ SUPERADMIN Stage 2 — документация центральной БД вы
 6. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
 7. ~~Приёмка архитектором (erp-architect).~~ **DONE (2026-06-12).**
 8. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
-9. SUPERADMIN Stage 2 implementation: создание миграций для центральной БД.
+9. ~~SUPERADMIN Stage 2 implementation: создание миграций для центральной БД.~~ **DONE (2026-06-12).**
+10. ~~SUPERADMIN Stage 3 dry-run на MySQL 8.4.9.~~ **DONE (2026-06-12).**
+11. Commit после разрешения владельца.
 
 - Проведена верификация обновлённой папки `docs`. Удалён физически оставшийся `docs/ui/UI_UX_RULES.md`. Исправлены 3 устаревшие ссылки на него в агентах. Удалён временный `docs/_DOCS_AUDIT_AND_CLEANUP.md`. Папка `docs/ui/ui/` отсутствует. Ссылки в документации синхронизированы. Commit `bc8e2e9`.
 - Проверен и утверждён UI-фундамент: документация синхронизирована, `_PAGE_TEMPLATE.md` обновлён под формат handoff дизайнера, runtime/syntax checks пройдены. UI готов к использованию в business-coding workflow.
@@ -111,8 +113,9 @@ SUPERADMIN Stage 2 — документация центральной БД вы
 - QA-замечания исправлены (2026-06-12, агент: erp-architect): `.module-card-status` CSS, `&mdash;` в заголовке. PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404.
 - SUPERADMIN Stage 1 принят. Все синтаксические и runtime проверки пройдены.
 
-- Зафиксированы обязательные правила Windows PowerShell для агентов (2026-06-12, агент: erp-architect): создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`, обновлены 4 проектных MD-документа, зафиксировано решение DECISION-0020. Commit: `f36ba81`.
+- SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): создан `docs/architecture/SUPERADMIN_DATABASE.md`.
+- SUPERADMIN Stage 3 — SQL-миграции созданы и проверены dry-run (2026-06-12): 4 таблицы на MySQL 8.4.9 без ошибок, JSON/FK/индексы подтверждены, временная БД удалена.
 
 ## Последнее обновление
 
-2026-06-12 00:48 — erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Следующий шаг: создание миграций.
+2026-06-12 01:10 — erp-architect: SUPERADMIN Stage 3 dry-run на MySQL 8.4.9 пройден. Все 4 таблицы созданы корректно. JSON/FK/21 индекс подтверждены. Временная БД удалена. Следующий шаг: commit.
