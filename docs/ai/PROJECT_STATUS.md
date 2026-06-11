@@ -6,7 +6,7 @@
 
 ## Текущий фокус
 
-Агентская сеть для KILO проработана. Базовый дизайн-код интегрирован в PHP-каркас. Перед бизнес-кодом нужно проверить/утвердить UI-фундамент, затем перейти к PDO-обёртке и роутеру.
+Настроены 4 проектных KILO-агента (`.kilo/agent/`) и `kilo.jsonc` с `default_agent: erp-architect`. Агентская сеть теперь работает внутри KILO без внешнего ChatGPT-координатора. Следующий шаг: PDO-обёртка и роутер.
 
 ## Уже принято
 
@@ -63,6 +63,13 @@
   - `app/View/pages/ui_demo.php`
   - `public/index.php` теперь показывает техническую UI demo-страницу.
 - Commit `473f748` — агентская сеть и UI-фундамент зафиксированы.
+- Настроены 4 проектных KILO-агента:
+  - `.kilo/agent/erp-architect.md` — главный координатор (primary).
+  - `.kilo/agent/erp-uiux-designer.md` — UI/UX-дизайнер (subagent).
+  - `.kilo/agent/erp-coder.md` — исполнитель разработки (subagent).
+  - `.kilo/agent/erp-qa-tester.md` — тестировщик (subagent).
+  - `kilo.jsonc` с `default_agent: erp-architect`.
+- Агентская сеть теперь внутри KILO; внешний ChatGPT-координатор исключён из агентного цикла.
 
 ## Заблокировано
 
@@ -77,4 +84,4 @@
 
 ## Последнее обновление
 
-2026-06-11 18:06 — ChatGPT/Codex: добавлены документы `AGENT_NETWORK.md` и `DESIGN_CODE_INTEGRATION.md`; базовый UI-фундамент интегрирован в PHP-каркас без бизнес-логики; commit `473f748`.
+2026-06-11 20:23 — KILO/erp-coder: настроены 4 проектных KILO-агента (`.kilo/agent/`); создан `kilo.jsonc` с `default_agent: erp-architect`; обновлены AGENTS.md, AGENT_NETWORK.md, KILO_WORKFLOW.md, DECISIONS_LOG.md, AGENT_WORK_LOG.md, ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md. Добавлено решение DECISION-0016.

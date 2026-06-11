@@ -628,3 +628,93 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-11 20:23 — KILO/erp-coder / Настройка проектных KILO-агентов
+
+### Задача
+Настроить 4 проектных KILO-режима (агента) ERP PLANEX вместо стандартных режимов. Создать/обновить `.kilocodemodes`, обновить документацию.
+
+### Исходный контекст
+Прочитаны:
+- README.md
+- AGENTS.md
+- docs/ai/PROJECT_STATUS.md
+- docs/ai/DECISIONS_LOG.md
+- docs/ai/AGENT_WORK_LOG.md
+- docs/ai/AGENT_NETWORK.md
+- docs/ai/KILO_WORKFLOW.md
+- docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md
+
+Исследована документация KILO: `.kilocodemodes` — legacy-формат, текущая версия KILO использует agent `.md` файлы в `.kilo/agent/`.
+
+### Что сделано
+- Создана директория `.kilo/agent/`.
+- Созданы 4 проектных KILO-агента:
+  - `erp-architect.md` — главный координатор (primary).
+  - `erp-uiux-designer.md` — UI/UX-дизайнер (subagent).
+  - `erp-coder.md` — исполнитель разработки (subagent).
+  - `erp-qa-tester.md` — тестировщик (subagent).
+- Создан `kilo.jsonc` с `default_agent: erp-architect` и `$schema`.
+- Обновлены MD-документы:
+  - `AGENTS.md` — добавлена таблица проектных KILO-режимов.
+  - `docs/ai/AGENT_NETWORK.md` — обновлены роли с 4 KILO-агентами вместо ChatGPT-координатора.
+  - `docs/ai/KILO_WORKFLOW.md` — добавлена информация об агентах.
+  - `docs/ai/PROJECT_STATUS.md` — обновлён фокус и список сделанного.
+  - `docs/ai/DECISIONS_LOG.md` — добавлено решение DECISION-0016.
+  - `docs/ai/AGENT_WORK_LOG.md` — эта запись.
+  - `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` — обновлён контекст.
+- `.kilocodemodes` НЕ создан — это legacy-формат; точный формат файла не задокументирован в текущей версии KILO.
+
+### Изменённые файлы
+- `.kilo/agent/erp-architect.md` (создан)
+- `.kilo/agent/erp-uiux-designer.md` (создан)
+- `.kilo/agent/erp-coder.md` (создан)
+- `.kilo/agent/erp-qa-tester.md` (создан)
+- `kilo.jsonc` (создан)
+- `AGENTS.md` (обновлён)
+- `docs/ai/AGENT_NETWORK.md` (обновлён)
+- `docs/ai/KILO_WORKFLOW.md` (обновлён)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/DECISIONS_LOG.md` (обновлён)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+
+### Принятые решения
+- DECISION-0016: Переход от внешнего ChatGPT-координатора к внутренним проектным KILO-агентам.
+- `.kilocodemodes` не создаётся — это legacy-формат, текущая версия KILO использует agent `.md` файлы.
+
+### Что НЕ сделано
+- `.kilocodemodes` не создан — точный формат не задокументирован в текущей версии KILO.
+- Бизнес-код не писался.
+- БД и миграции не создавались.
+- SUPERADMIN не начинался.
+
+### Причина невыполнения
+`.kilocodemodes` — legacy-формат старого VSCode-расширения. Текущая версия KILO использует agent `.md` файлы. Документация KILO описывает только migration mapping legacy-формата, но не его точную структуру. Текущий подход (agent `.md` + `kilo.jsonc`) полностью достигает цели настройки проектных агентов.
+
+### Проверки
+- 4 agent `.md` файла существуют в `.kilo/agent/`: OK.
+- `kilo.jsonc` существует с `default_agent: erp-architect`: OK.
+- `erp-architect` имеет `mode: primary`: OK.
+- `erp-uiux-designer`, `erp-coder`, `erp-qa-tester` имеют `mode: subagent`: OK.
+- MD-документы обновлены: OK.
+- `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` обновлён: OK.
+- Бизнес-код не затронут: OK.
+- БД не создана: OK.
+- SUPERADMIN не начат: OK.
+- `.env` не коммитился: OK.
+
+### Результат проверок
+Все проверки пройдены. Агенты настроены через текущий формат KILO. Проверить появление режимов в интерфейсе KILO можно командой `/agents` в CLI или через `<leader>a` в TUI.
+
+### Риски
+- `.kilocodemodes` не создан (legacy-формат). Если владельцу принципиален именно этот файл, потребуется уточнить его точный формат.
+- Проверка доступности агентов в интерфейсе KILO может потребовать перезапуска KILO-сессии.
+
+### Следующий шаг
+Проверить появление агентов в KILO через `/agents`. После подтверждения — commit. Далее: PDO-обёртка и роутер.
+
+### Статус
+DONE
