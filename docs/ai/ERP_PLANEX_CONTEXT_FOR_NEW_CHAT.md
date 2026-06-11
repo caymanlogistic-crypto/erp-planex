@@ -205,6 +205,8 @@ docs/ui/pages/[page-name].md
 Актуальные последние commits на момент начала этой задачи:
 
 ```text
+f36ba81 Add Windows PowerShell command rules for agents
+766be66 Update portable context after PDO router commit
 1a139cb Create PDO database layer and GET router
 f336244 Approve ERP PLANEX UI foundation
 bc1ada4 Update portable context commit hash after cleanup
