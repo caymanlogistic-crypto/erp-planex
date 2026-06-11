@@ -334,3 +334,69 @@ docs/ui/pages/
 ### Статус
 
 active
+
+---
+
+## DECISION-0019 — SUPERADMIN Stage 1: минимальный каркас
+
+### Решение
+
+SUPERADMIN Stage 1 создаёт минимальный архитектурный и технический каркас центральной панели SUPERADMIN без бизнес-логики.
+
+Конкретные решения Stage 1:
+
+1. **Маршрут**: `/superadmin` — простой путь, совместимый с текущим посегментным Router.
+2. **Структура папок**: `app/Superadmin/` — модуль SUPERADMIN в общем коде.
+3. **Файловая папка** `erp/superadmin/` зарезервирована под будущее развёртывание центральной панели как отдельной точки входа.
+4. **UI**: страница-заглушка dashboard с информационными карточками, навигационными пунктами (disabled), empty states.
+5. **Интеграция**: существующий layout/main.php и UI-фундамент.
+6. **Архитектурные документы**: `docs/architecture/SUPERADMIN.md`, `docs/ui/pages/superadmin-dashboard.md`.
+
+Что НЕ входит в Stage 1:
+- Центральная БД, таблицы, миграции
+- Авторизация, login/logout, сессии
+- CRUD компаний, пользователей SUPERADMIN
+- Feature toggles (код и UI)
+- Бизнес-модули
+
+### Причина
+
+SUPERADMIN должен начинаться с минимального проверяемого каркаса, а не с полноценной реализации. Это соответствует правилу маленьких задач: одна задача — один понятный результат.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0020 — Windows PowerShell command rules
+
+### Решение
+
+Зафиксировать обязательные правила выполнения команд в Windows PowerShell для всех агентов проекта.
+
+Конкретные правила:
+1. Проект работает на Windows. Команды выполняются в Windows PowerShell 5.1, которая не является Linux shell.
+2. **Запрещено** использовать Linux-style `curl` синтаксис в PowerShell: `curl` — это alias для `Invoke-WebRequest`, флаги `-s`, `-o NUL`, `-w` несовместимы.
+3. Для HTTP-проверок использовать `Invoke-WebRequest` с `-UseBasicParsing` или `cmd.exe /c curl.exe`.
+4. Для проверки HTTP 4xx/5xx использовать try/catch, чтобы PowerShell не прерывал выполнение.
+5. В спорных случаях для Git использовать `cmd.exe /c "git ..."` или `git --no-pager`.
+6. Команды должны быть проверяемыми и не должны зависать.
+7. Если команда сломалась из-за оболочки — это не ACCEPTED, нужно повторить корректной командой.
+8. Shell-ошибки из-за несовместимости — tooling/runtime issues, не app failures.
+
+Правила зафиксированы в отдельном документе: `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`.
+
+Ссылки добавлены в: `KILO_PROJECT_RULES.md`, `QA_CHECKLIST.md`, `DEEPSEEK_CODER_RULES.md`, `TASK_TEMPLATE.md`.
+
+### Причина
+
+Во время QA SUPERADMIN Stage 1 (2026-06-12) агент использовал Linux-style `curl` команду в PowerShell:
+```
+curl -s -o NUL -w "%{http_code}" http://127.0.0.1:8015/superadmin
+```
+PowerShell воспринял `curl` как alias для `Invoke-WebRequest`, команда сломалась, QA-проверка зависла/остановилась. Чтобы предотвратить повторение, правила зафиксированы как системное требование.
+
+### Статус
+
+active

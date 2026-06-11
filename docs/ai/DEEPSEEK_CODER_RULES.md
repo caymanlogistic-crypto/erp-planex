@@ -58,6 +58,16 @@ git status
 php -l path/to/file.php
 ```
 
+### Windows PowerShell Command Rules
+
+Проект работает на Windows. Команды выполняются в PowerShell 5.1, не в Linux shell.
+
+- Не использовать Linux-style `curl` синтаксис (`-s`, `-o NUL`, `-w`).
+- Для HTTP-проверок: `powershell -Command "(Invoke-WebRequest -Uri 'http://host' -UseBasicParsing).StatusCode"`.
+- Для проверки 4xx/5xx: использовать try/catch.
+- Если Git даёт мусорный вывод: `cmd.exe /c "git ..."` или `git --no-pager`.
+- Полные правила: `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`.
+
 Для всех изменённых PHP-файлов — `php -l`.
 
 Если есть тесты, миграции или runtime-страница — выполнить применимые проверки.

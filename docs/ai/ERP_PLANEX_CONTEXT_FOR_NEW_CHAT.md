@@ -87,6 +87,7 @@ C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\
 10. `docs/ai/KILO_PROJECT_RULES.md` — проектные правила KILO.
 11. `docs/ai/TASK_TEMPLATE.md` — шаблон постановки задач.
 12. `docs/ai/QA_CHECKLIST.md` — чеклист приёмки.
+13. `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md` — правила выполнения команд в Windows PowerShell (обязательно!).
 13. Профильные документы из `docs/architecture/`, `docs/business/`, `docs/ui/` по теме задачи.
 
 Если задача связана с KILO, агентами, режимами, промтами или маршрутизацией, обязательно читать также:
@@ -182,18 +183,19 @@ docs/ui/pages/[page-name].md
 - правила логирования, QA, KILO и переносимого контекста закреплены;
 - бизнес-код ещё не пишется;
 - БД и миграции ещё не созданы;
-- SUPERADMIN ещё не начат;
-- авторизация, роли в коде ещё не реализованы.
+- SUPERADMIN Stage 1 реализован (страница-заглушка);
+- авторизация, роли в коде ещё не реализованы;
+- Windows PowerShell command rules зафиксированы (DECISION-0020).
 
 ## Текущий фокус
 
-Текущий фокус: PDO-обёртка и роутер созданы. Следующий шаг — SUPERADMIN.
+Текущий фокус: SUPERADMIN Stage 1 реализован (страница-заглушка). Следующий шаг — QA-проверка.
 
 Ближайший порядок:
 
 1. ~~Проверить/утвердить UI-фундамент и дизайн-код.~~ **DONE (2026-06-11).**
 2. ~~Перейти к техническому ядру: PDO-обёртка и роутер.~~ **DONE (2026-06-11).**
-3. Затем отдельной задачей начинать SUPERADMIN.
+3. ~~Начать SUPERADMIN.~~ **DONE (2026-06-12) — Stage 1.**
 4. Любые бизнес-страницы делать только через workflow `erp-uiux-designer → erp-coder → erp-qa-tester` с MD-шаблоном страницы.
 
 Главный запрет: **не давать агенту размытые задачи типа “делай ERP”**.
@@ -227,14 +229,15 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активной незакрытой задачи нет.
-
-Последняя завершённая задача: создание PDO-обёртки и простого GET-роутера (2026-06-11). Созданы `app/Core/Database.php` (lazy PDO wrapper, utf8mb4, безопасная обработка ошибок) и `app/Http/Router.php` (GET-роутер с параметрами `{id}`, посегментное сравнение, HTTP 404). `public/index.php` обновлён: интегрированы Database и Router, зарегистрированы маршруты `/`, `/test`, `/test-db`. Все 17 PHP-файлов проходят `php -l`, все runtime-проверки пройдены.
+Активная задача: SUPERADMIN Stage 1 реализован (2026-06-12, erp-coder). QA-проверка была начата, но зависла из-за использования Linux-style curl в Windows PowerShell. Зафиксированы Windows PowerShell Command Rules (DECISION-0020, 2026-06-12). Требуется повторная QA-проверка с использованием PowerShell-совместимых команд.
 
 Следующий рабочий шаг:
 1. ~~Проверить/утвердить UI-фундамент.~~ **DONE.**
 2. ~~Отдельной задачей перейти к PDO-обёртке и простому роутеру.~~ **DONE.**
-3. После этого отдельной задачей начинать SUPERADMIN.
+3. ~~Реализовать страницу `/superadmin` по MD-шаблону (erp-coder).~~ **DONE (2026-06-12).**
+4. ~~Зафиксировать Windows PowerShell command rules.~~ **DONE (2026-06-12).**
+5. Повторная QA-проверка страницы (erp-qa-tester) с PowerShell-совместимыми командами.
+6. Приёмка архитектором (erp-architect).
 
 ## Утверждённая архитектура ERP PLANEX
 
@@ -273,7 +276,7 @@ SUPERADMIN должен в будущем управлять:
 
 SUPERADMIN не является обычным пользователем локальной ERP.
 
-SUPERADMIN ещё не начат.
+SUPERADMIN Stage 1: UI-шаблон `docs/ui/pages/superadmin-dashboard.md` создан (2026-06-11). Код реализован (2026-06-12): страница, CSS, маршрут, sidebar.
 
 ## Модель локальной ERP
 
@@ -485,10 +488,13 @@ app/
   Http/
     Router.php
   Support/helpers.php
+  Superadmin/
+    .gitkeep
   View/
     layouts/main.php
     components/
     pages/ui_demo.php
+    pages/superadmin_dashboard.php
 bootstrap/app.php
 config/app.php
 config/database.php
@@ -594,7 +600,8 @@ FINAL REPORT должен содержать:
 - Не записывать MYSQL-пароль в этот MD-файл.
 - Не коммитить `.env`.
 - Не придумывать неподтверждённые бизнес-правила.
-- Не давать KILO размытые задачи типа “делай ERP”.
+- Не давать KILO размытые задачи типа "делай ERP".
+- **Не использовать Linux-style команды в Windows PowerShell** (curl, grep и т.д. с Linux-флагами). Все команды должны быть PowerShell-совместимыми. Полные правила: `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`.
 
 ## Последнее обновление этого файла
 
@@ -602,4 +609,10 @@ FINAL REPORT должен содержать:
 
 2026-06-11 23:50 — KILO/erp-architect: PDO-обёртка и роутер созданы через agent workflow (coder → QA → architect), QA ACCEPTED. Техническое ядро готово, следующий шаг — SUPERADMIN. Предыдущее: 2026-06-11 23:35 — UI-фундамент проверен и утверждён.
 
+2026-06-11 23:57 — KILO/erp-uiux-designer: создан MD-шаблон `docs/ui/pages/superadmin-dashboard.md` для SUPERADMIN Stage 1. Обновлены: текущая задача, статус SUPERADMIN.
+
 2026-06-11 23:45 — KILO/erp-coder: PDO-обёртка Database и простой GET-роутер Router созданы, проверены, интегрированы в `public/index.php`. Обновлены: текущий фокус, текущая задача, структура, статус проекта.
+
+2026-06-12 00:01 — KILO/erp-coder: SUPERADMIN Stage 1 реализован. Созданы `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php`, 13 новых CSS-классов в `app.css`, маршрут `/superadmin` в `index.php`, sidebar обновлён. Все проверки пройдены.
+
+2026-06-12 00:37 — KILO/erp-architect: зафиксированы Windows PowerShell command rules (DECISION-0020). Создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`. Обновлены `KILO_PROJECT_RULES.md`, `QA_CHECKLIST.md`, `DEEPSEEK_CODER_RULES.md`, `TASK_TEMPLATE.md`. Правила добавлены в главные запреты и список обязательного чтения.

@@ -22,6 +22,31 @@
 - [ ] Непроверенные части явно зафиксированы.
 - [ ] Блокеры записаны как NEEDS_OWNER_DECISION или BLOCKED.
 
+## Windows PowerShell HTTP Runtime Checks
+
+**Обязательный пункт**: HTTP runtime checks on Windows must use PowerShell-safe commands.
+
+Проект работает на Windows. PowerShell 5.1 отличается от Linux shell. `curl` в PowerShell — это alias для `Invoke-WebRequest`, Linux-флаги (`-s`, `-o NUL`, `-w`) ломаются.
+
+Правильные команды для HTTP-проверок на Windows:
+
+```powershell
+# HTTP 200
+powershell -Command "(Invoke-WebRequest -Uri 'http://127.0.0.1:8015/superadmin' -UseBasicParsing).StatusCode"
+
+# HTTP 404 с try/catch (без try/catch прервёт проверку как ошибку)
+powershell -Command "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8015/nonexistent' -UseBasicParsing; $r.StatusCode } catch { $_.Exception.Response.StatusCode.value__ }"
+
+# Проверка контента
+powershell -Command "(Invoke-WebRequest -Uri 'http://127.0.0.1:8015/superadmin' -UseBasicParsing).Content -match 'SUPERADMIN'"
+```
+
+Если команда сломалась из-за оболочки — это не ACCEPTED, нужно повторить корректной командой.
+
+Полные правила: `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`.
+
+---
+
 ## QA для кода
 
 - [ ] PHP-файлы проходят `php -l`.

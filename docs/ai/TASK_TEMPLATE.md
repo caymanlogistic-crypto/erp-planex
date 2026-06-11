@@ -25,6 +25,19 @@
 2. ...
 3. ...
 
+## WINDOWS COMMAND RULES
+
+Проект работает на Windows. Все shell-команды выполняются в **Windows PowerShell 5.1**, который не является Linux shell.
+
+Обязательные правила:
+- **Не использовать Linux curl синтаксис в PowerShell** (curl — это alias для Invoke-WebRequest, флаги `-s`, `-o NUL`, `-w` несовместимы).
+- Для HTTP-проверок использовать `Invoke-WebRequest` или `cmd.exe /c curl.exe`.
+- Для проверки 4xx/5xx использовать try/catch, чтобы PowerShell не прерывал проверку как ошибку.
+- Если Git в PowerShell даёт мусорный/битый вывод, использовать `cmd.exe /c "git ..."`.
+- Shell errors из-за несовместимости с PowerShell — это tooling/runtime issues, не app failures.
+- Сломанная команда — не ACCEPTED, нужно повторить корректной.
+- Полные правила: `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`.
+
 ## Что запрещено
 
 - Не придумывать неподтверждённые бизнес-правила.

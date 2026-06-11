@@ -41,6 +41,14 @@ PHP / MySQL
 - Если `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` не обновлялся — указать причину в FINAL REPORT. Если есть сомнение, обновлять файл или нет, обновить его или записать в `AGENT_WORK_LOG.md`, почему обновление не требуется.
 - Для UI и дизайн-кода читать `docs/ui/DESIGN_CODE_INTEGRATION.md` и не создавать разрозненные стили.
 
+## Windows PowerShell Command Rules
+
+Проект работает на Windows. Агенты выполняют команды через Windows PowerShell 5.1, который отличается от Linux shell.
+
+- **Запрещено** использовать Linux-style `curl` синтаксис в PowerShell (`curl -s -o NUL -w` и т.д.).
+- Для HTTP-проверок использовать `Invoke-WebRequest` или `cmd.exe /c curl.exe`.
+- Полные правила: `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`.
+
 ## При нехватке данных
 
 - Остановиться.

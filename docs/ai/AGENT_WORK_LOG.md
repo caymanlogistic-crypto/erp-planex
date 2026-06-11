@@ -1254,3 +1254,259 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-11 23:57 — KILO/erp-uiux-designer / MD-шаблон SUPERADMIN dashboard
+
+### Задача
+Создать MD-шаблон страницы SUPERADMIN dashboard: `docs/ui/pages/superadmin-dashboard.md`.
+
+### Исходный контекст
+Прочитаны обязательные файлы:
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ui/PAGE_PATTERN.md`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`
+- `docs/architecture/SUPERADMIN.md`
+- `app/View/layouts/main.php`
+- `public/assets/css/app.css`
+
+Техническое ядро готово (PDO-обёртка, роутер). Следующий шаг — SUPERADMIN Stage 1. По workflow `DECISION-0019` и `DECISION-0017`, перед реализацией страницы дизайнер создаёт MD-шаблон.
+
+### Что сделано
+- Создан файл `docs/ui/pages/superadmin-dashboard.md` (272 строки, ~18 КБ) строго по формату `_PAGE_TEMPLATE.md`.
+- Описана страница-заглушка SUPERADMIN dashboard Stage 1:
+  - **Тип**: admin settings / dashboard.
+  - **Route**: `/superadmin`.
+  - **Пользователь**: SUPERADMIN.
+  - **Layout**: существующий `main.php` (topbar 38px + sidebar 224px + content), min-width 1440px, без inspector, без нижней формы.
+  - **Page head**: title "SUPERADMIN — Центральная панель", 4 summary-карточки (Компании, Пользователи SUPERADMIN, Активные features, Статус системы) — все статичные, без реальных данных.
+  - **Navigation**: 6 пунктов будущих разделов (все disabled, серые, с бейджем "Скоро").
+  - **Main content**: информационный alert + сетка 2×2 карточек модулей (Управление компаниями, Пользователи SUPERADMIN, Feature toggles, Системные настройки) — все статичные, не кликабельные.
+  - **Empty states**: для навигации и карточек модулей.
+  - **CSS/classes**: только существующие классы из `app.css` + 13 новых классов с пометкой "requires new CSS".
+  - **Acceptance checklist**: 22 пункта проверок для кодера и QA.
+- Все 15 обязательных секций `_PAGE_TEMPLATE.md` заполнены (неприменимые явно отмечены "не применимо" или "нет").
+- Все запреты соблюдены: без бизнес-логики, без БД, без авторизации, без реальных иконок/данных, без Bootstrap/Tailwind, без inline styles.
+
+### Изменённые файлы
+- `docs/ui/pages/superadmin-dashboard.md` (создан)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+
+### Принятые решения
+Нет. Новых архитектурных решений не принималось. Шаблон реализован в рамках DECISION-0019 (SUPERADMIN Stage 1).
+
+### Что НЕ сделано
+- Код не писался (это задача erp-coder).
+- CSS не изменялся (новые классы предложены, но не добавлены в `app.css`).
+- БД и миграции не создавались.
+- Авторизация не проектировалась.
+- Бизнес-логика не придумывалась.
+
+### Проверки
+- Файл `docs/ui/pages/superadmin-dashboard.md` существует: OK.
+- Все 15 секций `_PAGE_TEMPLATE.md` освещены: OK.
+- Нет противоречий с `DESIGN_CODE_INTEGRATION.md`: OK.
+- Используются только существующие CSS-классы из `app.css`: OK.
+- Новые классы помечены "requires new CSS": OK.
+- Layout соответствует `PAGE_PATTERN.md`: OK.
+- Нет бизнес-логики, БД, авторизации, реальных данных: OK.
+- Нет Bootstrap/Tailwind/React/Vue: OK.
+- Нет inline styles: OK.
+- Иконки — только текстовые заглушки: OK.
+
+### Результат проверок
+Все проверки пройдены. Шаблон готов к передаче erp-coder для реализации.
+
+### Риски
+- 13 новых CSS-классов предложены, но не добавлены в `app.css`. Кодер должен добавить их при реализации.
+- Шаблон содержит текстовые иконки-заглушки (`[=]`, `[#]`, `[🏢]` и т.д.) — кодер может заменить на более осмысленные текстовые символы, но не должен использовать реальные иконки/изображения.
+
+### Следующий шаг
+Передать шаблон erp-architect для ревью, затем erp-coder для реализации страницы `/superadmin`.
+
+### Статус
+DONE
+
+---
+
+## 2026-06-12 00:01 — KILO/erp-coder / SUPERADMIN Stage 1 — реализация страницы-заглушки
+
+### Задача
+Реализовать минимальный технический каркас SUPERADMIN Stage 1: страницу-заглушку `/superadmin` строго по UI-шаблону `docs/ui/pages/superadmin-dashboard.md`.
+
+### Исходный контекст
+Прочитаны обязательные файлы (13 шт.):
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/architecture/SUPERADMIN.md`
+- `docs/architecture/PHP_APP_SKELETON.md`
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ui/PAGE_PATTERN.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+- `app/View/layouts/main.php`
+- `app/Http/Router.php`
+- `public/index.php`
+- `public/assets/css/app.css`
+
+MD-шаблон `superadmin-dashboard.md` создан erp-uiux-designer. Решение DECISION-0019 определяет scope Stage 1: маршрут `/superadmin`, папка `app/Superadmin/`, страница-заглушка, интеграция с layout.
+
+### Что сделано
+- Создана директория модуля `app/Superadmin/` с `.gitkeep`.
+- Создана страница `app/View/pages/superadmin_dashboard.php` строго по UI-шаблону:
+  - **Page header**: title "SUPERADMIN — Центральная панель" (через существующий компонент `ui_page_header`).
+  - **Summary-карточки** (4 шт.): Компании, Пользователи SUPERADMIN, Активные features, Статус системы — статичные значения `—` / `OK`.
+  - **Информационный alert** `.alert.alert-info` с текстом о назначении панели.
+  - **Навигация будущих разделов** `.placeholder-nav`: 6 пунктов (все disabled, `aria-disabled="true"`), с бейджем "Скоро" (`.badge-soon`).
+  - **Сетка карточек модулей** `.cards-grid` (2×2): 4 карточки с иконками, названиями, статусом "В разработке" (`.status.status-neutral`) и описаниями.
+  - **Empty state** (hidden div) — запасной блок на случай отсутствия карточек.
+- Добавлены 13 новых CSS-классов в `public/assets/css/app.css` (перед медиа-запросами): `.summary-cards`, `.summary-card`, `.summary-card-icon`, `.summary-card-value`, `.summary-card-label`, `.placeholder-nav`, `.placeholder-nav-item`, `.placeholder-nav-icon`, `.badge-soon`, `.cards-grid`, `.module-card`, `.module-card-icon`, `.module-card-title`, `.module-card-desc`.
+- Зарегистрирован маршрут `GET /superadmin` в `public/index.php` (после `/test-db`, перед `$router->dispatch()`).
+- Обновлён sidebar в `app/View/layouts/main.php`: SUPERADMIN стал активной ссылкой (`.is-active` при текущем URI `/superadmin`).
+
+### Изменённые файлы
+- `app/Superadmin/` (создана директория)
+- `app/Superadmin/.gitkeep` (создан)
+- `app/View/pages/superadmin_dashboard.php` (создан)
+- `public/assets/css/app.css` (изменён — добавлены CSS-классы)
+- `public/index.php` (изменён — добавлен маршрут `/superadmin`)
+- `app/View/layouts/main.php` (изменён — sidebar SUPERADMIN)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+
+### Принятые решения
+Нет. Всё сделано строго в рамках DECISION-0019.
+
+### Что НЕ сделано
+- БД не подключалась (запрещено Stage 1).
+- Миграции не создавались.
+- Таблицы не создавались.
+- Авторизация / login / logout не добавлялись.
+- CRUD компаний / пользователей SUPERADMIN не реализовывался.
+- Feature toggles не добавлялись.
+- Интерактивность / JS-обработчики не добавлялись.
+- Навигационные пункты не делались кликабельными.
+- Реальные данные не добавлялись.
+- Bootstrap/Tailwind/React/Vue не использовались.
+- Inline styles не добавлялись.
+- Новые CSS-классы кроме перечисленных в UI-шаблоне не добавлялись.
+- Бизнес-логика не менялась.
+- Commit не выполнялся (запрещено задачей).
+
+### Проверки
+- `php -l app/View/pages/superadmin_dashboard.php` — No syntax errors.
+- `php -l public/index.php` — No syntax errors.
+- `php -l app/View/layouts/main.php` — No syntax errors.
+- `git status` — изменённые файлы видны, untracked файлы видны.
+- `.env` в gitignore — OK (`git check-ignore .env` возвращает `.env`).
+- PHP dev server на `127.0.0.1:8011` — запущен.
+- `curl http://127.0.0.1:8011/superadmin` — HTTP 200.
+- `curl http://127.0.0.1:8011/` — HTTP 200.
+- `curl http://127.0.0.1:8011/test` — HTTP 200.
+- `curl http://127.0.0.1:8011/nonexistent` — HTTP 404.
+- `git diff -- .` — секретов не обнаружено.
+- HTML-контент `/superadmin` проверен — все блоки отображаются, sidebar `.is-active` на SUPERADMIN, title "SUPERADMIN — ERP PLANEX".
+
+### Результат проверок
+Все проверки пройдены успешно. Страница открывается, старые маршруты не сломаны, 404 работает.
+
+### Риски
+- Sidebar: пункт "UI foundation" (`/`) всегда имеет класс `.is-active` (захардкожен) — не исправлялось, т.к. не входит в scope.
+- Эмодзи в HTML entity (`&#x1F3E2;`) — отображаются в браузере, но curl-вывод показывает raw entity.
+- Класс `.badge-soon` использует `background: #eef2f7` (хардкод цвета) — разрешено UI-шаблоном, т.к. аналог `.environment-badge`.
+
+### Следующий шаг
+QA-проверка страницы (`erp-qa-tester`), затем приёмка архитектором (`erp-architect`).
+
+### Статус
+DONE
+
+---
+
+## 2026-06-12 00:37 — KILO/erp-architect / Windows PowerShell Command Rules
+
+### Задача
+Зафиксировать в проектной документации обязательные правила выполнения команд в Windows PowerShell, чтобы KILO/DeepSeek агенты больше не ломали runtime-проверки Linux-style командами.
+
+### Исходный контекст
+Во время QA SUPERADMIN Stage 1 агент использовал в PowerShell команду:
+```
+curl -s -o NUL -w "%{http_code}" http://127.0.0.1:8015/superadmin
+```
+PowerShell воспринял `curl` как alias для `Invoke-WebRequest`, команда сломалась, QA-проверка зависла/остановилась.
+
+Прочитаны обязательные файлы:
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ai/DEEPSEEK_CODER_RULES.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+
+### Что сделано
+- Создан отдельный документ `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md` с полными правилами:
+  - проект работает на Windows;
+  - PowerShell отличается от Linux shell;
+  - нельзя использовать Linux-style curl flags в PowerShell;
+  - curl в PowerShell — alias для Invoke-WebRequest;
+  - правильные команды: `Invoke-WebRequest` с `-UseBasicParsing`, `cmd.exe /c curl.exe`;
+  - HTTP 4xx/5xx через try/catch;
+  - Git через `cmd.exe /c` или `--no-pager` при проблемах;
+  - команды должны быть проверяемыми и не должны зависать;
+  - сломанная команда — не ACCEPTED, нужно повторить корректной.
+- Добавлены ссылки/правила в:
+  - `KILO_PROJECT_RULES.md` — новый раздел "Windows PowerShell Command Rules".
+  - `QA_CHECKLIST.md` — новый раздел "Windows PowerShell HTTP Runtime Checks" с примерами команд.
+  - `DEEPSEEK_CODER_RULES.md` — дополнен раздел "Проверки" правилами PowerShell.
+  - `TASK_TEMPLATE.md` — новый блок "WINDOWS COMMAND RULES".
+- Зафиксировано решение DECISION-0020 в `DECISIONS_LOG.md`.
+- Обновлён `PROJECT_STATUS.md`.
+- Обновлён `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` — добавлено правило и ссылка.
+
+### Изменённые файлы
+- `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md` (создан)
+- `docs/ai/KILO_PROJECT_RULES.md` (обновлён)
+- `docs/ai/QA_CHECKLIST.md` (обновлён)
+- `docs/ai/DEEPSEEK_CODER_RULES.md` (обновлён)
+- `docs/ai/TASK_TEMPLATE.md` (обновлён)
+- `docs/ai/DECISIONS_LOG.md` (обновлён)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+
+### Принятые решения
+- DECISION-0020: Windows PowerShell command rules. Запрещён Linux-style синтаксис в PowerShell, зафиксированы правильные команды для HTTP-проверок и Git на Windows.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД и миграции не затрагивались.
+- Commit не выполнялся (запрещено без разрешения владельца).
+
+### Проверки
+- Файл `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md` создан: OK.
+- Все target-файлы обновлены (KILO_PROJECT_RULES, QA_CHECKLIST, DEEPSEEK_CODER_RULES, TASK_TEMPLATE): OK.
+- DECISIONS_LOG обновлён: OK.
+- ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md обновлён: OK.
+- Синтаксических проверок не требуется (только MD).
+
+### Результат проверок
+Все изменения применены. Документация синхронизирована.
+
+### Риски
+- Правила нужно донести до агента `erp-qa-tester` перед повторной проверкой SUPERADMIN Stage 1.
+- Если агенты продолжат копировать Linux-команды из интернета без адаптации к PowerShell, инциденты могут повториться. Правила теперь явно прописаны в 5 документах.
+
+### Следующий шаг
+Вернуться к QA-проверке SUPERADMIN Stage 1 с учётом новых Windows PowerShell правил. QA-агент должен использовать `Invoke-WebRequest` вместо `curl`.
+
+### Статус
+DONE
