@@ -6,7 +6,7 @@
 
 ## Текущий фокус
 
-SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка `/superadmin`, UI-шаблон, CSS, маршрут, sidebar — всё проверено, QA-замечания исправлены. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД. Workflow MD-шаблонов страниц закреплён и готов к использованию.
+SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): точная спецификация 4 таблиц (`companies`, `features`, `company_features`, `superadmin_users`) создана в `docs/architecture/SUPERADMIN_DATABASE.md`. Закреплён безопасный подход к DB credentials, default-deny модель feature toggles, конвенция кодов feature. Следующий шаг: SUPERADMIN Stage 2 implementation — создание миграций. Workflow MD-шаблонов страниц закреплён и готов к использованию.
 
 ## Уже принято
 
@@ -84,7 +84,7 @@ SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка 
 
 ## Заблокировано
 
-Нет блокеров. SUPERADMIN Stage 1 принят. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.
+Нет блокеров. SUPERADMIN Stage 2 — документация выполнена. Следующий шаг: SUPERADMIN Stage 2 implementation — создание миграций.
 
 ## Следующий рекомендуемый шаг
 
@@ -95,7 +95,8 @@ SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка 
 5. ~~Реализовать страницу `/superadmin` по шаблону (erp-coder).~~ **DONE (2026-06-12).**
 6. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
 7. ~~Приёмка архитектором (erp-architect).~~ **DONE (2026-06-12).**
-8. SUPERADMIN Stage 2: документация центральной БД.
+8. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
+9. SUPERADMIN Stage 2 implementation: создание миграций для центральной БД.
 
 - Проведена верификация обновлённой папки `docs`. Удалён физически оставшийся `docs/ui/UI_UX_RULES.md`. Исправлены 3 устаревшие ссылки на него в агентах. Удалён временный `docs/_DOCS_AUDIT_AND_CLEANUP.md`. Папка `docs/ui/ui/` отсутствует. Ссылки в документации синхронизированы. Commit `bc8e2e9`.
 - Проверен и утверждён UI-фундамент: документация синхронизирована, `_PAGE_TEMPLATE.md` обновлён под формат handoff дизайнера, runtime/syntax checks пройдены. UI готов к использованию в business-coding workflow.
@@ -114,4 +115,4 @@ SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка 
 
 ## Последнее обновление
 
-2026-06-12 00:44 — erp-architect: SUPERADMIN Stage 1 принят. QA-замечания исправлены (.module-card-status CSS, &mdash;). PowerShell-safe HTTP-проверки пройдены. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.
+2026-06-12 00:48 — erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Следующий шаг: создание миграций.

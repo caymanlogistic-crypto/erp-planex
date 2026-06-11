@@ -36,9 +36,9 @@ erp/superadmin/
 - Интеграция с существующим layout/UI-фундаментом
 - Базовая структура папок под будущие модули SUPERADMIN
 
-### Stage 2 — Центральная БД (будущий)
+### Stage 2 — Центральная БД
 
-- Документация центральной БД SUPERADMIN
+- ~~Документация центральной БД SUPERADMIN~~ **DONE (2026-06-12).** См. `docs/architecture/SUPERADMIN_DATABASE.md`.
 - Создание таблиц: `companies`, `features`, `company_features`, `superadmin_users`
 - Подключение SUPERADMIN к центральной БД
 - Миграции
@@ -139,11 +139,13 @@ docs/
 
 На Stage 1 БД не создаётся и не подключается. Класс `Database` (PDO-обёртка) уже существует в `app/Core/Database.php` и будет использован на Stage 2.
 
-Центральная БД SUPERADMIN (черновик в `DATABASE_DRAFT.md`):
+**Stage 2 (документация):** точная архитектурная спецификация центральной БД SUPERADMIN создана в `docs/architecture/SUPERADMIN_DATABASE.md`. Описаны 4 таблицы:
 - `companies` — зарегистрированные компании/локальные ERP
-- `features` — доступные функции
-- `company_features` — включение/отключение features по компаниям
-- `superadmin_users` — пользователи SUPERADMIN
+- `features` — реестр доступных функций (module/page/report/custom_report/action/integration/ui_block)
+- `company_features` — включение/отключение features по компаниям (default-deny)
+- `superadmin_users` — пользователи SUPERADMIN (отдельные от локальных users)
+
+Закреплён безопасный подход к DB credentials: пароли не хранятся в БД, только логический `db_identifier`.
 
 ## Пользователи SUPERADMIN
 
@@ -155,6 +157,7 @@ docs/
 - **DECISION-0013** — Feature toggles управляются из SUPERADMIN
 - **DECISION-0019** — SUPERADMIN Stage 1 scope, маршрут `/superadmin`, структура папок
 
-## Принятые решения (эта задача)
+## Принятые решения
 
 - **DECISION-0019**: SUPERADMIN Stage 1 — минимальный каркас. Маршрут: `/superadmin`. Структура: `app/Superadmin/`. Без БД, миграций, auth, CRUD, feature toggles. Зафиксировано в `DECISIONS_LOG.md`.
+- **DECISION-0021**: SUPERADMIN Stage 2 — точная схема центральной БД (4 таблицы). Определены поля, типы, индексы, FK, статусные модели, reserved-поля. Закреплён безопасный подход к DB credentials: пароли не хранятся в БД. Feature toggles: default-deny модель. Конвенция кодов feature: `type.name`. См. `docs/architecture/SUPERADMIN_DATABASE.md`.

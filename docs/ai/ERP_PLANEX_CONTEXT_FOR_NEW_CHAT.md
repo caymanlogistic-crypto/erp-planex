@@ -184,12 +184,13 @@ docs/ui/pages/[page-name].md
 - бизнес-код ещё не пишется;
 - БД и миграции ещё не созданы;
 - SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка, UI-шаблон, CSS (14 классов), маршрут `/superadmin`, sidebar. QA пройден.
+- SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021.
 - авторизация, роли в коде ещё не реализованы;
 - Windows PowerShell command rules зафиксированы (DECISION-0020, commit f36ba81).
 
 ## Текущий фокус
 
-Текущий фокус: SUPERADMIN Stage 1 принят (2026-06-12). Следующий шаг — SUPERADMIN Stage 2: документация центральной БД.
+Текущий фокус: SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц. Следующий шаг: SUPERADMIN Stage 2 implementation — создание миграций.
 
 Ближайший порядок:
 
@@ -233,15 +234,16 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: SUPERADMIN Stage 1 принят (2026-06-12). Страница-заглушка `/superadmin` создана, QA-замечания исправлены, HTTP-проверки пройдены. Незакоммиченные файлы ожидают commit после разрешения владельца.
+Активная задача: SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md`. Решение DECISION-0021 зафиксировано. Незакоммиченные MD-файлы ожидают commit после разрешения владельца.
 
 Следующий рабочий шаг:
 1. ~~Проверить/утвердить UI-фундамент.~~ **DONE.**
 2. ~~Создать PDO-обёртку и роутер.~~ **DONE.**
 3. ~~SUPERADMIN Stage 1: архитектура, UI-шаблон, реализация.~~ **DONE (2026-06-12).**
 4. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
-5. Commit (после разрешения владельца).
-6. SUPERADMIN Stage 2: документация центральной БД.
+5. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
+6. Commit (после разрешения владельца).
+7. SUPERADMIN Stage 2 implementation: создание миграций.
 
 ## Утверждённая архитектура ERP PLANEX
 
@@ -280,7 +282,11 @@ SUPERADMIN должен в будущем управлять:
 
 SUPERADMIN не является обычным пользователем локальной ERP.
 
-SUPERADMIN Stage 1: принят (2026-06-12). Созданы: `docs/architecture/SUPERADMIN.md`, `docs/ui/pages/superadmin-dashboard.md` (UI-шаблон), `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php` (страница), 14 CSS-классов в `app.css`, маршрут `/superadmin`, sidebar обновлён. Следующий этап: Stage 2 — центральная БД.
+SUPERADMIN Stage 1: принят (2026-06-12). Созданы: `docs/architecture/SUPERADMIN.md`, `docs/ui/pages/superadmin-dashboard.md` (UI-шаблон), `app/Superadmin/`, `app/View/pages/superadmin_dashboard.php` (страница), 14 CSS-классов в `app.css`, маршрут `/superadmin`, sidebar обновлён.
+
+SUPERADMIN Stage 2: документация выполнена (2026-06-12). Создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц: `companies`, `features`, `company_features`, `superadmin_users`. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Решение DECISION-0021.
+
+Следующий этап: Stage 2 implementation — создание миграций на основе `SUPERADMIN_DATABASE.md`.
 
 ## Модель локальной ERP
 
@@ -449,10 +455,12 @@ Feature toggles должны поддерживать:
 
 Центральная БД SUPERADMIN:
 
-- `companies`;
-- `features`;
-- `company_features`;
-- `superadmin_users`.
+- `companies` — реестр компаний (key, name, entity_type, status, folder_path, db_identifier, settings_json)
+- `features` — реестр функций (code, name, type, parent_code, is_system, is_active)
+- `company_features` — feature toggles (company_id, feature_code, is_enabled, enabled_from, enabled_until)
+- `superadmin_users` — пользователи SUPERADMIN (name, email, password_hash, role)
+
+Полная спецификация: `docs/architecture/SUPERADMIN_DATABASE.md`. DB credentials (пароли) НЕ хранятся в таблицах БД — только логический `db_identifier`.
 
 Локальная БД компании:
 
@@ -623,3 +631,5 @@ FINAL REPORT должен содержать:
 2026-06-12 00:37 — KILO/erp-architect: зафиксированы Windows PowerShell command rules (DECISION-0020). Создан `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`. Обновлены 4 проектных MD-документа. Правила добавлены в главные запреты и список обязательного чтения.
 
 2026-06-12 00:44 — KILO/erp-architect: SUPERADMIN Stage 1 принят. Исправлены 3 QA-замечания (`.module-card-status` CSS, `&mdash;` в заголовке). PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404. Все PHP-файлы `php -l` OK. Секретов нет. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.
+
+2026-06-12 00:48 — KILO/erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` (~450 строк) с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Обновлены: `SUPERADMIN.md`, `DECISIONS_LOG.md`, `PROJECT_STATUS.md`, `AGENT_WORK_LOG.md`. Следующий шаг: создание миграций.

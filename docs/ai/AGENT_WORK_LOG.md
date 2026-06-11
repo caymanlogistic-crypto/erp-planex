@@ -1556,9 +1556,128 @@ SUPERADMIN Stage 1 реализован erp-coder (2026-06-12). Предыдущ
 
 ### Риски
 - Все изменения в рабочем дереве. Commit — после разрешения владельца.
-
 ### Следующий шаг
+
 SUPERADMIN Stage 2: документация центральной БД.
 
 ### Статус
+
+DONE
+
+---
+
+## 2026-06-12 00:48 — KILO/erp-architect / SUPERADMIN Stage 2 — документация центральной БД
+
+### Задача
+
+Подготовить точную архитектурную спецификацию центральной БД SUPERADMIN: 4 таблицы (`companies`, `features`, `company_features`, `superadmin_users`). Документационная задача. Без кода, миграций, создания таблиц в MySQL.
+
+### Исходный контекст
+
+Прочитаны обязательные файлы (14 шт.):
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `README.md`
+- `AGENTS.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ai/WINDOWS_POWERSHELL_COMMAND_RULES.md`
+- `docs/architecture/DATABASE_DRAFT.md`
+- `docs/architecture/PHP_APP_SKELETON.md`
+- `docs/architecture/SUPERADMIN.md`
+- `docs/architecture/FEATURE_TOGGLES.md`
+- `docs/architecture/MULTI_COMPANY_DEPLOYMENT.md`
+
+SUPERADMIN Stage 1 принят. Черновик БД существует в `DATABASE_DRAFT.md`, но нужна точная спецификация перед созданием миграций.
+
+### Что сделано
+
+- Создан `docs/architecture/SUPERADMIN_DATABASE.md` — точная архитектурная спецификация центральной БД SUPERADMIN (~450 строк).
+- Описаны 4 таблицы с полным набором атрибутов:
+
+**1. `companies`** — центральный реестр компаний/локальных ERP:
+  - 12 полей: id, key (уникальный slug, неизменяем), name, short_name, entity_type, status (active/inactive/suspended/provisioning), folder_path, db_identifier (только имя БД, НЕ пароль), storage_path, settings_json (JSON), created_at, updated_at.
+  - 5 индексов: PRIMARY, uk_key, idx_status, idx_entity_type, idx_created_at.
+  - Статусная модель с переходами.
+  - 9 зарезервированных полей для будущих этапов.
+
+**2. `features`** — реестр всех функций (feature toggles):
+  - 11 полей: id, code (конвенция `type.name`), name, type (7 типов), description, parent_code (само-ссылка FK), is_system, is_active, sort_order, created_at, updated_at.
+  - 6 индексов: PRIMARY, uk_code, idx_type, idx_parent_code, idx_is_active, idx_sort_order.
+  - 7 типов feature: module, page, report, custom_report, action, integration, ui_block.
+  - 5 зарезервированных полей.
+
+**3. `company_features`** — связка компаний и функций:
+  - 9 полей: id, company_id (FK→companies, CASCADE), feature_code (FK→features, CASCADE), is_enabled, enabled_from, enabled_until, notes, created_at, updated_at.
+  - 6 индексов: PRIMARY, uk_company_feature (уникальность пары), idx_company_id, idx_feature_code, idx_is_enabled, idx_enabled_until.
+  - Default-deny модель: если записи нет — функция недоступна.
+  - Логика проверки: is_enabled=1 AND enabled_from ≤ NOW AND (enabled_until IS NULL OR enabled_until > NOW).
+
+**4. `superadmin_users`** — пользователи SUPERADMIN:
+  - 10 полей: id, name, email (уникальный), password_hash (bcrypt cost ≥ 12), role (admin/operator/viewer), is_active, last_login_at, last_login_ip, created_at, updated_at.
+  - 4 индекса: PRIMARY, uk_email, idx_is_active, idx_role.
+  - 9 зарезервированных полей (сброс пароля, 2FA, remember token, блокировка и др.).
+
+- Закреплён **безопасный подход к DB credentials**: таблица `companies` хранит только логический `db_identifier` (имя БД). Реальные пароли, хосты, порты — никогда в БД. Три варианта хранения credentials: локальный `.env`, центральный конфиг в `.gitignore`, HashiCorp Vault (production).
+- Описана цепочка проверки feature toggles (5 шагов) для будущей реализации.
+- Создана концептуальная диаграмма связей таблиц (ASCII).
+
+- Обновлён `docs/architecture/SUPERADMIN.md`: Stage 2 статус обновлён на DONE, добавлена ссылка на `SUPERADMIN_DATABASE.md`, обновлён раздел «Связь с центральной БД», добавлено решение DECISION-0021.
+- Зафиксировано решение DECISION-0021 в `docs/ai/DECISIONS_LOG.md`.
+- Обновлён `docs/ai/PROJECT_STATUS.md`: текущий фокус, следующий шаг, последнее обновление.
+- Обновлён `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`: статус SUPERADMIN, текущий фокус, следующий шаг, модель БД.
+- Обновлён `docs/ai/AGENT_WORK_LOG.md` (эта запись).
+
+### Изменённые файлы
+
+- `docs/architecture/SUPERADMIN_DATABASE.md` (создан)
+- `docs/architecture/SUPERADMIN.md` (обновлён — 3 правки)
+- `docs/ai/DECISIONS_LOG.md` (обновлён — DECISION-0021)
+- `docs/ai/PROJECT_STATUS.md` (обновлён — 3 правки)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён — см. ниже)
+
+### Принятые решения
+
+- **DECISION-0021**: Утверждена точная схема центральной БД SUPERADMIN (4 таблицы). Определены поля, типы, индексы, FK, статусные модели, reserved-поля. Закреплён безопасный подход к DB credentials (пароли не хранятся в БД). Feature toggles: default-deny модель. Конвенция кодов feature: `type.name`.
+
+### Что НЕ сделано
+
+- Код не писался.
+- Миграции не создавались.
+- Таблицы в MySQL не создавались.
+- Авторизация не начиналась.
+- CRUD не создавался.
+- SUPERADMIN Stage 1 skeleton не изменялся.
+- Commit не делался (запрещено задачей).
+- Секреты/пароли/DB credentials не добавлялись в код или MD.
+
+### Проверки
+
+- `git status` до работы: clean (nothing to commit, working tree clean).
+- Проверено, что не изменён код без необходимости: OK (все изменения — только MD-документация).
+- Проверено, что не созданы миграции: OK.
+- Проверено, что не добавлены секреты/пароли/DB credentials: OK (в SUPERADMIN_DATABASE.md описаны только названия полей, без реальных значений. Пароли не упоминаются в значениях. В DECISIONS_LOG.md описан подход без конкретных паролей).
+- `git status` после работы: см. ниже.
+
+### Результат проверок
+
+Все проверки пройдены. Изменены только MD-файлы. Код, миграции, БД не затронуты. Секретов нет.
+
+### Риски
+
+- `key` в companies неизменяем — осознанное решение. При ошибочном создании потребуется ручное вмешательство.
+- JSON-поле `settings_json` требует MySQL 5.7+. Если минимальная версия ниже, потребуется TEXT.
+- `enabled_from`/`enabled_until` требуют корректной работы с временными зонами.
+- Иерархия feature (parent_code) может усложнить запросы на Stage 5.
+
+### Следующий шаг
+
+SUPERADMIN Stage 2 implementation: создание миграций для центральной БД на основе `docs/architecture/SUPERADMIN_DATABASE.md`.
+
+### Статус
+
 DONE

@@ -400,3 +400,37 @@ PowerShell воспринял `curl` как alias для `Invoke-WebRequest`, к
 ### Статус
 
 active
+
+---
+
+## DECISION-0021 — Схема центральной БД SUPERADMIN
+
+### Решение
+
+Утверждена точная архитектурная схема центральной БД SUPERADMIN. Создан документ `docs/architecture/SUPERADMIN_DATABASE.md`.
+
+**Таблицы:**
+
+1. `companies` — центральный реестр компаний/локальных ERP. Поля: id, key (уникальный slug, неизменяем), name, short_name, entity_type, status (active/inactive/suspended/provisioning), folder_path, db_identifier (только имя БД, НЕ пароль), storage_path, settings_json (JSON), created_at, updated_at. 5 индексов.
+
+2. `features` — реестр функций. Поля: id, code (уникальный, конвенция `type.name`), name, type (module/page/report/custom_report/action/integration/ui_block), description, parent_code (иерархия), is_system, is_active, sort_order, created_at, updated_at. 6 индексов. Само-ссылка FK: parent_code → code.
+
+3. `company_features` — связка компаний и функций (feature toggles). Поля: id, company_id (FK→companies), feature_code (FK→features), is_enabled, enabled_from, enabled_until, notes, created_at, updated_at. 6 индексов. Уникальность (company_id, feature_code). Default-deny: если записи нет — функция недоступна.
+
+4. `superadmin_users` — пользователи SUPERADMIN (отдельные от локальных users). Поля: id, name, email (уникальный), password_hash (bcrypt, cost ≥ 12), role (admin/operator/viewer), is_active, last_login_at, last_login_ip, created_at, updated_at. 4 индекса.
+
+**Ключевые архитектурные решения:**
+- Все таблицы: InnoDB, utf8mb4, utf8mb4_unicode_ci, timestamps created_at/updated_at.
+- DB credentials (пароли, хосты, порты, пользователи) **никогда не хранятся в таблице companies или любой другой таблице БД**. Только логический `db_identifier`. Реальные credentials — в локальном `.env` или внешнем хранилище секретов.
+- Feature toggles: модель default-deny (компания не имеет доступа к функции, пока нет явной записи с is_enabled=1).
+- Конвенция кодов feature: `type.name` (например, `module.trips`, `page.finance_report`, `report.monthly_pnl`).
+- Статусная модель companies: provisioning → active, active ↔ suspended, active ↔ inactive.
+- Зарезервированы поля для будущих этапов (мягкое удаление, аватарки, 2FA, сброс пароля, иконки, конфигурации).
+
+### Причина
+
+Перед созданием миграций нужна точная спецификация, чтобы кодер не придумывал схему на ходу, а следовал утверждённому архитектурному документу.
+
+### Статус
+
+active
