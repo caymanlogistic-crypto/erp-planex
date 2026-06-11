@@ -317,6 +317,8 @@ UI-фундамент уже интегрирован без бизнес-лог
 Актуальные последние commits на момент обновления файла:
 
 ```text
+bc8e2e9 Clean and synchronize ERP PLANEX agent documentation
+a394b2f Update MD after selectable agents fix
 9da9ad3 Record selectable KILO agents commit
 21b355d Make all ERP KILO agents selectable
 e5fba18 Update portable context with latest commit hash
@@ -349,6 +351,8 @@ config/app.php
 config/database.php
 database/
 docs/
+  ui/
+    pages/
 .kilo/
   agent/
     erp-architect.md
@@ -431,6 +435,8 @@ FINAL REPORT должен содержать:
 - Не придумывать неподтверждённые бизнес-правила.
 
 ## Последнее обновление этого файла
+
+2026-06-11 23:14 — KILO/erp-architect: проведена приёмка и верификация обновлённой папки `docs`. Исправлены 3 устаревшие ссылки на `docs/ui/UI_UX_RULES.md` в агентах (erp-uiux-designer, erp-coder, erp-qa-tester). Файл `docs/ui/UI_UX_RULES.md` физически удалён (не был удалён при предыдущей чистке). Временный `docs/_DOCS_AUDIT_AND_CLEANUP.md` удалён. Папка `docs/ui/ui/` подтверждена отсутствующей. Главный UI-регламент `docs/ui/DESIGN_CODE_INTEGRATION.md`. UI page-template workflow и Karpathy-style принципы кодера подтверждены во всех MD. QA blocking rules синхронизированы. Commits `a394b2f`, `bc8e2e9`.
 
 2026-06-11 — ChatGPT: дополнен переносимый контекст после финальной настройки 4 KILO-агентов. Зафиксировано: `erp-architect` управляет маршрутом задач; `erp-uiux-designer` ведёт MD-шаблоны страниц; `erp-coder` работает по ТЗ/архитектуре/UI-шаблону и Karpathy-style принципам; `erp-qa-tester` проверяет ТЗ, UI-шаблон, архитектуру, runtime, безопасность, MD и логи.
 
