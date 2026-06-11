@@ -206,6 +206,7 @@ docs/ui/pages/[page-name].md
 Актуальные последние commits на момент начала этой задачи:
 
 ```text
+c50b942 Document SUPERADMIN central database schema
 acd5009 Create SUPERADMIN stage 1 skeleton
 ab38f9d Update portable context after PowerShell rules commit
 f36ba81 Add Windows PowerShell command rules for agents
@@ -632,4 +633,4 @@ FINAL REPORT должен содержать:
 
 2026-06-12 00:44 — KILO/erp-architect: SUPERADMIN Stage 1 принят. Исправлены 3 QA-замечания (`.module-card-status` CSS, `&mdash;` в заголовке). PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404. Все PHP-файлы `php -l` OK. Секретов нет. Следующий шаг: SUPERADMIN Stage 2 — документация центральной БД.
 
-2026-06-12 00:48 — KILO/erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` (~450 строк) с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Обновлены: `SUPERADMIN.md`, `DECISIONS_LOG.md`, `PROJECT_STATUS.md`, `AGENT_WORK_LOG.md`. Следующий шаг: создание миграций.
+2026-06-12 00:48 — KILO/erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` (~450 строк) с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Обновлены: `SUPERADMIN.md`, `DECISIONS_LOG.md`, `PROJECT_STATUS.md`, `AGENT_WORK_LOG.md`. Commit `c50b942`. Следующий шаг: создание миграций.
