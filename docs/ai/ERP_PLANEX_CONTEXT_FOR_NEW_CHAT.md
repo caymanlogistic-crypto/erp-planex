@@ -207,6 +207,7 @@ docs/ui/pages/[page-name].md
 Актуальные последние commits на момент начала этой задачи:
 
 ```text
+3d7cae3 Create SUPERADMIN Stage 3 database migrations
 c50b942 Document SUPERADMIN central database schema
 acd5009 Create SUPERADMIN stage 1 skeleton
 ab38f9d Update portable context after PowerShell rules commit
@@ -645,3 +646,5 @@ FINAL REPORT должен содержать:
 2026-06-12 01:00 — KILO/erp-coder: SUPERADMIN Stage 3 — SQL-миграции созданы. 4 migration-файла в `database/migrations/`. Исправлен `.gitignore` для трекинга миграций. Обновлены: текущий фокус, текущая задача, статус проекта.
 
 2026-06-12 00:48 — KILO/erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` (~450 строк) с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Обновлены: `SUPERADMIN.md`, `DECISIONS_LOG.md`, `PROJECT_STATUS.md`, `AGENT_WORK_LOG.md`. Commit `c50b942`. Следующий шаг: создание миграций.
+
+2026-06-12 01:10 — KILO/erp-architect: SUPERADMIN Stage 3 — SQL-миграции созданы, проверены dry-run на MySQL 8.4.9, закоммичены. 4 таблицы созданы корректно, JSON/FK/21 индекс подтверждены. Принято решение DECISION-0022 (MySQL 5.7+). Commit `3d7cae3`. Следующий шаг: SUPERADMIN auth / migration runner.
