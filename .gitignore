@@ -1,0 +1,51 @@
+# Environment
+.env
+.env.*
+
+# Storage (keep .gitkeep)
+/storage/*
+!/storage/.gitkeep
+
+# Logs (keep .gitkeep)
+/logs/*
+!/logs/.gitkeep
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build / cache
+/cache/
+/tmp/
+/temp/
+*.cache
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# OS files (Windows / macOS)
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Database dumps
+*.sql
+*.sql.gz
+*.dump
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
