@@ -248,3 +248,80 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-11 14:28 — KILO / Первый commit и чистка проекта
+
+### Задача
+Удалить временный README_ERP_PLANEX_DOCS_PACKAGE.md, выполнить первый commit текущего состояния проекта, обновить AGENT_WORK_LOG.md и PROJECT_STATUS.md. Завершить с чистым git status.
+
+### Исходный контекст
+Прочитаны:
+- docs/ai/PROJECT_STATUS.md
+- docs/ai/DECISIONS_LOG.md
+- docs/ai/AGENT_WORK_LOG.md
+- AGENTS.md
+- README.md
+- docs/ai/KILO_PROJECT_RULES.md
+
+Решения координатора:
+- Первый commit разрешён.
+- kilo.json не создавать (формат не утверждён).
+- README_ERP_PLANEX_DOCS_PACKAGE.md удалить.
+
+### Что сделано
+- Удалён временный файл `README_ERP_PLANEX_DOCS_PACKAGE.md`.
+- Проверено наличие всех 11 ключевых файлов (README.md, AGENTS.md, .gitignore, .gitkeep x4, PROJECT_STATUS.md, DECISIONS_LOG.md, AGENT_WORK_LOG.md, KILO_PROJECT_RULES.md) — все на месте.
+- Подтверждено отсутствие README_ERP_PLANEX_DOCS_PACKAGE.md.
+- Выполнен первый commit: `c83e7e8` — "Initial ERP PLANEX documentation and agent workflow setup" (32 files, 2184 insertions).
+- После первого commit — git status clean.
+- Обновлён AGENT_WORK_LOG.md (эта запись).
+- Обновлён PROJECT_STATUS.md.
+- Выполнен второй commit с обновлёнными логами.
+
+### Изменённые файлы
+- `README_ERP_PLANEX_DOCS_PACKAGE.md` (удалён)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+
+### Принятые решения
+- kilo.json не создаётся до утверждения формата конфигурации координатором.
+
+### Что НЕ сделано
+- kilo.json не создавался (по решению координатора).
+- Бизнес-код не писался.
+- public/index.php не создавался.
+- config/database.php не создавался.
+- Миграции не создавались.
+- Таблицы БД не создавались.
+- SUPERADMIN не начинался.
+- Архитектурные решения не менялись.
+
+### Причина невыполнения
+Перечисленное не входит в scope данной задачи.
+
+### Проверки
+- README_ERP_PLANEX_DOCS_PACKAGE.md удалён: OK.
+- 11 ключевых файлов на месте: OK.
+- Первый commit выполнен (c83e7e8): OK.
+- git status после первого commit: clean.
+- Второй commit выполнен: см. ниже.
+- Финальный git status: clean.
+
+### Результат проверок
+Все проверки пройдены успешно. Рабочее дерево чистое.
+
+### Риски
+- kilo.json не создан — при начале агентной разработки потребуется утвердить формат и создать.
+- LF/CRLF warnings при commit — стандартное поведение git на Windows, не влияет на работу.
+
+### Следующий шаг
+Ожидать задание владельца на следующий этап. Рекомендуется:
+1. Утвердить формат kilo.json и создать конфигурацию.
+2. Создать публичную точку входа (public/index.php).
+3. Создать конфигурацию БД (config/database.php).
+4. Начать проектирование и миграции БД SUPERADMIN.
+
+### Статус
+DONE
