@@ -6,7 +6,7 @@
 
 ## Текущий фокус
 
-SUPERADMIN Stage 3 — SQL-миграции центральной БД созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12): 4 таблицы созданы корректно, JSON/FK/21 индекс подтверждены, временная БД удалена. Следующий шаг: commit после разрешения владельца. Workflow MD-шаблонов страниц закреплён и готов к использованию.
+SUPERADMIN Stage 4a — CLI migration runner создан (2026-06-12): `scripts/migrate.php` применяет SQL-миграции, отслеживает через `schema_migrations`, SHA256 checksum, idempotent. Успешно протестирован на dev БД: первый запуск — 4 applied, повторный — 4 skipped. Следующий шаг: commit после разрешения владельца.
 
 ## Уже принято
 
@@ -84,7 +84,7 @@ SUPERADMIN Stage 3 — SQL-миграции центральной БД созд
 
 ## Заблокировано
 
-Нет блокеров. SUPERADMIN Stage 3 — миграции созданы и проверены dry-run. Следующий шаг: commit после разрешения владельца.
+Нет блокеров. SUPERADMIN Stage 4a — migration runner создан, QA пройден (ACCEPTED), архитектор принял. Следующий шаг: commit после разрешения владельца.
 
 ## Следующий рекомендуемый шаг
 
@@ -98,7 +98,8 @@ SUPERADMIN Stage 3 — SQL-миграции центральной БД созд
 8. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
 9. ~~SUPERADMIN Stage 2 implementation: создание миграций для центральной БД.~~ **DONE (2026-06-12).**
 10. ~~SUPERADMIN Stage 3 dry-run на MySQL 8.4.9.~~ **DONE (2026-06-12).**
-11. Commit после разрешения владельца.
+11. ~~SUPERADMIN Stage 4a: migration runner.~~ **DONE (2026-06-12).**
+12. Commit после разрешения владельца.
 
 - Проведена верификация обновлённой папки `docs`. Удалён физически оставшийся `docs/ui/UI_UX_RULES.md`. Исправлены 3 устаревшие ссылки на него в агентах. Удалён временный `docs/_DOCS_AUDIT_AND_CLEANUP.md`. Папка `docs/ui/ui/` отсутствует. Ссылки в документации синхронизированы. Commit `bc8e2e9`.
 - Проверен и утверждён UI-фундамент: документация синхронизирована, `_PAGE_TEMPLATE.md` обновлён под формат handoff дизайнера, runtime/syntax checks пройдены. UI готов к использованию в business-coding workflow.
@@ -115,7 +116,8 @@ SUPERADMIN Stage 3 — SQL-миграции центральной БД созд
 
 - SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): создан `docs/architecture/SUPERADMIN_DATABASE.md`.
 - SUPERADMIN Stage 3 — SQL-миграции созданы и проверены dry-run (2026-06-12): 4 таблицы на MySQL 8.4.9 без ошибок, JSON/FK/индексы подтверждены, временная БД удалена.
+- SUPERADMIN Stage 4a — CLI migration runner создан (2026-06-12): `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md`. Первый запуск на dev БД: 4 applied, повторный: 4 skipped. Таблица `schema_migrations` с SHA256 checksum. Idempotent.
 
 ## Последнее обновление
 
-2026-06-12 01:10 — erp-architect: SUPERADMIN Stage 3 dry-run на MySQL 8.4.9 пройден. Все 4 таблицы созданы корректно. JSON/FK/21 индекс подтверждены. Временная БД удалена. Следующий шаг: commit.
+2026-06-12 01:20 — erp-architect: SUPERADMIN Stage 4a принят. Migration runner создан (erp-coder), QA пройден (ACCEPTED, 44/44 PASS). Скрипт `scripts/migrate.php` + документация `docs/architecture/MIGRATION_RUNNER.md`. Первый запуск: 4 applied, повторный: 4 skipped. Следующий шаг: commit после разрешения владельца.

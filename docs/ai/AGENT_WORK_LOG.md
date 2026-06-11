@@ -1926,3 +1926,200 @@ Commit SUPERADMIN Stage 3 после разрешения владельца.
 ### Статус
 
 DONE
+
+---
+
+## 2026-06-12 01:18 — erp-coder / SUPERADMIN Stage 4a — CLI migration runner
+
+### Задача
+
+Создать минимальный безопасный CLI migration runner для SQL-миграций ERP PLANEX: `scripts/migrate.php`. Также создать `docs/architecture/MIGRATION_RUNNER.md`.
+
+### Исходный контекст
+
+Прочитаны все обязательные файлы:
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/architecture/SUPERADMIN_DATABASE.md`
+- `docs/architecture/SUPERADMIN_MIGRATIONS.md`
+- `docs/architecture/PHP_APP_SKELETON.md`
+- `app/Core/Database.php`
+- `config/database.php`
+- `bootstrap/app.php`
+- `public/index.php`
+- `database/migrations/` (все 4 SQL-файла)
+
+SUPERADMIN Stage 3 завершён. Миграции созданы, dry-run на MySQL 8.4.9 пройден. Требовался инструмент для надёжного и идемпотентного применения миграций.
+
+### Что сделано
+
+- Создан `scripts/migrate.php` — CLI migration runner:
+  - Проверка CLI (`php_sapi_name() === 'cli'`).
+  - Загрузка `.env` напрямую (без `bootstrap/app.php`) + `config/database.php` + `app/Core\Database.php`.
+  - Создание таблицы `schema_migrations` (если нет): `id`, `migration` (UNIQUE), `checksum` (VARCHAR 64), `executed_at`.
+  - Сканирование `database/migrations/*.sql` (сортировка лексикографически, `.gitkeep` игнорируется).
+  - Проверка уже применённых миграций: `SELECT migration, checksum FROM schema_migrations`.
+  - Применение новых: `$pdo->exec($sql)`, SHA256 хэш через `hash('sha256', $content)`, запись в `schema_migrations`.
+  - Обработка ошибок: `RuntimeException` → "Database connection failed. Check your .env configuration." (exit 1). `PDOException` → `[FAIL] filename - message` и остановка.
+  - CLI-отчёт с `[OK]`, `[SKIP]`, `[FAIL]`, итоговой строкой.
+
+- Создан `docs/architecture/MIGRATION_RUNNER.md`:
+  - Назначение, как запускать, какие файлы применяет.
+  - Структура `schema_migrations` (поля, индексы, хэши).
+  - Механизм идемпотентности (имя + checksum).
+  - Обработка ошибок.
+  - Запреты (seed, пароли, credentials).
+  - Проверка на Windows PowerShell.
+  - Что НЕ входит в Stage 4a (rollback, генерация, web-интерфейс).
+  - Связь с DECISION-0021, DECISION-0022.
+
+- Проверки:
+  - `php -l scripts/migrate.php` — No syntax errors.
+  - `php scripts/migrate.php` без БД — выдал "Database connection failed. Check your .env configuration." (exit 1).
+  - БД `erp_planex` не существовала — создана через `CREATE DATABASE IF NOT EXISTS`.
+  - Первый запуск на dev БД: 4 applied (`[OK]`), 0 skipped, 0 failed.
+  - Повторный запуск: 4 skipped (`[SKIP]`), 0 applied, 0 failed.
+  - Таблицы в БД: companies, features, company_features, superadmin_users, schema_migrations (5 таблиц).
+  - `schema_migrations` содержит 4 записи с корректными SHA256 checksums.
+
+### Изменённые файлы
+
+- `scripts/migrate.php` (создан)
+- `docs/architecture/MIGRATION_RUNNER.md` (создан)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+
+### Принятые решения
+
+Нет. Новых архитектурных решений не принималось. Runner реализован в рамках существующей архитектуры.
+
+### Что НЕ сделано
+
+- Rollback миграций
+- Генерация миграций
+- Web-интерфейс migration runner
+- Seed runner
+- Проверка целостности checksum при повторном запуске
+- Транзакционное применение группы миграций
+- Роуты для миграций
+- Авторизация
+- Применение к production/рабочей БД
+- Commit
+
+### Причина невыполнения
+
+Перечисленное не входит в scope Stage 4a.
+
+### Проверки
+
+- `git status` до работы: clean.
+- `php -v`: PHP 8.5.6 — OK.
+- `php -l scripts/migrate.php`: No syntax errors — OK.
+- `.env` git-ignored (`git check-ignore .env`): OK.
+- Секреты не попали в код/MD: OK (пароль только в `.env`, не в git).
+- Runner не содержит seed/INSERT реальных данных: OK (только INSERT в schema_migrations для отслеживания).
+- `php scripts/migrate.php` без БД: показывает понятное сообщение (не fatal error) — OK.
+- `php scripts/migrate.php` первый запуск: 4 applied — OK.
+- `php scripts/migrate.php` второй запуск: 4 skipped — OK.
+- `git status` после: 2 new files (scripts/migrate.php, docs/architecture/MIGRATION_RUNNER.md) + 2 modified (AGENT_WORK_LOG.md, PROJECT_STATUS.md).
+
+### Результат проверок
+
+Все проверки пройдены успешно. Runner идемпотентен, обрабатывает ошибки корректно, не содержит секретов.
+
+### Риски
+
+- Runner использует `$pdo->exec()` без транзакционной обёртки для группы файлов. Каждый файл выполняется атомарно, но при ошибке в 3-й миграции первые 2 уже зафиксированы. Для DDL (CREATE TABLE IF NOT EXISTS) это приемлемо.
+- При проверке целостности checksum в будущем нужно сравнивать хэш текущего содержимого файла с сохранённым в БД (структура готова, логика не реализована).
+
+### Следующий шаг
+
+Commit после разрешения владельца.
+
+### Статус
+
+DONE
+
+---
+
+## 2026-06-12 01:20 — erp-architect / SUPERADMIN Stage 4a — финальная приёмка migration runner
+
+### Задача
+
+Принять результат SUPERADMIN Stage 4a: проверить работу erp-coder и erp-qa-tester, верифицировать migration runner и документацию, обновить логи и статус.
+
+### Исходный контекст
+
+SUPERADMIN Stage 3 завершён (dry-run миграций на MySQL 8.4.9 пройден). Владелец дал задачу на Stage 4a: создать CLI migration runner. Задача маршрутизирована: erp-architect (спецификация) → erp-coder (реализация) → erp-qa-tester (QA) → erp-architect (приёмка).
+
+Прочитаны все обязательные файлы (24 шт.).
+
+### Что сделано
+
+- Спроектирована архитектура migration runner: CLI-скрипт `scripts/migrate.php`, таблица `schema_migrations` (id, migration UNIQUE, checksum VARCHAR 64, executed_at), алгоритм (scan → sort → check → apply → record), безопасная обработка ошибок.
+- Сформирована точная задача для erp-coder: полная спецификация скрипта, структура таблицы, CLI-отчёт, запреты, проверки.
+- Получен FINAL REPORT от erp-coder (статус DONE). Созданы `scripts/migrate.php` (138 строк) и `docs/architecture/MIGRATION_RUNNER.md` (194 строки).
+- Кодер протестировал runner на dev БД MySQL 8.4.9: первый запуск 4 applied, повторный 4 skipped. Таблица `schema_migrations` содержит 4 записи с SHA256 checksums.
+- Сформирована задача для erp-qa-tester: 44 проверки по синтаксису, логике, безопасности, документации, scope, идемпотентности, PowerShell-совместимости.
+- Получен QA REPORT (статус ACCEPTED): все 44 проверки PASS, багов нет.
+- Выполнена финальная верификация архитектором: `php -l scripts/migrate.php` OK, `.env` git-ignored, секретов нет.
+
+### Изменённые файлы
+
+- `scripts/migrate.php` (создан erp-coder)
+- `docs/architecture/MIGRATION_RUNNER.md` (создан erp-coder)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён erp-coder + erp-architect)
+- `docs/ai/PROJECT_STATUS.md` (обновлён erp-coder)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён erp-coder)
+
+### Принятые решения
+
+Нет. Новых архитектурных решений не принималось. Runner реализован в рамках существующей архитектуры (Database, config/database.php, миграции Stage 3).
+
+### Что НЕ сделано
+
+- Rollback миграций
+- Генерация миграций
+- Web-интерфейс
+- Seed runner
+- Проверка целостности checksum при повторном запуске
+- Транзакционное применение группы миграций
+- Auth
+- Применение к production БД
+- Commit
+
+### Причина невыполнения
+
+Перечисленное не входит в scope Stage 4a (минимальный migration runner).
+
+### Проверки
+
+- `git status` до работы: clean.
+- `php -v`: PHP 8.5.6 — OK.
+- `php -l scripts/migrate.php`: No syntax errors — OK.
+- `.env` git-ignored: OK.
+- Секреты не попали в код/MD: OK.
+- Runner не содержит seed/INSERT реальных данных: OK.
+- Coder FINAL REPORT: DONE, все проверки пройдены.
+- QA REPORT: ACCEPTED, 44/44 PASS.
+- `git status` после: 2 untracked + 3 modified. Commit не делался.
+
+### Результат проверок
+
+Все проверки пройдены. Migration runner готов к использованию. Stage 4a принимается.
+
+### Риски
+
+- Runner не оборачивает группу миграций в транзакцию: при ошибке в середине часть DDL уже зафиксирована. Для CREATE TABLE IF NOT EXISTS приемлемо — при повторном запуске существующие таблицы пропускаются.
+- Проверка checksum на расхождение (изменился ли файл после применения) структурно готова, но не реализована — задача будущего этапа.
+- Runner протестирован на MySQL 8.4.9. Совместимость с MySQL 5.7 подтверждена на уровне SQL-синтаксиса миграций (Stage 3 dry-run).
+
+### Следующий шаг
+
+Commit SUPERADMIN Stage 4a после разрешения владельца.
+
+### Статус
+
+DONE

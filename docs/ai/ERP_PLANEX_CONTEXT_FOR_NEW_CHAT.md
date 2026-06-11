@@ -184,14 +184,15 @@ docs/ui/pages/[page-name].md
 - бизнес-код ещё не пишется;
 - SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка, UI-шаблон, CSS (14 классов), маршрут `/superadmin`, sidebar. QA пройден.
 - SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021.
-- SUPERADMIN Stage 3 — SQL-миграции созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12): 4 таблицы созданы корректно, JSON/FK/индексы подтверждены, временная БД удалена.
+- SUPERADMIN Stage 3 — SQL-миграции созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12): 4 таблицы созданы корректно, JSON/FK/индексы подтверждены.
+- SUPERADMIN Stage 4a — CLI migration runner создан (2026-06-12): `scripts/migrate.php` применяет миграции, отслеживает через `schema_migrations` с SHA256 checksum, идемпотентен. Протестирован на dev БД: первый запуск 4 applied, повторный 4 skipped.
 - Целевая версия MySQL: 5.7+ (DECISION-0022, 2026-06-12). Тип JSON используется для `companies.settings_json`.
 - авторизация, роли в коде ещё не реализованы;
 - Windows PowerShell command rules зафиксированы (DECISION-0020, commit f36ba81).
 
 ## Текущий фокус
 
-Текущий фокус: SUPERADMIN Stage 3 — SQL-миграции центральной БД созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12). Следующий шаг: commit после разрешения владельца.
+Текущий фокус: SUPERADMIN Stage 4a — CLI migration runner создан и протестирован (2026-06-12): `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md`. Первый запуск на dev БД: 4 applied, повторный: 4 skipped. Следующий шаг: commit после разрешения владельца.
 
 Ближайший порядок:
 
@@ -237,7 +238,7 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: SUPERADMIN Stage 3 — SQL-миграции центральной БД созданы и проверены dry-run (2026-06-12). 4 migration-файла применены к временной БД MySQL 8.4.9 без ошибок. JSON/FK/21 индекс подтверждены. Временная БД удалена. Следующий шаг: commit после разрешения владельца.
+Активная задача: SUPERADMIN Stage 4a — CLI migration runner создан и протестирован (2026-06-12). `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md` готовы. Тесты на dev БД: первый запуск 4 applied, повторный 4 skipped. SHA256 checksum, idempotent. Следующий шаг: commit после разрешения владельца.
 
 Следующий рабочий шаг:
 1. ~~Проверить/утвердить UI-фундамент.~~ **DONE.**
@@ -248,7 +249,8 @@ dc75ab4 Create minimal PHP application skeleton
 6. Commit (после разрешения владельца).
 7. ~~SUPERADMIN Stage 3: создание миграций (erp-coder).~~ **DONE (2026-06-12).**
 8. ~~SUPERADMIN Stage 3 dry-run на MySQL 8.4.9 (erp-architect).~~ **DONE (2026-06-12).**
-9. Commit (после разрешения владельца).
+9. ~~SUPERADMIN Stage 4a: migration runner (erp-coder).~~ **DONE (2026-06-12).**
+10. Commit (после разрешения владельца).
 
 ## Утверждённая архитектура ERP PLANEX
 
@@ -542,6 +544,8 @@ public/
   index.php
   assets/css/app.css
   assets/js/app.js
+scripts/
+  migrate.php
 storage/
 .env.example
 .gitignore
@@ -648,3 +652,5 @@ FINAL REPORT должен содержать:
 2026-06-12 00:48 — KILO/erp-architect: SUPERADMIN Stage 2 — документация центральной БД выполнена. Создан `docs/architecture/SUPERADMIN_DATABASE.md` (~450 строк) с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021. Закреплён безопасный подход к DB credentials (пароли не в БД). Default-deny модель feature toggles. Конвенция кодов feature: `type.name`. Обновлены: `SUPERADMIN.md`, `DECISIONS_LOG.md`, `PROJECT_STATUS.md`, `AGENT_WORK_LOG.md`. Commit `c50b942`. Следующий шаг: создание миграций.
 
 2026-06-12 01:10 — KILO/erp-architect: SUPERADMIN Stage 3 — SQL-миграции созданы, проверены dry-run на MySQL 8.4.9, закоммичены. 4 таблицы созданы корректно, JSON/FK/21 индекс подтверждены. Принято решение DECISION-0022 (MySQL 5.7+). Commit `3d7cae3`. Следующий шаг: SUPERADMIN auth / migration runner.
+
+2026-06-12 01:18 — KILO/erp-coder: SUPERADMIN Stage 4a — CLI migration runner создан и протестирован. `scripts/migrate.php` + `docs/architecture/MIGRATION_RUNNER.md`. Тесты на dev БД: первый запуск 4 applied, повторный 4 skipped. Таблица schema_migrations с SHA256 checksum. Idempotent. Следующий шаг: commit после разрешения владельца.
