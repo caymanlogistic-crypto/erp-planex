@@ -317,6 +317,7 @@ UI-фундамент уже интегрирован без бизнес-лог
 Актуальные последние commits на момент обновления файла:
 
 ```text
+b856edc Update portable context after documentation cleanup commit
 bc8e2e9 Clean and synchronize ERP PLANEX agent documentation
 a394b2f Update MD after selectable agents fix
 9da9ad3 Record selectable KILO agents commit
