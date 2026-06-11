@@ -1,0 +1,10 @@
+<?php
+
+return [
+    'app_name' => env('APP_NAME', 'ERP PLANEX'),
+    'app_env'  => env('APP_ENV', 'local'),
+    'app_debug' => env('APP_DEBUG', true),
+
+    'base_path'    => BASE_PATH,
+    'storage_path' => STORAGE_PATH,
+];
