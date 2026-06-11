@@ -216,7 +216,9 @@ docs/ui/pages/[page-name].md
 Актуальные последние commits на момент начала этой задачи:
 
 ```text
+50f96a9 Fix ERP PLANEX UI process rules and SUPERADMIN handoff
 be55198 Create SUPERADMIN Stage 4a migration runner
+b3c60c4 Update portable context after SUPERADMIN Stage 4a runner commit
 9513b78 Update portable context after SUPERADMIN Stage 3 migrations commit
 3d7cae3 Create SUPERADMIN Stage 3 database migrations
 c50b942 Document SUPERADMIN central database schema
@@ -690,4 +692,4 @@ QA обязан проверять UI формально. Запрещены с�
 
 2026-06-11 — ChatGPT: файл пересобран как единый самодостаточный переносимый контекст для нового ChatGPT-чата.
 
-2026-06-12 01:35 — KILO/erp-architect: **системное исправление UI-процесса**. Причина: `/superadmin` отклонён владельцем визуально. Зафиксирована корневая причина (слабый handoff, отсутствие visual review, формальный QA без запрета demo-placeholder). Добавлены 6 новых системных правил: фактическая проверка файлов, DeepSeek/KILO не vision, manual visual review, запрет demo-placeholder, качество handoff, Formal UI QA. Обновлены 4 файла агентов, 10+ MD-документов. Следующий этап: переделка /superadmin по обновлённому handoff.
+2026-06-12 01:50 — KILO/erp-architect: commit `50f96a9` — системное исправление UI-процесса, 15 файлов, DECISION-0023. Блокер radius/shadow в erp-uiux-designer.md снят. Проект готов к переделке /superadmin.
