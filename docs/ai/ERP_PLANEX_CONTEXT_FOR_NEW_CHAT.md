@@ -281,7 +281,8 @@ UI-фундамент уже интегрирован без бизнес-лог
 Актуальные последние commits на момент обновления файла:
 
 ```text
-(будет добавлен после commit)
+ad9ae8c Configure ERP PLANEX KILO agent modes
+a9ff2b7 Update portable context latest commit
 2a635a7 Record agent network and UI foundation commit
 473f748 Define agent network and integrate UI foundation
 309469f Add portable ERP PLANEX context file and update agent rules
