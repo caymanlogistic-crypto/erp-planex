@@ -62,6 +62,7 @@
   - `app/View/components/`
   - `app/View/pages/ui_demo.php`
   - `public/index.php` теперь показывает техническую UI demo-страницу.
+- Commit `473f748` — агентская сеть и UI-фундамент зафиксированы.
 
 ## Заблокировано
 
@@ -76,4 +77,4 @@
 
 ## Последнее обновление
 
-2026-06-11 18:06 — ChatGPT/Codex: добавлены документы `AGENT_NETWORK.md` и `DESIGN_CODE_INTEGRATION.md`; базовый UI-фундамент интегрирован в PHP-каркас без бизнес-логики.
+2026-06-11 18:06 — ChatGPT/Codex: добавлены документы `AGENT_NETWORK.md` и `DESIGN_CODE_INTEGRATION.md`; базовый UI-фундамент интегрирован в PHP-каркас без бизнес-логики; commit `473f748`.

@@ -618,6 +618,7 @@ DONE
 - Локальный сервер поднят на `http://127.0.0.1:8010`.
 - Browser-проверка UI demo: title `UI foundation — ERP PLANEX`, CSS загружен, sidebar есть, panel count = 3, table rows = 3, console errors = 0.
 - `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` обновлён: OK.
+- Commit `473f748` — `Define agent network and integrate UI foundation`.
 
 ### Риски
 - Если у владельца есть готовый внешний макет/HTML/CSS, его нужно отдельно передать и сверить с текущим UI-фундаментом.
