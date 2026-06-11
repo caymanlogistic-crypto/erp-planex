@@ -70,6 +70,7 @@
   - `.kilo/agent/erp-qa-tester.md` — тестировщик (primary/selectable).
 - Исправлена настройка KILO: все 4 проектных агента теперь имеют `mode: primary`, потому что в UI KILO `subagent`-роли не отображались в списке выбора.
   - `kilo.jsonc` с `default_agent: erp-architect`.
+- Commit `21b355d` — все проектные KILO-агенты сделаны selectable.
 - Агентская сеть теперь внутри KILO; внешний ChatGPT-координатор исключён из агентного цикла.
 
 ## Заблокировано

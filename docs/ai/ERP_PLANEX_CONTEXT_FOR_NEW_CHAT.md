@@ -283,6 +283,8 @@ UI-фундамент уже интегрирован без бизнес-лог
 Актуальные последние commits на момент обновления файла:
 
 ```text
+21b355d Make all ERP KILO agents selectable
+e5fba18 Update portable context with latest commit hash
 ad9ae8c Configure ERP PLANEX KILO agent modes
 a9ff2b7 Update portable context latest commit
 2a635a7 Record agent network and UI foundation commit
@@ -395,7 +397,7 @@ FINAL REPORT должен содержать:
 
 ## Последнее обновление этого файла
 
-2026-06-11 21:02 — ChatGPT/Codex: исправлена видимость KILO-агентов. `erp-uiux-designer`, `erp-coder`, `erp-qa-tester` переведены с `mode: subagent` на `mode: primary`, потому что в выпадающем списке KILO отображались только primary-агенты. Все 4 проектных агента должны быть selectable; `erp-architect` остаётся `default_agent`.
+2026-06-11 21:02 — ChatGPT/Codex: исправлена видимость KILO-агентов. `erp-uiux-designer`, `erp-coder`, `erp-qa-tester` переведены с `mode: subagent` на `mode: primary`, потому что в выпадающем списке KILO отображались только primary-агенты. Все 4 проектных агента должны быть selectable; `erp-architect` остаётся `default_agent`; commit `21b355d`.
 
 2026-06-11 20:23 — KILO/erp-coder: настроены 4 проектных KILO-агента (`.kilo/agent/`); создан `kilo.jsonc` с `default_agent: erp-architect`; обновлены AGENTS.md, AGENT_NETWORK.md, KILO_WORKFLOW.md, DECISIONS_LOG.md (DECISION-0016), AGENT_WORK_LOG.md. Агентская сеть перенесена внутрь KILO, внешний ChatGPT-координатор исключён из цикла.
 
