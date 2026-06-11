@@ -196,6 +196,7 @@ SUPERADMIN ещё не начат.
 Актуальные последние commits на момент обновления файла:
 
 ```text
+309469f Add portable ERP PLANEX context file and update agent rules
 6443743 Update logs and status after PHP skeleton creation
 dc75ab4 Create minimal PHP application skeleton
 4b4d30d Update project status after initial setup commit
@@ -597,4 +598,4 @@ FINAL REPORT должен содержать:
 
 ## Последнее обновление этого файла
 
-2026-06-11 17:51 — ChatGPT/Codex: правило обязательного ведения этого файла продублировано в `AGENTS.md`, `AGENT_LOGGING_MASTER_PROMPT.md`, `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md`; файл синхронизирован как главный переносимый контекст проекта.
+2026-06-11 17:51 — ChatGPT/Codex: правило обязательного ведения этого файла продублировано в `AGENTS.md`, `AGENT_LOGGING_MASTER_PROMPT.md`, `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md`; файл синхронизирован как главный переносимый контекст проекта; commit `309469f`.
