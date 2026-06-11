@@ -48,6 +48,9 @@
   - `docs/architecture/PHP_APP_SKELETON.md` — описание каркаса.
 - PHP 8.5.6 доступен, все файлы проходят `php -l`.
 - Commit `dc75ab4` — 8 файлов каркаса зафиксированы.
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` превращён в главный переносимый контекст проекта для новых ChatGPT-чатов.
+- В `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` добавлено обязательное правило: каждый следующий агент обязан поддерживать файл актуальным, добавлять новую важную информацию и удалять устаревшую.
+- Правило обязательного ведения `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` продублировано в `AGENTS.md`, `AGENT_LOGGING_MASTER_PROMPT.md`, `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md`.
 
 ## Заблокировано
 
@@ -62,4 +65,4 @@
 
 ## Последнее обновление
 
-2026-06-11 14:42 — KILO: минимальный PHP-каркас, commit dc75ab4.
+2026-06-11 17:51 — ChatGPT/Codex: переносимый контекст обновлён, правило его ведения продублировано во всех ключевых agent-rule MD.

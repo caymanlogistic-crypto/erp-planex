@@ -431,3 +431,85 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-11 17:48 — ChatGPT/Codex / Обновление переносимого контекста
+
+### Задача
+Превратить `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` из текста задания в главный переносимый контекст проекта и прописать жёсткое правило, что каждый следующий агент обязан вести этот файл: добавлять новую важную информацию и удалять неактуальную.
+
+### Исходный контекст
+Прочитаны:
+- README.md
+- AGENTS.md
+- docs/ai/PROJECT_STATUS.md
+- docs/ai/DECISIONS_LOG.md
+- docs/ai/AGENT_WORK_LOG.md
+- docs/ai/AGENT_LOGGING_MASTER_PROMPT.md
+- docs/ai/KILO_WORKFLOW.md
+- docs/ai/DEEPSEEK_CODER_RULES.md
+- docs/ai/KILO_PROJECT_RULES.md
+- docs/ai/TASK_TEMPLATE.md
+- docs/ai/QA_CHECKLIST.md
+- docs/architecture/ARCHITECTURE_OVERVIEW.md
+- docs/architecture/MULTI_COMPANY_DEPLOYMENT.md
+- docs/architecture/FEATURE_TOGGLES.md
+- docs/architecture/PERMISSIONS_MODEL.md
+- docs/architecture/DATABASE_DRAFT.md
+- docs/architecture/MODULE_PATTERN.md
+- docs/architecture/DOCUMENT_STORAGE_MODEL.md
+- docs/architecture/PHP_APP_SKELETON.md
+- docs/business/ENTITIES_GLOSSARY.md
+- docs/business/LINEAR_TRIP_WORKFLOW.md
+- docs/business/CONTRACTOR_CREW_WORKFLOW.md
+- docs/business/CLIENT_WORKFLOW.md
+- docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md
+
+### Что сделано
+- `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` переписан как самодостаточный переносимый контекст проекта.
+- Добавлен отдельный раздел `ОБЯЗАТЕЛЬНОЕ ПРАВИЛО ОБНОВЛЕНИЯ ЭТОГО ФАЙЛА`.
+- Добавлен жёсткий промт для следующего ChatGPT-агента с обязанностью вести этот файл.
+- Зафиксировано, что нужно добавлять в файл, что удалять или заменять, и что запрещено хранить.
+- В файл внесены текущий статус проекта, архитектура, deployment-модель, SUPERADMIN, локальная ERP, роли, feature toggles, бизнес-модели, БД-черновик, git-правила и следующий шаг.
+- Правило обязательного ведения переносимого контекста продублировано в `AGENTS.md`, `AGENT_LOGGING_MASTER_PROMPT.md`, `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md`.
+
+### Изменённые файлы
+- docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md
+- AGENTS.md
+- docs/ai/AGENT_LOGGING_MASTER_PROMPT.md
+- docs/ai/KILO_PROJECT_RULES.md
+- docs/ai/TASK_TEMPLATE.md
+- docs/ai/QA_CHECKLIST.md
+- docs/ai/AGENT_WORK_LOG.md
+- docs/ai/PROJECT_STATUS.md
+
+### Принятые решения
+Новых архитектурных решений не принималось. По указанию владельца закреплено правило: `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` является важным живым файлом, который следующий агент обязан поддерживать актуальным.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД и миграции не создавались.
+- SUPERADMIN не начинался.
+
+### Причина невыполнения
+Перечисленное не входило в scope задачи.
+
+### Проверки
+- Проверено наличие `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+- Проверено наличие раздела `ОБЯЗАТЕЛЬНОЕ ПРАВИЛО ОБНОВЛЕНИЯ ЭТОГО ФАЙЛА`.
+- Проверено наличие жёсткого промта для следующего ChatGPT-агента.
+- Проверено, что правило добавлено в `AGENTS.md`, `AGENT_LOGGING_MASTER_PROMPT.md`, `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md`.
+- Выполнен `git status --short`.
+
+### Результат проверок
+Файл обновлён и содержит обязательное правило ведения. Правило продублировано в ключевых agent-rule MD. Проверки перед commit выполнены.
+
+### Риски
+- После commit нужно обновить commit hash в `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`, если commit станет новым актуальным состоянием проекта.
+
+### Следующий шаг
+Сделать commit с обновлённым переносимым контекстом и правилами агентов, затем проверить финальный `git status`.
+
+### Статус
+DONE
