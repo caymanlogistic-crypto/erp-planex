@@ -26,3 +26,10 @@ if (!function_exists('storage_path')) {
         return STORAGE_PATH . ($path ? DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR) : '');
     }
 }
+
+if (!function_exists('e')) {
+    function e(?string $value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}

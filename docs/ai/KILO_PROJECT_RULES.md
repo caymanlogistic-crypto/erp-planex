@@ -29,6 +29,7 @@ PHP / MySQL
 
 - **Логировать все действия** в `docs/ai/AGENT_WORK_LOG.md`.
 - **Перед началом работы читать** `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` как главный переносимый контекст проекта.
+- **Читать** `docs/ai/AGENT_NETWORK.md`, если задача связана с ролями, промтами, координацией агентов или порядком работы KILO.
 - **Обновлять статус** проекта в `docs/ai/PROJECT_STATUS.md`.
 - **Фиксировать решения** в `docs/ai/DECISIONS_LOG.md`.
 - **Проверять перед завершением задачи**, нужно ли обновить `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
@@ -38,6 +39,7 @@ PHP / MySQL
 - **Выполнять проверки** после изменений (`git status`, `php -l` при наличии PHP).
 - Если проверка невозможна — записать причину в лог.
 - Если `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` не обновлялся — указать причину в FINAL REPORT.
+- Для UI и дизайн-кода читать `docs/ui/DESIGN_CODE_INTEGRATION.md` и не создавать разрозненные стили.
 
 ## При нехватке данных
 

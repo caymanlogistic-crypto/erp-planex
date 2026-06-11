@@ -27,6 +27,8 @@ docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md
 docs/ai/PROJECT_STATUS.md
 docs/ai/DECISIONS_LOG.md
 docs/ai/AGENT_WORK_LOG.md
+docs/ai/AGENT_NETWORK.md, если задача связана с KILO, ролями, промтами или агентным циклом
+docs/ui/DESIGN_CODE_INTEGRATION.md, если задача связана с UI или дизайн-кодом
 ```
 
 Также агент читает профильные файлы по задаче:

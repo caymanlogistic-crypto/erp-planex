@@ -23,15 +23,19 @@ ERP-система для управления логистическими пе
 
 Каждый агент обязан прочитать (в порядке очерёдности):
 
-1. `docs/ai/PROJECT_STATUS.md` — текущий этап и фокус проекта
-2. `docs/ai/DECISIONS_LOG.md` — все утверждённые решения
-3. `docs/ai/AGENT_WORK_LOG.md` — журнал выполненных работ
-4. Профильные документы из `docs/architecture/`, `docs/business/`, `docs/ui/` по задаче
+1. `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` — главный переносимый контекст проекта
+2. `docs/ai/PROJECT_STATUS.md` — текущий этап и фокус проекта
+3. `docs/ai/DECISIONS_LOG.md` — все утверждённые решения
+4. `docs/ai/AGENT_WORK_LOG.md` — журнал выполненных работ
+5. `docs/ai/AGENT_NETWORK.md` — если задача связана с KILO, ролями, промтами или агентским циклом
+6. `docs/ui/DESIGN_CODE_INTEGRATION.md` — если задача связана с UI или дизайн-кодом
+7. Профильные документы из `docs/architecture/`, `docs/business/`, `docs/ui/` по задаче
 
 ## Обязанности агентов
 
 - Вести логи работы в `docs/ai/AGENT_WORK_LOG.md`
 - Актуализировать `docs/ai/PROJECT_STATUS.md` после каждой задачи
+- Поддерживать актуальным `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
 - Фиксировать архитектурные решения в `docs/ai/DECISIONS_LOG.md`
 - Завершать задачу только через FINAL REPORT
 - Не придумывать бизнес-правила без подтверждения владельца

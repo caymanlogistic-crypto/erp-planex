@@ -514,3 +514,116 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-11 18:06 — ChatGPT/Codex / Агентская сеть и дизайн-код перед разработкой
+
+### Задача
+Проработать агентскую сеть для KILO: роли, промты, порядок работы и приёмки. Отдельно зафиксировать правила интеграции дизайн-кода в систему перед началом активного написания ERP.
+
+### Исходный контекст
+Прочитаны:
+- docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md
+- docs/ui/UI_UX_RULES.md
+- docs/ui/PAGE_PATTERN.md
+- docs/ui/FORMS_STANDARD.md
+- docs/ui/TABLES_STANDARD.md
+- docs/ai/PROJECT_STATUS.md
+- docs/ai/DECISIONS_LOG.md
+- docs/ai/AGENT_WORK_LOG.md
+- AGENTS.md
+- docs/ai/KILO_WORKFLOW.md
+- docs/ai/KILO_PROJECT_RULES.md
+- docs/ai/TASK_TEMPLATE.md
+- docs/ai/QA_CHECKLIST.md
+
+### Что сделано
+- Создан `docs/ai/AGENT_NETWORK.md`.
+- Создан `docs/ui/DESIGN_CODE_INTEGRATION.md`.
+- В `AGENTS.md`, `KILO_WORKFLOW.md`, `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md` добавлены ссылки на агентскую сеть и дизайн-интеграцию.
+- В `README.md`, `AGENT_LOGGING_MASTER_PROMPT.md`, `DEEPSEEK_CODER_RULES.md` добавлены ссылки на переносимый контекст, агентскую сеть и дизайн-фундамент.
+- UI-документы связаны с новым правилом единого дизайн-фундамента.
+- В `DECISIONS_LOG.md` добавлены решения DECISION-0014 и DECISION-0015.
+- Интегрирован базовый UI-фундамент без бизнес-логики:
+  - `public/assets/css/app.css`
+  - `public/assets/js/app.js`
+  - `app/View/layouts/main.php`
+  - `app/View/components/`
+  - `app/View/pages/ui_demo.php`
+  - `public/index.php`
+  - `app/Support/helpers.php`
+- Обновлён `docs/architecture/PHP_APP_SKELETON.md`.
+- Обновлён `PROJECT_STATUS.md`.
+- Обновлён `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+
+### Изменённые файлы
+- docs/ai/AGENT_NETWORK.md
+- docs/ui/DESIGN_CODE_INTEGRATION.md
+- README.md
+- AGENTS.md
+- docs/ai/AGENT_LOGGING_MASTER_PROMPT.md
+- docs/ai/DEEPSEEK_CODER_RULES.md
+- docs/ai/KILO_WORKFLOW.md
+- docs/ai/KILO_PROJECT_RULES.md
+- docs/ai/TASK_TEMPLATE.md
+- docs/ai/QA_CHECKLIST.md
+- docs/ui/UI_UX_RULES.md
+- docs/ui/PAGE_PATTERN.md
+- docs/ui/FORMS_STANDARD.md
+- docs/ui/TABLES_STANDARD.md
+- docs/ai/DECISIONS_LOG.md
+- docs/architecture/PHP_APP_SKELETON.md
+- app/Support/helpers.php
+- public/index.php
+- app/View/layouts/main.php
+- app/View/components/alert.php
+- app/View/components/button.php
+- app/View/components/empty_state.php
+- app/View/components/form_actions.php
+- app/View/components/input.php
+- app/View/components/page_header.php
+- app/View/components/status_badge.php
+- app/View/components/table.php
+- app/View/pages/ui_demo.php
+- public/assets/css/app.css
+- public/assets/js/app.js
+- docs/ai/PROJECT_STATUS.md
+- docs/ai/AGENT_WORK_LOG.md
+- docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md
+
+### Принятые решения
+- DECISION-0014: перед активной разработкой используется агентская сеть с ролями и форматом задач для KILO.
+- DECISION-0015: дизайн-код интегрируется до бизнес-модулей через единый UI-фундамент.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД, миграции, SUPERADMIN не создавались.
+- Авторизация и роутер не создавались.
+
+### Причина невыполнения
+Текущая задача — подготовить правила, агентскую сеть и технически подключить базовый дизайн-фундамент без бизнес-логики.
+
+### Проверки
+- Проверить наличие новых MD-файлов.
+- Проверить ссылки на `AGENT_NETWORK.md` и `DESIGN_CODE_INTEGRATION.md` в управляющих документах.
+- Выполнить `php -l` для PHP-файлов.
+- Проверить UI demo-страницу в браузере.
+- Проверить git status.
+
+### Результат проверок
+- Новые MD-файлы существуют: OK.
+- Ссылки на `AGENT_NETWORK.md` и `DESIGN_CODE_INTEGRATION.md` найдены в README, AGENTS, AI/UI-документах: OK.
+- `php -l` выполнен для всех PHP-файлов: ошибок нет.
+- Локальный сервер поднят на `http://127.0.0.1:8010`.
+- Browser-проверка UI demo: title `UI foundation — ERP PLANEX`, CSS загружен, sidebar есть, panel count = 3, table rows = 3, console errors = 0.
+- `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` обновлён: OK.
+
+### Риски
+- Если у владельца есть готовый внешний макет/HTML/CSS, его нужно отдельно передать и сверить с текущим UI-фундаментом.
+
+### Следующий шаг
+Проверить/утвердить UI-фундамент, затем перейти к PDO-обёртке и простому роутеру.
+
+### Статус
+DONE
