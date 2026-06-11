@@ -956,3 +956,160 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-11 — ChatGPT / Пересборка переносимого контекста ERP PLANEX
+
+### Задача
+Создать/пересобрать единый переносимый MD-файл контекста для нового ChatGPT-чата и встроить обязательное правило, что каждый агент обязан автоматически поддерживать этот файл актуальным.
+
+### Исходный контекст
+Прочитаны обязательные файлы:
+- `README.md`
+- `AGENTS.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/AGENT_LOGGING_MASTER_PROMPT.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/DEEPSEEK_CODER_RULES.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/architecture/ARCHITECTURE_OVERVIEW.md`
+- `docs/architecture/MULTI_COMPANY_DEPLOYMENT.md`
+- `docs/architecture/FEATURE_TOGGLES.md`
+- `docs/architecture/PERMISSIONS_MODEL.md`
+- `docs/architecture/DATABASE_DRAFT.md`
+- `docs/architecture/MODULE_PATTERN.md`
+- `docs/architecture/DOCUMENT_STORAGE_MODEL.md`
+- `docs/business/ENTITIES_GLOSSARY.md`
+- `docs/business/LINEAR_TRIP_WORKFLOW.md`
+- `docs/business/CONTRACTOR_CREW_WORKFLOW.md`
+- `docs/business/CLIENT_WORKFLOW.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/QA_CHECKLIST.md`
+
+### Что сделано
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` пересобран как единый самодостаточный контекст для нового ChatGPT-чата.
+- В файл добавлены обязательные разделы по роли ChatGPT, рабочей папке, KILO + DeepSeek, правилам не придумывать неизвестные детали, логированию, обязательным MD, текущему статусу, текущей задаче, архитектуре, SUPERADMIN, локальной ERP, роли “Руководитель”, клиентам, подрядчикам, экипажам, документам, версионности, feature toggles, бизнес-блокам, линейной перевозке, черновой БД, структуре проекта, Git-правилам, правилам KILO-промтов и приёмке FINAL REPORT.
+- Раздел `# ОБЯЗАТЕЛЬНОЕ ПРАВИЛО ОБНОВЛЕНИЯ ЭТОГО ФАЙЛА` сделан заголовком первого уровня, как отдельное обязательное правило.
+- Усилено правило обновления переносимого контекста в:
+  - `AGENTS.md`
+  - `docs/ai/AGENT_LOGGING_MASTER_PROMPT.md`
+  - `docs/ai/KILO_PROJECT_RULES.md`
+  - `docs/ai/TASK_TEMPLATE.md`
+  - `docs/ai/QA_CHECKLIST.md`
+- Обновлён `docs/ai/PROJECT_STATUS.md`.
+
+### Созданные файлы
+Новых отдельных файлов не создано. Использован единственный файл контекста:
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+
+### Обновлённые файлы
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `AGENTS.md`
+- `docs/ai/AGENT_LOGGING_MASTER_PROMPT.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+
+### Принятые решения
+Новых архитектурных или бизнес-решений не принималось. Выполнена синхронизация уже утверждённых правил.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД не создавалась.
+- Миграции не создавались.
+- SUPERADMIN не начинался.
+- Второй/дублирующий файл контекста не создавался.
+- `.env` не коммитился.
+
+### Проверки
+- Проверено наличие `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+- Проверено отсутствие дублирующего `START_NEW_CHAT_PROMPT.txt`.
+- Проверено наличие раздела `# ОБЯЗАТЕЛЬНОЕ ПРАВИЛО ОБНОВЛЕНИЯ ЭТОГО ФАЙЛА`.
+- Проверено наличие правил обновления переносимого контекста в агентских MD.
+- Проверено, что реальный MYSQL-пароль не записан в `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+- Выполнен `git status` перед commit.
+
+### Риски
+Самоссылочный commit hash невозможно корректно вписать в тот же commit без изменения самого hash. Поэтому hash текущего commit фиксируется в FINAL REPORT; следующий агент должен обновить список commits в переносимом контексте при следующей синхронизации.
+
+### Следующий шаг
+Проверить/утвердить UI-фундамент; затем отдельной задачей перейти к PDO-обёртке и роутеру.
+
+### Статус
+DONE
+
+---
+
+## 2026-06-11 23:35 — KILO/erp-architect / UI-фундамент — проверка и утверждение
+
+### Задача
+Проверить и подготовить к утверждению текущий UI-фундамент ERP PLANEX перед началом бизнес-кодинга: документацию, связку дизайнер→кодер, код, соответствие ERP PLANEX, runtime-проверки.
+
+### Исходный контекст
+Прочитаны все обязательные MD и все текущие UI-файлы проекта (32 файла):
+- Главные AI-документы: `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`, `PROJECT_STATUS.md`, `DECISIONS_LOG.md`, `AGENT_WORK_LOG.md`, `AGENT_NETWORK.md`, `KILO_WORKFLOW.md`, `QA_CHECKLIST.md`.
+- UI-документы: `DESIGN_CODE_INTEGRATION.md`, `PAGE_PATTERN.md`, `FORMS_STANDARD.md`, `TABLES_STANDARD.md`, `pages/README.md`, `pages/_PAGE_TEMPLATE.md`.
+- UI-код: `layouts/main.php`, 8 компонентов, `ui_demo.php`, `app.css`, `app.js`, `index.php`, `bootstrap/app.php`, `helpers.php`.
+- Агенты: `erp-uiux-designer.md`, `erp-coder.md`, `erp-qa-tester.md`.
+
+### Что сделано
+- Проверена документация UI (`docs/ui/`): главный регламент `DESIGN_CODE_INTEGRATION.md`, стандарты `PAGE_PATTERN.md`, `FORMS_STANDARD.md`, `TABLES_STANDARD.md`, папка `pages/` с `README.md` и `_PAGE_TEMPLATE.md` — на месте, адекватны, дублей нет.
+- Проверена связка дизайнер→кодер: workflow `erp-architect → erp-uiux-designer → erp-coder → erp-qa-tester` закреплён в `DESIGN_CODE_INTEGRATION.md`, `AGENT_NETWORK.md`, `KILO_WORKFLOW.md`, агентах `.kilo/agent/*.md` и `QA_CHECKLIST.md`. Правило `BLOCKED: NEEDS_UI_DESIGN_HANDOFF` прописано у кодера. MD-шаблон страницы — источник истины.
+- Проверен текущий UI-код: единый layout (`main.php`), 8 PHP-компонентов, CSS-система (369 строк, CSS-переменные), JS-фундамент, demo-страница. Код чист: без inline-стилей, без бизнес-логики, без SQL, без дублирования. Пригоден для расширения.
+- Оценено соответствие ERP PLANEX: UI-фундамент строгий, рабочий, desktop-first, без лендинг/маркетингового вида. Пригоден для таблиц, форм, справочников, статусов, документов. Не перегружен визуально.
+- Выполнены runtime/syntax checks:
+  - `php -v`: PHP 8.5.6 — OK.
+  - `php -l` для всех 15 PHP-файлов: ошибок нет.
+  - `git status`: документационные модификации от предыдущей задачи; UI-код не изменён.
+  - `.env` проверен: git-ignored, не попадёт в репозиторий.
+  - Проверка секретов в выводе UI demo: чист.
+  - PHP dev server на `127.0.0.1:8020` запущен, UI demo отдаёт HTTP 200, страница рендерится корректно, layout цел.
+- Найден и исправлен один документационный пробел: `_PAGE_TEMPLATE.md` (14 секций) не совпадал по структуре с форматом handoff в `erp-uiux-designer.md` (20 элементов). Шаблон обновлён: добавлена секция «Charts», расширены таблицы CSS-классов, добавлены конкретные имена классов из агента дизайнера, acceptance checklist расширен.
+
+### Изменённые файлы
+- `docs/ui/pages/_PAGE_TEMPLATE.md` (обновлён — синхронизирован с форматом handoff дизайнера)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+
+### Принятые решения
+Нет. Новых архитектурных решений не принималось.
+
+### Что НЕ сделано
+- Бизнес-код не писался.
+- БД и миграции не создавались.
+- SUPERADMIN не начинался.
+- Недостающие компоненты (Select, Textarea, Checkbox, ConfirmAction, Modal, Toast, Pagination, Inspector) не добавлялись — они зарезервированы в `DESIGN_CODE_INTEGRATION.md` как компоненты первого этапа, но их реализация будет происходить по мере создания реальных страниц.
+- CSS-классы из `erp-uiux-designer.md` (`.tbl`, `.col-num`, `.field-msg` и др.) не добавлялись в `app.css` — это задача первого реального page design handoff.
+- Commit не выполнялся (запрещено без разрешения владельца).
+
+### Проверки
+- `git status`: чист по UI-коду (только док-модификации от предыдущей задачи).
+- `php -v`: PHP 8.5.6 — OK.
+- `php -l` × 15 файлов: все без ошибок — OK.
+- `.env` git-ignored: OK.
+- Секреты в UI-выводе: OK (не найдены).
+- UI demo HTTP 200, layout цел: OK.
+- `docs/ui/UI_UX_RULES.md` не существует (удалён ранее): OK.
+- `docs/ui/ui/` не существует (удалена ранее): OK.
+- Ссылки на `UI_UX_RULES.md` в агентах не найдены: OK (исправлены ранее).
+- Агентская документация синхронизирована: OK.
+
+### Результат проверок
+Все проверки пройдены успешно. UI-фундамент готов к использованию в business-coding workflow.
+
+### Риски
+- `_PAGE_TEMPLATE.md` обновлён под формат дизайнера. Если дизайнер начнёт использовать старую версию, возможна путаница. Текущая версия синхронизирована с `.kilo/agent/erp-uiux-designer.md`.
+- Некоторые CSS-классы из handoff-формата дизайнера (`.tbl`, `.col-num` и др.) пока не реализованы в `app.css`. Это не блокер: они будут добавляться кодером при реализации конкретных страниц по указанию дизайнера.
+- Текущие стандарты (`PAGE_PATTERN.md`, `FORMS_STANDARD.md`, `TABLES_STANDARD.md`) относительно тонкие — при первой реальной UI-задаче дизайнеру может потребоваться их расширить.
+
+### Следующий шаг
+UI-фундамент утверждён. Можно переходить к PDO-обёртке и роутеру. Затем отдельной задачей — SUPERADMIN.
+
+### Статус
+DONE

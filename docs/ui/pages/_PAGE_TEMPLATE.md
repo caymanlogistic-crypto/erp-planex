@@ -1,18 +1,21 @@
 # UI PAGE TEMPLATE — [Название страницы]
 
+Этот шаблон является источником истины для `erp-coder` и `erp-qa-tester`. Дизайнер (`erp-uiux-designer`) обязан заполнить все применимые секции до передачи задачи кодеру. Кодер реализует страницу строго по этому шаблону.
+
 ## 1. Страница
 
 - Route / view:
 - Тип страницы: list+inspector / table-only / master-detail / form / admin settings / report
-- Пользователь:
+- Пользователь (роль):
 - Главная задача пользователя:
 - Что нельзя менять в бизнес-логике:
 
 ## 2. Layout
 
-- App shell:
+- App shell: topbar 38px + sidebar 224px + content
+- Content min-width: 1440px (desktop-first)
 - Основная сетка:
-- Правый inspector: да/нет
+- Правый inspector: да/нет, ширина:
 - Нижняя форма/editor: да/нет
 - Scroll areas:
 
@@ -21,7 +24,7 @@
 - Eyebrow:
 - Title:
 - Summary counters:
-- Primary action:
+- Primary action (`.btn .btn-primary`):
 - Secondary actions:
 
 ## 4. Filters / toolbar
@@ -33,21 +36,24 @@
 
 ## 5. Main table / grid
 
-- Component:
+- Component: `.tbl` inside `.tbl-wrap`
+- Row height: 32px
+- Thead height: 30px
+- Header sticky: да/нет
 - Columns:
 
 | # | Название | Тип | Класс | Ширина/поведение | Примечание |
 |---|---|---|---|---|---|
 | 1 | | | | | |
 
-- Row states:
-- Row actions:
+- Row states: hover / selected (`.is-sel`) / empty
+- Row actions (показывать на hover):
 - Bulk actions:
 
 ## 6. Inspector / detail panel
 
 - Нужен: да/нет
-- Width:
+- Width (обычно 320–380px):
 - Header:
 - Status badge:
 - Tabs:
@@ -65,8 +71,8 @@
 | | | | | |
 
 - Form states:
-  - error:
-  - success:
+  - error (`.is-error`, `.field-msg`):
+  - success (`.is-success`):
   - readonly:
   - disabled:
 
@@ -75,6 +81,8 @@
 | Modal | Size | Trigger | Fields/content | Footer buttons |
 |---|---|---|---|---|
 | | | | | |
+
+- Danger confirmations:
 
 ## 9. Toasts / alerts
 
@@ -85,25 +93,35 @@
 
 ## 10. Empty / loading / error
 
-- Empty state:
-- Loading state:
+- Empty table state:
+- Loading skeleton:
 - Error state:
 
 ## 11. Statuses and badges
 
 - Используемые badges:
 - Flight statuses, если есть:
+  - search / found / started / completed / attention / planned_route
 
-## 12. CSS/classes coder must use
+## 12. Charts, если есть
+
+- Chart type:
+- Data series:
+- Colors: `--chart-1 … --chart-8`
+- Legend:
+- Empty/loading state:
+
+## 13. CSS/classes coder must use
 
 - Layout classes:
 - Components:
-- Buttons:
-- Table:
-- Forms:
-- States:
+- Buttons: `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-toolbar`, `.btn-icon`, `.btn-danger`
+- Table: `.tbl`, `.tbl-wrap`, `.tbl-compact`, `.tbl-striped`, `.col-num`, `.col-chk`, `.col-actions`, `.col-mono`, `.col-muted`, `.col-pin`, `.tr-total`, `.row-acts`, `.ra`, `.ra.del`
+- Forms: `.field`, `.field-label`, `.req`, `.field-input`, `.field-select`, `.field-textarea`, `.field-msg`, `.is-error`, `.is-success`
+- States: `.is-sel`, `.is-disabled`, `.is-active`
+- Inspector: `.inspector`, `.inspector-header`, `.inspector-title`, `.inspector-tabs`, `.inspector-body`, `.insp-section`, `.kv-row`
 
-## 13. Strict prohibitions for coder
+## 14. Strict prohibitions for coder
 
 - Не придумывать layout.
 - Не придумывать новые CSS-классы без решения дизайнера/архитектора.
@@ -111,14 +129,22 @@
 - Не использовать Bootstrap/Tailwind/React/Vue/Material.
 - Не добавлять inline styles, кроме разрешённых динамических PHP values.
 - Не менять этот шаблон без дизайнера.
+- `border-radius` не больше 4px.
+- `box-shadow` blur не больше 8px.
+- Не использовать browser-default input/select.
 
-## 14. Acceptance checklist
+## 15. Acceptance checklist
 
+- [ ] Industrial Graphite + Warm Accent сохранён.
 - [ ] Страница соответствует `DESIGN_CODE_INTEGRATION.md`.
 - [ ] Таблицы соответствуют `TABLES_STANDARD.md`.
 - [ ] Формы соответствуют `FORMS_STANDARD.md`.
 - [ ] Layout соответствует `PAGE_PATTERN.md`.
-- [ ] Empty/loading/error states описаны.
+- [ ] Empty/loading/error states описаны и реализованы.
 - [ ] Опасные действия имеют подтверждение.
 - [ ] Кодер может реализовать страницу без поиска примеров.
 - [ ] QA может проверить страницу по этому шаблону.
+- [ ] Нет случайных CSS-классов.
+- [ ] Нет хардкода цветов.
+- [ ] Нет inline styles, кроме динамических PHP.
+- [ ] Runtime/browser check выполнен.
