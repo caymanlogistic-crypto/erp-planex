@@ -4,7 +4,7 @@
 
 **ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.** Manual visual approval deferred. UI polish deferred.
 
-Latest stable commit remains: `91c6911`. Working tree has uncommitted functional changes.
+Latest commit: `7100015` — feat(superadmin): add companies registry provisioning.
 
 Code status: module implemented, migration 005 applied, provisioning flow works (central record → local DB → storage).
 
@@ -444,6 +444,7 @@ UI Module Catalog:
 Актуальные последние commits на момент начала этой задачи:
 
 ```text
+7100015 feat(superadmin): add companies registry provisioning
 50f96a9 Fix ERP PLANEX UI process rules and SUPERADMIN handoff
 be55198 Create SUPERADMIN Stage 4a migration runner
 b3c60c4 Update portable context after SUPERADMIN Stage 4a runner commit

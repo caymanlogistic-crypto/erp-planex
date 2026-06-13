@@ -1,5 +1,22 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 15:49 — KILO/erp-architect — Commit SUPERADMIN Companies Registry checkpoint
+
+### Задача
+Зафиксировать функционально принятую точку `SUPERADMIN Companies Registry` в Git.
+
+### Что сделано
+- Проверен git status: 11 modified + 6 untracked — только файлы Companies Registry и связанные MD.
+- Проверен diff на секреты: `.env` отсутствует, паролей/токенов нет.
+- Commit `7100015` — 17 files, 2046 insertions, 16 deletions.
+- Working tree после commit: clean.
+- Push: НЕ выполнялся.
+
+### Статус
+DONE
+
+---
+
 ## 2026-06-13 — KILO/erp-qa-tester — QA SUPERADMIN Companies Registry
 
 ### Задача
