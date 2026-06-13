@@ -1,3 +1,12 @@
+# CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_VEHICLES_REGISTRY_QA_ACCEPTED
+
+Current focus: Company Vehicles Registry — **QA: FUNCTIONAL_ACCEPTED** (59/59 PASS, 0 BLOCKER).
+
+## Next module
+**Экипажи / связка Подрядчик + Машина + Водитель** — следующий модуль после завершения справочного фундамента.
+
+---
+
 # CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_DRIVERS_REGISTRY_QA_ACCEPTED
 
 Current focus: Company Drivers Registry — **QA: FUNCTIONAL_ACCEPTED** (55/55 PASS, 0 BLOCKER).

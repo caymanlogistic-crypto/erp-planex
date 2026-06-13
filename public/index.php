@@ -1569,4 +1569,277 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
     require base_path('app/View/layouts/main.php');
 });
 
+$router->get('/company/vehicles', function () use ($config, $db) {
+    $pageTitle = 'Транспорт';
+    $pageContext = 'Транспорт — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $vehicles = [];
+        $dbError = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_vehicles.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $vehicles = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_vehicles.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $vehicles = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_vehicles.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $vehicleStmt = $localPdo->query("SELECT * FROM vehicles ORDER BY created_at DESC");
+        $vehicles = $vehicleStmt->fetchAll(PDO::FETCH_ASSOC);
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $vehicles = [];
+        $dbError = 'Не удалось подключиться к базе данных компании.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_vehicles.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/vehicles/create', function () use ($config, $db) {
+    $pageTitle = 'Добавить транспорт';
+    $pageContext = 'Транспорт — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdVehicle = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_vehicles_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $success = false;
+            $errors = [];
+            $old = [];
+            $formError = null;
+            $createdVehicle = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_vehicles_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdVehicle = null;
+    } catch (\Exception $e) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+        $createdVehicle = null;
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_vehicles_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/vehicles/create', function () use ($config, $db) {
+    $pageTitle = 'Добавить транспорт';
+    $pageContext = 'Транспорт — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $createdVehicle = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        $formError = 'Компания не найдена';
+
+        ob_start();
+        require base_path('app/View/pages/company_vehicles_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/company_vehicles_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $formError = 'Добавление транспорта недоступно';
+
+            ob_start();
+            require base_path('app/View/pages/company_vehicles_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $plateNumber = trim($_POST['plate_number'] ?? '');
+
+        if ($plateNumber === '') {
+            $errors['plate_number'] = 'Обязательное поле';
+        }
+
+        if (empty($errors['plate_number'])) {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicles WHERE plate_number = ?');
+            $checkStmt->execute([$plateNumber]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['plate_number'] = 'Госномер уже используется в этой компании';
+            }
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/company_vehicles_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $brand = trim($_POST['brand'] ?? '');
+        $model = trim($_POST['model'] ?? '');
+        $vehicleType = trim($_POST['vehicle_type'] ?? '');
+        $vin = trim($_POST['vin'] ?? '');
+        $stsNumber = trim($_POST['sts_number'] ?? '');
+        $ptsNumber = trim($_POST['pts_number'] ?? '');
+        $capacityTons = trim($_POST['capacity_tons'] ?? '');
+        $volumeM3 = trim($_POST['volume_m3'] ?? '');
+        $comments = trim($_POST['comments'] ?? '');
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO vehicles (plate_number, brand, model, vehicle_type, vin,
+             sts_number, pts_number, capacity_tons, volume_m3, status, comments)
+             VALUES (:plate_number, :brand, :model, :vehicle_type, :vin,
+             :sts_number, :pts_number, :capacity_tons, :volume_m3, :status, :comments)'
+        );
+        $insert->execute([
+            ':plate_number'  => $plateNumber,
+            ':brand'         => $brand !== '' ? $brand : null,
+            ':model'         => $model !== '' ? $model : null,
+            ':vehicle_type'  => $vehicleType !== '' ? $vehicleType : null,
+            ':vin'           => $vin !== '' ? $vin : null,
+            ':sts_number'    => $stsNumber !== '' ? $stsNumber : null,
+            ':pts_number'    => $ptsNumber !== '' ? $ptsNumber : null,
+            ':capacity_tons' => $capacityTons !== '' ? $capacityTons : null,
+            ':volume_m3'     => $volumeM3 !== '' ? $volumeM3 : null,
+            ':status'        => 'active',
+            ':comments'      => $comments !== '' ? $comments : null,
+        ]);
+
+        $lastId = $localPdo->lastInsertId();
+        $selectStmt = $localPdo->prepare('SELECT * FROM vehicles WHERE id = ?');
+        $selectStmt->execute([$lastId]);
+        $createdVehicle = $selectStmt->fetch(PDO::FETCH_ASSOC);
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка добавления транспорта: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_vehicles_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

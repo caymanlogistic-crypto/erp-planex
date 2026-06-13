@@ -1,5 +1,63 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 17:45 — KILO/erp-qa-tester — QA Company Vehicles Registry
+
+### Задача
+QA-проверка модуля Company Vehicles Registry.
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 59 проверок, 59 PASS, 0 FAIL, 0 BLOCKER.
+
+### Ключевые подтверждения
+- Транспорт в локальной БД (таблица vehicles), НЕ в центральной
+- Миграция 005 существует, идемпотентна (CREATE TABLE IF NOT EXISTS)
+- plate_number validation работает, duplicate блокируется
+- Все 6 предыдущих модулей целы
+- main.php, app.css, Database.php, Router.php — не изменены
+- Core Kit классы присутствуют, demo-placeholder UI отсутствует
+- Нет exec-SELECT, секретов в git diff нет
+
+### Статус
+DONE — FUNCTIONAL_ACCEPTED, COMMIT RECOMMENDATION: READY
+
+---
+
+## 2026-06-13 17:40 — KILO/erp-coder — Company Vehicles Registry
+
+### Задача
+Реализовать модуль «Логист ведёт транспорт».
+
+### Что сделано
+- 3 маршрута: GET list, GET form, POST create
+- Views `company_vehicles.php` (5 состояний), `company_vehicles_create.php` (4 состояния)
+- Валидация plate_number (required + unique), duplicate check
+- Безопасный `query()->fetch()` паттерн, нет exec-SELECT
+- Все Core Kit модули из handoff: CORE-05, CORE-08, CORE-13, CORE-17, CORE-19, CORE-24, CORE-26, CORE-27, CORE-28, CORE-31, CORE-32, CORE-33, CORE-34
+- PATTERN-01 Table-only registry + form page
+- main.php, app.css, Database.php, Router.php — НЕ изменены
+- Все предыдущие модули целы
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 17:35 — KILO/erp-architect — Архитектурное решение и handoff для Company Vehicles Registry
+
+### Задача
+Зафиксировать минимальную архитектуру для справочника транспорта, создать handoff и миграцию.
+
+### Что сделано
+- Принято DECISION-0038: таблица `vehicles` в локальной БД компании, 14 полей, UNIQUE KEY uk_plate_number
+- Создан handoff: `docs/ui/pages/company-vehicles.md`
+- Создана миграция: `database/migrations-local/005_create_company_vehicles.sql`
+- Задача передана erp-coder с MANDATORY CODER INVOCATION BLOCK
+
+### Статус
+DONE
+
+---
+
 ## 2026-06-13 17:28 — KILO/erp-architect — Commit Company Drivers Registry
 
 ### Задача

@@ -1,3 +1,34 @@
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_VEHICLES_REGISTRY_QA_ACCEPTED
+
+**Seventh functional module `Company Vehicles Registry` — QA ACCEPTED (59/59 PASS, 0 BLOCKER).**
+
+**ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.**
+
+Code status:
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Next module: Экипажи / связка Подрядчик + Машина + Водитель
+
+New local table `vehicles` (in `erp_company_{id}`): id, plate_number (UNIQUE), brand, model, vehicle_type, vin, sts_number, pts_number, capacity_tons, volume_m3, status, comments, created_at, updated_at.
+
+New routes:
+- GET `/company/vehicles?company_id=N`
+- GET/POST `/company/vehicles/create?company_id=N`
+
+Key files added:
+- `database/migrations-local/005_create_company_vehicles.sql`
+- `app/View/pages/company_vehicles.php`
+- `app/View/pages/company_vehicles_create.php`
+- `docs/ui/pages/company-vehicles.md` (handoff)
+- `docs/ai/DECISIONS_LOG.md` (DECISION-0038)
+
+---
+
 # CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_DRIVERS_REGISTRY_QA_ACCEPTED
 
 **Sixth functional module `Company Drivers Registry` — QA ACCEPTED (55/55 PASS, 0 BLOCKER).**
