@@ -1019,4 +1019,281 @@ $router->post('/company/clients/create', function () use ($config, $db) {
     require base_path('app/View/layouts/main.php');
 });
 
+$router->get('/company/contractors', function () use ($config, $db) {
+    $pageTitle = 'Подрядчики';
+    $pageContext = 'Подрядчики — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $contractors = [];
+        $dbError = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_contractors.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $contractors = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $contractors = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/003_create_company_contractors.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $contractorStmt = $localPdo->query("SELECT * FROM contractors ORDER BY created_at DESC");
+        $contractors = $contractorStmt->fetchAll(PDO::FETCH_ASSOC);
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $contractors = [];
+        $dbError = 'Не удалось подключиться к базе данных компании.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_contractors.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/contractors/create', function () use ($config, $db) {
+    $pageTitle = 'Создать подрядчика';
+    $pageContext = 'Подрядчики — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdContractor = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_contractors_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $success = false;
+            $errors = [];
+            $old = [];
+            $formError = null;
+            $createdContractor = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdContractor = null;
+    } catch (\Exception $e) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+        $createdContractor = null;
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_contractors_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/contractors/create', function () use ($config, $db) {
+    $pageTitle = 'Создать подрядчика';
+    $pageContext = 'Подрядчики — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $createdContractor = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        $formError = 'Компания не найдена';
+
+        ob_start();
+        require base_path('app/View/pages/company_contractors_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $formError = 'Создание подрядчиков недоступно';
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/003_create_company_contractors.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $inn = trim($_POST['inn'] ?? '');
+        $kpp = trim($_POST['kpp'] ?? '');
+        $ogrn = trim($_POST['ogrn'] ?? '');
+        $legalAddress = trim($_POST['legal_address'] ?? '');
+        $physicalAddress = trim($_POST['physical_address'] ?? '');
+        $contactPerson = trim($_POST['contact_person'] ?? '');
+        $contactPhone = trim($_POST['contact_phone'] ?? '');
+        $contactEmail = trim($_POST['contact_email'] ?? '');
+        $comments = trim($_POST['comments'] ?? '');
+
+        if ($name === '') {
+            $errors['name'] = 'Обязательное поле';
+        }
+
+        if ($inn === '') {
+            $errors['inn'] = 'Обязательное поле';
+        }
+
+        if (empty($errors['inn'])) {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM contractors WHERE inn = ?');
+            $checkStmt->execute([$inn]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['inn'] = 'ИНН уже используется в этой компании';
+            }
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO contractors (name, inn, kpp, ogrn, legal_address, physical_address,
+             contact_person, contact_phone, contact_email, status, comments)
+             VALUES (:name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
+             :contact_person, :contact_phone, :contact_email, :status, :comments)'
+        );
+        $insert->execute([
+            ':name'             => $name,
+            ':inn'              => $inn,
+            ':kpp'              => $kpp !== '' ? $kpp : null,
+            ':ogrn'             => $ogrn !== '' ? $ogrn : null,
+            ':legal_address'    => $legalAddress !== '' ? $legalAddress : null,
+            ':physical_address' => $physicalAddress !== '' ? $physicalAddress : null,
+            ':contact_person'   => $contactPerson !== '' ? $contactPerson : null,
+            ':contact_phone'    => $contactPhone !== '' ? $contactPhone : null,
+            ':contact_email'    => $contactEmail !== '' ? $contactEmail : null,
+            ':status'           => 'active',
+            ':comments'         => $comments !== '' ? $comments : null,
+        ]);
+
+        $createdContractor = [
+            'id'   => $localPdo->lastInsertId(),
+            'name' => $name,
+            'inn'  => $inn,
+        ];
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка создания подрядчика: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_contractors_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

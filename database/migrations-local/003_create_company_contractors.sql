@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS `contractors` (
+    `id` INT UNSIGNED AUTO_INCREMENT,
+    `name` VARCHAR(255) NOT NULL,
+    `inn` VARCHAR(20) NOT NULL,
+    `kpp` VARCHAR(20) DEFAULT NULL,
+    `ogrn` VARCHAR(20) DEFAULT NULL,
+    `legal_address` VARCHAR(500) DEFAULT NULL,
+    `physical_address` VARCHAR(500) DEFAULT NULL,
+    `contact_person` VARCHAR(255) DEFAULT NULL,
+    `contact_phone` VARCHAR(50) DEFAULT NULL,
+    `contact_email` VARCHAR(255) DEFAULT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'active',
+    `comments` TEXT DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_inn` (`inn`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

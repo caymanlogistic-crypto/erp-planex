@@ -1,21 +1,9 @@
-# CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_CLIENTS_REGISTRY_QA_ACCEPTED
+# CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_CONTRACTORS_REGISTRY_QA_ACCEPTED
 
-Current focus: Company Clients Registry — **QA: FUNCTIONAL_ACCEPTED** (32/32 PASS, 0 FAIL, 0 BLOCKER).
-
-## QA result
-- 32 checks, 32 PASS, 0 FAIL, 0 BLOCKER
-- Clients in local DB only, UNIQUE KEY uk_inn, no F-1 regression
-- SUPERADMIN, Company Owner, Logists — not broken
-- Architecture: COMPLIANT
-- Commitable: YES
-
-## Implementation
-- Migration: `database/migrations-local/002_create_company_clients.sql` (14 fields)
-- Routes: GET `/company/clients`, GET/POST `/company/clients/create`
-- Views: `company_clients.php` (5 states), `company_clients_create.php` (4 states)
+Current focus: Company Contractors Registry — **QA: FUNCTIONAL_ACCEPTED** (25/25 PASS, 0 BLOCKER).
 
 ## Next module
-**Логист ведёт подрядчиков** — справочник подрядчиков в локальной БД компании.
+**Логист ведёт водителей** — справочник водителей в локальной БД компании.
 
 ---
 

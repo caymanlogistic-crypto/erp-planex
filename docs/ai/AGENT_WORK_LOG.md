@@ -1,5 +1,34 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 16:52 — KILO/erp-qa-tester — QA Company Contractors Registry
+
+### Задача
+QA-проверка модуля Company Contractors Registry.
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 25 проверок, 25 PASS, 0 FAIL, 0 BLOCKER.
+
+### Статус
+DONE — COMMIT RECOMMENDATION: READY
+
+---
+
+## 2026-06-13 16:48 — KILO/erp-coder — Company Contractors Registry
+
+### Задача
+Реализовать модуль «Логист ведёт подрядчиков».
+
+### Что сделано
+- Миграция `003_create_company_contractors.sql` (14 полей, UNIQUE KEY uk_inn)
+- 3 маршрута: GET list, GET form, POST create
+- Views `company_contractors.php` (5 состояний), `company_contractors_create.php` (4 состояния)
+- Безопасный `query()->fetch()` паттерн, нет exec-SELECT
+
+### Статус
+DONE
+
+---
+
 ## 2026-06-13 16:33 — KILO/erp-qa-tester — QA Company Clients Registry
 
 ### Задача

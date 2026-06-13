@@ -1,15 +1,16 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_CLIENTS_REGISTRY_QA_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_CONTRACTORS_REGISTRY_QA_ACCEPTED
 
-**Fourth functional module `Company Clients Registry` — QA ACCEPTED (32/32 PASS, 0 FAIL, 0 BLOCKER).**
+**Fifth functional module `Company Contractors Registry` — QA ACCEPTED (25/25 PASS, 0 BLOCKER).**
 
-**ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.** Manual visual approval deferred. UI polish deferred.
+**ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.**
 
 Code status:
-- Companies Registry: FUNCTIONAL_ACCEPTED (migration 005)
-- Company Owner User: FUNCTIONAL_ACCEPTED (migration 006)
-- Company Logist User: FUNCTIONAL_ACCEPTED (local migration 001)
-- Company Clients Registry: FUNCTIONAL_ACCEPTED (local migration 002)
-- Next module: Логист ведёт подрядчиков
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Next module: Логист ведёт водителей
 
 New local table `clients` (in `erp_company_{id}`): id, name, inn (UNIQUE), kpp, ogrn, legal_address, physical_address, contact_person, contact_phone, contact_email, status, comments, created_at, updated_at.
 
