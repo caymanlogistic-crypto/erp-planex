@@ -742,4 +742,281 @@ $router->post('/company/logists/create', function () use ($config, $db) {
     require base_path('app/View/layouts/main.php');
 });
 
+$router->get('/company/clients', function () use ($config, $db) {
+    $pageTitle = 'Клиенты';
+    $pageContext = 'Клиенты — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $clients = [];
+        $dbError = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_clients.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $clients = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_clients.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $clients = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_clients.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/002_create_company_clients.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $clientStmt = $localPdo->query("SELECT * FROM clients ORDER BY created_at DESC");
+        $clients = $clientStmt->fetchAll(PDO::FETCH_ASSOC);
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $clients = [];
+        $dbError = 'Не удалось подключиться к базе данных компании.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_clients.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/clients/create', function () use ($config, $db) {
+    $pageTitle = 'Создать клиента';
+    $pageContext = 'Клиенты — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdClient = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_clients_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $success = false;
+            $errors = [];
+            $old = [];
+            $formError = null;
+            $createdClient = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_clients_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdClient = null;
+    } catch (\Exception $e) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+        $createdClient = null;
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_clients_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/clients/create', function () use ($config, $db) {
+    $pageTitle = 'Создать клиента';
+    $pageContext = 'Клиенты — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $createdClient = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        $formError = 'Компания не найдена';
+
+        ob_start();
+        require base_path('app/View/pages/company_clients_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/company_clients_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $formError = 'Создание клиентов недоступно';
+
+            ob_start();
+            require base_path('app/View/pages/company_clients_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/002_create_company_clients.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $inn = trim($_POST['inn'] ?? '');
+        $kpp = trim($_POST['kpp'] ?? '');
+        $ogrn = trim($_POST['ogrn'] ?? '');
+        $legalAddress = trim($_POST['legal_address'] ?? '');
+        $physicalAddress = trim($_POST['physical_address'] ?? '');
+        $contactPerson = trim($_POST['contact_person'] ?? '');
+        $contactPhone = trim($_POST['contact_phone'] ?? '');
+        $contactEmail = trim($_POST['contact_email'] ?? '');
+        $comments = trim($_POST['comments'] ?? '');
+
+        if ($name === '') {
+            $errors['name'] = 'Обязательное поле';
+        }
+
+        if ($inn === '') {
+            $errors['inn'] = 'Обязательное поле';
+        }
+
+        if (empty($errors['inn'])) {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM clients WHERE inn = ?');
+            $checkStmt->execute([$inn]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['inn'] = 'ИНН уже используется в этой компании';
+            }
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/company_clients_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO clients (name, inn, kpp, ogrn, legal_address, physical_address,
+             contact_person, contact_phone, contact_email, status, comments)
+             VALUES (:name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
+             :contact_person, :contact_phone, :contact_email, :status, :comments)'
+        );
+        $insert->execute([
+            ':name'             => $name,
+            ':inn'              => $inn,
+            ':kpp'              => $kpp !== '' ? $kpp : null,
+            ':ogrn'             => $ogrn !== '' ? $ogrn : null,
+            ':legal_address'    => $legalAddress !== '' ? $legalAddress : null,
+            ':physical_address' => $physicalAddress !== '' ? $physicalAddress : null,
+            ':contact_person'   => $contactPerson !== '' ? $contactPerson : null,
+            ':contact_phone'    => $contactPhone !== '' ? $contactPhone : null,
+            ':contact_email'    => $contactEmail !== '' ? $contactEmail : null,
+            ':status'           => 'active',
+            ':comments'         => $comments !== '' ? $comments : null,
+        ]);
+
+        $createdClient = [
+            'id'   => $localPdo->lastInsertId(),
+            'name' => $name,
+            'inn'  => $inn,
+        ];
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка создания клиента: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_clients_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

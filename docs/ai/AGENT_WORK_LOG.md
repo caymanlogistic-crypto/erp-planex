@@ -1,5 +1,47 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 16:33 — KILO/erp-qa-tester — QA Company Clients Registry
+
+### Задача
+QA-проверка модуля Company Clients Registry по handoff и DECISION-0035.
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 32 проверки, 32 PASS, 0 FAIL, 0 BLOCKER.
+
+### Ключевые подтверждения
+- Клиенты в локальной БД (таблица clients), НЕ в центральной
+- name/inn validation работает, duplicate inn блокируется
+- Нет F-1 регресса (exec-SELECT не используется)
+- SUPERADMIN, Company Owner, Logists — не сломаны
+- main.php, Database.php, Router.php — не изменены
+- Все Core Kit классы присутствуют, demo-placeholder UI отсутствует
+- Секретов в git diff нет
+
+### Статус
+DONE — FUNCTIONAL_ACCEPTED, COMMIT RECOMMENDATION: READY
+
+---
+
+## 2026-06-13 16:30 — KILO/erp-coder — Company Clients Registry
+
+### Задача
+Реализовать модуль «Логист ведёт клиентов» — справочник клиентов в локальной БД компании.
+
+### Что сделано
+- Создана миграция `database/migrations-local/002_create_company_clients.sql` (14 полей, UNIQUE KEY uk_inn)
+- Добавлены 3 маршрута в `public/index.php`: GET `/company/clients`, GET/POST `/company/clients/create`
+- Создан view `company_clients.php` (5 состояний)
+- Создан view `company_clients_create.php` (4 состояния)
+- Валидация name/inn (required + unique)
+- Безопасный паттерн `query()->fetch()` для проверки таблицы (не exec-SELECT)
+- Все Core Kit классы, e() для экранирования
+- main.php, app.css, Database.php, Router.php — НЕ изменены
+
+### Статус
+DONE
+
+---
+
 ## 2026-06-13 16:26 — KILO/erp-qa-tester — QA RE-CHECK F-1 fix (Company Logist)
 
 ### Задача

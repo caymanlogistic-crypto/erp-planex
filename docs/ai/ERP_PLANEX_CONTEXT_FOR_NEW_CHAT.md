@@ -1,16 +1,28 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_LOGIST_USER_QA_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_CLIENTS_REGISTRY_QA_ACCEPTED
 
-**Third functional module `Company Logist User (Логист)` — QA ACCEPTED (44 checks, 39 PASS, 0 BLOCKER; F-1 fixed, re-check PASS).**
+**Fourth functional module `Company Clients Registry` — QA ACCEPTED (32/32 PASS, 0 FAIL, 0 BLOCKER).**
 
 **ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.** Manual visual approval deferred. UI polish deferred.
 
-Latest commit: `87d2011` — feat(superadmin): add company owner user provisioning (new work pending commit).
-
 Code status:
-- Companies Registry: FUNCTIONAL_ACCEPTED (migration 005, provisioning flow)
-- Company Owner User: FUNCTIONAL_ACCEPTED (migration 006, duplicate prevention, bcrypt)
-- Company Logist User: FUNCTIONAL_ACCEPTED (local migration 001, 3 routes, F-1 fixed)
-- Next module: Логист ведёт клиентов
+- Companies Registry: FUNCTIONAL_ACCEPTED (migration 005)
+- Company Owner User: FUNCTIONAL_ACCEPTED (migration 006)
+- Company Logist User: FUNCTIONAL_ACCEPTED (local migration 001)
+- Company Clients Registry: FUNCTIONAL_ACCEPTED (local migration 002)
+- Next module: Логист ведёт подрядчиков
+
+New local table `clients` (in `erp_company_{id}`): id, name, inn (UNIQUE), kpp, ogrn, legal_address, physical_address, contact_person, contact_phone, contact_email, status, comments, created_at, updated_at.
+
+New routes:
+- GET `/company/clients?company_id=N`
+- GET/POST `/company/clients/create?company_id=N`
+
+Key files added:
+- `database/migrations-local/002_create_company_clients.sql`
+- `app/View/pages/company_clients.php`
+- `app/View/pages/company_clients_create.php`
+- `docs/ui/pages/company-clients.md` (handoff)
+- `docs/ai/DECISIONS_LOG.md` (DECISION-0035)
 
 New local migration `database/migrations-local/001_create_company_users.sql`: таблица `users` в локальной БД компании с UNIQUE KEY uk_login.
 
