@@ -1,3 +1,29 @@
+# CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_LOGIST_USER_QA_ACCEPTED
+
+Current focus: Company Logist User (Логист) — **F-1 FIXED, QA RE-CHECK PASS, FUNCTIONAL_ACCEPTED**.
+
+## QA result
+- Initial QA: 44 checks, 39 PASS, 1 FAIL (F-1), 0 BLOCKER
+- F-1 fix: замена `PDO::exec("SELECT ...")` → `$localPdo->query("SELECT ...")->fetch()` в 2 местах
+- QA re-check: PASS — повторные HTTP-запросы работают, дубликат login блокируется
+- Architecture: COMPLIANT — логист только в локальной БД, role_code='logist', password_hash bcrypt
+- Security: открытый пароль не хранится, секретов в git diff нет
+- Commitable: YES (per ACCELERATED FUNCTIONAL DEVELOPMENT MODE)
+
+### Implementation results
+- Migration: `database/migrations-local/001_create_company_users.sql` — таблица `users` в локальной БД компании (9 полей, UNIQUE KEY uk_login).
+- Routes: GET `/company/logists`, GET `/company/logists/create`, POST `/company/logists/create` — все с контекстом `?company_id=N`.
+- Views: `company_logists.php` (5 состояний), `company_logists_create.php` (4 состояния).
+- Password: bcrypt `password_hash()`, открытый пароль показывается один раз на success page.
+- Auto-migration: таблица `users` создаётся автоматически при первом доступе к локальной БД.
+- main.php, app.css, Database.php, Router.php — НЕ изменены.
+- SUPERADMIN маршруты и views — НЕ сломаны.
+
+## Next module
+**Логист ведёт клиентов** — справочник клиентов в локальной БД компании.
+
+---
+
 # CURRENT STATUS OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_USER_QA_ACCEPTED
 
 Current focus: SUPERADMIN Company Owner User — **QA: FUNCTIONAL_ACCEPTED** (42 checks, 39 PASS, 0 FAIL, 0 BLOCKER).

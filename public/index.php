@@ -452,4 +452,294 @@ $router->post('/superadmin/companies/{id}/create-owner', function ($id) use ($co
     }
 });
 
+$router->get('/company/logists', function () use ($config, $db) {
+    $pageTitle = 'Логисты';
+    $pageContext = 'Логисты — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $logists = [];
+        $dbError = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_logists.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $logists = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_logists.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Логисты — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $logists = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_logists.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/001_create_company_users.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $logistStmt = $localPdo->query("SELECT * FROM users WHERE role_code = 'logist' ORDER BY created_at DESC");
+        $logists = $logistStmt->fetchAll(PDO::FETCH_ASSOC);
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $logists = [];
+        $dbError = 'Не удалось подключиться к базе данных компании. Проверьте, что локальная БД создана.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_logists.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/logists/create', function () use ($config, $db) {
+    $pageTitle = 'Создать логиста';
+    $pageContext = 'Логисты — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $generatedPassword = null;
+        $createdLogist = null;
+        $tempPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_logists_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $success = false;
+            $errors = [];
+            $old = [];
+            $formError = null;
+            $generatedPassword = null;
+            $createdLogist = null;
+            $tempPassword = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_logists_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Логисты — Компания: ' . $company['name'];
+
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $generatedPassword = generatePassword();
+        $createdLogist = null;
+        $tempPassword = null;
+    } catch (\Exception $e) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+        $generatedPassword = null;
+        $createdLogist = null;
+        $tempPassword = null;
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_logists_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/logists/create', function () use ($config, $db) {
+    $pageTitle = 'Создать логиста';
+    $pageContext = 'Логисты — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $generatedPassword = null;
+    $createdLogist = null;
+    $tempPassword = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        $formError = 'Компания не найдена';
+
+        ob_start();
+        require base_path('app/View/pages/company_logists_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/company_logists_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Логисты — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $formError = 'Создание логистов недоступно';
+
+            ob_start();
+            require base_path('app/View/pages/company_logists_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/001_create_company_users.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $fullName = trim($_POST['full_name'] ?? '');
+        $login = trim($_POST['login'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+
+        if ($fullName === '') {
+            $errors['full_name'] = 'Обязательное поле';
+        }
+
+        if ($login === '') {
+            $errors['login'] = 'Обязательное поле';
+        } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
+            $errors['login'] = 'Только латинские буквы, цифры и подчёркивание';
+        }
+
+        if (empty($errors['login'])) {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM users WHERE login = ?');
+            $checkStmt->execute([$login]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['login'] = 'Логин уже используется в этой компании';
+            }
+        }
+
+        if ($password === '') {
+            $password = generatePassword();
+        }
+
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Некорректный email';
+        }
+
+        if (!empty($errors)) {
+            $generatedPassword = generatePassword();
+
+            ob_start();
+            require base_path('app/View/pages/company_logists_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO users (full_name, login, email, phone, password_hash, role_code, status)
+             VALUES (:full_name, :login, :email, :phone, :password_hash, :role_code, :status)'
+        );
+        $insert->execute([
+            ':full_name'     => $fullName,
+            ':login'         => $login,
+            ':email'         => $email !== '' ? $email : null,
+            ':phone'         => $phone !== '' ? $phone : null,
+            ':password_hash' => $passwordHash,
+            ':role_code'     => 'logist',
+            ':status'        => 'active',
+        ]);
+
+        $createdLogist = [
+            'full_name' => $fullName,
+            'login'     => $login,
+        ];
+        $tempPassword = $password;
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка создания логиста: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_logists_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

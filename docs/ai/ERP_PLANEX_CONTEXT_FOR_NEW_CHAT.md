@@ -1,4 +1,38 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_USER_QA_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_LOGIST_USER_QA_ACCEPTED
+
+**Third functional module `Company Logist User (Логист)` — QA ACCEPTED (44 checks, 39 PASS, 0 BLOCKER; F-1 fixed, re-check PASS).**
+
+**ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.** Manual visual approval deferred. UI polish deferred.
+
+Latest commit: `87d2011` — feat(superadmin): add company owner user provisioning (new work pending commit).
+
+Code status:
+- Companies Registry: FUNCTIONAL_ACCEPTED (migration 005, provisioning flow)
+- Company Owner User: FUNCTIONAL_ACCEPTED (migration 006, duplicate prevention, bcrypt)
+- Company Logist User: FUNCTIONAL_ACCEPTED (local migration 001, 3 routes, F-1 fixed)
+- Next module: Логист ведёт клиентов
+
+New local migration `database/migrations-local/001_create_company_users.sql`: таблица `users` в локальной БД компании с UNIQUE KEY uk_login.
+
+New routes:
+- GET `/company/logists?company_id=N` — список логистов компании
+- GET `/company/logists/create?company_id=N` — форма создания логиста
+- POST `/company/logists/create?company_id=N` — обработка создания логиста
+
+Key files added/modified:
+- `database/migrations-local/001_create_company_users.sql` (new)
+- `database/migrations-local/.gitkeep` (new)
+- `app/View/pages/company_logists.php` (new)
+- `app/View/pages/company_logists_create.php` (new)
+- `public/index.php` (modified: 3 routes added)
+
+Password rules: bcrypt only in local DB, temporary password shown once on success page, auto-generated if empty.
+
+Architecture: Логист хранится ТОЛЬКО в локальной БД компании, НЕ в центральной. Контекст компании временно через `?company_id=N`.
+
+main.php, app.css, Database.php, Router.php — НЕ изменены. SUPERADMIN маршруты/views — НЕ сломаны.
+
+---
 
 **Second functional module `SUPERADMIN Company Owner User (Руководитель)` — QA ACCEPTED (42 checks, 39 PASS, 0 FAIL, 0 BLOCKER).**
 
@@ -306,7 +340,7 @@ docs/ui/pages/[page-name].md
 
 ## Текущий фокус
 
-Текущий фокус: **`QA ACCEPTED`** — второй бизнес-модуль `SUPERADMIN Company Owner User (Руководитель)` реализован и прошёл QA.
+Текущий фокус: **`CODER DONE`** — третий бизнес-модуль `Company Logist User (Логист)` реализован, готов к QA.
 
 Следующий модуль: **Логист** — Руководитель создаёт локального пользователя в БД своей компании.
 
@@ -471,7 +505,7 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **SUPERADMIN Company Owner User — QA ACCEPTED (2026-06-13).**
+Активная задача: **Company Logist User — CODER DONE (2026-06-13).**
 
 Следующий рабочий шаг:
 1. ~~Foundation rework cycle.~~ **DONE.**
@@ -481,9 +515,12 @@ dc75ab4 Create minimal PHP application skeleton
 5. ~~SUPERADMIN Company Owner User — архитектурное решение (DECISION-0033).~~ **DONE (2026-06-13).**
 6. ~~SUPERADMIN Company Owner User — handoff.~~ **DONE (architect-created, accelerated mode).**
 7. ~~SUPERADMIN Company Owner User — coder implementation.~~ **DONE (2026-06-13).**
-8. ~~SUPERADMIN Company Owner User — QA.~~ **DONE: FUNCTIONAL_ACCEPTED (42/42, 39 PASS, 0 FAIL, 0 BLOCKER).**
-9. Commit текущей точки.
-10. Следующий модуль: Руководитель создаёт логиста.
+8. ~~SUPERADMIN Company Owner User — QA.~~ **DONE: FUNCTIONAL_ACCEPTED (39/42 PASS, 0 FAIL).**
+9. ~~Company Logist User — архитектурное решение (DECISION-0034).~~ **DONE (2026-06-13).**
+10. ~~Company Logist User — handoff.~~ **DONE (architect-created, accelerated mode).**
+11. ~~Company Logist User — coder implementation.~~ **DONE (2026-06-13).**
+12. Company Logist User — QA.
+13. Commit текущей точки.
 
 Исторический список завершённых шагов:
 

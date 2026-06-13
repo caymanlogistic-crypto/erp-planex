@@ -1,5 +1,107 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 16:26 — KILO/erp-qa-tester — QA RE-CHECK F-1 fix (Company Logist)
+
+### Задача
+Повторная проверка исправления бага F-1 (exec() unbuffered query → error 2014).
+
+### Результат
+**PASS**. F-1 FIXED. Повторные HTTP-запросы работают без error 2014. Дубликат login корректно блокируется. COMMIT RECOMMENDATION: READY.
+
+### Статус
+DONE — F-1 FIXED
+
+---
+
+## 2026-06-13 16:24 — KILO/erp-qa-tester — QA Company Logist User (Логист)
+
+### Задача
+Провести QA-проверку модуля Company Logist User по handoff и архитектурным решениям.
+
+### Результат
+**NEEDS_FUNCTIONAL_REWORK**. 44 проверки, 39 PASS, 1 FAIL (F-1), 0 BLOCKER, 1 compliance note.
+
+### Ключевые проблемы
+- **F-1 (MAJOR):** `PDO::exec("SELECT 1 FROM users LIMIT 0")` оставлял небуферизированный результат → error 2014 на повторных запросах. Затронуты строки 511, 664 public/index.php.
+- Валидация полей, duplicate login, password_hash — логика в коде корректна, но недостижима из-за F-1.
+
+### Что подтверждено
+- Логист хранится только в локальной БД (users), не в центральной
+- role_code = 'logist', password_hash bcrypt, UNIQUE KEY uk_login
+- SUPERADMIN / Companies Registry / Company Owner не сломаны
+- main.php, app.css, Database.php, Router.php не изменены
+- Core Kit классы использованы, demo-placeholder UI отсутствует
+- Секретов в git diff нет
+
+### Статус
+DONE — передан на coder rework (F-1)
+
+---
+
+## 2026-06-13 16:16 — KILO/erp-coder — Company Logist User (Логист)
+
+### Задача
+Реализовать модуль «Руководитель создаёт Логиста» — локального пользователя компании в её локальной БД.
+
+### Что сделано
+- Создана миграция `database/migrations-local/001_create_company_users.sql` — таблица `users` в локальной БД компании: id, full_name, login, email, phone, password_hash, role_code (logist), status, timestamps, UNIQUE KEY uk_login.
+- Создана папка `database/migrations-local/` с `.gitkeep`.
+- Создан view `app/View/pages/company_logists.php` — список логистов: 5 состояний (company not found, company not active, db error, empty state, table with logists).
+- Создан view `app/View/pages/company_logists_create.php` — форма создания: 4 состояния (company not found, company not active, success, form with validation errors).
+- Добавлены 3 маршрута в `public/index.php`:
+  - GET `/company/logists` — список логистов компании. Подключение к локальной БД через db_identifier, авто-миграция таблицы users, SELECT с фильтром role_code='logist'.
+  - GET `/company/logists/create` — форма создания с автогенерацией пароля.
+  - POST `/company/logists/create` — обработка: валидация full_name (required), login (required, latin/digits/underscore, unique in local DB), email (optional, valid format), автогенерация пароля (generatePassword() 10 символов), bcrypt password_hash, INSERT в локальную БД, success page с временным паролем.
+
+### Ключевые архитектурные решения
+- Логист хранится ТОЛЬКО в локальной БД компании (таблица `users`), НЕ в центральной БД.
+- Пароль: только `password_hash` (bcrypt) в БД. Открытый пароль показывается один раз на success page.
+- Контекст компании: временно через `?company_id=N` в URL.
+- Миграция локальной БД применяется автоматически при первом доступе, если таблица `users` не существует.
+- Все Core Kit модули из handoff использованы (CORE-05, CORE-08, CORE-13, CORE-17, CORE-19, CORE-20, CORE-24, CORE-26, CORE-27, CORE-28, CORE-31, CORE-32, CORE-33, CORE-34).
+- COMPOSITE pattern: PATTERN-01 Table-only registry + form page.
+
+### Изменённые файлы
+- `public/index.php` (добавлены 3 маршрута, 290+ строк)
+- `database/migrations-local/001_create_company_users.sql` (создан)
+- `database/migrations-local/.gitkeep` (создан)
+- `app/View/pages/company_logists.php` (создан)
+- `app/View/pages/company_logists_create.php` (создан)
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+
+### Что НЕ сделано
+- `main.php` не изменён (sidebar/topbar/shell не затронуты).
+- `app.css` не изменён.
+- Существующие SUPERADMIN маршруты и views не изменены.
+- `app/Core/Database.php` не изменён.
+- `app/Http/Router.php` не изменён.
+- Миграции центральной БД (001-006) не изменены.
+- Логист не создаётся в центральной БД.
+- Auth/session/login/logout не реализованы.
+- Редактирование/блокировка/удаление логиста не реализованы.
+- Commit не выполнялся (нет команды).
+
+### Проверки
+- `php -l public/index.php`: No syntax errors.
+- `php -l app/View/pages/company_logists.php`: No syntax errors.
+- `php -l app/View/pages/company_logists_create.php`: No syntax errors.
+- Runtime:
+  - `/superadmin/companies` → 200 (Companies Registry не сломан).
+  - `/superadmin/companies/1/create-owner` GET → 200 (создание Руководителя не сломано).
+  - `/company/logists?company_id=1` → 200 (список/empty).
+  - `/company/logists/create?company_id=1` GET → 200 (форма).
+  - `/company/logists?company_id=0` → 200 + сообщение об ошибке.
+  - `/company/logists?company_id=99999` → 200 + сообщение об ошибке.
+- Git diff: секретов/паролей/токенов нет. `.env` не в changes.
+- Security: `password_hash` только в БД, открытый пароль не хранится, `e()` для всех пользовательских данных.
+
+### Статус
+DONE — готово к QA-проверке erp-qa-tester.
+
+---
+
 ## 2026-06-13 16:02 — KILO/erp-qa-tester — QA SUPERADMIN Company Owner User
 
 ### Задача

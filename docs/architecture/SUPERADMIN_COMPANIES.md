@@ -103,6 +103,8 @@ docs/architecture/SUPERADMIN_DATABASE.md
 
 `Руководитель` хранится в центральной БД. `Логист` хранится в локальной БД экспедитора.
 
+Полная спецификация Логиста: DECISION-0034, `docs/architecture/PERMISSIONS_MODEL.md`, `docs/ui/pages/company-logists.md`.
+
 ## Storage
 
 Для каждого экспедитора создается отдельная папка документов.
