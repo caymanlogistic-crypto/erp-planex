@@ -28,6 +28,16 @@ use App\Http\Router;
 $db     = new Database($config['database']);
 $router = new Router();
 
+function generatePassword(int $length = 10): string
+{
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $password = '';
+    for ($i = 0; $i < $length; $i++) {
+        $password .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    return $password;
+}
+
 $router->get('/', function () use ($config) {
     $pageTitle = 'UI foundation';
 
@@ -72,6 +82,26 @@ $router->get('/superadmin/companies', function () use ($config, $db) {
         $pdo = $db->connection();
         $stmt = $pdo->query('SELECT * FROM companies ORDER BY created_at DESC');
         $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $ownerMap = [];
+        $companyIds = array_column($companies, 'id');
+        if (!empty($companyIds)) {
+            $placeholders = implode(',', array_fill(0, count($companyIds), '?'));
+            $ownerStmt = $pdo->prepare(
+                "SELECT id, company_id, full_name FROM company_users 
+                 WHERE company_id IN ($placeholders) AND role = 'company_owner' AND status = 'active'"
+            );
+            $ownerStmt->execute($companyIds);
+            foreach ($ownerStmt->fetchAll() as $owner) {
+                $ownerMap[$owner['company_id']] = $owner;
+            }
+        }
+        foreach ($companies as &$c) {
+            $c['owner_name'] = $ownerMap[$c['id']]['full_name'] ?? null;
+            $c['owner_id'] = $ownerMap[$c['id']]['id'] ?? null;
+        }
+        unset($c);
+
         $dbError = null;
     } catch (\Exception $e) {
         $companies = [];
@@ -219,6 +249,204 @@ $router->post('/superadmin/companies/create', function () use ($config, $db) {
 
         ob_start();
         require base_path('app/View/pages/superadmin_companies_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->get('/superadmin/companies/{id}/create-owner', function ($id) use ($config, $db) {
+    $pageTitle = 'Создать Руководителя';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $ownerExists = false;
+            $existingOwner = null;
+            $success = false;
+            $errors = [];
+            $old = [];
+            $formError = null;
+            $generatedPassword = null;
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' AND status = 'active'"
+        );
+        $ownerStmt->execute([(int) $id]);
+        $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC);
+
+        $ownerExists = $existingOwner !== false;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $generatedPassword = generatePassword();
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $company = null;
+        $ownerExists = false;
+        $existingOwner = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+        $generatedPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->post('/superadmin/companies/{id}/create-owner', function ($id) use ($config, $db) {
+    $pageTitle = 'Создать Руководителя';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $ownerExists = false;
+            $existingOwner = null;
+            $success = false;
+            $errors = [];
+            $old = $_POST;
+            $formError = 'Компания не найдена';
+            $generatedPassword = null;
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' AND status = 'active'"
+        );
+        $ownerStmt->execute([(int) $id]);
+        $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingOwner) {
+            $ownerExists = true;
+            $success = false;
+            $errors = [];
+            $old = $_POST;
+            $formError = null;
+            $generatedPassword = null;
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $ownerExists = false;
+        $errors = [];
+        $old = $_POST;
+
+        $fullName = trim($_POST['full_name'] ?? '');
+        $login = trim($_POST['login'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $comments = trim($_POST['comments'] ?? '');
+
+        if ($fullName === '') {
+            $errors['full_name'] = 'Обязательное поле';
+        }
+
+        if ($login === '') {
+            $errors['login'] = 'Обязательное поле';
+        } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
+            $errors['login'] = 'Только латинские буквы, цифры и подчёркивание';
+        }
+
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Некорректный email';
+        }
+
+        if ($password === '') {
+            $password = generatePassword();
+        }
+
+        if (!empty($errors)) {
+            $formError = null;
+            $success = false;
+            $generatedPassword = generatePassword();
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+
+        $insert = $pdo->prepare(
+            'INSERT INTO company_users (company_id, full_name, login, email, phone, password_hash, role, status, comments)
+             VALUES (:company_id, :full_name, :login, :email, :phone, :password_hash, :role, :status, :comments)'
+        );
+        $insert->execute([
+            ':company_id'    => (int) $id,
+            ':full_name'     => $fullName,
+            ':login'         => $login,
+            ':email'         => $email !== '' ? $email : null,
+            ':phone'         => $phone !== '' ? $phone : null,
+            ':password_hash' => $passwordHash,
+            ':role'          => 'company_owner',
+            ':status'        => 'active',
+            ':comments'      => $comments !== '' ? $comments : null,
+        ]);
+
+        $createdOwner = [
+            'full_name' => $fullName,
+            'login'     => $login,
+        ];
+        $tempPassword = $password;
+        $success = true;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $ownerExists = false;
+        $existingOwner = null;
+        $success = false;
+        $errors = [];
+        $old = $_POST;
+        $formError = 'Ошибка создания Руководителя: ' . $e->getMessage();
+        $generatedPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_create.php');
         $content = ob_get_clean();
         require base_path('app/View/layouts/main.php');
     }

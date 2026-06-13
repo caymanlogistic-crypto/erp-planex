@@ -1,39 +1,31 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANIES_REGISTRY_FUNCTIONAL_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_USER_QA_ACCEPTED
 
-**First functional module `SUPERADMIN Companies Registry` — FUNCTIONAL_ACCEPTED. QA passed (67/67).**
+**Second functional module `SUPERADMIN Company Owner User (Руководитель)` — QA ACCEPTED (42 checks, 39 PASS, 0 FAIL, 0 BLOCKER).**
 
 **ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.** Manual visual approval deferred. UI polish deferred.
 
-Latest commit: `7100015` — feat(superadmin): add companies registry provisioning.
+Latest commit: `7100015` — feat(superadmin): add companies registry provisioning (unchanged, new work pending commit).
 
-Code status: module implemented, migration 005 applied, provisioning flow works (central record → local DB → storage).
+Code status:
+- Companies Registry: FUNCTIONAL_ACCEPTED (migration 005, provisioning flow)
+- Company Owner User: FUNCTIONAL_DONE (migration 006, table `company_users`, GET/POST routes, create form, success page, duplicate prevention, bcrypt passwords)
+- Next module: Логист (local user in company's local DB)
 
-Approved owner decisions for the next module:
+New table `company_users`: id, company_id (FK→companies.id ON DELETE CASCADE), full_name, login, email, phone, password_hash (bcrypt), role (company_owner), status, comments, created_at, updated_at.
 
-1. Fields entered by `SUPERADMIN` when creating an expeditor/company:
-   - use the same basic business fields as the current contractor/client standard for now;
-   - this must be a separate SUPERADMIN expeditor/company registry table/model, not reuse the local contractor table;
-   - baseline fields for the first implementation: `name`, `inn`, `kpp`, `ogrn`, `legal_address`, `physical_address`, `contact_person`, `contact_phone`, `contact_email`, `status`, `comments`;
-   - `name` and `inn` are required at minimum because the current contractor/client standard marks them required;
-   - do not invent extra legal/tax fields beyond this without owner approval.
+New routes:
+- GET/POST `/superadmin/companies/{id}/create-owner` — create company owner form/handler
+- GET `/superadmin/companies` — updated to load owner data (owner_name, owner_id per company)
 
-2. Local DB name generation:
-   - local DB name is generated automatically from company ID;
-   - do not ask the user to enter the local DB name manually;
-   - do not use slug/key as the source of truth for DB name generation.
+Key files added/modified:
+- `database/migrations/006_create_company_users.sql` (new)
+- `app/View/pages/superadmin_company_owner_create.php` (new)
+- `app/View/pages/superadmin_companies.php` (modified: owner column)
+- `public/index.php` (modified: owner routes, generatePassword function, owner data loading)
 
-3. Storage folder generation:
-   - storage folder is generated/named by company ID;
-   - do not use slug/key as the source of truth for storage folder generation.
+Password rules: bcrypt only in DB, temporary password shown once on success page, auto-generated if empty, no open passwords in DB/logs/git.
 
-Important correction to older docs:
-- older mentions that `key/slug` is used in URL/path/DB names are superseded for DB and storage generation by this owner decision;
-- `key/slug` may remain as a UI/URL/display machine code only if already required by existing schema, but it must not drive local DB name or storage folder name in the first Companies Registry implementation.
-
-Next required action:
-1. Keep MD updated with this decision.
-2. Prepare exact `erp-coder` task for the first code module `SUPERADMIN Companies Registry`.
-3. Coder must not implement extra functionality beyond Companies Registry/provisioning foundation.
+Duplicate prevention: one active company_owner per company (app-level check, blocks creation).
 
 ---
 
@@ -314,9 +306,9 @@ docs/ui/pages/[page-name].md
 
 ## Текущий фокус
 
-Текущий фокус: **`FUNCTIONAL_ACCEPTED`** — первый бизнес-модуль `SUPERADMIN Companies Registry` реализован и прошёл QA.
+Текущий фокус: **`QA ACCEPTED`** — второй бизнес-модуль `SUPERADMIN Company Owner User (Руководитель)` реализован и прошёл QA.
 
-Следующий модуль: **Главный пользователь экспедитора (Руководитель)** — отдельное действие SUPERADMIN после создания экспедитора.
+Следующий модуль: **Логист** — Руководитель создаёт локального пользователя в БД своей компании.
 
 **ACCELERATED FUNCTIONAL DEVELOPMENT MODE** — приоритет функционала над визуальной полировкой.
 
@@ -479,14 +471,19 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **SUPERADMIN Companies Registry — FUNCTIONAL_ACCEPTED (2026-06-13).**
+Активная задача: **SUPERADMIN Company Owner User — QA ACCEPTED (2026-06-13).**
 
 Следующий рабочий шаг:
 1. ~~Foundation rework cycle.~~ **DONE.**
 2. ~~SUPERADMIN Companies Registry — designer handoff.~~ **DONE (architect-created, accelerated mode).**
 3. ~~SUPERADMIN Companies Registry — coder implementation.~~ **DONE (2026-06-13).**
 4. ~~SUPERADMIN Companies Registry — QA.~~ **DONE: FUNCTIONAL_ACCEPTED (67/67).**
-5. Следующий модуль: Главный пользователь экспедитора (Руководитель).
+5. ~~SUPERADMIN Company Owner User — архитектурное решение (DECISION-0033).~~ **DONE (2026-06-13).**
+6. ~~SUPERADMIN Company Owner User — handoff.~~ **DONE (architect-created, accelerated mode).**
+7. ~~SUPERADMIN Company Owner User — coder implementation.~~ **DONE (2026-06-13).**
+8. ~~SUPERADMIN Company Owner User — QA.~~ **DONE: FUNCTIONAL_ACCEPTED (42/42, 39 PASS, 0 FAIL, 0 BLOCKER).**
+9. Commit текущей точки.
+10. Следующий модуль: Руководитель создаёт логиста.
 
 Исторический список завершённых шагов:
 

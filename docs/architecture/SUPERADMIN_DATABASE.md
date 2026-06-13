@@ -86,6 +86,29 @@ Do not invent extra fields or credentials storage without owner approval.
 
 Примечание: `superadmin_users` не связана внешним ключом с `companies`, так как пользователь SUPERADMIN управляет всеми компаниями, а не принадлежит конкретной.
 
+Дополнительная таблица (DECISION-0033, 2026-06-13):
+
+```text
+┌──────────────────────┐
+│   company_users      │
+│──────────────────────│
+│ id (PK)              │
+│ company_id (FK) ─────┤──→ companies.id
+│ full_name            │
+│ login                │
+│ email                │
+│ phone                │
+│ password_hash        │
+│ role                 │  DEFAULT 'company_owner'
+│ status               │  DEFAULT 'active'
+│ comments             │
+│ created_at           │
+│ updated_at           │
+└──────────────────────┘
+```
+
+`company_users` хранит главных пользователей компаний (Руководителей). Связь: `company_id` → `companies.id` (ON DELETE CASCADE). Полная спецификация — DECISION-0033 и `docs/architecture/PERMISSIONS_MODEL.md`.
+
 ---
 
 ## Таблица 1: `companies`

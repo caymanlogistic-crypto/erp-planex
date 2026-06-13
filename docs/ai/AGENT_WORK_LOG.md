@@ -1,5 +1,51 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 16:02 — KILO/erp-qa-tester — QA SUPERADMIN Company Owner User
+
+### Задача
+Провести QA-проверку модуля SUPERADMIN Company Owner User (Руководитель) по handoff и архитектурным решениям.
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 42 проверки, 39 PASS, 0 FAIL, 0 BLOCKER. 4 minor compliance notes (non-blocking, deferred to UI polish cycle).
+
+### Ключевые проверки
+- Миграция 006: существует, все 12 полей, FK + ON DELETE CASCADE, идемпотентна.
+- main.php не изменён, CSS не изменён, Core Kit классы присутствуют.
+- GET/POST маршруты функциональны, валидация корректна, автогенерация пароля работает.
+- Дублирование блокируется: повторный POST → «Руководитель уже создан».
+- Пароль: только `password_hash` в БД, открытый пароль не хранится.
+- Companies Registry не сломан, DB/storage naming от ID не изменён.
+- PHP syntax: 3/3 clean.
+- Документация: 5 MD-файлов обновлены.
+
+### 4 compliance notes (non-blocking, deferred)
+- CN-1: KV-list использует `<dl>/<dt>/<dd>` вместо `<div class="kv-row">/<span class="kv-key">/<span class="kv-value">`.
+- CN-2: `--warning-bg` вместо `--warn-bg` для временного пароля.
+- CN-3: `--success` вместо `--ok` для dot-индикатора.
+- CN-4: `<span class="col-muted">` внутри `<td>` вместо `<td class="col-muted">`.
+
+### Статус
+DONE — FUNCTIONAL_ACCEPTED
+
+---
+
+## 2026-06-13 15:55 — KILO/erp-architect — Архитектурное решение и handoff для Company Owner User
+
+### Задача
+Зафиксировать минимальную архитектуру для главного пользователя экспедитора, создать handoff и передать реализацию кодеру.
+
+### Что сделано
+- Принято DECISION-0033: таблица `company_users` в центральной БД, `company_id` FK, роль `company_owner`, пароль только hash, автогенерация.
+- Создан handoff: `docs/ui/pages/superadmin-company-owner-user.md`.
+- Обновлены: `PERMISSIONS_MODEL.md`, `SUPERADMIN_COMPANIES.md`, `SUPERADMIN_DATABASE.md`.
+- Задача передана erp-coder с MANDATORY CODER INVOCATION BLOCK.
+- После кодера — QA (FUNCTIONAL_ACCEPTED).
+
+### Статус
+DONE
+
+---
+
 ## 2026-06-13 15:49 — KILO/erp-architect — Commit SUPERADMIN Companies Registry checkpoint
 
 ### Задача
@@ -3643,3 +3689,35 @@ DONE
 
 ### Статус
 DESIGNER_HANDOFF_ACCEPTED_FOR_CODER
+
+---
+
+## 2026-06-13 15:54 — KILO/erp-coder — Реализация SUPERADMIN Company Owner User (Руководитель)
+
+### Задача
+Реализовать модуль создания главного пользователя экспедитора (Руководитель) по DECISION-0033 и accepted designer handoff `docs/ui/pages/superadmin-company-owner-user.md`.
+
+### Что сделано
+- Создана миграция `database/migrations/006_create_company_users.sql`: таблица `company_users` с полями id, company_id (FK→companies.id ON DELETE CASCADE), full_name, login, email, phone, password_hash, role (company_owner), status, comments, created_at, updated_at.
+- Миграция применена через `php scripts/migrate.php`, идемпотентность подтверждена (повторный запуск — 6 skipped).
+- Добавлена функция `generatePassword()` в `public/index.php` (random_int, буквы+цифры, 10 символов).
+- Обновлён маршрут GET `/superadmin/companies`: после запроса компаний загружается ownerMap из `company_users` (batch-запрос, один SQL), данные передаются в `$companies` как `owner_name`/`owner_id`.
+- Добавлен маршрут GET `/superadmin/companies/{id}/create-owner`: загружает компанию, проверяет существующего Руководителя, показывает форму или блокирующее сообщение.
+- Добавлен маршрут POST `/superadmin/companies/{id}/create-owner`: валидация (full_name, login required; login regex; email format), авто-генерация пароля при пустом, `password_hash(PASSWORD_BCRYPT)`, INSERT, success page с временным паролем (один раз).
+- Создан view `app/View/pages/superadmin_company_owner_create.php`: 4 состояния (company null, owner exists, success, form). Использует классы из Core Kit: `.page-head`, `.panel`, `.panel-body`, `.form-section`, `.field`, `.field-input`, `.notice.warn`, `.notice.success`, `.kv` (dt/dd), `.btn-primary`, `.btn-ghost`, `.btn-toolbar`, `.form-actions`.
+- Модифицирован `app/View/pages/superadmin_companies.php`: добавлена колонка «Руководитель» (между Статус и Создан), 3 состояния ячейки (error/provisioning → «—», owner exists → имя + «Просмотреть», owner absent → «Создать Руководителя»).
+
+### Runtime checks
+- `php -l` для `public/index.php`, `superadmin_company_owner_create.php`, `superadmin_companies.php` — все OK.
+- `GET /superadmin/companies` → 200, колонка «Руководитель» видна, имя owner отображается.
+- `GET /superadmin/companies/1/create-owner` → 200, форма открывается.
+- `POST /superadmin/companies/1/create-owner` → 200, success page с временным паролем.
+- Duplicate create block: POST для той же компании → «Руководитель уже создан».
+- Password hash check: `SELECT password_hash FROM company_users` → `$2y$12$...` (bcrypt), НЕ открытый текст.
+- `SELECT * FROM company_users` → company_id=1, role='company_owner', status='active'.
+- `GET /superadmin/companies/create` → 200, создание экспедитора не сломано.
+- `main.php` не изменён (отсутствует в git diff).
+- Никаких паролей/секретов в git diff.
+
+### Статус
+DONE

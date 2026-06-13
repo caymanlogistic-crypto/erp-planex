@@ -1,4 +1,28 @@
-# CURRENT STATUS OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANIES_REGISTRY_FUNCTIONAL_ACCEPTED
+# CURRENT STATUS OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_USER_QA_ACCEPTED
+
+Current focus: SUPERADMIN Company Owner User — **QA: FUNCTIONAL_ACCEPTED** (42 checks, 39 PASS, 0 FAIL, 0 BLOCKER).
+
+## QA result
+- Total: 42 checks, 39 PASS, 0 FAIL, 0 BLOCKER
+- 4 minor compliance notes (non-blocking, deferred to UI polish cycle)
+- Security: password_hash only in DB, no open passwords, no secrets in git
+
+## Implementation results
+- Migration 006: `company_users` table created (12 fields, FK→companies ON DELETE CASCADE)
+- Router: GET/POST `/superadmin/companies/{id}/create-owner` routes added
+- Views: `superadmin_company_owner_create.php` (4 states: not-found, owner-exists, success, form), `superadmin_companies.php` modified (owner column)
+- Password: bcrypt `password_hash()`, open password never stored in DB, shown once on success page
+- Duplicate prevention: one active owner per company (app-level check)
+
+## Runtime URLs
+- `/superadmin/companies` → 200 (owner column visible)
+- `/superadmin/companies/{id}/create-owner` GET → 200 (form or blocking message)
+- `/superadmin/companies/{id}/create-owner` POST → 200 (success page or validation errors)
+
+## Next module
+**Руководитель создаёт логиста** — local user in company's local DB, per DECISION-0033 roadmap.
+
+---
 
 Current focus: SUPERADMIN Companies Registry — **FUNCTIONAL_ACCEPTED**. QA passed (67/67). Ready for next module.
 

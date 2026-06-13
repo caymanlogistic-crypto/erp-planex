@@ -68,6 +68,7 @@ function statusBadge(string $status): string
                         <th>Название</th>
                         <th>ИНН</th>
                         <th>Статус</th>
+                        <th>Руководитель</th>
                         <th>Создан</th>
                         <th></th>
                     </tr>
@@ -79,6 +80,21 @@ function statusBadge(string $status): string
                         <td><?= e($c['name']) ?></td>
                         <td class="col-mono"><?= e($c['inn'] ?? '') ?></td>
                         <td><?= statusBadge($c['status']) ?></td>
+                        <td>
+                            <?php if (in_array($c['status'], ['error', 'provisioning'], true)): ?>
+                                <span class="col-muted">—</span>
+                            <?php elseif (!empty($c['owner_name'])): ?>
+                                <span class="dot" style="background:var(--success)"></span>
+                                <?= e($c['owner_name']) ?>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/create-owner" class="btn btn-ghost" style="font-size:11px;padding:2px 6px;margin-left:6px">
+                                    Просмотреть
+                                </a>
+                            <?php else: ?>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/create-owner" class="btn btn-primary" style="font-size:11px;padding:2px 10px">
+                                    Создать Руководителя
+                                </a>
+                            <?php endif; ?>
+                        </td>
                         <td class="col-muted"><?= e($c['created_at'] ?? '') ?></td>
                         <td class="col-actions"></td>
                     </tr>
