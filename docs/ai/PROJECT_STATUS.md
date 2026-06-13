@@ -1,9 +1,14 @@
-# CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_CREWS_REGISTRY_QA_ACCEPTED
+# CURRENT STATUS OVERRIDE — 2026-06-13 — REFERENCE_BLOCK_ACCEPTED
 
-Current focus: Company Crews Registry — **QA: FUNCTIONAL_ACCEPTED** (71/71 PASS, 0 BLOCKER).
+Current focus: **Справочный фундамент ЗАВЕРШЁН и ПРОВЕРЕН.**
+
+Комплексная проверка: **REFERENCE_BLOCK_ACCEPTED** (78/78 PASS, 0 FAIL, 0 BLOCKER). Все 8 модулей функционально работают. Готово к ручной проверке владельцем.
 
 ## Next step
-**Комплексная финальная проверка всего справочного блока** (8 модулей: SUPERADMIN, Owner, Logists, Clients, Contractors, Drivers, Vehicles, Crews). После проверки — передача Главному дизайнеру / КЛАУД на UI-полировку.
+1. **Владелец выполняет ручную функциональную проверку** в браузере.
+2. После ручной приёмки — передача блока Главному дизайнеру / КЛАУД на UI-полировку.
+3. UI-полировка включает: visual design, typography, spacing, states, responsive.
+4. Только после UI-полировки: edit/delete, pagination, complex filters, auth/session, рейсы, документы.
 
 ---
 
@@ -229,16 +234,19 @@ Backend/auth/CRUD/feature toggles/business modules разблокированы 
 
 ## Следующий рекомендуемый шаг
 
-**Зафиксировать текущую точку и перейти к развитию системы.**
+**Владелец выполняет ручную функциональную проверку справочного блока в браузере.**
 
 1. ~~erp-architect ставит задачу `erp-uiux-designer` на compliance-аудит.~~ **DONE (2026-06-13).**
 2. ~~erp-uiux-designer проводит compliance-аудит.~~ **DONE: `PARTIALLY COMPLIANT`, 5 отклонений, 0 BLOCKER.**
 3. ~~erp-architect ставит задачу `erp-coder` на точечный UI rework по 5 отклонениям.~~ **DONE (2026-06-13): все 5 исправлены.**
 4. ~~Scope кодера: 5 строк `app.css` + 1 строка `index.php`.~~ **DONE.**
 5. ~~Foundation/shell/sidebar/topbar/IA НЕ перестраивать.~~ **DONE — не менялись.**
-6. ~~Owner visual review / решение владельца по продолжению.~~ **DONE: принято для продолжения разработки с оговоркой `DESIGN_REVIEW_PENDING`.**
-7. Зафиксировать текущую точку commit.
-8. Следующий этап: развитие SUPERADMIN business foundation, рекомендуемый первый модуль — `SUPERADMIN Companies Registry`.
+6. ~~Owner visual review / решение владельца по продолжению.~~ **DONE: принято для продолжения разработки.**
+7. ~~SUPERADMIN Companies Registry → Company Owner User → Company Logist User → Clients → Contractors → Drivers → Vehicles → Crews.~~ **DONE: все 8 модулей FUNCTIONAL_ACCEPTED.**
+8. ~~Комплексная проверка справочного блока.~~ **DONE: REFERENCE_BLOCK_ACCEPTED (78/78 PASS).**
+9. **Owner manual functional review — NEXT.**
+10. Главный дизайнер / КЛАУД UI-полировка — после ручной приёмки.
+11. После UI-полировки: edit/delete, pagination, complex filters, auth/session, рейсы, документы.
 
 - Проведена верификация обновлённой папки `docs`. Удалён физически оставшийся `docs/ui/UI_UX_RULES.md`. Исправлены 3 устаревшие ссылки на него в агентах. Удалён временный `docs/_DOCS_AUDIT_AND_CLEANUP.md`. Папка `docs/ui/ui/` отсутствует. Ссылки в документации синхронизированы. Commit `bc8e2e9`.
 - Проверен и утверждён UI-фундамент: документация синхронизирована, `_PAGE_TEMPLATE.md` обновлён под формат handoff дизайнера, runtime/syntax checks пройдены. UI готов к использованию в business-coding workflow.

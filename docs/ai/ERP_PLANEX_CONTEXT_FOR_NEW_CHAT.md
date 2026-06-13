@@ -1,8 +1,6 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_CREWS_REGISTRY_QA_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — REFERENCE_BLOCK_ACCEPTED
 
-**Eighth functional module `Company Crews Registry` — QA ACCEPTED (71/71 PASS, 0 BLOCKER).**
-
-**ACCELERATED FUNCTIONAL DEVELOPMENT MODE active. Справочный фундамент ЗАВЕРШЁН.**
+**Справочный фундамент ЗАВЕРШЁН. Комплексная проверка: REFERENCE_BLOCK_ACCEPTED (78/78 PASS, 0 BLOCKER).**
 
 Code status:
 - Companies Registry: FUNCTIONAL_ACCEPTED
@@ -13,7 +11,14 @@ Code status:
 - Company Drivers Registry: FUNCTIONAL_ACCEPTED
 - Company Vehicles Registry: FUNCTIONAL_ACCEPTED
 - Company Crews Registry: FUNCTIONAL_ACCEPTED
-- Next: комплексная финальная проверка справочного блока, затем UI-полировка Главным дизайнером / КЛАУД
+- **REFERENCE_BLOCK_ACCEPTED — 78/78 комплексных проверок PASS, 0 BLOCKER**
+- Next: Owner manual functional review → Главный дизайнер / КЛАУД UI-полировка
+
+Latest commit: `7df0821` feat(company): add crews registry
+Working tree: clean
+Push: NO
+
+QA report: `docs/qa/QA_FINAL_REPORT_REFERENCE_BLOCK.md`
 
 New local table `crews` (in `erp_company_{id}`): id, contractor_id, vehicle_id, driver_id, status, comments, created_at, updated_at. UNIQUE KEY uk_crew (contractor_id, vehicle_id, driver_id).
 
@@ -432,11 +437,7 @@ docs/ui/pages/[page-name].md
 
 ## Текущий фокус
 
-Текущий фокус: **`CODER DONE`** — третий бизнес-модуль `Company Logist User (Логист)` реализован, готов к QA.
-
-Следующий модуль: **Логист** — Руководитель создаёт локального пользователя в БД своей компании.
-
-**ACCELERATED FUNCTIONAL DEVELOPMENT MODE** — приоритет функционала над визуальной полировкой.
+Текущий фокус: **`REFERENCE_BLOCK_ACCEPTED`** — справочный фундамент завершён и проверен. Готов к ручной проверке владельцем.
 
 ### Targeted coder rework result (2026-06-13)
 
@@ -597,22 +598,20 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **Company Logist User — CODER DONE (2026-06-13).**
+Активная задача: **Справочный фундамент — REFERENCE_BLOCK_ACCEPTED (2026-06-13).**
 
-Следующий рабочий шаг:
-1. ~~Foundation rework cycle.~~ **DONE.**
-2. ~~SUPERADMIN Companies Registry — designer handoff.~~ **DONE (architect-created, accelerated mode).**
-3. ~~SUPERADMIN Companies Registry — coder implementation.~~ **DONE (2026-06-13).**
-4. ~~SUPERADMIN Companies Registry — QA.~~ **DONE: FUNCTIONAL_ACCEPTED (67/67).**
-5. ~~SUPERADMIN Company Owner User — архитектурное решение (DECISION-0033).~~ **DONE (2026-06-13).**
-6. ~~SUPERADMIN Company Owner User — handoff.~~ **DONE (architect-created, accelerated mode).**
-7. ~~SUPERADMIN Company Owner User — coder implementation.~~ **DONE (2026-06-13).**
-8. ~~SUPERADMIN Company Owner User — QA.~~ **DONE: FUNCTIONAL_ACCEPTED (39/42 PASS, 0 FAIL).**
-9. ~~Company Logist User — архитектурное решение (DECISION-0034).~~ **DONE (2026-06-13).**
-10. ~~Company Logist User — handoff.~~ **DONE (architect-created, accelerated mode).**
-11. ~~Company Logist User — coder implementation.~~ **DONE (2026-06-13).**
-12. Company Logist User — QA.
-13. Commit текущей точки.
+Все 8 модулей реализованы и проверены:
+1. ~~SUPERADMIN Companies Registry.~~ **FUNCTIONAL_ACCEPTED.**
+2. ~~SUPERADMIN Company Owner User.~~ **FUNCTIONAL_ACCEPTED.**
+3. ~~Company Logist User.~~ **FUNCTIONAL_ACCEPTED.**
+4. ~~Company Clients Registry.~~ **FUNCTIONAL_ACCEPTED.**
+5. ~~Company Contractors Registry.~~ **FUNCTIONAL_ACCEPTED.**
+6. ~~Company Drivers Registry.~~ **FUNCTIONAL_ACCEPTED.**
+7. ~~Company Vehicles Registry.~~ **FUNCTIONAL_ACCEPTED.**
+8. ~~Company Crews Registry.~~ **FUNCTIONAL_ACCEPTED.**
+9. ~~Комплексная проверка справочного блока.~~ **REFERENCE_BLOCK_ACCEPTED (78/78 PASS).**
+10. **Owner manual functional review — NEXT.**
+11. Главный дизайнер / КЛАУД UI-полировка — после ручной приёмки.
 
 Исторический список завершённых шагов:
 
