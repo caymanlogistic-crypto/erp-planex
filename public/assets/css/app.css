@@ -888,6 +888,133 @@ tr:last-child td {
     padding-top: 2px;
 }
 
+/* === AUTH LAYOUT (login page) === */
+.auth-shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--topbar-h) 1fr;
+    min-height: 100vh;
+    min-width: 0;
+    background: var(--app-bg);
+}
+
+.auth-topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    height: var(--topbar-h);
+    background: var(--surface-strong);
+    border-bottom: 1px solid var(--line);
+    z-index: 100;
+}
+
+.auth-topbar-brand {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 13px;
+    background: var(--nav-bg);
+    gap: 9px;
+    width: 224px;
+    flex-shrink: 0;
+}
+
+.auth-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+/* === LOGIN CARD === */
+.login-card {
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    width: 380px;
+    max-width: 100%;
+}
+
+.login-card-head {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--surface-muted);
+    border-bottom: 1px solid var(--line-hair);
+}
+
+.login-card-head h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-main);
+}
+
+.login-card-body {
+    padding: 14px;
+}
+
+.login-form .field {
+    margin-bottom: 12px;
+}
+
+.login-form .field:last-of-type {
+    margin-bottom: 8px;
+}
+
+.login-actions {
+    margin-top: 14px;
+}
+
+/* === DASHBOARD LINKS === */
+.dash-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line-hair);
+    text-decoration: none;
+    color: var(--text-main);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dash-link:last-child {
+    border-bottom: none;
+}
+
+.dash-link:hover {
+    background: var(--surface);
+    color: var(--accent);
+}
+
+.dash-link-label {
+    flex-shrink: 0;
+    color: var(--text-main);
+}
+
+.dash-link:hover .dash-link-label {
+    color: var(--accent);
+}
+
+.dash-link-desc {
+    color: var(--text-faint);
+    font-weight: 400;
+    font-size: 12px;
+    text-align: right;
+}
+
+/* === TOPBAR LOGOUT BUTTON === */
+.topbar-right .btn-ghost {
+    height: 24px;
+    font-size: 11px;
+    padding: 0 8px;
+}
+
 @media (max-width: 860px) {
     .app-shell {
         grid-template-columns: 1fr;

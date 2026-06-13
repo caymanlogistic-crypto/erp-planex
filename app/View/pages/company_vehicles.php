@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles/create?company_id=<?= $companyId ?>" class="btn btn-primary">Добавить транспорт</a>
+        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспорт</a>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
     <div class="panel-body">
         <div class="empty-state">
             <p>Транспорт ещё не добавлен.</p>
-            <a href="/company/vehicles/create?company_id=<?= $companyId ?>" class="btn btn-primary">Добавить первый транспорт</a>
+            <a href="/company/vehicles/create" class="btn btn-primary">Добавить первый транспорт</a>
         </div>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles/create?company_id=<?= $companyId ?>" class="btn btn-primary">Добавить транспорт</a>
+        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспорт</a>
     </div>
 </div>
 
@@ -77,6 +77,7 @@
                         <th>Грузоподъёмность (т)</th>
                         <th>Статус</th>
                         <th>Создан</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -95,6 +96,11 @@
                             </span>
                         </td>
                         <td class="col-muted"><?= e($v['created_at']) ?></td>
+                        <td class="col-actions">
+                            <a href="/company/vehicles/<?= $v['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                            <a href="/company/vehicles/<?= $v['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                            <a href="/company/documents?entity_type=vehicle&entity_id=<?= $v['id'] ?>" class="btn btn-toolbar">Документы</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Добавить транспорт</h1>
+        <h1>Редактировать транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -17,73 +17,89 @@
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Добавление транспорта недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». Редактирование транспорта недоступно.
+</div>
+
+<?php elseif (isset($dbError)): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Редактировать транспорт</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="notice warn">
+    <?= e($dbError) ?>
+</div>
+
+<?php elseif ($entityNotFound): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Транспорт не найден</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="notice warn">
+    Транспорт с ID <?= e((string)$vehicleId) ?> не найден в этой компании.
 </div>
 
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div>
-        <h1>Транспорт добавлен</h1>
+        <h1>Транспорт обновлён</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles" class="btn btn-primary">← К списку</a>
+        <a href="/company/vehicles/<?= $vehicleId ?>" class="btn btn-primary">← К просмотру</a>
     </div>
 </div>
 
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Транспорт успешно добавлен.
+            Транспорт успешно обновлён.
         </div>
 
         <div class="kv" style="margin-top:16px">
             <div class="kv-row">
                 <span class="kv-key">Госномер</span>
-                <span class="kv-value"><code><?= e($createdVehicle['plate_number']) ?></code></span>
+                <span class="kv-value"><code><?= e($vehicle['plate_number']) ?></code></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Марка</span>
-                <span class="kv-value"><?= e($createdVehicle['brand'] ?? '—') ?></span>
+                <span class="kv-value"><?= e($vehicle['brand'] ?? '') ?: '—' ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Модель</span>
-                <span class="kv-value"><?= e($createdVehicle['model'] ?? '—') ?></span>
-            </div>
-            <div class="kv-row">
-                <span class="kv-key">Тип ТС</span>
-                <span class="kv-value"><?= e($createdVehicle['vehicle_type'] ?? '—') ?></span>
-            </div>
-            <div class="kv-row">
-                <span class="kv-key">VIN</span>
-                <span class="kv-value"><?= e($createdVehicle['vin'] ?? '—') ?></span>
-            </div>
-            <div class="kv-row">
-                <span class="kv-key">СТС</span>
-                <span class="kv-value"><?= e($createdVehicle['sts_number'] ?? '—') ?></span>
-            </div>
-            <div class="kv-row">
-                <span class="kv-key">ПТС</span>
-                <span class="kv-value"><?= e($createdVehicle['pts_number'] ?? '—') ?></span>
-            </div>
-            <div class="kv-row">
-                <span class="kv-key">Грузоподъёмность (т)</span>
-                <span class="kv-value"><?= $createdVehicle['capacity_tons'] !== null ? e($createdVehicle['capacity_tons']) : '—' ?></span>
-            </div>
-            <div class="kv-row">
-                <span class="kv-key">Объём кузова (м³)</span>
-                <span class="kv-value"><?= $createdVehicle['volume_m3'] !== null ? e($createdVehicle['volume_m3']) : '—' ?></span>
+                <span class="kv-value"><?= e($vehicle['model'] ?? '') ?: '—' ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Статус</span>
-                <span class="kv-value">Активен</span>
+                <span class="kv-value">
+                    <?php if ($vehicle['status'] === 'active'): ?>
+                        <span class="badge badge-ok"><span class="dot"></span>Активен</span>
+                    <?php elseif ($vehicle['status'] === 'archived'): ?>
+                        <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+                    <?php else: ?>
+                        <span class="badge"><span class="dot"></span>Неактивен</span>
+                    <?php endif; ?>
+                </span>
             </div>
         </div>
 
         <div class="form-actions" style="margin-top:16px">
-            <a href="/company/vehicles" class="btn btn-primary">← К списку</a>
-            <a href="/company/vehicles/create" class="btn btn-ghost">Добавить ещё</a>
+            <a href="/company/vehicles/<?= $vehicleId ?>" class="btn btn-primary">← К просмотру</a>
+            <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
 </div>
@@ -92,11 +108,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Добавить транспорт</h1>
+        <h1>Редактировать транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+        <a href="/company/vehicles/<?= $vehicleId ?>" class="btn btn-ghost">← К просмотру</a>
     </div>
 </div>
 
@@ -104,7 +120,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/vehicles/create" class="panel">
+<form method="post" action="/company/vehicles/<?= $vehicleId ?>/edit" class="panel">
     <div class="panel-body">
 
         <div class="form-section">
@@ -177,6 +193,19 @@
         </div>
 
         <div class="form-section">
+            <h3 class="panel-head-title">Статус</h3>
+
+            <div class="field">
+                <label class="field-label">Статус</label>
+                <select name="status" class="field-input">
+                    <option value="active" <?= ($old['status'] ?? '') === 'active' ? 'selected' : '' ?>>Активен</option>
+                    <option value="inactive" <?= ($old['status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Неактивен</option>
+                    <option value="archived" <?= ($old['status'] ?? '') === 'archived' ? 'selected' : '' ?>>Архив</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-section">
             <h3 class="panel-head-title">Дополнительно</h3>
 
             <div class="field">
@@ -186,8 +215,8 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Добавить транспорт</button>
-            <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            <a href="/company/vehicles/<?= $vehicleId ?>" class="btn btn-ghost">← К просмотру</a>
         </div>
 
     </div>

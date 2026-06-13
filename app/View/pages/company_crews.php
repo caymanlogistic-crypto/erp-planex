@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/crews/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать экипаж</a>
+        <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
     <div class="panel-body">
         <div class="empty-state">
             <p>Экипажи ещё не созданы.</p>
-            <a href="/company/crews/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать первый экипаж</a>
+            <a href="/company/crews/create" class="btn btn-primary">Создать первый экипаж</a>
         </div>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/crews/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать экипаж</a>
+        <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>
     </div>
 </div>
 
@@ -75,6 +75,7 @@
                         <th>Водитель</th>
                         <th>Статус</th>
                         <th>Создан</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,6 +92,11 @@
                             </span>
                         </td>
                         <td class="col-muted"><?= e($c['created_at']) ?></td>
+                        <td class="col-actions">
+                            <a href="/company/crews/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                            <a href="/company/crews/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                            <a href="/company/documents?entity_type=crew&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

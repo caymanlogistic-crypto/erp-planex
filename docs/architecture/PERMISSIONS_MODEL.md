@@ -149,3 +149,38 @@ SUPERADMIN НЕ может:
 - менять привязку Руководителя к компании (company_id неизменен)
 - видеть текущий пароль Руководителя (только password_hash)
 - дать Руководителю SUPERADMIN-доступ
+
+### Реализация авторизации и маршрутных guards (DECISION-0041, 2026-06-13)
+
+Полная спецификация: `docs/architecture/AUTH_SESSION_MODEL.md`.
+
+**Route guards (реализованы):**
+
+| Префикс | Требование |
+|---------|------------|
+| `/superadmin/*` | `role_code = 'superadmin'` |
+| `/company/*` | `role_code IN ('company_owner', 'logist')` |
+| `/company/logists*` | `role_code = 'company_owner'` |
+
+**Контекст компании:** все `/company/*` маршруты читают `$_SESSION['company_id']`, не `$_GET['company_id']`.
+
+**Без сессии:** редирект 302 на `/login`.
+
+---
+
+## Уточнение 2026-06-13 — Ownership и Access Grants
+
+### Модель владения записями
+
+Все локальные таблицы компании содержат колонки `created_by_user_id` и `created_by_role`.
+
+**Правила видимости:**
+- `company_owner` видит все записи своей компании
+- `logist` видит только записи, которые создал сам (`created_by_user_id = его id`) + записи с явно выданным доступом через `entity_access_grants`
+
+**Выдача доступа:**
+- Руководитель может выдать логисту доступ на просмотр чужой записи
+- Маршрут: `POST /company/access-grants/grant`
+- UI: на карточке сущности — секция «Доступ логистов»
+
+Полная спецификация: `docs/architecture/ENTITY_OWNERSHIP_AND_ACCESS.md`. Решения: DECISION-0044, DECISION-0046.

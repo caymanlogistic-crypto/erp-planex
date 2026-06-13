@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists?company_id=<?= $companyId ?>" class="btn btn-ghost">← К списку</a>
+        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists?company_id=<?= $companyId ?>" class="btn btn-primary">← К списку</a>
+        <a href="/company/logists" class="btn btn-primary">← К списку</a>
     </div>
 </div>
 
@@ -69,8 +69,8 @@
         </div>
 
         <div class="form-actions" style="margin-top:16px">
-            <a href="/company/logists?company_id=<?= $companyId ?>" class="btn btn-primary">← К списку логистов</a>
-            <a href="/company/logists/create?company_id=<?= $companyId ?>" class="btn btn-ghost">Создать ещё</a>
+            <a href="/company/logists" class="btn btn-primary">← К списку логистов</a>
+            <a href="/company/logists/create" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
 </div>
@@ -85,7 +85,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists?company_id=<?= $companyId ?>" class="btn btn-ghost">← К списку</a>
+        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -93,7 +93,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/logists/create?company_id=<?= $companyId ?>" class="panel">
+<form method="post" action="/company/logists/create" class="panel">
     <div class="panel-body">
 
         <div class="form-section">
@@ -160,7 +160,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать логиста</button>
-            <a href="/company/logists?company_id=<?= $companyId ?>" class="btn btn-ghost">Отмена</a>
+            <a href="/company/logists" class="btn btn-ghost">Отмена</a>
         </div>
 
     </div>

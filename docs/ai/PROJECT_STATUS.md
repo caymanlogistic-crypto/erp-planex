@@ -1,4 +1,171 @@
-# CURRENT STATUS OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_MANAGEMENT_QA_ACCEPTED
+# CURRENT STATUS OVERRIDE — 2026-06-13 — FULL_REFERENCE_FUNCTIONAL_ACCEPTED
+
+Current focus: **ПОЛНЫЙ ФУНКЦИОНАЛЬНЫЙ КОНТУР СПРАВОЧНОГО БЛОКА ЗАВЕРШЁН И ПРОВЕРЕН.**
+
+QA: **FULL_REFERENCE_FUNCTIONAL_ACCEPTED** (65/65 PASS, 0 FAIL, 0 BLOCKER).
+
+## Что реализовано
+
+### Auth & Sessions
+- Login/logout, session_regenerate_id, route guards (3 роли), динамический sidebar
+
+### SUPERADMIN
+- Companies: list, create, view, edit, status (active/inactive/blocked/archived)
+- Owner: view, edit, reset-password
+
+### Company Management (6 сущностей)
+- **Все сущности имеют полный CRUD:** list, create, view, edit, archive
+- Logists (с reset-password)
+- Clients, Contractors, Drivers, Vehicles, Crews
+- Безопасное архивирование (блокировка если в crews)
+- Валидация уникальных полей при редактировании
+
+### Documents
+- Upload (whitelist, entity check, size limit)
+- List (7 состояний)
+- Download (realpath, secure headers)
+
+### Ownership & Access Grants
+- created_by_user_id/role во всех таблицах
+- entity_access_grants с UNIQUE KEY
+- Logist видит свои + grant view
+- Company_owner видит всё + выдаёт доступ
+
+## Статистика
+- **79 маршрутов**
+- **16 новых view-файлов**
+- **2 новые миграции** (008, 009) + 7 существующих
+- **index.php**: 6864 строк
+- **QA**: 65/65 PASS
+
+## Next step
+1. **Владелец выполняет ручную функциональную проверку** в браузере
+2. После ручной приёмки — commit (логичные группы)
+3. Затем UI-полировка Главным дизайнером / КЛАУД
+
+## Code status
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Company & Owner Management: FUNCTIONAL_ACCEPTED
+- Reference Block: REFERENCE_BLOCK_ACCEPTED (78/78 PASS)
+- Auth & Sessions: AUTH_BLOCK_ACCEPTED (73/73 PASS)
+- Document Upload: DOCUMENT_UPLOAD_ACCEPTED (45/48 PASS)
+- Entity CRUD (view/edit/archive): FUNCTIONAL_ACCEPTED
+- Ownership & Access Grants: FUNCTIONAL_ACCEPTED
+- Document Download: FUNCTIONAL_ACCEPTED
+- **Full Reference Functional: FULL_REFERENCE_FUNCTIONAL_ACCEPTED (65/65 PASS)**
+
+Working tree: dirty (45 files changed/new)
+Push: NO
+
+## Последнее обновление
+2026-06-13 23:50 — KILO/erp-architect: полный функциональный контур завершён и проверен.
+
+---
+
+# CURRENT STATUS OVERRIDE — 2026-06-13 — DOCUMENT_UPLOAD_BLOCK_ACCEPTED (архив)
+
+Previous focus: **Document Upload Block ЗАВЕРШЁН И ПРОВЕРЕН.**
+
+QA-проверка: **DOCUMENT_UPLOAD_ACCEPTED** (48 проверок, 45 PASS, 3 FAIL, 0 BLOCKER). Все FAIL связаны с незакоммиченным Auth Block, не с Document Upload.
+
+Реализовано: миграция documents, 3 маршрута, 2 view (list + upload form), 5 entity views с ссылками «Документы», полная безопасность (storage вне public, whitelist, entity check, size limit).
+
+## Next step
+1. **Владелец выполняет ручную проверку** в браузере.
+2. После ручной приёмки — commit Auth Block + Document Upload Block.
+3. Затем следующий функциональный блок.
+
+## Code status
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Reference Block: REFERENCE_BLOCK_ACCEPTED (78/78 PASS)
+- Company & Owner Management: FUNCTIONAL_ACCEPTED (41/41 PASS)
+- Auth & Sessions: AUTH_BLOCK_ACCEPTED (73/73 PASS)
+- **Document Upload: DOCUMENT_UPLOAD_ACCEPTED (48 проверок, 45 PASS, 0 BLOCKER)**
+
+Working tree: dirty (31 files changed/new, pending commit)
+Push: NO
+
+New routes (3 added):
+- GET `/company/documents?entity_type=X&entity_id=Y` — список документов
+- GET `/company/documents/upload?entity_type=X&entity_id=Y` — форма загрузки
+- POST `/company/documents/upload?entity_type=X&entity_id=Y` — обработка загрузки
+
+New files (5 created):
+- `database/migrations-local/007_create_company_documents.sql` — таблица documents
+- `app/View/pages/company_documents.php` — список документов (7 состояний)
+- `app/View/pages/company_documents_upload.php` — форма загрузки (6 состояний)
+- `docs/ui/pages/company-documents-list.md` — MD-шаблон списка
+- `docs/ui/pages/company-documents-upload.md` — MD-шаблон загрузки
+
+Modified (6):
+- `public/index.php` — +3 маршрута document upload
+- `app/View/pages/company_clients.php` — +ссылка «Документы»
+- `app/View/pages/company_contractors.php` — +ссылка «Документы»
+- `app/View/pages/company_drivers.php` — +ссылка «Документы»
+- `app/View/pages/company_vehicles.php` — +ссылка «Документы»
+- `app/View/pages/company_crews.php` — +ссылка «Документы»
+
+Key decisions: DECISION-0042 (архитектура Document Upload Block)
+
+---
+
+# CURRENT STATUS OVERRIDE — 2026-06-13 — AUTH_BLOCK_ACCEPTED
+
+Current focus: **Авторизация и сессии РЕАЛИЗОВАНЫ И ПРОВЕРЕНЫ.**
+
+QA-проверка: **AUTH_BLOCK_ACCEPTED** (73/73 PASS, 0 FAIL, 0 BLOCKER). Реализовано: логин, логаут, сессии, route guards, контекст компании из сессии, динамический sidebar (3 роли).
+
+## Next step
+1. **Владелец выполняет ручную проверку** в браузере (login/logout/auth flow).
+2. После ручной приёмки — commit.
+3. Затем UI-полировка или следующий функциональный блок.
+
+## Code status
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Reference Block: REFERENCE_BLOCK_ACCEPTED (78/78 PASS)
+- Company & Owner Management: FUNCTIONAL_ACCEPTED (41/41 PASS)
+- **Auth & Sessions: AUTH_BLOCK_ACCEPTED (73/73 PASS)**
+
+Working tree: dirty (25 files changed/new, pending commit)
+Push: NO
+
+New routes:
+- GET/POST `/login` — страница входа
+- GET `/logout` — выход
+- GET `/company/dashboard` — company dashboard
+
+New files:
+- `app/View/layouts/auth-layout.php` — layout для `/login`
+- `app/View/pages/login_form.php` — форма логина
+- `app/View/pages/company_dashboard.php` — company dashboard
+- `docs/architecture/AUTH_SESSION_MODEL.md` — архитектура авторизации
+- `docs/ui/pages/login.md` — MD-шаблон логина
+- `docs/ui/pages/company-dashboard.md` — MD-шаблон dashboard
+
+Key decisions: DECISION-0041 (модель авторизации, сессий, guards)
+
+---
 
 Current focus: **Управление компанией и Руководителем ЗАВЕРШЕНО и ПРОВЕРЕНО.**
 
@@ -404,3 +571,20 @@ Next questions for owner:
 Code status: NO code changes.
 
 Commit status: NOT committed after this documentation handoff update.
+
+---
+
+# CURRENT STATUS OVERRIDE — 2026-06-13 — DOCUMENTS_BLOCK_DESIGNED
+
+Current focus: **Documents and File Upload for Directories — UI DESIGN COMPLETE.**
+
+erp-uiux-designer завершил проектирование UI для блока документов:
+- `docs/ui/pages/company-documents-list.md` — страница списка документов (PATTERN-01, 6 состояний, 7 колонок)
+- `docs/ui/pages/company-documents-upload.md` — страница загрузки документа (form page, 5 состояний, 3 поля)
+- Migration: `database/migrations-local/007_create_company_documents.sql` (таблица documents)
+- Storage: `storage/companies/{id}/documents/{type}/{eid}/`
+- Изменения существующих страниц: добавить кнопку «Документы» в 5 справочников (clients, contractors, drivers, vehicles, crews)
+
+Deferred: download route, verified/rejected статусы, предпросмотр, удаление, массовая загрузка.
+
+Следующий шаг: erp-architect передаёт handoff на erp-coder для реализации.

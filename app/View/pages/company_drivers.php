@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать водителя</a>
+        <a href="/company/drivers/create" class="btn btn-primary">Создать водителя</a>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
     <div class="panel-body">
         <div class="empty-state">
             <p>Водители ещё не созданы.</p>
-            <a href="/company/drivers/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать первого водителя</a>
+            <a href="/company/drivers/create" class="btn btn-primary">Создать первого водителя</a>
         </div>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать водителя</a>
+        <a href="/company/drivers/create" class="btn btn-primary">Создать водителя</a>
     </div>
 </div>
 
@@ -76,6 +76,7 @@
                         <th>Дата окончания ВУ</th>
                         <th>Статус</th>
                         <th>Создан</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,6 +94,11 @@
                             </span>
                         </td>
                         <td class="col-muted"><?= e($d['created_at']) ?></td>
+                        <td class="col-actions">
+                            <a href="/company/drivers/<?= $d['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                            <a href="/company/drivers/<?= $d['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                            <a href="/company/documents?entity_type=driver&entity_id=<?= $d['id'] ?>" class="btn btn-toolbar">Документы</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

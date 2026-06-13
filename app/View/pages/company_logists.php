@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать логиста</a>
+        <a href="/company/logists/create" class="btn btn-primary">Создать логиста</a>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
     <div class="panel-body">
         <div class="empty-state">
             <p>Логисты ещё не созданы.</p>
-            <a href="/company/logists/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать первого логиста</a>
+            <a href="/company/logists/create" class="btn btn-primary">Создать первого логиста</a>
         </div>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать логиста</a>
+        <a href="/company/logists/create" class="btn btn-primary">Создать логиста</a>
     </div>
 </div>
 
@@ -75,6 +75,7 @@
                         <th>Роль</th>
                         <th>Статус</th>
                         <th>Создан</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,12 +86,21 @@
                         <td class="col-mono"><?= e($l['login']) ?></td>
                         <td>Логист</td>
                         <td>
-                            <span class="badge<?= $l['status'] === 'active' ? ' badge-ok' : '' ?>">
-                                <span class="dot"></span>
-                                <?= $l['status'] === 'active' ? 'Активен' : e($l['status']) ?>
-                            </span>
+                            <?php if ($l['status'] === 'active'): ?>
+                            <span class="badge badge-ok"><span class="dot"></span>Активен</span>
+                            <?php elseif ($l['status'] === 'blocked'): ?>
+                            <span class="badge"><span class="dot"></span>Заблокирован</span>
+                            <?php elseif ($l['status'] === 'archived'): ?>
+                            <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+                            <?php else: ?>
+                            <span class="badge"><span class="dot"></span><?= e($l['status']) ?></span>
+                            <?php endif; ?>
                         </td>
                         <td class="col-muted"><?= e($l['created_at']) ?></td>
+                        <td class="col-actions">
+                            <a href="/company/logists/<?= $l['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                            <a href="/company/logists/<?= $l['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

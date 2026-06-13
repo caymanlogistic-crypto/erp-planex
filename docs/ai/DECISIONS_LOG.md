@@ -1256,6 +1256,52 @@ active
 
 ---
 
+## DECISION-0041 — Модель авторизации, сессий и маршрутных guards
+
+### Решение
+
+Утверждена архитектура авторизации и сессий для MVP-этапа. Полная спецификация: `docs/architecture/AUTH_SESSION_MODEL.md`.
+
+**Ключевые решения:**
+
+1. **Структура сессии**: `$_SESSION['user_id']`, `$_SESSION['role_code']` (superadmin/company_owner/logist), `$_SESSION['company_id']` (null для SUPERADMIN), `$_SESSION['user_name']`.
+
+2. **Порядок аутентификации**:
+   - SUPERADMIN: поиск по `superadmin_users.email` + `is_active=1`
+   - Руководитель: поиск по `company_users.login` + `status='active'`
+   - Логист: поиск по всем активным компаниям → локальная `users` WHERE `login` + `role_code='logist'` + `status='active'`
+     - 0 совпадений → «Неверный логин или пароль»
+     - 1 совпадение → проверка пароля
+     - >1 совпадений → «Логин найден в нескольких компаниях, обратитесь к администратору»
+
+3. **Авто-создание SUPERADMIN (development-mode)**: при первом GET `/login`, если `superadmin_users` пуста — создать `admin@planex.local` со случайным bcrypt-паролем, показать один раз на странице логина.
+
+4. **Маршрутные guards**:
+   - `/superadmin/*` → только `role_code=superadmin`
+   - `/company/*` → `role_code IN (company_owner, logist)`
+   - `/company/logists*` → только `role_code=company_owner`
+   - Без сессии → редирект 302 на `/login`
+
+5. **Контекст компании**: все `/company/*` маршруты читают `$_SESSION['company_id']`, не `$_GET['company_id']`. Для SUPERADMIN разрешён `?company_id=N` для отладки.
+
+6. **Безопасность**: `session_start()` в начале index.php, `session_regenerate_id(true)` после успешного логина, `session_destroy()` на logout.
+
+7. **Страница логина**: отдельный минимальный layout без sidebar, центрированная форма login+password.
+
+8. **Company Dashboard**: минимальная страница-заглушка `/company/dashboard` с навигационными ссылками на доступные разделы.
+
+9. **Динамический sidebar**: разный набор пунктов для SUPERADMIN, Руководителя и Логиста.
+
+### Причина
+
+Перед реальными пользователями система должна работать через нормальный вход с сессиями и защитой маршрутов, а не через ручной `?company_id=N`.
+
+### Статус
+
+active
+
+---
+
 ## DECISION-0040 — Модель управления компанией и Руководителем в SUPERADMIN
 
 ### Решение
@@ -1352,6 +1398,143 @@ active
 ### Причина
 
 Владелец при ручной проверке справочного фундамента выявил, что экспедитор и Руководитель создаются, но отсутствует управление ими (редактирование, статусы, сброс пароля). Это критический пробел до передачи реальным пользователям.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0042 — Маршруты и архитектура Document Upload Block
+
+### Решение
+
+Утверждена архитектура модуля загрузки документов для справочников компании.
+
+**Маршруты (query-string подход):**
+- `GET /company/documents?entity_type=X&entity_id=Y` — список документов сущности
+- `GET /company/documents/upload?entity_type=X&entity_id=Y` — форма загрузки
+- `POST /company/documents/upload?entity_type=X&entity_id=Y` — обработка загрузки
+
+Query-string подход выбран для совместимости с текущим посегментным Router без его модификации.
+
+**Таблица `documents` (локальная БД компании):**
+15 полей: id, entity_type, entity_id, document_type, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, comments, created_at, updated_at.
+
+**Хранение файлов:** `storage/companies/{company_id}/documents/{entity_type}/{entity_id}/`
+
+**Безопасность:** файлы вне public/, stored_name через uniqid(), whitelist расширений (pdf/jpg/jpeg/png/doc/docx/xls/xlsx), запрещены .php/.js/.exe и др., макс. 10 МБ, проверка существования сущности, path traversal check.
+
+**Что deferred:** download route, verified/rejected статусы, предпросмотр, drag-and-drop, массовая загрузка, удаление/замена.
+
+### Причина
+
+Владелец утвердил задачу: перед реальным использованием ERP нужен механизм загрузки документов к базовым сущностям.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0043 — Полное управление сущностями (View/Edit/Archive)
+
+### Решение
+
+Реализован полный цикл управления для всех 6 сущностей компании: просмотр, редактирование, архивирование.
+
+**Маршруты (25 новых):**
+- `GET /company/{entity}/{id}` — карточка сущности
+- `GET /company/{entity}/{id}/edit` — форма редактирования
+- `POST /company/{entity}/{id}/edit` — сохранение изменений
+- `POST /company/{entity}/{id}/archive` — архивирование (status='archived')
+- `POST /company/logists/{id}/reset-password` — сброс пароля логиста
+
+**Безопасное архивирование:**
+- Contractor/Driver/Vehicle: блокировать если участвует в crews
+- Logist/Client/Crew: архивирование всегда
+
+**Hard delete:** не реализуется. Все удаления — мягкие через статус.
+
+### Причина
+
+Справочный фундамент (REFERENCE_BLOCK_ACCEPTED) имел только create/list. Владелец требует полный функциональный контур.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0044 — Модель Ownership и Access Grants
+
+### Решение
+
+Реализована минимальная модель владения записями и выдачи доступа.
+
+**Ownership-колонки:** created_by_user_id, created_by_role во всех локальных таблицах (users, clients, contractors, drivers, vehicles, crews, documents).
+
+**Таблица entity_access_grants:** entity_type, entity_id, granted_to_user_id, granted_by_user_id, access_level ('view'), UNIQUE KEY.
+
+**Правила видимости:**
+- company_owner → все записи
+- logist → свои (created_by_user_id) + grant view
+
+**UI:** на карточке сущности — секция «Доступ логистов» с формой выдачи через POST /company/access-grants/grant.
+
+### Причина
+
+Владелец требует: логист видит только свои записи, руководитель может дать доступ.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0045 — Document Download Route
+
+### Решение
+
+`GET /company/documents/download?id=N` — защищённое скачивание: проверка прав, realpath(), Content-Disposition: attachment, Content-Type из БД.
+
+### Причина
+
+Ранее кнопка «Скачать» была disabled. Владелец требует полный функционал.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0046 — Модель Ownership транспорта
+
+### Решение
+
+Транспорт (vehicles) использует owned-модель как все остальные сущности: created_by_user_id/role, filtering, grants. Не общий справочник.
+
+### Причина
+
+Единообразие ownership-модели.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0047 — Полный функциональный контур справочного блока
+
+### Решение
+
+Реализован и проверен полный функциональный контур: Auth + SUPERADMIN Companies/Owner + Company Logists/Clients/Contractors/Drivers/Vehicles/Crews + Documents + Ownership/Grants.
+
+79 маршрутов. QA: 65/65 PASS, 0 BLOCKER. Статус: FULL_REFERENCE_FUNCTIONAL_ACCEPTED.
+
+### Причина
+
+Владелец требует 100% функциональный контур перед UI-полировкой.
 
 ### Статус
 

@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/clients/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать клиента</a>
+        <a href="/company/clients/create" class="btn btn-primary">Создать клиента</a>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
     <div class="panel-body">
         <div class="empty-state">
             <p>Клиенты ещё не созданы.</p>
-            <a href="/company/clients/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать первого клиента</a>
+            <a href="/company/clients/create" class="btn btn-primary">Создать первого клиента</a>
         </div>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/clients/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать клиента</a>
+        <a href="/company/clients/create" class="btn btn-primary">Создать клиента</a>
     </div>
 </div>
 
@@ -74,6 +74,7 @@
                         <th>ИНН</th>
                         <th>Статус</th>
                         <th>Создан</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,12 +84,22 @@
                         <td><?= e($c['name']) ?></td>
                         <td class="col-mono"><?= e($c['inn']) ?></td>
                         <td>
-                            <span class="badge<?= $c['status'] === 'active' ? ' badge-ok' : '' ?>">
-                                <span class="dot"></span>
-                                <?= $c['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
-                            </span>
+                            <?php if ($c['status'] === 'active'): ?>
+                            <span class="badge badge-ok"><span class="dot"></span>Активен</span>
+                            <?php elseif ($c['status'] === 'inactive'): ?>
+                            <span class="badge"><span class="dot"></span>Неактивен</span>
+                            <?php elseif ($c['status'] === 'archived'): ?>
+                            <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+                            <?php else: ?>
+                            <span class="badge"><span class="dot"></span><?= e($c['status']) ?></span>
+                            <?php endif; ?>
                         </td>
                         <td class="col-muted"><?= e($c['created_at']) ?></td>
+                        <td class="col-actions">
+                            <a href="/company/clients/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                            <a href="/company/clients/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                            <a href="/company/documents?entity_type=client&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

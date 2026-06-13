@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать экипаж</h1>
+        <h1>Редактировать экипаж</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -17,18 +17,50 @@
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Создание экипажа недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». Редактирование экипажа недоступно.
+</div>
+
+<?php elseif (isset($dbError)): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Редактировать экипаж</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/crews" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="notice warn">
+    <?= e($dbError) ?>
+</div>
+
+<?php elseif ($entityNotFound): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Экипаж не найден</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/crews" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="notice warn">
+    Экипаж с ID <?= e((string)$crewId) ?> не найден в этой компании.
 </div>
 
 <?php elseif (!empty($blockingNotices)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Создать экипаж</h1>
+        <h1>Редактировать экипаж</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/crews" class="btn btn-ghost">← К списку</a>
+        <a href="/company/crews/<?= $crewId ?>" class="btn btn-ghost">← К просмотру</a>
     </div>
 </div>
 
@@ -43,42 +75,50 @@
 
 <div class="page-head">
     <div>
-        <h1>Экипаж создан</h1>
+        <h1>Экипаж обновлён</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/crews" class="btn btn-primary">← К списку</a>
+        <a href="/company/crews/<?= $crewId ?>" class="btn btn-primary">← К просмотру</a>
     </div>
 </div>
 
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Экипаж успешно создан.
+            Экипаж успешно обновлён.
         </div>
 
         <div class="kv" style="margin-top:16px">
             <div class="kv-row">
                 <span class="kv-key">Подрядчик</span>
-                <span class="kv-value"><?= e($createdCrew['contractor_name']) ?></span>
+                <span class="kv-value"><?= e($crew['contractor_name'] ?? '') ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Транспорт</span>
-                <span class="kv-value"><code><?= e($createdCrew['plate_number']) ?></code></span>
+                <span class="kv-value"><code><?= e($crew['plate_number'] ?? '') ?></code></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Водитель</span>
-                <span class="kv-value"><?= e($createdCrew['driver_name']) ?></span>
+                <span class="kv-value"><?= e($crew['driver_name'] ?? '') ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Статус</span>
-                <span class="kv-value">Активен</span>
+                <span class="kv-value">
+                    <?php if ($crew['status'] === 'active'): ?>
+                        <span class="badge badge-ok"><span class="dot"></span>Активен</span>
+                    <?php elseif ($crew['status'] === 'archived'): ?>
+                        <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+                    <?php else: ?>
+                        <span class="badge"><span class="dot"></span>Неактивен</span>
+                    <?php endif; ?>
+                </span>
             </div>
         </div>
 
         <div class="form-actions" style="margin-top:16px">
-            <a href="/company/crews" class="btn btn-primary">← К списку</a>
-            <a href="/company/crews/create" class="btn btn-ghost">Создать ещё</a>
+            <a href="/company/crews/<?= $crewId ?>" class="btn btn-primary">← К просмотру</a>
+            <a href="/company/crews" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
 </div>
@@ -87,11 +127,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать экипаж</h1>
+        <h1>Редактировать экипаж</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/crews" class="btn btn-ghost">← К списку</a>
+        <a href="/company/crews/<?= $crewId ?>" class="btn btn-ghost">← К просмотру</a>
     </div>
 </div>
 
@@ -99,7 +139,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/crews/create" class="panel">
+<form method="post" action="/company/crews/<?= $crewId ?>/edit" class="panel">
     <div class="panel-body">
 
         <div class="form-section">
@@ -152,6 +192,19 @@
         </div>
 
         <div class="form-section">
+            <h3 class="panel-head-title">Статус</h3>
+
+            <div class="field">
+                <label class="field-label">Статус</label>
+                <select name="status" class="field-input">
+                    <option value="active" <?= ($old['status'] ?? '') === 'active' ? 'selected' : '' ?>>Активен</option>
+                    <option value="inactive" <?= ($old['status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Неактивен</option>
+                    <option value="archived" <?= ($old['status'] ?? '') === 'archived' ? 'selected' : '' ?>>Архив</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-section">
             <h3 class="panel-head-title">Дополнительно</h3>
 
             <div class="field">
@@ -161,8 +214,8 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Создать экипаж</button>
-            <a href="/company/crews" class="btn btn-ghost">← К списку</a>
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            <a href="/company/crews/<?= $crewId ?>" class="btn btn-ghost">← К просмотру</a>
         </div>
 
     </div>

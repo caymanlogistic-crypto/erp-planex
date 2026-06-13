@@ -1,4 +1,168 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_MANAGEMENT_QA_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — FULL_REFERENCE_FUNCTIONAL_ACCEPTED
+
+**ПОЛНЫЙ ФУНКЦИОНАЛЬНЫЙ КОНТУР СПРАВОЧНОГО БЛОКА ЗАВЕРШЁН. QA: 65/65 PASS, 0 BLOCKER.**
+
+## Состояние
+- 79 маршрутов (Auth + SUPERADMIN + Company 6 entities CRUD + Documents + Ownership)
+- 16 новых view-файлов (view + edit для каждой сущности)
+- 2 новые миграции (008 ownership columns, 009 entity_access_grants)
+- index.php: 6864 строк
+- All php -l clean
+
+## Реализовано
+- Auth: login/logout/sessions/route guards (3 роли)
+- SUPERADMIN: companies CRUD + owner management + password reset
+- Company Logists: list/create/view/edit/reset-password/archive
+- Company Clients/Contractors/Drivers/Vehicles/Crews: list/create/view/edit/archive
+- Documents: upload/list/download
+- Ownership: created_by_user_id/role, entity_access_grants, filtering, grant UI
+
+## Статус
+FULL_REFERENCE_FUNCTIONAL_ACCEPTED. Готово к ручной проверке владельцем.
+
+## Next step
+Владелец проверяет → commit → UI-полировка Главным дизайнером / КЛАУД.
+
+---
+
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — DOCUMENTS_BLOCK_DESIGNED (архив)
+
+**Documents and File Upload for Directories: UI DESIGN COMPLETE (erp-uiux-designer).**
+
+## Documents Block handoff status
+
+- Designer handoff: **HANDOFF_READY**
+  - `docs/ui/pages/company-documents-list.md` — список документов сущности (PATTERN-01, table-only)
+  - `docs/ui/pages/company-documents-upload.md` — форма загрузки документа (form page)
+- Coder implementation: PENDING
+- Routes: `/company/documents?entity_type=X&entity_id=Y`, `/company/documents/upload?entity_type=X&entity_id=Y`
+- Migration: `database/migrations-local/007_create_company_documents.sql`
+- Storage: `storage/companies/{id}/documents/{type}/{eid}/`
+- Entity type whitelist: client, contractor, driver, vehicle, crew
+- Deferred: download route, verified/rejected statuses, preview, delete, batch upload
+
+Следующий шаг: передать на реализацию erp-coder.
+
+---
+
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — DOCUMENT_UPLOAD_BLOCK_ACCEPTED
+
+**Document Upload Block ЗАВЕРШЁН. QA: DOCUMENT_UPLOAD_ACCEPTED (48 проверок, 45 PASS, 3 FAIL, 0 BLOCKER).**
+
+Все 3 FAIL связаны с незакоммиченным Auth Block (main.php, app.css изменены предшествующей задачей; sidebar active state — отдельная задача). Код Document Upload: 0 дефектов.
+
+Реализовано:
+- Миграция `documents` (15 полей, 4 индекса)
+- 3 маршрута: список / форма / обработка загрузки
+- 2 новых view: список документов (7 состояний), форма загрузки (6 состояний)
+- 5 entity views: ссылки «Документы» в каждой строке
+- Безопасность: storage вне public, uniqid stored_name, whitelist расширений, проверка сущности, size limit 10MB, path traversal check
+- Deferred: download route (disabled кнопка), verified/rejected статусы, предпросмотр
+
+Code status:
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Reference Block: REFERENCE_BLOCK_ACCEPTED (78/78 PASS)
+- Company & Owner Management: FUNCTIONAL_ACCEPTED (41/41 PASS)
+- Auth & Sessions: AUTH_BLOCK_ACCEPTED (73/73 PASS)
+- **Document Upload: DOCUMENT_UPLOAD_ACCEPTED (45/48 PASS, 0 BLOCKER)**
+
+Latest commit: `21fdddc` feat(superadmin): add company and owner management
+Working tree: dirty (31 files changed/new: Auth Block + Document Upload)
+Push: NO
+
+New routes (6 total, including auth):
+- GET/POST `/login` — страница входа
+- GET `/logout` — выход
+- GET `/company/dashboard` — company dashboard
+- GET `/company/documents?entity_type=X&entity_id=Y` — список документов
+- GET `/company/documents/upload?entity_type=X&entity_id=Y` — форма загрузки
+- POST `/company/documents/upload?entity_type=X&entity_id=Y` — обработка загрузки
+
+New views (5 created total):
+- `app/View/layouts/auth-layout.php` — layout для /login
+- `app/View/pages/login_form.php` — форма логина
+- `app/View/pages/company_dashboard.php` — company dashboard
+- `app/View/pages/company_documents.php` — список документов (7 состояний)
+- `app/View/pages/company_documents_upload.php` — форма загрузки (6 состояний)
+
+Key decisions:
+- DECISION-0041: модель авторизации, сессий, guards
+- DECISION-0042: архитектура Document Upload Block (маршруты, хранение, безопасность)
+
+Storage structure:
+```
+storage/companies/{company_id}/documents/{entity_type}/{entity_id}/
+```
+
+Next step: Owner manual review → commit (Auth + Documents) → следующий блок
+
+---
+
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — AUTH_BLOCK_ACCEPTED
+
+**Авторизация и сессии РЕАЛИЗОВАНЫ. QA: AUTH_BLOCK_ACCEPTED (73/73 PASS, 0 BLOCKER).**
+
+Code status:
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Reference Block: REFERENCE_BLOCK_ACCEPTED (78/78 PASS)
+- Company & Owner Management: FUNCTIONAL_ACCEPTED (41/41 PASS)
+- **Auth & Sessions: AUTH_BLOCK_ACCEPTED (73/73 PASS)**
+
+Latest commit: `21fdddc` feat(superadmin): add company and owner management
+Working tree: dirty (25 files changed/new, pending commit after owner approval)
+Push: NO
+
+New routes (3 added):
+- GET/POST `/login` — страница входа + обработчик аутентификации
+- GET `/logout` — выход (session_destroy + редирект)
+- GET `/company/dashboard` — company dashboard (заглушка)
+
+New views (3 created):
+- `app/View/layouts/auth-layout.php` — минимальный layout для `/login` (без sidebar)
+- `app/View/pages/login_form.php` — форма логина (5 состояний)
+- `app/View/pages/company_dashboard.php` — страница-заглушка компании
+
+Modified:
+- `app/View/layouts/main.php` — динамический sidebar (3 роли: SUPERADMIN/Руководитель/Логист), динамический topbar user block (аватар+имя+роль+«Выйти»)
+- `public/index.php` — +315 строк: session_start(), helpers (isAuthenticated/requireRole/getSessionCompanyId), auth handlers, route guards, замена $_GET['company_id'] → getSessionCompanyId() во всех company-маршрутах
+- `public/assets/css/app.css` — +130 строк новых классов (auth-shell, auth-topbar, login-card, dash-link и др.)
+- 12 файлов company views — замена ?company_id= ссылок
+
+Architecture docs:
+- `docs/architecture/AUTH_SESSION_MODEL.md` — полная спецификация авторизации и сессий
+- `docs/ui/pages/login.md` — MD-шаблон страницы логина
+- `docs/ui/pages/company-dashboard.md` — MD-шаблон company dashboard
+
+Key decisions:
+- DECISION-0041: модель авторизации — 3 источника (superadmin_users.email, company_users.login, локальные users.login), порядок аутентификации, структура сессии, route guards, контекст компании из сессии, авто-создание SUPERADMIN в development-mode
+
+Session structure:
+- `$_SESSION['user_id']`, `$_SESSION['role_code']` (superadmin/company_owner/logist), `$_SESSION['company_id']` (null для SUPERADMIN), `$_SESSION['user_name']`
+
+Route guards:
+- `/superadmin/*` → requireRole('superadmin')
+- `/company/*` → requireRole(['company_owner', 'logist'])
+- `/company/logists*` → requireRole('company_owner')
+- Без сессии → 302 на /login
+
+QA: 73/73 PASS, 0 FAIL, 0 BLOCKER (code-structure verification; runtime HTTP checks не выполнялись)
+Next: Owner manual review → commit → следующий блок
+
+---
 
 **Управление компанией и Руководителем РЕАЛИЗОВАНО. QA: FUNCTIONAL_ACCEPTED (41/41 PASS, 0 BLOCKER).**
 
@@ -44,6 +208,8 @@ Key decisions:
 Handoff:
 - `docs/ui/pages/superadmin-company-management.md`
 - `docs/ui/pages/superadmin-company-owner-management.md`
+- `docs/ui/pages/login.md` (new — Auth Block)
+- `docs/ui/pages/company-dashboard.md` (new — Auth Block)
 
 QA: 41/41 PASS, 0 FAIL, 0 BLOCKER
 Next: Owner manual review → commit → UI polish (Chief Designer / KLAUD)

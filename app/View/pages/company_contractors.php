@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать подрядчика</a>
+        <a href="/company/contractors/create" class="btn btn-primary">Создать подрядчика</a>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
     <div class="panel-body">
         <div class="empty-state">
             <p>Подрядчики ещё не созданы.</p>
-            <a href="/company/contractors/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать первого подрядчика</a>
+            <a href="/company/contractors/create" class="btn btn-primary">Создать первого подрядчика</a>
         </div>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors/create?company_id=<?= $companyId ?>" class="btn btn-primary">Создать подрядчика</a>
+        <a href="/company/contractors/create" class="btn btn-primary">Создать подрядчика</a>
     </div>
 </div>
 
@@ -74,6 +74,7 @@
                         <th>ИНН</th>
                         <th>Статус</th>
                         <th>Создан</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -89,6 +90,11 @@
                             </span>
                         </td>
                         <td class="col-muted"><?= e($c['created_at']) ?></td>
+                        <td class="col-actions">
+                            <a href="/company/contractors/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                            <a href="/company/contractors/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                            <a href="/company/documents?entity_type=contractor&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

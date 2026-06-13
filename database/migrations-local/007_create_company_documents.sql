@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS `documents` (
+    `id` INT UNSIGNED AUTO_INCREMENT,
+    `entity_type` VARCHAR(20) NOT NULL,
+    `entity_id` INT UNSIGNED NOT NULL,
+    `document_type` VARCHAR(100) DEFAULT NULL,
+    `original_name` VARCHAR(500) NOT NULL,
+    `stored_name` VARCHAR(255) NOT NULL,
+    `relative_path` VARCHAR(1000) NOT NULL,
+    `mime_type` VARCHAR(100) NOT NULL,
+    `file_size` BIGINT UNSIGNED NOT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'uploaded',
+    `uploaded_by_user_id` INT UNSIGNED DEFAULT NULL,
+    `uploaded_by_role` VARCHAR(50) DEFAULT NULL,
+    `comments` TEXT DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_entity` (`entity_type`, `entity_id`),
+    KEY `idx_status` (`status`),
+    KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
