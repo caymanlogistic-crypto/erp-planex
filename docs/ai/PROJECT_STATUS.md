@@ -1,3 +1,12 @@
+# CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_DRIVERS_REGISTRY_QA_ACCEPTED
+
+Current focus: Company Drivers Registry — **QA: FUNCTIONAL_ACCEPTED** (55/55 PASS, 0 BLOCKER).
+
+## Next module
+**Логист ведёт транспорт** — справочник транспорта в локальной БД компании.
+
+---
+
 # CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_CONTRACTORS_REGISTRY_QA_ACCEPTED
 
 Current focus: Company Contractors Registry — **QA: FUNCTIONAL_ACCEPTED** (25/25 PASS, 0 BLOCKER).

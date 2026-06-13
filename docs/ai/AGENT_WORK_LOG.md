@@ -1,6 +1,64 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
-## 2026-06-13 16:52 — KILO/erp-qa-tester — QA Company Contractors Registry
+## 2026-06-13 17:28 — KILO/erp-architect — Commit Company Drivers Registry
+
+### Задача
+Зафиксировать функционально принятую точку `Company Drivers Registry` в Git.
+
+### Что сделано
+- Проверен git status: 6 files staged (3 new views, 1 migration, 1 handoff, 1 modified index.php + DECISIONS_LOG.md)
+- Проверен diff на секреты: `.env` отсутствует, паролей/токенов нет
+- Commit `78d7cb4` — 6 files, 793 insertions
+- Working tree после commit: clean
+- Push: НЕ выполнялся
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 17:25 — KILO/erp-qa-tester — QA Company Drivers Registry
+
+### Задача
+QA-проверка модуля Company Drivers Registry.
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 55 проверок, 55 PASS, 0 FAIL, 0 BLOCKER.
+
+### Статус
+DONE — COMMIT RECOMMENDATION: READY
+
+---
+
+## 2026-06-13 17:22 — KILO/erp-coder — Company Drivers Registry
+
+### Задача
+Реализовать модуль «Логист ведёт водителей».
+
+### Что сделано
+- Миграция `004_create_company_drivers.sql` (11 полей, UNIQUE KEY uk_phone)
+- 3 маршрута: GET list, GET form, POST create
+- Views `company_drivers.php` (5 состояний), `company_drivers_create.php` (4 состояния)
+- Безопасный `query()->fetch()` паттерн, нет exec-SELECT
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 17:16 — KILO/erp-architect — Архитектурное решение и handoff для Company Drivers Registry
+
+### Задача
+Зафиксировать минимальную архитектуру для справочника водителей, создать handoff и миграцию.
+
+### Что сделано
+- Принято DECISION-0037: таблица `drivers` в локальной БД компании, поля full_name/phone*, UNIQUE uk_phone
+- Создан handoff: `docs/ui/pages/company-drivers.md`
+- Создана миграция: `database/migrations-local/004_create_company_drivers.sql`
+- Задача передана erp-coder с MANDATORY CODER INVOCATION BLOCK
+
+### Статус
+DONE
 
 ### Задача
 QA-проверка модуля Company Contractors Registry.

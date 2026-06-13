@@ -1,6 +1,6 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_CONTRACTORS_REGISTRY_QA_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_DRIVERS_REGISTRY_QA_ACCEPTED
 
-**Fifth functional module `Company Contractors Registry` — QA ACCEPTED (25/25 PASS, 0 BLOCKER).**
+**Sixth functional module `Company Drivers Registry` — QA ACCEPTED (55/55 PASS, 0 BLOCKER).**
 
 **ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.**
 
@@ -10,7 +10,23 @@ Code status:
 - Company Logist User: FUNCTIONAL_ACCEPTED
 - Company Clients Registry: FUNCTIONAL_ACCEPTED
 - Company Contractors Registry: FUNCTIONAL_ACCEPTED
-- Next module: Логист ведёт водителей
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Next module: Логист ведёт транспорт
+
+Latest commit: `78d7cb4` — feat(company): add drivers registry
+
+New local table `drivers` (in `erp_company_{id}`): id, full_name, phone (UNIQUE), license_number, license_category, license_issue_date, license_expire_date, status, comments, created_at, updated_at.
+
+New routes:
+- GET `/company/drivers?company_id=N`
+- GET/POST `/company/drivers/create?company_id=N`
+
+Key files added:
+- `database/migrations-local/004_create_company_drivers.sql`
+- `app/View/pages/company_drivers.php`
+- `app/View/pages/company_drivers_create.php`
+- `docs/ui/pages/company-drivers.md` (handoff)
+- `docs/ai/DECISIONS_LOG.md` (DECISION-0037)
 
 New local table `clients` (in `erp_company_{id}`): id, name, inn (UNIQUE), kpp, ogrn, legal_address, physical_address, contact_person, contact_phone, contact_email, status, comments, created_at, updated_at.
 
