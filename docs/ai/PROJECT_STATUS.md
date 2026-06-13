@@ -1,3 +1,12 @@
+# CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_CREWS_REGISTRY_QA_ACCEPTED
+
+Current focus: Company Crews Registry — **QA: FUNCTIONAL_ACCEPTED** (71/71 PASS, 0 BLOCKER).
+
+## Next step
+**Комплексная финальная проверка всего справочного блока** (8 модулей: SUPERADMIN, Owner, Logists, Clients, Contractors, Drivers, Vehicles, Crews). После проверки — передача Главному дизайнеру / КЛАУД на UI-полировку.
+
+---
+
 # CURRENT STATUS OVERRIDE — 2026-06-13 — COMPANY_VEHICLES_REGISTRY_QA_ACCEPTED
 
 Current focus: Company Vehicles Registry — **QA: FUNCTIONAL_ACCEPTED** (59/59 PASS, 0 BLOCKER).

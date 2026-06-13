@@ -1,5 +1,66 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 17:50 — KILO/erp-qa-tester — QA Company Crews Registry
+
+### Задача
+QA-проверка модуля Company Crews Registry (Экипажи).
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 71 проверка, 71 PASS, 0 FAIL, 0 BLOCKER.
+
+### Ключевые подтверждения
+- Экипажи в локальной БД (таблица crews), НЕ в центральной
+- JOIN для имён: contractor_name, plate_number, driver_name
+- Validation: 3 required + 3 exist-in-DB + unique combo
+- Duplicate crew blocked (app-level + UNIQUE KEY)
+- Blocking deps: отсутствие подрядчиков/водителей/транспорта
+- Все 7 предыдущих модулей целы
+- main.php, app.css, Database.php, Router.php — не изменены
+- Нет exec-SELECT, секретов в git diff нет
+
+### Статус
+DONE — FUNCTIONAL_ACCEPTED, COMMIT RECOMMENDATION: READY
+
+---
+
+## 2026-06-13 17:48 — KILO/erp-coder — Company Crews Registry
+
+### Задача
+Реализовать модуль «Экипажи / связка Подрядчик + Машина + Водитель».
+
+### Что сделано
+- 3 маршрута: GET list, GET form, POST create
+- Views `company_crews.php` (5 состояний), `company_crews_create.php` (5 состояний + blocking)
+- SELECT из существующих справочников (contractors, vehicles, drivers — только active)
+- Валидация: required, exist-in-DB, unique combo contractor+vehicle+driver
+- JOIN для имён в списке и success page
+- Безопасный `query()->fetch()` паттерн, нет exec-SELECT
+- Все Core Kit модули из handoff: CORE-05, CORE-08, CORE-13, CORE-17, CORE-19, CORE-24, CORE-26, CORE-27, CORE-28, CORE-31, CORE-32, CORE-33, CORE-34
+- PATTERN-01 Table-only registry + form page
+- main.php, app.css, Database.php, Router.php — НЕ изменены
+- Все предыдущие модули целы
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 17:46 — KILO/erp-architect — Архитектурное решение и handoff для Company Crews Registry
+
+### Задача
+Зафиксировать минимальную архитектуру для справочника экипажей, создать handoff и миграцию.
+
+### Что сделано
+- Принято DECISION-0039: таблица `crews` в локальной БД компании, поля contractor_id/vehicle_id/driver_id, UNIQUE KEY uk_crew, без FK
+- Создан handoff: `docs/ui/pages/company-crews.md`
+- Создана миграция: `database/migrations-local/006_create_company_crews.sql`
+- Задача передана erp-coder с MANDATORY CODER INVOCATION BLOCK
+
+### Статус
+DONE
+
+---
+
 ## 2026-06-13 17:45 — KILO/erp-qa-tester — QA Company Vehicles Registry
 
 ### Задача

@@ -1,3 +1,35 @@
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_CREWS_REGISTRY_QA_ACCEPTED
+
+**Eighth functional module `Company Crews Registry` — QA ACCEPTED (71/71 PASS, 0 BLOCKER).**
+
+**ACCELERATED FUNCTIONAL DEVELOPMENT MODE active. Справочный фундамент ЗАВЕРШЁН.**
+
+Code status:
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Next: комплексная финальная проверка справочного блока, затем UI-полировка Главным дизайнером / КЛАУД
+
+New local table `crews` (in `erp_company_{id}`): id, contractor_id, vehicle_id, driver_id, status, comments, created_at, updated_at. UNIQUE KEY uk_crew (contractor_id, vehicle_id, driver_id).
+
+New routes:
+- GET `/company/crews?company_id=N`
+- GET/POST `/company/crews/create?company_id=N`
+
+Key files added:
+- `database/migrations-local/006_create_company_crews.sql`
+- `app/View/pages/company_crews.php`
+- `app/View/pages/company_crews_create.php`
+- `docs/ui/pages/company-crews.md` (handoff)
+- `docs/ai/DECISIONS_LOG.md` (DECISION-0039)
+
+---
+
 # CURRENT CONTEXT OVERRIDE — 2026-06-13 — COMPANY_VEHICLES_REGISTRY_QA_ACCEPTED
 
 **Seventh functional module `Company Vehicles Registry` — QA ACCEPTED (59/59 PASS, 0 BLOCKER).**
