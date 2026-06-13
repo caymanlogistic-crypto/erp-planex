@@ -1,3 +1,55 @@
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_MANAGEMENT_QA_ACCEPTED
+
+**Управление компанией и Руководителем РЕАЛИЗОВАНО. QA: FUNCTIONAL_ACCEPTED (41/41 PASS, 0 BLOCKER).**
+
+Code status:
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Reference Block: REFERENCE_BLOCK_ACCEPTED (78/78 PASS)
+- **Company & Owner Management: FUNCTIONAL_ACCEPTED (41/41 PASS)**
+
+Latest commit: `7df0821` feat(company): add crews registry
+Working tree: dirty (6 files changed/new, pending commit after owner approval)
+Push: NO
+
+New routes (7 added):
+- GET `/superadmin/companies/{id}` — company card view
+- GET/POST `/superadmin/companies/{id}/edit` — company edit
+- GET `/superadmin/companies/{id}/owner` — owner card view
+- GET/POST `/superadmin/companies/{id}/owner/edit` — owner edit
+- POST `/superadmin/companies/{id}/owner/reset-password` — password reset
+
+New views (4 created):
+- `app/View/pages/superadmin_company_view.php`
+- `app/View/pages/superadmin_company_edit.php`
+- `app/View/pages/superadmin_company_owner_view.php`
+- `app/View/pages/superadmin_company_owner_edit.php`
+
+Modified:
+- `app/View/pages/superadmin_companies.php` — ссылка «Карточка» на company view
+- `public/index.php` — +497 строк, 7 маршрутов
+
+Key decisions:
+- DECISION-0040: безопасное управление статусами (active/inactive/blocked/archived), без hard delete
+- Company edit НЕ меняет db_identifier/storage_path/provisioning fields
+- Owner password reset: generatePassword() → bcrypt → UPDATE только hash, plaintext показан один раз
+- main.php, app.css, Database.php, Router.php не изменены
+
+Handoff:
+- `docs/ui/pages/superadmin-company-management.md`
+- `docs/ui/pages/superadmin-company-owner-management.md`
+
+QA: 41/41 PASS, 0 FAIL, 0 BLOCKER
+Next: Owner manual review → commit → UI polish (Chief Designer / KLAUD)
+
+---
+
 # CURRENT CONTEXT OVERRIDE — 2026-06-13 — REFERENCE_BLOCK_ACCEPTED
 
 **Справочный фундамент ЗАВЕРШЁН. Комплексная проверка: REFERENCE_BLOCK_ACCEPTED (78/78 PASS, 0 BLOCKER).**

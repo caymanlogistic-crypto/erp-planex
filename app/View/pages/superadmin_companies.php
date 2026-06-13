@@ -86,8 +86,8 @@ function statusBadge(string $status): string
                             <?php elseif (!empty($c['owner_name'])): ?>
                                 <span class="dot" style="background:var(--success)"></span>
                                 <?= e($c['owner_name']) ?>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/create-owner" class="btn btn-ghost" style="font-size:11px;padding:2px 6px;margin-left:6px">
-                                    Просмотреть
+                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost" style="font-size:11px;padding:2px 6px;margin-left:6px">
+                                    Карточка
                                 </a>
                             <?php else: ?>
                                 <a href="/superadmin/companies/<?= $c['id'] ?>/create-owner" class="btn btn-primary" style="font-size:11px;padding:2px 10px">

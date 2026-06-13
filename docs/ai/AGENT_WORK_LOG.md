@@ -1,5 +1,58 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 19:20 — KILO/erp-architect — Superadmin Company & Owner Management
+
+### Задача
+Реализовать управление компанией и Руководителем в SUPERADMIN: просмотр, редактирование, смена статуса, сброс пароля.
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 41 проверка QA, 41 PASS, 0 FAIL, 0 BLOCKER.
+
+### Архитектурное решение
+- DECISION-0040: безопасное управление статусами (без hard delete), модель редактирования компании и Руководителя.
+
+### Реализовано (erp-coder)
+- 4 новых view: superadmin_company_view.php, superadmin_company_edit.php, superadmin_company_owner_view.php, superadmin_company_owner_edit.php
+- 7 новых маршрутов в public/index.php (company view/edit, owner view/edit, reset-password)
+- Обновлён superadmin_companies.php: ссылка «Карточка» вместо «Просмотреть»
+
+### Ключевые проверки
+- Company UPDATE: только name/inn/kpp/ogrn/addresses/contacts/status/comments, НЕ db_identifier/storage_path
+- Owner UPDATE: только full_name/login/email/phone/status/comments, НЕ password_hash/role/company_id
+- Password reset: generatePassword() → password_hash(PASSWORD_BCRYPT) → UPDATE только hash
+- Plaintext пароль не сохраняется в БД, показан один раз
+- Invalid company_id → 200 (не 500)
+- Duplicate inn/login блокируется
+- main.php, app.css, Database.php, Router.php не изменены
+- Все 8 предыдущих модулей целы
+
+### Handoff
+- `docs/ui/pages/superadmin-company-management.md` (создан)
+- `docs/ui/pages/superadmin-company-owner-management.md` (создан)
+
+### Изменённые файлы
+- `public/index.php` (+497 строк, 7 маршрутов)
+- `app/View/pages/superadmin_companies.php` (4 строки)
+- `app/View/pages/superadmin_company_view.php` (создан)
+- `app/View/pages/superadmin_company_edit.php` (создан)
+- `app/View/pages/superadmin_company_owner_view.php` (создан)
+- `app/View/pages/superadmin_company_owner_edit.php` (создан)
+- `docs/ai/DECISIONS_LOG.md` (DECISION-0040)
+- `docs/ui/pages/superadmin-company-management.md` (создан)
+- `docs/ui/pages/superadmin-company-owner-management.md` (создан)
+
+### Что НЕ сделано
+- Commit не выполнялся (ожидает owner approval)
+- Push не выполнялся
+- UI polish не выполнялся
+- Hard delete не реализован
+- Auth/session не реализованы
+
+### Статус
+DONE — готово к commit после owner approval
+
+---
+
 ## 2026-06-13 18:03 — KILO/erp-architect — Комплексная проверка справочного блока
 
 ### Задача

@@ -1,3 +1,46 @@
+# CURRENT STATUS OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANY_OWNER_MANAGEMENT_QA_ACCEPTED
+
+Current focus: **Управление компанией и Руководителем ЗАВЕРШЕНО и ПРОВЕРЕНО.**
+
+QA-проверка: **FUNCTIONAL_ACCEPTED** (41/41 PASS, 0 FAIL, 0 BLOCKER). Реализовано: карточка компании, редактирование компании, управление статусом, карточка Руководителя, редактирование Руководителя, сброс пароля.
+
+## Next step
+1. **Владелец выполняет ручную проверку** в браузере.
+2. После ручной приёмки — commit.
+3. Затем UI-полировка Главным дизайнером / КЛАУД (включая справочный блок).
+
+## Code status
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Reference Block: REFERENCE_BLOCK_ACCEPTED (78/78 PASS)
+- **Company & Owner Management: FUNCTIONAL_ACCEPTED (41/41 PASS)**
+
+Working tree: dirty (6 files changed/new, pending commit)
+Push: NO
+
+New routes:
+- GET/POST `/superadmin/companies/{id}` — company card view
+- GET/POST `/superadmin/companies/{id}/edit` — company edit
+- GET `/superadmin/companies/{id}/owner` — owner card view
+- GET/POST `/superadmin/companies/{id}/owner/edit` — owner edit
+- POST `/superadmin/companies/{id}/owner/reset-password` — password reset
+
+New views:
+- `app/View/pages/superadmin_company_view.php`
+- `app/View/pages/superadmin_company_edit.php`
+- `app/View/pages/superadmin_company_owner_view.php`
+- `app/View/pages/superadmin_company_owner_edit.php`
+
+Key decisions: DECISION-0040 (безопасное управление статусами, без hard delete)
+
+---
+
 # CURRENT STATUS OVERRIDE — 2026-06-13 — REFERENCE_BLOCK_ACCEPTED
 
 Current focus: **Справочный фундамент ЗАВЕРШЁН и ПРОВЕРЕН.**
@@ -5,8 +48,8 @@ Current focus: **Справочный фундамент ЗАВЕРШЁН и П�
 Комплексная проверка: **REFERENCE_BLOCK_ACCEPTED** (78/78 PASS, 0 FAIL, 0 BLOCKER). Все 8 модулей функционально работают. Готово к ручной проверке владельцем.
 
 ## Next step
-1. **Владелец выполняет ручную функциональную проверку** в браузере.
-2. После ручной приёмки — передача блока Главному дизайнеру / КЛАУД на UI-полировку.
+1. ~~Владелец выполняет ручную функциональную проверку в браузере.~~ **DONE — выявлен пробел управления компанией и Руководителем.**
+2. ~~После ручной приёмки — передача блока Главному дизайнеру / КЛАУД на UI-полировку.~~ **ОТЛОЖЕНО до реализации управления.**
 3. UI-полировка включает: visual design, typography, spacing, states, responsive.
 4. Только после UI-полировки: edit/delete, pagination, complex filters, auth/session, рейсы, документы.
 

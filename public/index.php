@@ -452,6 +452,503 @@ $router->post('/superadmin/companies/{id}/create-owner', function ($id) use ($co
     }
 });
 
+$router->get('/superadmin/companies/{id}', function ($id) use ($config, $db) {
+    $pageTitle = 'Карточка компании';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $owner = null;
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_view.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageTitle = 'Компания: ' . $company['name'];
+
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
+        );
+        $ownerStmt->execute([(int) $id]);
+        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $dbError = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_view.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $company = null;
+        $owner = null;
+        $dbError = 'Не удалось загрузить компанию: ' . $e->getMessage();
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_view.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->get('/superadmin/companies/{id}/edit', function ($id) use ($config, $db) {
+    $pageTitle = 'Редактировать компанию';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $errors = [];
+            $old = [];
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $errors = [];
+        $old = $company;
+        $formError = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_edit.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $company = null;
+        $errors = [];
+        $old = [];
+        $formError = 'Не удалось загрузить компанию: ' . $e->getMessage();
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_edit.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $db) {
+    $pageTitle = 'Редактировать компанию';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $errors = [];
+            $old = $_POST;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $errors = [];
+        $old = $_POST;
+        $formError = null;
+
+        $name = trim($_POST['name'] ?? '');
+        $inn  = trim($_POST['inn'] ?? '');
+
+        if ($name === '') {
+            $errors['name'] = 'Обязательное поле';
+        }
+
+        if ($inn === '') {
+            $errors['inn'] = 'Обязательное поле';
+        } else {
+            $dupStmt = $pdo->prepare('SELECT COUNT(*) FROM companies WHERE inn = ? AND id != ?');
+            $dupStmt->execute([$inn, (int) $id]);
+            if ($dupStmt->fetchColumn() > 0) {
+                $errors['inn'] = 'ИНН уже используется';
+            }
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $update = $pdo->prepare(
+            'UPDATE companies SET
+                name = :name,
+                inn = :inn,
+                kpp = :kpp,
+                ogrn = :ogrn,
+                legal_address = :legal_address,
+                physical_address = :physical_address,
+                contact_person = :contact_person,
+                contact_phone = :contact_phone,
+                contact_email = :contact_email,
+                status = :status,
+                comments = :comments
+             WHERE id = :id'
+        );
+
+        $update->execute([
+            ':name'             => $name,
+            ':inn'              => $inn,
+            ':kpp'              => $_POST['kpp'] ?? null,
+            ':ogrn'             => $_POST['ogrn'] ?? null,
+            ':legal_address'    => $_POST['legal_address'] ?? null,
+            ':physical_address' => $_POST['physical_address'] ?? null,
+            ':contact_person'   => $_POST['contact_person'] ?? null,
+            ':contact_phone'    => $_POST['contact_phone'] ?? null,
+            ':contact_email'    => $_POST['contact_email'] ?? null,
+            ':status'           => $_POST['status'] ?? $company['status'],
+            ':comments'         => $_POST['comments'] ?? null,
+            ':id'               => (int) $id,
+        ]);
+
+        header('Location: /superadmin/companies/' . $id);
+        exit;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $errors = [];
+        $old = $_POST;
+        $formError = 'Ошибка сохранения: ' . $e->getMessage();
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_edit.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->get('/superadmin/companies/{id}/owner', function ($id) use ($config, $db) {
+    $pageTitle = 'Руководитель';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $owner = null;
+            $dbError = null;
+            $passwordReset = false;
+            $newPassword = null;
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_view.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
+        );
+        $ownerStmt->execute([(int) $id]);
+        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        $pageTitle = $owner ? 'Руководитель: ' . $owner['full_name'] : 'Руководитель';
+        $dbError = null;
+        $passwordReset = false;
+        $newPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_view.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $company = null;
+        $owner = null;
+        $dbError = 'Не удалось загрузить данные: ' . $e->getMessage();
+        $passwordReset = false;
+        $newPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_view.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->get('/superadmin/companies/{id}/owner/edit', function ($id) use ($config, $db) {
+    $pageTitle = 'Редактировать Руководителя';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $owner = null;
+            $errors = [];
+            $old = [];
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
+        );
+        $ownerStmt->execute([(int) $id]);
+        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if (!$owner) {
+            $errors = [];
+            $old = [];
+            $formError = 'Руководитель не создан';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $errors = [];
+        $old = $owner;
+        $formError = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_edit.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $company = null;
+        $owner = null;
+        $errors = [];
+        $old = [];
+        $formError = 'Не удалось загрузить данные: ' . $e->getMessage();
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_edit.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->post('/superadmin/companies/{id}/owner/edit', function ($id) use ($config, $db) {
+    $pageTitle = 'Редактировать Руководителя';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $owner = null;
+            $errors = [];
+            $old = $_POST;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
+        );
+        $ownerStmt->execute([(int) $id]);
+        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if (!$owner) {
+            $errors = [];
+            $old = $_POST;
+            $formError = 'Руководитель не создан';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $errors = [];
+        $old = $_POST;
+        $formError = null;
+
+        $fullName = trim($_POST['full_name'] ?? '');
+        $login = trim($_POST['login'] ?? '');
+
+        if ($fullName === '') {
+            $errors['full_name'] = 'Обязательное поле';
+        }
+
+        if ($login === '') {
+            $errors['login'] = 'Обязательное поле';
+        } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
+            $errors['login'] = 'Только латинские буквы, цифры и подчёркивание';
+        } else {
+            $dupStmt = $pdo->prepare('SELECT COUNT(*) FROM company_users WHERE login = ? AND id != ?');
+            $dupStmt->execute([$login, (int) $owner['id']]);
+            if ($dupStmt->fetchColumn() > 0) {
+                $errors['login'] = 'Логин уже используется';
+            }
+        }
+
+        $email = trim($_POST['email'] ?? '');
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Некорректный email';
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $update = $pdo->prepare(
+            'UPDATE company_users SET
+                full_name = :full_name,
+                login = :login,
+                email = :email,
+                phone = :phone,
+                status = :status,
+                comments = :comments
+             WHERE id = :id'
+        );
+
+        $update->execute([
+            ':full_name' => $fullName,
+            ':login'     => $login,
+            ':email'     => $email !== '' ? $email : null,
+            ':phone'     => trim($_POST['phone'] ?? '') ?: null,
+            ':status'    => $_POST['status'] ?? $owner['status'],
+            ':comments'  => trim($_POST['comments'] ?? '') ?: null,
+            ':id'        => (int) $owner['id'],
+        ]);
+
+        header('Location: /superadmin/companies/' . $id . '/owner');
+        exit;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $owner = $owner ?? null;
+        $errors = [];
+        $old = $_POST;
+        $formError = 'Ошибка сохранения: ' . $e->getMessage();
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_edit.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
+$router->post('/superadmin/companies/{id}/owner/reset-password', function ($id) use ($config, $db) {
+    $pageTitle = 'Руководитель';
+    $pageContext = 'Реестр компаний';
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int) $id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $owner = null;
+            $dbError = 'Компания не найдена';
+            $passwordReset = false;
+            $newPassword = null;
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_view.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
+        );
+        $ownerStmt->execute([(int) $id]);
+        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if (!$owner) {
+            $dbError = null;
+            $passwordReset = false;
+            $newPassword = null;
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_owner_view.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $newPassword = generatePassword(10);
+        $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
+
+        $update = $pdo->prepare('UPDATE company_users SET password_hash = ? WHERE id = ?');
+        $update->execute([$passwordHash, (int) $owner['id']]);
+
+        $passwordReset = true;
+        $dbError = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_view.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $owner = $owner ?? null;
+        $dbError = 'Ошибка сброса пароля: ' . $e->getMessage();
+        $passwordReset = false;
+        $newPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_owner_view.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
+});
+
 $router->get('/company/logists', function () use ($config, $db) {
     $pageTitle = 'Логисты';
     $pageContext = 'Логисты — Компания';

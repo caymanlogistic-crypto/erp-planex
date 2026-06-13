@@ -1,3 +1,30 @@
+# UPDATE — 2026-06-13 — COMPANY & OWNER MANAGEMENT IMPLEMENTED
+
+## Implemented company management (DECISION-0040)
+
+Company management routes:
+- `GET /superadmin/companies/{id}` — company card view
+- `GET /superadmin/companies/{id}/edit` — company edit form
+- `POST /superadmin/companies/{id}/edit` — company edit save
+
+Editable fields: name*, inn*, kpp, ogrn, legal_address, physical_address, contact_person, contact_phone, contact_email, status, comments.
+
+Protected fields (never modified on edit): db_identifier, storage_path, key, folder_path, settings_json, error_message, entity_type, short_name.
+
+Safe status management: status can be changed to active/inactive/blocked/archived via edit form. No status triggers physical deletion of local DB, storage, company_users, or local reference data.
+
+Owner management routes:
+- `GET /superadmin/companies/{id}/owner` — owner card view
+- `GET /superadmin/companies/{id}/owner/edit` — owner edit form
+- `POST /superadmin/companies/{id}/owner/edit` — owner edit save
+- `POST /superadmin/companies/{id}/owner/reset-password` — password reset (bcrypt only)
+
+Handoff: `docs/ui/pages/superadmin-company-management.md`, `docs/ui/pages/superadmin-company-owner-management.md`
+
+QA: FUNCTIONAL_ACCEPTED (41/41 PASS).
+
+---
+
 # UPDATE — 2026-06-13 — OWNER-APPROVED DETAILS FOR FIRST IMPLEMENTATION
 
 ## Approved input fields for creating an expeditor
