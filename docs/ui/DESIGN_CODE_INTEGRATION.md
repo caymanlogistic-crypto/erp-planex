@@ -16,6 +16,9 @@
 
 ```text
 docs/ui/DESIGN_CODE_INTEGRATION.md   # главный UI-регламент
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md # формализованные правила из STYLE ERP
+docs/ui/ERP_UI_KIT_CORE.html         # основной компактный UI-kit: CORE modules + COMPOSITE patterns
+docs/ui/ERP_UI_MODULE_CATALOG.html   # legacy extraction draft / большой черновой каталог
 docs/ui/PAGE_PATTERN.md              # общий стандарт страницы
 docs/ui/FORMS_STANDARD.md            # стандарт форм
 docs/ui/TABLES_STANDARD.md           # стандарт таблиц
@@ -23,6 +26,24 @@ docs/ui/pages/                       # MD-шаблоны конкретных с
 ```
 
 Запрещено создавать второй общий UI-регламент с тем же смыслом.
+
+`STYLE_ERP_EXTRACTED_RULES.md` — не runtime-библиотека и не библиотека компонентов. Это формализованные правила из визуальных образцов `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\`.
+
+Кодер не должен открывать STYLE ERP и выбирать оттуда блоки. Если правило нужно для реализации, оно должно быть перенесено в MD/handoff до передачи задачи кодеру.
+
+`ERP_UI_KIT_CORE.html` является основным обязательным источником для `erp-uiux-designer`. Дизайнер проектирует страницу из CORE modules и COMPOSITE patterns, а не из разрозненного списка extraction-пунктов.
+
+`ERP_UI_MODULE_CATALOG.html` остаётся legacy extraction draft / историей извлечения 224 пунктов из STYLE ERP. Он не является основным рабочим каталогом для дизайнера.
+
+Новый UI-модуль нельзя использовать в page handoff и нельзя отдавать кодеру, пока модуль не формализован в Core Kit / профильных MD. Если подходящего модуля нет, дизайнер обязан остановиться:
+
+```text
+BLOCKED: NEEDS_UI_MODULE_EXPANSION
+```
+
+Page handoff обязан содержать раздел `CORE modules used`, выбранный `COMPOSITE pattern`, а также `MODULE USAGE DECISIONS` с причинами выбора и отказа от альтернатив.
+
+Private applied examples не являются названиями универсальных модулей. Запрещено использовать page-specific module names as universal handoff names.
 
 ---
 
@@ -175,6 +196,41 @@ app/View/components/
 app/View/pages/ui_demo.php
 public/index.php
 ```
+
+---
+
+## STYLE ERP Extracted Rules
+
+Визуальные образцы STYLE ERP формализованы в:
+
+```text
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
+```
+
+Дизайнер обязан использовать этот документ при production-grade handoff для важных UI-экранов.
+
+Вместе с этим документом дизайнер обязан использовать визуальный каталог:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+```
+
+Извлечённые ключевые правила:
+
+- desktop-first app shell: sidebar 224px, topbar 38px, min-width 1440px;
+- visual direction: Industrial Graphite + Warm Accent;
+- canonical tokens для nav/surfaces/lines/text/accent/status/controls;
+- плотная типографика: IBM Plex Sans, body 13px, tabular nums;
+- ERP-grid как основной объект списков: sticky thead, row 32px, row actions on hover;
+- unified forms: 28px controls, field labels, error/success/disabled states;
+- filters-bar компактный, без больших filter cards;
+- inspector 320-380px для list+detail сценариев;
+- key-value blocks для системной/admin информации;
+- admin/settings pages: sections, tables/forms/key-value, no KPI/SaaS cards;
+- empty/loading/error states должны быть осмысленными и page-specific;
+- charts используются только для report/analytics, не вместо рабочих таблиц.
+
+STYLE ERP showcase pages не являются production layouts. Дизайнер не должен превращать showcase композицию в рабочую страницу.
 
 ---
 

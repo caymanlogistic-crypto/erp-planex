@@ -107,10 +107,15 @@ docs/architecture/PHP_APP_SKELETON.md
 
 ```text
 docs/ui/DESIGN_CODE_INTEGRATION.md
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
 docs/ui/PAGE_PATTERN.md
 docs/ui/FORMS_STANDARD.md
 docs/ui/TABLES_STANDARD.md
+docs/ui/ERP_UI_KIT_CORE.html
+docs/ui/ERP_UI_MODULE_CATALOG.html
 ```
+
+`docs/ui/ERP_UI_KIT_CORE.html` is the primary working UI-kit. `docs/ui/ERP_UI_MODULE_CATALOG.html` is legacy extraction/reference history only.
 
 Если задача относится к конкретной странице, обязательно прочитай её MD-шаблон:
 
@@ -259,6 +264,152 @@ docs/ui/pages/
 BLOCKED: NEEDS_UI_DESIGN_HANDOFF
 ```
 
+### 5.3. CSS class discipline (CRITICAL)
+
+Кодер не имеет права добавлять CSS-классы, которых нет в accepted handoff или в `docs/ui/ERP_UI_KIT_CORE.html`.
+
+Запрещено добавлять без формализации:
+- `environment-badge`;
+- `nav-dot`;
+- `panel-head-title` (если не оформлен в Core Kit);
+- любые другие классы, не перечисленные в handoff SOURCE MAPPING.
+
+Если для реализации нужен класс, отсутствующий в handoff и Core Kit — вернуть:
+```text
+BLOCKED: UNKNOWN_UI_MODULE
+```
+
+### 5.4. CSS compatibility rule (CRITICAL)
+
+Перед добавлением дочернего класса внутрь родительского контейнера кодер обязан проверить:
+
+- есть ли у родителя padding;
+- должен ли дочерний элемент быть flush к краю родителя;
+- где должны быть внутренние отступы.
+
+Критический паттерн: `.panel` + `.panel-head` + `.panel-body`:
+- `.panel` должен иметь `padding: 0; overflow: hidden;`
+- `.panel-head` должен быть flush к верхнему краю панели
+- внутренние отступы — только в `.panel-body`
+
+Добавление `padding` к `.panel` при использовании `.panel-head`/`.panel-body` — BLOCKER.
+
+### 5.5. Hover states rule
+
+Все интерактивные элементы, для которых handoff или Core Kit требует hover state, должны его иметь. Минимально:
+
+- `.nav-item:hover` обязателен (Core Kit: `background: var(--nav-hover); color: var(--nav-text-act)`);
+- кнопки должны иметь hover из Core Kit.
+
+Отсутствие обязательного hover state — основание для возврата на rework.
+
+### 5.6. Post-implementation CSS audit
+
+После реализации кодер обязан предоставить список всех новых или изменённых CSS-классов с указанием источника каждого класса:
+
+| Class | Source | Added/Modified |
+|-------|--------|----------------|
+| `.panel-head` | `ERP_UI_KIT_CORE.html` Production CSS Reference | Added |
+| `.panel-body` | `ERP_UI_KIT_CORE.html` Production CSS Reference | Added |
+
+Классы без источника (не из handoff и не из Core Kit) — BLOCKER.
+
+---
+
+### 5.0. LAYOUT FOUNDATION GATE — ЗАПРЕТ НА САМОСТОЯТЕЛЬНЫЕ РЕШЕНИЯ
+
+**Кодер не имеет права самостоятельно решать:**
+
+- цвет topbar (светлый/тёмный);
+- позицию topbar (внутри column / full-width);
+- структуру sidebar navigation;
+- что находится в правой части topbar (user block, badges);
+- какие иконки используются в nav (SVG / dot / символы);
+- font-weight nav items;
+- структуру nav groups и nav-bottom;
+- информационную архитектуру меню (какие пункты в каком порядке, в каких группах).
+
+Если handoff не содержит раздел `0. LAYOUT FOUNDATION SOURCE MAPPING` с явной спецификацией shell/foundation — верни:
+
+```text
+BLOCKED: NEEDS_LAYOUT_FOUNDATION_SPEC
+```
+
+Если раздел 0 есть, но часть foundation-параметров не указана — верни:
+
+```text
+BLOCKED: INCOMPLETE_FOUNDATION_SPEC
+```
+
+**Запрещено**: угадывать, импровизировать или переиспользовать предыдущую реализацию shell без явной проверки в handoff.
+
+**Запрещено**: ходить в `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\` за foundation-решениями. Все правила должны быть формализованы в handoff до кодера.
+
+**Запрещено**: менять `app/View/layouts/main.php` (nav structure, topbar, sidebar) без явной спецификации в handoff.
+
+### 5.1. BLOCKED при слабом UI handoff
+
+Если задача UI имеет handoff, но он слабый, противоречивый или не production-grade, ты не пишешь код.
+
+Верни:
+
+```text
+BLOCKED: NEEDS_DESIGNER_REWORK
+```
+
+Это обязательно, если handoff:
+
+- отсутствует;
+- общий и допускает разные трактовки;
+- противоречит сам себе;
+- содержит `REJECTED` как актуальный статус;
+- допускает demo/foundation/showcase wording;
+- не указывает точные sections/classes/tokens;
+- не указывает page title/subtitle/topbar context/sidebar active state;
+- не содержит coder implementation checklist;
+- не содержит QA formal checklist;
+- не содержит owner visual checklist;
+- противоречит `DESIGN_CODE_INTEGRATION.md` или `PAGE_PATTERN.md`;
+- разрешает или не запрещает признаки demo-placeholder/SaaS-dashboard для admin/business page.
+
+Ты не имеешь права "спасти" слабый handoff собственным вкусом. Дизайн не додумывается кодером.
+
+Ты не ходишь в `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\` за дизайнерскими решениями и не копируешь оттуда HTML/CSS. STYLE ERP не является runtime-библиотекой или библиотекой компонентов. Если handoff требует открыть STYLE ERP или выбрать оттуда блок, верни `BLOCKED: NEEDS_DESIGNER_REWORK`.
+
+### 5.2. BLOCKED при неизвестном UI-модуле
+
+Ты реализуешь только формализованные UI-модули из:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
+docs/ui/DESIGN_CODE_INTEGRATION.md
+docs/ui/PAGE_PATTERN.md
+docs/ui/FORMS_STANDARD.md
+docs/ui/TABLES_STANDARD.md
+docs/ui/pages/[page-name].md
+```
+
+`docs/ui/ERP_UI_MODULE_CATALOG.html` можно читать только как legacy extraction/reference history. Он не является основанием для самостоятельной реализации UI-модулей.
+
+Page handoff обязан содержать `CORE modules used` и selected `COMPOSITE pattern` с `CORE-xx`/`PATTERN-xx` из `ERP_UI_KIT_CORE.html`. Если handoff использует неизвестный модуль, private/page-specific module name, не перечисляет модули или требует новую структуру/classes/states без формализации, ты не пишешь код.
+
+Верни:
+
+```text
+BLOCKED: UNKNOWN_UI_MODULE
+```
+
+Ты не изобретаешь:
+
+- новый UI-модуль;
+- новую структуру модуля;
+- новые CSS-классы для модуля;
+- новые состояния модуля;
+- новый layout pattern.
+
+Ты не ходишь в STYLE ERP за дизайнерскими решениями. Если для реализации не хватает формализованного модуля, задача возвращается дизайнеру/архитектору на расширение Core Kit / профильных MD.
+
 ---
 
 ### 6. Соблюдать дизайн-код
@@ -274,6 +425,7 @@ BLOCKED: NEEDS_UI_DESIGN_HANDOFF
 - SPA-архитектура;
 - npm/build pipeline без отдельного решения;
 - случайные CSS-классы;
+- неизвестные UI-модули вне `docs/ui/ERP_UI_KIT_CORE.html`;
 - хардкод цветов;
 - inline styles, кроме динамических PHP-значений;
 - большие скругления и декоративные тени;

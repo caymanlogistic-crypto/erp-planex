@@ -6,6 +6,12 @@
 
 Главный UI-регламент: `docs/ui/DESIGN_CODE_INTEGRATION.md`.
 
+Формализованные правила из STYLE ERP: `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`.
+
+Основной компактный UI-kit: `docs/ui/ERP_UI_KIT_CORE.html`.
+
+Legacy extraction draft: `docs/ui/ERP_UI_MODULE_CATALOG.html`.
+
 Шаблоны конкретных страниц хранятся в:
 
 ```text
@@ -33,11 +39,44 @@ Error state
 
 ---
 
+## Production Page Patterns from STYLE ERP
+
+Для важных экранов дизайнер обязан выбрать один рабочий pattern и описать его в page handoff:
+
+- `list + inspector`: page-head → filters-bar → main table/work area + right inspector 320-380px → pagination.
+- `table-only`: page-head → toolbar/filter → full-width ERP-grid → pagination.
+- `master-detail`: entity head/status/actions → tabs → left sections/forms/tables + right summary/activity.
+- `form/editor`: grouped fieldsets → validation panel/summary when needed → clear form actions.
+- `admin/settings`: page-head → settings/admin sections → tables/forms/key-value blocks → neutral status.
+- `report/charts`: page-head → filters → chart cards + table detail when needed.
+
+Запрещено использовать showcase composition как production page.
+
+## Page Header Rules
+
+- Page title: 15-16px, 700, конкретное название business/admin объекта.
+- Subtitle: коротко объясняет назначение страницы.
+- Topbar context должен соответствовать текущей странице.
+- Sidebar active item должен соответствовать route.
+- Запрещены `UI foundation`, `Техническая демо-страница`, `Основное действие`, demo/showcase/foundation wording на business/admin pages.
+
+---
+
 ## Обязательное правило
 
 Если страница создаётся или меняется, сначала должен быть актуальный MD-шаблон страницы в `docs/ui/pages/`.
 
 Кодер не должен сам проектировать структуру страницы.
+
+MD-шаблон страницы обязан содержать `CORE modules used`, выбранный `COMPOSITE pattern` и `MODULE USAGE DECISIONS` по `docs/ui/ERP_UI_KIT_CORE.html`.
+
+Private applied examples не являются названиями универсальных модулей. Названия, привязанные к конкретному source screen, запрещены в universal handoff.
+
+Если для страницы нет подходящего формализованного модуля, дизайнер не проектирует его внутри handoff, а возвращает:
+
+```text
+BLOCKED: NEEDS_UI_MODULE_EXPANSION
+```
 
 ---
 

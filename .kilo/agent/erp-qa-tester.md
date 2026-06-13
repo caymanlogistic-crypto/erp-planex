@@ -63,10 +63,15 @@ docs/architecture/PHP_APP_SKELETON.md
 
 ```text
 docs/ui/DESIGN_CODE_INTEGRATION.md
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
 docs/ui/PAGE_PATTERN.md
 docs/ui/FORMS_STANDARD.md
 docs/ui/TABLES_STANDARD.md
+docs/ui/ERP_UI_KIT_CORE.html
+docs/ui/ERP_UI_MODULE_CATALOG.html
 ```
+
+`docs/ui/ERP_UI_KIT_CORE.html` is the primary working UI-kit for CORE modules and COMPOSITE patterns. `docs/ui/ERP_UI_MODULE_CATALOG.html` is legacy extraction/reference history only.
 
 Если проверяется конкретная страница, обязательно прочитай её MD-шаблон:
 
@@ -119,6 +124,10 @@ docs/ui/pages/[page-name].md
 - empty/loading/error states;
 - modals/toasts;
 - CSS-классы;
+- `UI modules used`;
+- `CORE modules used`;
+- selected `COMPOSITE pattern`;
+- `MODULE USAGE DECISIONS`;
 - запреты для кодера;
 - acceptance checklist.
 
@@ -174,15 +183,64 @@ php -l path/to/changed/file.php
 
 ---
 
-### 5. UI/UX-проверки — Formal UI QA
+### 5. UI/UX-проверки — LAYOUT FOUNDATION GATE + Formal UI QA
 
-QA обязан проверять формально. Запрещены субъективные оценки: «визуально красиво», «визуально принято», «дизайн выглядит хорошо».
+#### 5.0. LAYOUT FOUNDATION GATE (ПЕРВЫЙ ШАГ — до компонентов)
 
-QA должен писать только: `Formal UI QA: PASS` или `Formal UI QA: FAIL`.
+QA обязан пройти LAYOUT FOUNDATION GATE **до** Formal UI QA и component-source audit.
+
+Если LAYOUT FOUNDATION GATE не пройден — `Formal UI QA: FAIL` немедленно.
+
+Эталон: `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\TransportERP_MASTER_UI_RULES.md`
+
+Проверь каждый пункт:
+
+**App Shell:**
+- [ ] `grid-template-rows: var(--topbar-h) 1fr` присутствует в `.app-shell`
+- [ ] Topbar занимает полную ширину (`grid-column: 1/-1`)
+- [ ] Sidebar 224px, topbar 38px
+
+**Topbar:**
+- [ ] Фон topbar: `var(--surface-strong)` = #fefdf8 (СВЕТЛЫЙ)
+- [ ] `border-bottom: 1px solid var(--line)` на topbar
+- [ ] Правая часть topbar содержит user block (имя + роль), не только debug badge
+- [ ] Цвет текста topbar: `var(--text-main)`
+
+**Sidebar:**
+- [ ] `border-right: 1px solid var(--nav-divider)` на `.app-sidebar`
+- [ ] `.nav-item { font-weight: 600; height: 34px; font-size: 12.5px }`
+- [ ] Nav icons: SVG inline 16×16, opacity 0.45 — НЕ `nav-dot`
+- [ ] Nav section label: 9px, 700, uppercase, letter-spacing .12em
+- [ ] Active state: `.is-active::before` pseudo (2px gold left line) — НЕ `border-left` на элементе
+- [ ] `.nav-spacer` и `.nav-bottom` с нижним блоком присутствуют
+
+**Sidebar IA:**
+- [ ] Нет тавтологичных placeholder-пунктов ("Навигация")
+- [ ] Операционные модули отделены от системных (SUPERADMIN)
+- [ ] Структура соответствует разделу `0b` handoff
+
+**Отчёт:**
+```text
+Layout Foundation Gate: PASS / FAIL
+```
+
+Если FAIL — остановить QA. Статус: `NON-COMPLIANT / NEEDS_UI_REWORK` с источником нормы `Layout Foundation Gate`. Дальнейшая проверка компонентов не выполняется.
+
+#### 5.1. Formal UI QA (только после Layout Foundation Gate: PASS)
+
+QA обязан проверять формально. Запрещены субъективные оценки: «визуально красиво», «визуально принято», «дизайн выглядит хорошо», «лучше/хуже», «нравится/не нравится».
+
+QA должен писать только через compliance language: `COMPLIANT` / `PARTIALLY COMPLIANT` / `NON-COMPLIANT`, плюс `Formal UI QA: PASS` или `Formal UI QA: FAIL` для технической формальной проверки.
 
 Если есть интерфейс, формально проверь:
 
 - [ ] интерфейс соответствует Industrial Graphite + Warm Accent;
+- [ ] все UI-модули страницы перечислены в handoff в разделе `CORE modules used`;
+- [ ] selected `COMPOSITE pattern` указан и существует в `docs/ui/ERP_UI_KIT_CORE.html`;
+- [ ] все UI-модули существуют в `docs/ui/ERP_UI_KIT_CORE.html` или профильных MD;
+- [ ] private/page-specific names не используются как универсальные модули (`Drivers bottom editor`, `Drivers selected row`, `Drivers right inspector`, `Drivers table card`, `Drivers filters bar`, `Drivers page header`);
+- [ ] нет unknown UI modules;
+- [ ] нет ручной отсебятины кодера в layout/classes/states;
 - [ ] нет Bootstrap/Tailwind/Material/SaaS вида;
 - [ ] нет случайных цветов;
 - [ ] нет случайных CSS-классов;
@@ -199,6 +257,80 @@ QA должен писать только: `Formal UI QA: PASS` или `Formal U
 - [ ] **VISUAL CHECK URL** предоставлен;
 - [ ] **Manual owner visual review required: YES** (для новых/изменённых экранов);
 - [ ] **Commit allowed before owner visual approval: NO** (для новых/изменённых экранов).
+
+---
+
+### 5.1. Known formal signs of weak UI
+
+QA обязан ловить формальные признаки слабого UI, даже если PHP/runtime проверки проходят.
+
+Для business/admin page это блокеры или причины `Formal UI QA: FAIL`:
+
+- `UI foundation` на странице, в title/topbar/nav или основном тексте;
+- `Техническая демо-страница`;
+- абстрактное действие `Основное действие` без page-specific context;
+- demo/showcase/foundation wording;
+- placeholder labels вместо business/admin контекста;
+- отсутствует page-specific purpose;
+- неправильный page title/subtitle;
+- неправильный active sidebar item;
+- пустая неиспользуемая рабочая область;
+- запрещённые classes из handoff;
+- cold color tokens или white/blue corporate remnants;
+- SaaS-card layout там, где нужен admin/settings или ERP-grid pattern;
+- pseudo-icons `[=]`, `[#]`, `[~]`, `[v]` или emoji как иконки;
+- отсутствуют required sections из handoff;
+- форма/таблица выглядят как showcase компонентов, а не часть конкретного business/admin экрана;
+- `Formal UI QA PASS` трактуется как финальная визуальная приёмка.
+- handoff отправляет кодера смотреть STYLE ERP вместо точной MD-спецификации;
+- STYLE ERP используется как runtime-библиотека или библиотека компонентов.
+- handoff использует неизвестный UI-модуль или не перечисляет `CORE modules used` / selected `COMPOSITE pattern`;
+- кодер реализовал модуль, которого нет в `ERP_UI_KIT_CORE.html` / профильных MD.
+
+### 5.2. Component-source audit (MANDATORY for UI tasks)
+
+QA обязан выполнить component-source audit для каждой UI-задачи:
+
+- [ ] каждый CSS-класс в HTML проверен: он есть в Core Kit (`docs/ui/ERP_UI_KIT_CORE.html`) или в handoff SOURCE MAPPING;
+- [ ] нет классов, не описанных ни в Core Kit, ни в handoff;
+- [ ] handoff содержит таблицу SOURCE MAPPING (секция 15a `_PAGE_TEMPLATE.md`);
+- [ ] handoff содержит CSS COMPATIBILITY CHECK (секция 15b `_PAGE_TEMPLATE.md`);
+- [ ] `.panel` + `.panel-head` padding rule: `.panel` имеет `padding: 0`, head flush к верху;
+- [ ] `.nav-item:hover` реализован (Core Kit: `background: var(--nav-hover); color: var(--nav-text-act)`);
+- [ ] `.kv` строки имеют `border-bottom` divider;
+- [ ] `page-head` (не `page-header`) используется для новых страниц;
+- [ ] `environment-badge`, `nav-dot`, `panel-head-title` — либо формализованы в Core Kit, либо отсутствуют.
+
+Если класс не найден в Core Kit и не указан в handoff SOURCE MAPPING — результат:
+```text
+Formal UI QA: FAIL
+```
+причина: `component-source mismatch / unknown class`.
+
+В UI QA отчёте обязательно писать:
+
+```text
+Formal UI QA: PASS/FAIL
+Component-source audit: PASS/FAIL
+Architect pre-owner review required: YES
+Manual owner visual review required: YES
+Commit allowed before owner visual approval: NO
+```
+
+QA не пишет:
+
+- "визуально принято";
+- "выглядит хорошо";
+- "дизайн готов";
+- "можно считать визуально approved".
+
+Если найден неформализованный модуль, результат:
+
+```text
+Formal UI QA: FAIL
+```
+
+и статус `NEEDS_REWORK` или `BLOCKED`, в зависимости от того, требуется ли расширение Core Kit / профильных MD.
 
 ---
 
@@ -375,6 +507,8 @@ QA может делать только небольшие безопасные 
 Проверить:
 
 - наличие `docs/ui/pages/[page-name].md`;
+- наличие `UI modules used` в handoff;
+- отсутствие unknown UI modules;
 - соответствие реализации шаблону;
 - CSS-классы;
 - формы;

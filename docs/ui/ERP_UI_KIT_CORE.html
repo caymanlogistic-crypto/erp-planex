@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ERP PLANEX UI Kit Core</title>
+  <style>
+    :root {
+      --sidebar-w: 224px;
+      --topbar-h: 38px;
+      --app-bg: #e2dfd8;
+      --nav-bg: #191816;
+      --nav-hover: #272522;
+      --nav-active-bg: rgba(140,82,28,.28);
+      --nav-gold: #c8933a;
+      --nav-text: rgba(240,238,232,.65);
+      --nav-text-act: #d4a254;
+      --surface-muted: #e8e4db;
+      --surface-form: #f0ede6;
+      --surface-inspector: #f3f1eb;
+      --surface: #f5f3ee;
+      --surface-strong: #fefdf8;
+      --surface-field: #fefdf8;
+      --line-hair: #dedad0;
+      --line-soft: #c9c3b8;
+      --line: #a8a196;
+      --line-strong: #827b70;
+      --text-main: #131210;
+      --text-muted: #4c4840;
+      --text-faint: #78726a;
+      --inverse: #f5f3ee;
+      --accent: #7c4718;
+      --accent-hover: #683c13;
+      --accent-deep: #4e2d0e;
+      --accent-bg: #e8dbc8;
+      --success: #1f6b43;
+      --success-bg: #ddeee5;
+      --warning: #7a5210;
+      --warning-bg: #fdf0d5;
+      --danger: #992e26;
+      --danger-bg: #fcecea;
+      --neutral: #625d57;
+      --neutral-bg: #e3e0da;
+      --chart-1: #c07830;
+      --chart-2: #4a7a9b;
+      --chart-3: #3a8278;
+      --chart-4: #b84c3a;
+      --chart-5: #b89228;
+      --chart-6: #6a6ea0;
+      --chart-7: #6a8a50;
+      --chart-8: #5c7a88;
+      --control-h: 28px;
+      --btn-h: 30px;
+      --toolbar-h: 26px;
+      --row-h: 32px;
+      --thead-h: 30px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--app-bg);
+      color: var(--text-main);
+      font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.35;
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .kit-shell { min-width: 1440px; display: grid; grid-template-columns: 224px 1fr; min-height: 100vh; }
+    .kit-nav { position: sticky; top: 0; height: 100vh; overflow: auto; background: var(--nav-bg); color: var(--nav-text); padding: 10px 8px; }
+    .brand { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px; color: var(--inverse); font-weight: 700; }
+    .brand-mark { width: 18px; height: 18px; border: 1px solid var(--nav-gold); background: rgba(200,147,58,.16); border-radius: 2px; }
+    .nav-sec { margin: 14px 8px 6px; font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(240,238,232,.28); }
+    .kit-nav a { display: flex; height: 28px; align-items: center; padding: 0 8px; border-radius: 2px; color: var(--nav-text); text-decoration: none; font-size: 12px; font-weight: 600; }
+    .kit-nav a:hover { background: var(--nav-hover); color: var(--nav-text-act); }
+    .kit-main { min-width: 0; }
+    .topbar { position: sticky; top: 0; z-index: 20; height: var(--topbar-h); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; background: var(--surface-strong); border-bottom: 1px solid var(--line); }
+    .crumbs { color: var(--text-faint); font-size: 12px; }
+    .crumbs strong { color: var(--text-main); }
+    .content { padding: 12px 14px 28px; }
+    .hero { display: grid; grid-template-columns: 1fr 360px; gap: 10px; margin-bottom: 10px; }
+    .hero-main, .box { background: var(--surface-strong); border: 1px solid var(--line); border-radius: 2px; }
+    .hero-main { padding: 14px; }
+    h1 { margin: 0 0 5px; font-size: 18px; line-height: 1.15; }
+    h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    h3 { margin: 0 0 5px; font-size: 13px; }
+    p { margin: 0; }
+    .muted { color: var(--text-muted); }
+    .faint { color: var(--text-faint); }
+    .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid var(--line-soft); background: var(--surface-muted); border-radius: 2px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .box-head { min-height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--surface-muted); border-bottom: 1px solid var(--line-hair); }
+    .box-body { padding: 10px; }
+    .principles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .principle { background: var(--surface); border: 1px solid var(--line-hair); border-radius: 2px; padding: 8px; min-height: 70px; }
+    .section { margin-top: 14px; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+    .module-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .module-card, .pattern-card, .example-card { background: var(--surface-strong); border: 1px solid var(--line); border-radius: 2px; min-width: 0; }
+    .module-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 8px; background: var(--surface-muted); border-bottom: 1px solid var(--line-hair); }
+    .id { color: var(--accent); font-weight: 800; font-size: 12px; }
+    .module-body { padding: 8px; display: grid; gap: 6px; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .meta { min-height: 42px; padding: 6px; border: 1px solid var(--line-hair); background: var(--surface); border-radius: 2px; }
+    .meta b { display: block; margin-bottom: 2px; color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    .preview { min-height: 122px; border: 1px solid var(--line-hair); background: var(--surface); border-radius: 2px; padding: 8px; overflow: hidden; }
+    .pattern-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .pattern-body { padding: 8px; display: grid; grid-template-columns: 1fr 270px; gap: 8px; }
+    .example-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { height: 30px; padding: 0 8px; border-bottom: 1px solid var(--line-hair); text-align: left; vertical-align: top; }
+    th { background: var(--surface-muted); color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    td { background: var(--surface-strong); font-size: 12px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: var(--btn-h); padding: 0 10px; margin: 2px; border: 1px solid var(--line-soft); border-radius: 2px; background: var(--surface-field); color: var(--text-main); font-size: 12px; font-weight: 600; }
+    .btn-primary { background: var(--accent); border-color: var(--accent-deep); color: var(--inverse); }
+    .btn-secondary { background: linear-gradient(180deg, #fffefc 0%, #e2dbd0 100%); border-color: var(--line-strong); }
+    .btn-ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+    .btn-toolbar { height: var(--toolbar-h); font-size: 11px; }
+    .btn-icon { width: var(--btn-h); padding: 0; }
+    .btn-danger { background: var(--danger-bg); border-color: #ca8880; color: var(--danger); }
+    .disabled { opacity: .45; cursor: not-allowed; }
+    .mini-shell { display: grid; grid-template-columns: 72px 1fr; min-height: 96px; border: 1px solid var(--line-hair); }
+    .mini-side { background: var(--nav-bg); color: var(--nav-text); padding: 6px; }
+    .mini-main { background: var(--app-bg); padding: 6px; }
+    .mini-top { height: 20px; background: var(--surface-strong); border: 1px solid var(--line-hair); margin-bottom: 5px; }
+    .mini-panel { border: 1px solid var(--line-hair); background: var(--surface-strong); border-radius: 2px; }
+    .mini-panel-head { height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 7px; background: var(--surface-muted); border-bottom: 1px solid var(--line-hair); font-weight: 700; font-size: 12px; }
+    .mini-panel-body { padding: 7px; }
+    .nav-item-demo { height: 24px; display: flex; align-items: center; padding: 0 6px; margin-bottom: 4px; border-radius: 2px; font-weight: 600; }
+    .nav-item-demo.active { color: var(--nav-text-act); background: var(--nav-active-bg); border-left: 2px solid var(--nav-gold); }
+    .field { margin-bottom: 6px; }
+    .field-label { display: block; margin-bottom: 3px; color: var(--text-muted); font-size: 10.5px; font-weight: 700; }
+    .field-input, .field-select, .field-textarea { width: 100%; min-height: var(--control-h); border: 1px solid var(--line-soft); border-radius: 2px; background: var(--surface-field); color: var(--text-main); padding: 4px 7px; font: inherit; font-size: 12px; }
+    .field-textarea { min-height: 50px; }
+    .field-msg { margin-top: 3px; color: var(--text-faint); font-size: 11px; }
+    .is-error .field-input { border-color: #ca8880; background: #fff8f7; }
+    .badge { display: inline-flex; align-items: center; gap: 5px; min-height: 20px; padding: 0 7px; border: 1px solid var(--line-soft); border-radius: 2px; background: var(--neutral-bg); color: var(--neutral); font-size: 11px; font-weight: 700; }
+    .badge-ok { background: var(--success-bg); color: var(--success); border-color: #7eb89b; }
+    .badge-warn { background: var(--warning-bg); color: var(--warning); border-color: #c9a450; }
+    .badge-danger { background: var(--danger-bg); color: var(--danger); border-color: #ca8880; }
+    .dot { width: 6px; height: 6px; border-radius: 1px; background: currentColor; }
+    .filters { display: flex; gap: 5px; align-items: center; min-height: 34px; padding: 4px; background: var(--surface-muted); border: 1px solid var(--line-hair); }
+    .chip { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid var(--line-soft); border-radius: 2px; background: var(--surface-field); color: var(--text-muted); font-size: 11px; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .tbl th, .tbl td { height: 25px; padding: 0 6px; white-space: nowrap; }
+    .tbl tbody tr.sel td { background: rgba(124,71,24,.08); }
+    .row-actions { display: flex; gap: 3px; justify-content: flex-end; }
+    .ra { width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--line-soft); background: var(--surface-field); border-radius: 2px; color: var(--text-faint); font-size: 10px; }
+    .pagination { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px; border-top: 1px solid var(--line-hair); font-size: 11px; }
+    .pg-btn { width: 24px; height: 24px; border: 1px solid var(--line-soft); background: var(--surface-field); border-radius: 2px; }
+    .pg-btn.active { background: var(--accent); color: var(--inverse); border-color: var(--accent-deep); }
+    .kv { display: grid; grid-template-columns: 94px 1fr; gap: 0; font-size: 12px; }
+    .kv div { padding: 5px 0; border-bottom: 1px solid var(--line-hair); }
+    .kv .k { color: var(--text-faint); font-weight: 700; }
+    .notice { border: 1px solid var(--line-soft); background: var(--surface-muted); padding: 8px; border-radius: 2px; }
+    .notice.warn { background: var(--warning-bg); border-color: #c9a450; color: var(--warning); }
+    .empty { display: grid; place-items: center; min-height: 80px; text-align: center; color: var(--text-faint); }
+    .sk { height: 12px; margin: 6px 0; border-radius: 2px; background: linear-gradient(90deg, var(--surface-muted), var(--line-hair), var(--surface-muted)); }
+    .tabs { display: flex; border-bottom: 1px solid var(--line-hair); }
+    .tab { height: 28px; display: flex; align-items: center; padding: 0 10px; border-bottom: 2px solid transparent; color: var(--text-faint); font-weight: 600; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .modal-demo { border: 1px solid var(--line-soft); background: var(--surface-strong); box-shadow: 0 4px 8px rgba(0,0,0,.12); border-radius: 2px; }
+    .modal-head { height: 32px; display: flex; align-items: center; padding: 0 9px; background: var(--surface-muted); border-bottom: 1px solid var(--line-hair); font-weight: 700; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 5px; padding: 7px; background: var(--surface-muted); border-top: 1px solid var(--line-hair); }
+    .toast { display: flex; gap: 7px; align-items: center; padding: 8px; border: 1px solid #7eb89b; background: var(--success-bg); color: var(--success); border-radius: 2px; }
+    .ctx { width: 150px; border: 1px solid var(--line-soft); background: var(--surface-strong); border-radius: 2px; }
+    .ctx div { height: 26px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; border-bottom: 1px solid var(--line-hair); }
+    .bars { display: flex; align-items: end; gap: 6px; height: 70px; }
+    .bar { width: 22px; background: var(--chart-1); border-radius: 2px 2px 0 0; }
+    .donut { width: 62px; height: 62px; border-radius: 50%; background: conic-gradient(var(--chart-1) 0 36%, var(--chart-2) 36% 62%, var(--chart-3) 62% 82%, var(--chart-4) 82%); position: relative; }
+    .donut:after { content: ""; position: absolute; inset: 16px; background: var(--surface-strong); border-radius: 50%; }
+    .doc-row, .activity-row { display: grid; grid-template-columns: 42px 1fr auto; gap: 7px; align-items: center; min-height: 34px; border-bottom: 1px solid var(--line-hair); }
+    .doc-type { height: 22px; display: grid; place-items: center; border: 1px solid var(--line-soft); background: var(--surface-muted); font-size: 10px; font-weight: 700; }
+    .editor { border: 1px solid var(--line); background: var(--surface-form); padding: 7px; border-radius: 2px; }
+    .matrix { margin-top: 8px; }
+    .rule-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .rule { min-height: 98px; padding: 8px; border: 1px solid var(--line-hair); background: var(--surface); border-radius: 2px; }
+    .rule b { display: block; margin-bottom: 4px; color: var(--text-muted); text-transform: uppercase; font-size: 10px; letter-spacing: .04em; }
+    code { padding: 1px 4px; border: 1px solid var(--line-hair); background: var(--surface-muted); border-radius: 2px; }
+
+    /* ============================================
+       PRODUCTION CSS — PANEL PATTERN (CORE-08)
+       Mandatory: .panel has NO padding.
+       Padding belongs to .panel-body only.
+       .panel-head must be flush to panel top.
+       ============================================ */
+    .panel, .box {
+      background: var(--surface-strong);
+      border: 1px solid var(--line-hair);
+      border-radius: 2px;
+      padding: 0;
+      overflow: hidden;
+    }
+    .panel-head, .box-head {
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: var(--surface-muted);
+      border-bottom: 1px solid var(--line-hair);
+    }
+    .panel-body, .box-body {
+      padding: 10px;
+    }
+    .panel-head-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 0;
+      color: var(--text-main);
+    }
+    /* Alternative: use <h2> inside panel-head (h2 already styled 12px/700/uppercase/0.04em in Core Kit) */
+
+    /* ============================================
+       PRODUCTION CSS — KEY-VALUE (CORE-31)
+       Must have row dividers.
+       Accepts both <dl> and <div> markup.
+       ============================================ */
+    .kv { display: grid; grid-template-columns: 94px 1fr; gap: 0; font-size: 12px; margin: 0; }
+    .kv > * { padding: 5px 0; border-bottom: 1px solid var(--line-hair); }
+    .kv dt, .kv .k { color: var(--text-faint); font-weight: 700; }
+    .kv dd { color: var(--text-main); font-weight: 400; margin: 0; }
+
+    /* ============================================
+       PRODUCTION CSS — NOTICE (CORE-32)
+       ============================================ */
+    .notice {
+      border: 1px solid var(--line-soft);
+      background: var(--surface-muted);
+      padding: 8px;
+      border-radius: 2px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================
+       PRODUCTION CSS — BADGE (CORE-24)
+       Neutral badge. Use .badge-ok/.badge-warn/.badge-danger for semantics.
+       ============================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 20px;
+      padding: 0 7px;
+      border: 1px solid var(--line-soft);
+      border-radius: 2px;
+      background: var(--neutral-bg);
+      color: var(--neutral);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-ok { background: var(--success-bg); color: var(--success); border-color: #7eb89b; }
+    .badge-warn { background: var(--warning-bg); color: var(--warning); border-color: #c9a450; }
+    .badge-danger { background: var(--danger-bg); color: var(--danger); border-color: #ca8880; }
+
+    /* ============================================
+       PRODUCTION CSS — DISABLED STATE (CORE-23)
+       ============================================ */
+    .disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ============================================
+       PRODUCTION CSS — SIDEBAR NAVIGATION (CORE-02)
+       Hover state is MANDATORY.
+       ============================================ */
+    .nav-item:hover {
+      background: var(--nav-hover);
+      color: var(--nav-text-act);
+    }
+    .nav-item.is-active {
+      background: var(--nav-active-bg);
+      color: var(--nav-text-act);
+      border-left: 2px solid var(--nav-gold);
+    }
+    /* .nav-dot is optional sub-element of CORE-02 */
+    .nav-dot {
+      width: 6px; height: 6px;
+      border-radius: 1px;
+      background: var(--nav-gold);
+    }
+
+    /* ============================================
+       PRODUCTION CSS — TOPBAR (CORE-03)
+       .environment-badge is OPTIONAL.
+       Must only appear if explicitly in designer handoff.
+       ============================================ */
+    .environment-badge {
+      display: inline;
+      font-size: 11px;
+      color: var(--text-faint);
+      background: transparent;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="kit-shell">
+  <aside class="kit-nav">
+    <div class="brand"><span class="brand-mark"></span><span>ERP PLANEX</span></div>
+    <div class="nav-sec">UI Kit Core</div>
+    <a href="#principles">Design principles</a>
+    <a href="#core">Core modules</a>
+    <a href="#patterns">Composite patterns</a>
+    <a href="#examples">Applied examples</a>
+    <a href="#buttons">Button matrix</a>
+    <a href="#layouts">Layout matrix</a>
+    <a href="#rules">Agent rules</a>
+    <a href="#superadmin">SUPERADMIN ready set</a>
+  </aside>
+  <main class="kit-main">
+    <div class="topbar">
+      <div class="crumbs">docs/ui <span>›</span> <strong>ERP_UI_KIT_CORE.html</strong></div>
+      <span class="tag">Compact universal design system</span>
+    </div>
+    <div class="content">
+      <section class="hero">
+        <div class="hero-main">
+          <h1>ERP PLANEX UI Kit Core</h1>
+          <p class="muted">Compact universal design system derived from STYLE ERP. This file is a visual working catalog for designers, architects, coders and QA. It is not a runtime library and not a component dependency.</p>
+          <div class="hero-tags">
+            <span class="tag">Industrial Graphite + Warm Accent</span>
+            <span class="tag">desktop-first</span>
+            <span class="tag">dense ERP</span>
+            <span class="tag">table/form/document/status oriented</span>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-head"><h2>Important</h2></div>
+          <div class="box-body">
+            <p><code>ERP_UI_MODULE_CATALOG.html</code> is a legacy extraction draft and extraction history. It was not edited in this task.</p>
+            <p class="muted" style="margin-top:6px">Design work now starts from this compact core kit: CORE modules + COMPOSITE patterns + applied examples.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="box" id="principles">
+        <div class="box-head"><h2>Design principles</h2><span class="tag">no random UI</span></div>
+        <div class="box-body principles">
+          <div class="principle"><h3>Industrial Graphite + Warm Accent</h3><p class="muted">Graphite shell, warm copper accent, layered warm surfaces.</p></div>
+          <div class="principle"><h3>Desktop-first ERP</h3><p class="muted">FHD workbench, 224px sidebar, 38px topbar, dense content.</p></div>
+          <div class="principle"><h3>Operational objects</h3><p class="muted">Tables, forms, documents, statuses, inspectors and logs drive screens.</p></div>
+          <div class="principle"><h3>Forbidden look</h3><p class="muted">No SaaS dashboard, landing, Bootstrap admin, demo foundation, random cards.</p></div>
+        </div>
+      </section>
+
+      <section class="section" id="core">
+        <div class="section-title"><h2>CORE UI MODULES</h2><span class="tag">45 universal modules</span></div>
+        <div class="module-grid">
+          <article class="module-card"><div class="module-head"><b>CORE-01 App shell</b><span class="id">CORE-01</span></div><div class="module-body"><p>Base screen frame: sidebar + topbar + content.</p><div class="meta-grid"><div class="meta"><b>Use</b>Every ERP page.</div><div class="meta"><b>Do not use</b>Never replace with landing/page card.</div><div class="meta"><b>Location</b>Root view/layout.</div><div class="meta"><b>With</b>Sidebar, topbar, work area.</div><div class="meta"><b>Classes/tokens</b><code>--sidebar-w</code>, <code>--topbar-h</code>, <code>--app-bg</code>.</div><div class="meta"><b>Forbidden</b>Mobile-first shell, huge gaps.</div></div><div class="preview"><div class="mini-shell"><div class="mini-side"><div class="nav-item-demo active">Module</div><div class="nav-item-demo">Registry</div></div><div class="mini-main"><div class="mini-top"></div><div class="mini-panel"><div class="mini-panel-head">Work area</div><div class="mini-panel-body">Dense ERP content</div></div></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-02 Sidebar navigation</b><span class="id">CORE-02</span></div><div class="module-body"><p>Left grouped navigation with active route. Hover state is MANDATORY.</p><div class="meta-grid"><div class="meta"><b>Use</b>Global ERP sections.</div><div class="meta"><b>Do not use</b>Random icons or fake demo groups.</div><div class="meta"><b>Location</b>Left shell.</div><div class="meta"><b>With</b>Topbar, breadcrumbs.</div><div class="meta"><b>Classes/tokens</b><code>nav-group</code>, <code>nav-item</code>, <code>is-active</code>, <code>nav-dot</code> (optional). Hover: <code>nav-item:hover</code> mandatory.</div><div class="meta"><b>Forbidden</b><code>a.nav-item { color: inherit }</code>. Missing hover state.</div></div><div class="preview" style="background:var(--nav-bg)"><div class="nav-sec">Operations</div><div class="nav-item-demo active">Trips <span style="margin-left:auto">28</span></div><div class="nav-item-demo">Requests <span style="margin-left:auto;color:#c8933a">5</span></div><div class="nav-sec">Directories</div><div class="nav-item-demo">Clients</div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-03 Topbar</b><span class="id">CORE-03</span></div><div class="module-body"><p>Thin context bar for current section, search and user zone.</p><div class="meta-grid"><div class="meta"><b>Use</b>All shell pages.</div><div class="meta"><b>Do not use</b>Demo title or UI foundation text.</div><div class="meta"><b>Location</b>Top shell, 38px.</div><div class="meta"><b>With</b>Breadcrumbs, global search, user block.</div><div class="meta"><b>Classes/tokens</b><code>topbar</code>, <code>surface-strong</code>, <code>environment-badge</code> (optional, handoff-only).</div><div class="meta"><b>Forbidden</b>Hero header in topbar. <code>environment-badge</code> without designer handoff.</div></div><div class="preview"><div class="mini-top" style="display:flex;align-items:center;justify-content:space-between;padding:0 8px"><span>SUPERADMIN › Companies</span><span class="tag">VP</span></div><div class="notice">Context is concrete and page-specific.</div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-04 Breadcrumbs / page context</b><span class="id">CORE-04</span></div><div class="module-body"><p>Route context and current page position.</p><div class="meta-grid"><div class="meta"><b>Use</b>Nested sections and admin tools.</div><div class="meta"><b>Do not use</b>Generic demo/foundation labels.</div><div class="meta"><b>Location</b>Topbar or page header.</div><div class="meta"><b>With</b>Topbar, page header.</div><div class="meta"><b>Classes/tokens</b><code>topbar-crumbs</code>, muted text.</div><div class="meta"><b>Forbidden</b>Breadcrumbs unrelated to route.</div></div><div class="preview"><div class="crumbs">SUPERADMIN <span>›</span> Companies <span>›</span> <strong>Feature access</strong></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-05 Page header</b><span class="id">CORE-05</span></div><div class="module-body"><p>Compact page title, purpose and optional summary.</p><div class="meta-grid"><div class="meta"><b>Use</b>Every working page.</div><div class="meta"><b>Do not use</b>Hero-scale marketing block.</div><div class="meta"><b>Location</b>Top of content.</div><div class="meta"><b>With</b>Page actions, filters.</div><div class="meta"><b>Classes/tokens</b><code>page-head</code>, 15-16px title.</div><div class="meta"><b>Forbidden</b>Abstract "Main action".</div></div><div class="preview"><div class="mini-panel"><div class="mini-panel-body"><h3>Companies</h3><p class="muted">Central registry of local ERP systems.</p></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-06 Page actions area</b><span class="id">CORE-06</span></div><div class="module-body"><p>Right-aligned page-level commands.</p><div class="meta-grid"><div class="meta"><b>Use</b>Creation/export/system action.</div><div class="meta"><b>Do not use</b>Actions without page purpose.</div><div class="meta"><b>Location</b>Page header right.</div><div class="meta"><b>With</b>Primary/secondary buttons.</div><div class="meta"><b>Classes/tokens</b><code>btn-primary</code>, <code>btn-secondary</code>.</div><div class="meta"><b>Forbidden</b>Many primary actions.</div></div><div class="preview" style="display:flex;justify-content:flex-end;align-items:start"><button class="btn btn-secondary">Export</button><button class="btn btn-primary">Create company</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-07 Work area</b><span class="id">CORE-07</span></div><div class="module-body"><p>Main operational canvas below page header.</p><div class="meta-grid"><div class="meta"><b>Use</b>Tables, forms, panels, inspectors.</div><div class="meta"><b>Do not use</b>Empty decorative whitespace.</div><div class="meta"><b>Location</b>Content body.</div><div class="meta"><b>With</b>Composite patterns.</div><div class="meta"><b>Classes/tokens</b><code>work</code>, <code>content-body</code>.</div><div class="meta"><b>Forbidden</b>Floating unrelated cards.</div></div><div class="preview"><div style="display:grid;grid-template-columns:1fr 120px;gap:6px"><div class="mini-panel"><div class="mini-panel-head">Table</div><div class="mini-panel-body">Records</div></div><div class="mini-panel"><div class="mini-panel-head">Detail</div><div class="mini-panel-body">Facts</div></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-08 Panel</b><span class="id">CORE-08</span></div><div class="module-body"><p>Base framed work section.</p><div class="meta-grid"><div class="meta"><b>Use</b>Group related table/form/facts.</div><div class="meta"><b>Do not use</b>Decorative card grid.</div><div class="meta"><b>Location</b>Inside work area.</div><div class="meta"><b>With</b>Panel head/body.</div><div class="meta"><b>Classes/tokens</b><code>panel</code>, <code>line-hair</code>.</div><div class="meta"><b>Forbidden</b>Radius > 4px, heavy shadow.</div></div><div class="preview"><div class="mini-panel"><div class="mini-panel-head">Panel title <span class="tag">tag</span></div><div class="mini-panel-body">Operational content</div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-09 Admin/settings section</b><span class="id">CORE-09</span></div><div class="module-body"><p>Compact system/settings block.</p><div class="meta-grid"><div class="meta"><b>Use</b>SUPERADMIN, features, settings.</div><div class="meta"><b>Do not use</b>KPI dashboard card.</div><div class="meta"><b>Location</b>Admin work area.</div><div class="meta"><b>With</b>Notice, status, key-value.</div><div class="meta"><b>Classes/tokens</b><code>panel</code>, neutral badge.</div><div class="meta"><b>Forbidden</b>Debug badge as main UI.</div></div><div class="preview"><div class="mini-panel"><div class="mini-panel-head">Feature toggles <span class="badge">Reserved</span></div><div class="mini-panel-body"><p class="muted">Access to modules and reports by company.</p></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-10 Toolbar</b><span class="id">CORE-10</span></div><div class="module-body"><p>Compact action strip for a panel or table.</p><div class="meta-grid"><div class="meta"><b>Use</b>Table/panel actions.</div><div class="meta"><b>Do not use</b>Page-level primary commands.</div><div class="meta"><b>Location</b>Panel top.</div><div class="meta"><b>With</b>Toolbar buttons, filters.</div><div class="meta"><b>Classes/tokens</b><code>toolbar</code>, <code>--toolbar-h</code>.</div><div class="meta"><b>Forbidden</b>Tall button rows.</div></div><div class="preview"><div class="filters"><button class="btn btn-toolbar">Refresh</button><button class="btn btn-toolbar">Columns</button><span class="chip">142 rows</span></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-11 Filter toolbar</b><span class="id">CORE-11</span></div><div class="module-body"><p>Search/select/date controls for data reduction.</p><div class="meta-grid"><div class="meta"><b>Use</b>Lists with many rows.</div><div class="meta"><b>Do not use</b>Huge filter card.</div><div class="meta"><b>Location</b>Above table.</div><div class="meta"><b>With</b>Search field, chips, clear action.</div><div class="meta"><b>Classes/tokens</b><code>filters-bar</code>, field controls.</div><div class="meta"><b>Forbidden</b>Fake filters without behavior.</div></div><div class="preview"><div class="filters"><input class="field-input" style="max-width:120px" value="Search"><select class="field-select" style="max-width:105px"><option>Status</option></select><span class="chip">Active</span></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-12 Search field</b><span class="id">CORE-12</span></div><div class="module-body"><p>Compact search control.</p><div class="meta-grid"><div class="meta"><b>Use</b>Find records by text/code.</div><div class="meta"><b>Do not use</b>As decorative topbar element.</div><div class="meta"><b>Location</b>Filter toolbar or topbar.</div><div class="meta"><b>With</b>Filter toolbar, keyboard hint.</div><div class="meta"><b>Classes/tokens</b><code>field-input</code>, <code>top-search</code>.</div><div class="meta"><b>Forbidden</b>Fake Ctrl K hint.</div></div><div class="preview"><input class="field-input" value="Search by INN, name, route"></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-13 Data table / ERP grid</b><span class="id">CORE-13</span></div><div class="module-body"><p>Primary data object for registries.</p><div class="meta-grid"><div class="meta"><b>Use</b>Entity lists, logs, reports.</div><div class="meta"><b>Do not use</b>Cards instead of rows.</div><div class="meta"><b>Location</b>Main work area.</div><div class="meta"><b>With</b>Toolbar, filters, pagination.</div><div class="meta"><b>Classes/tokens</b><code>tbl-wrap</code>, <code>tbl</code>.</div><div class="meta"><b>Forbidden</b>Bootstrap table look.</div></div><div class="preview"><table class="tbl"><thead><tr><th>Code</th><th>Status</th><th>Amount</th></tr></thead><tbody><tr><td>ERP-01</td><td><span class="badge badge-ok">Active</span></td><td>48 500</td></tr><tr><td>ERP-02</td><td><span class="badge">Draft</span></td><td>12 800</td></tr></tbody></table></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-14 Table row states</b><span class="id">CORE-14</span></div><div class="module-body"><p>Hover, selected, disabled and empty row states.</p><div class="meta-grid"><div class="meta"><b>Use</b>Every interactive grid.</div><div class="meta"><b>Do not use</b>Bright row colors.</div><div class="meta"><b>Location</b>Table body.</div><div class="meta"><b>With</b>Row actions, inspector.</div><div class="meta"><b>Classes/tokens</b><code>is-sel</code>, warm hover.</div><div class="meta"><b>Forbidden</b>Selected row without detail.</div></div><div class="preview"><table class="tbl"><tbody><tr><td>Default row</td></tr><tr class="sel"><td>Selected row</td></tr><tr><td class="faint">Disabled/empty hint</td></tr></tbody></table></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-15 Table row actions</b><span class="id">CORE-15</span></div><div class="module-body"><p>Actions for a single row.</p><div class="meta-grid"><div class="meta"><b>Use</b>Edit/open/delete row.</div><div class="meta"><b>Do not use</b>Mass actions in row.</div><div class="meta"><b>Location</b>Actions column.</div><div class="meta"><b>With</b>Icon/danger buttons.</div><div class="meta"><b>Classes/tokens</b><code>row-acts</code>, <code>ra</code>.</div><div class="meta"><b>Forbidden</b>Always-visible clutter.</div></div><div class="preview"><table class="tbl"><tbody><tr><td>Company</td><td><div class="row-actions"><span class="ra">O</span><span class="ra">E</span><span class="ra" style="color:var(--danger)">D</span></div></td></tr></tbody></table></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-16 Pagination</b><span class="id">CORE-16</span></div><div class="module-body"><p>Compact page navigation and range text.</p><div class="meta-grid"><div class="meta"><b>Use</b>Lists beyond one page.</div><div class="meta"><b>Do not use</b>Static small lists.</div><div class="meta"><b>Location</b>Under table.</div><div class="meta"><b>With</b>Table grid, page size select.</div><div class="meta"><b>Classes/tokens</b><code>pagination-wrap</code>, <code>pg-btn</code>.</div><div class="meta"><b>Forbidden</b>Huge pagination blocks.</div></div><div class="preview"><div class="pagination"><span>1-50 of 142</span><span><button class="pg-btn">‹</button><button class="pg-btn active">1</button><button class="pg-btn">2</button><button class="pg-btn">›</button></span></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-17 Primary button</b><span class="id">CORE-17</span></div><div class="module-body"><p>Main action of a page or form.</p><div class="meta-grid"><div class="meta"><b>Use</b>One primary action per work zone.</div><div class="meta"><b>Do not use</b>For cancel/delete.</div><div class="meta"><b>Location</b>Page/form action area.</div><div class="meta"><b>With</b>Secondary, ghost.</div><div class="meta"><b>Classes/tokens</b><code>btn-primary</code>, accent.</div><div class="meta"><b>Forbidden</b>Multiple competing primary buttons.</div></div><div class="preview"><button class="btn btn-primary">Save entity</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-18 Secondary button</b><span class="id">CORE-18</span></div><div class="module-body"><p>Secondary action near a primary action.</p><div class="meta-grid"><div class="meta"><b>Use</b>Save draft/export/open.</div><div class="meta"><b>Do not use</b>As main decision.</div><div class="meta"><b>Location</b>Action area.</div><div class="meta"><b>With</b>Primary/ghost.</div><div class="meta"><b>Classes/tokens</b><code>btn-secondary</code>.</div><div class="meta"><b>Forbidden</b>Too many equal choices.</div></div><div class="preview"><button class="btn btn-secondary">Save draft</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-19 Ghost button</b><span class="id">CORE-19</span></div><div class="module-body"><p>Quiet neutral action.</p><div class="meta-grid"><div class="meta"><b>Use</b>Cancel, close, quiet operation.</div><div class="meta"><b>Do not use</b>Main operation.</div><div class="meta"><b>Location</b>Form/modal footer.</div><div class="meta"><b>With</b>Primary, secondary.</div><div class="meta"><b>Classes/tokens</b><code>btn-ghost</code>.</div><div class="meta"><b>Forbidden</b>Ghost danger action.</div></div><div class="preview"><button class="btn btn-ghost">Cancel</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-20 Toolbar button</b><span class="id">CORE-20</span></div><div class="module-body"><p>Compact command inside toolbar.</p><div class="meta-grid"><div class="meta"><b>Use</b>Refresh, columns, export.</div><div class="meta"><b>Do not use</b>Page creation action.</div><div class="meta"><b>Location</b>Toolbar/filter bar.</div><div class="meta"><b>With</b>Toolbar, table.</div><div class="meta"><b>Classes/tokens</b><code>btn-toolbar</code>.</div><div class="meta"><b>Forbidden</b>Tall normal buttons in toolbar.</div></div><div class="preview"><button class="btn btn-toolbar">Columns</button><button class="btn btn-toolbar">Export</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-21 Icon button</b><span class="id">CORE-21</span></div><div class="module-body"><p>Compact utility or row action button.</p><div class="meta-grid"><div class="meta"><b>Use</b>Obvious small actions.</div><div class="meta"><b>Do not use</b>Unclear command without label.</div><div class="meta"><b>Location</b>Row actions, utility zones.</div><div class="meta"><b>With</b>Tooltip/hint when needed.</div><div class="meta"><b>Classes/tokens</b><code>btn-icon</code>.</div><div class="meta"><b>Forbidden</b>Emoji/pseudo-icon labels.</div></div><div class="preview"><button class="btn btn-icon">⋯</button><button class="btn btn-icon">↻</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-22 Danger button</b><span class="id">CORE-22</span></div><div class="module-body"><p>Destructive command.</p><div class="meta-grid"><div class="meta"><b>Use</b>Delete, reset, revoke.</div><div class="meta"><b>Do not use</b>Without confirmation.</div><div class="meta"><b>Location</b>Confirm dialog or row actions.</div><div class="meta"><b>With</b>Danger confirmation.</div><div class="meta"><b>Classes/tokens</b><code>btn-danger</code>.</div><div class="meta"><b>Forbidden</b>Danger as primary copper.</div></div><div class="preview"><button class="btn btn-danger">Delete</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-23 Disabled/future action</b><span class="id">CORE-23</span></div><div class="module-body"><p>Unavailable or reserved operation.</p><div class="meta-grid"><div class="meta"><b>Use</b>First-stage module, feature reserved.</div><div class="meta"><b>Do not use</b>Fake active button.</div><div class="meta"><b>Location</b>Admin/settings section.</div><div class="meta"><b>With</b>Notice, status badge.</div><div class="meta"><b>Classes/tokens</b><code>is-disabled</code>, neutral.</div><div class="meta"><b>Forbidden</b>Looks clickable when not.</div></div><div class="preview"><button class="btn btn-secondary disabled">Configure later</button></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-24 Status badge</b><span class="id">CORE-24</span></div><div class="module-body"><p>Compact semantic state marker.</p><div class="meta-grid"><div class="meta"><b>Use</b>Entity/document/system state.</div><div class="meta"><b>Do not use</b>Decorative labels.</div><div class="meta"><b>Location</b>Tables, headers, sections.</div><div class="meta"><b>With</b>Marker dot, key-value.</div><div class="meta"><b>Classes/tokens</b><code>badge</code>, success/warning/danger/neutral.</div><div class="meta"><b>Forbidden</b>Bootstrap colors.</div></div><div class="preview"><span class="badge badge-ok"><span class="dot"></span>Active</span> <span class="badge badge-warn"><span class="dot"></span>Warning</span> <span class="badge"><span class="dot"></span>Reserved</span></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-25 Operational status / flight status</b><span class="id">CORE-25</span></div><div class="module-body"><p>Operational status with fixed domain states.</p><div class="meta-grid"><div class="meta"><b>Use</b>Trips and operations.</div><div class="meta"><b>Do not use</b>Generic admin state.</div><div class="meta"><b>Location</b>Tables, inspector, history.</div><div class="meta"><b>With</b>Status dot, activity log.</div><div class="meta"><b>Classes/tokens</b><code>status-search</code> ... <code>status-planned_route</code>.</div><div class="meta"><b>Forbidden</b>Invented flight status.</div></div><div class="preview"><span class="badge badge-warn"><span class="dot"></span>Search</span> <span class="badge badge-ok"><span class="dot"></span>Started</span> <span class="badge"><span class="dot"></span>Completed</span></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-26 Form field</b><span class="id">CORE-26</span></div><div class="module-body"><p>Label + input/select/textarea + message.</p><div class="meta-grid"><div class="meta"><b>Use</b>All data entry.</div><div class="meta"><b>Do not use</b>Browser-default controls.</div><div class="meta"><b>Location</b>Forms, filters, modals.</div><div class="meta"><b>With</b>Form section, validation.</div><div class="meta"><b>Classes/tokens</b><code>field</code>, <code>field-input</code>.</div><div class="meta"><b>Forbidden</b>Missing label.</div></div><div class="preview"><div class="field"><label class="field-label">Company name *</label><input class="field-input" value="PLANEX"></div><div class="field-msg">Required business name.</div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-27 Form section</b><span class="id">CORE-27</span></div><div class="module-body"><p>Logical group of fields.</p><div class="meta-grid"><div class="meta"><b>Use</b>Entity editor, modal form.</div><div class="meta"><b>Do not use</b>One long field stream.</div><div class="meta"><b>Location</b>Form page or bottom editor.</div><div class="meta"><b>With</b>Form fields, actions.</div><div class="meta"><b>Classes/tokens</b><code>form-section</code>, panel.</div><div class="meta"><b>Forbidden</b>Mixed unrelated fields.</div></div><div class="preview"><div class="mini-panel"><div class="mini-panel-head">Legal data</div><div class="mini-panel-body"><div class="field"><input class="field-input" value="INN"></div><div class="field"><input class="field-input" value="KPP"></div></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-28 Validation/error state</b><span class="id">CORE-28</span></div><div class="module-body"><p>Field and form validation feedback.</p><div class="meta-grid"><div class="meta"><b>Use</b>Invalid input or failed save.</div><div class="meta"><b>Do not use</b>Raw PHP/SQL errors.</div><div class="meta"><b>Location</b>Under field or top summary.</div><div class="meta"><b>With</b>Form field, notice.</div><div class="meta"><b>Classes/tokens</b><code>is-error</code>, <code>field-msg</code>.</div><div class="meta"><b>Forbidden</b>Only red border without message.</div></div><div class="preview"><div class="field is-error"><label class="field-label">Email</label><input class="field-input" value="wrong"><div class="field-msg" style="color:var(--danger)">Enter a valid email.</div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-29 Upload/document input</b><span class="id">CORE-29</span></div><div class="module-body"><p>File upload with metadata/status.</p><div class="meta-grid"><div class="meta"><b>Use</b>Documents and attachments.</div><div class="meta"><b>Do not use</b>Files stored in public.</div><div class="meta"><b>Location</b>Document section or form.</div><div class="meta"><b>With</b>Document section, status badge.</div><div class="meta"><b>Classes/tokens</b><code>upload</code>, <code>doc-row</code>.</div><div class="meta"><b>Forbidden</b>No type/size hint.</div></div><div class="preview"><div class="notice">Drop PDF/DOCX here, max 10 MB</div><div class="doc-row"><div class="doc-type">PDF</div><div>Contract.pdf<br><span class="faint">840 KB</span></div><span class="badge badge-ok">Uploaded</span></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-30 Right inspector / entity detail panel</b><span class="id">CORE-30</span></div><div class="module-body"><p>Details of selected row.</p><div class="meta-grid"><div class="meta"><b>Use</b>List-detail workflow.</div><div class="meta"><b>Do not use</b>As paragraph dump.</div><div class="meta"><b>Location</b>Right side, 320-380px.</div><div class="meta"><b>With</b>Table row states, tabs, key-value.</div><div class="meta"><b>Classes/tokens</b><code>inspector</code>, <code>surface-inspector</code>.</div><div class="meta"><b>Forbidden</b>Inspector without selected entity.</div></div><div class="preview"><div class="mini-panel" style="background:var(--surface-inspector)"><div class="mini-panel-head">Entity detail <span class="badge badge-ok">Active</span></div><div class="mini-panel-body"><div class="kv"><div class="k">Code</div><div>ERP-01</div><div class="k">Status</div><div>Active</div></div></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-31 Key-value list</b><span class="id">CORE-31</span></div><div class="module-body"><p>Structured facts for system/entity info. Row dividers MANDATORY.</p><div class="meta-grid"><div class="meta"><b>Use</b>Facts, dates, ids, settings.</div><div class="meta"><b>Do not use</b>Long prose.</div><div class="meta"><b>Location</b>Inspector, admin section.</div><div class="meta"><b>With</b>Panel, notice.</div><div class="meta"><b>Classes/tokens</b><code>kv</code> (grid 94px 1fr), <code>dt/dd</code> or <code>.k</code>. Row <code>border-bottom</code> mandatory.</div><div class="meta"><b>Forbidden</b>Accent color for normal value. Missing row dividers. No key-value without border-bottom.</div></div><div class="preview"><div class="kv"><div class="k">Environment</div><div>local</div><div class="k">DB status</div><div>reserved</div><div class="k">Version</div><div>0.1</div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-32 Notice / system message</b><span class="id">CORE-32</span></div><div class="module-body"><p>Neutral page or section message.</p><div class="meta-grid"><div class="meta"><b>Use</b>Reserved module, system info.</div><div class="meta"><b>Do not use</b>As debug banner.</div><div class="meta"><b>Location</b>Below page header or inside panel.</div><div class="meta"><b>With</b>Status badge, key-value.</div><div class="meta"><b>Classes/tokens</b><code>notice</code>, neutral bg.</div><div class="meta"><b>Forbidden</b>Blue info alert.</div></div><div class="preview"><div class="notice">Central administration functions are being prepared.</div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-33 Warning / blocking notice</b><span class="id">CORE-33</span></div><div class="module-body"><p>Risk or blocking condition.</p><div class="meta-grid"><div class="meta"><b>Use</b>Permission, risk, failed dependency.</div><div class="meta"><b>Do not use</b>Normal info.</div><div class="meta"><b>Location</b>Near affected workflow.</div><div class="meta"><b>With</b>Disabled action.</div><div class="meta"><b>Classes/tokens</b><code>warning-bg</code>, <code>warning</code>.</div><div class="meta"><b>Forbidden</b>Bright alert style.</div></div><div class="preview"><div class="notice warn">Feature toggles are not available until central DB is connected.</div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-34 Empty state</b><span class="id">CORE-34</span></div><div class="module-body"><p>Meaningful state when no data exists.</p><div class="meta-grid"><div class="meta"><b>Use</b>Empty table/list/panel.</div><div class="meta"><b>Do not use</b>Blank workspace.</div><div class="meta"><b>Location</b>Inside panel/table.</div><div class="meta"><b>With</b>Optional primary action.</div><div class="meta"><b>Classes/tokens</b><code>empty-state</code>.</div><div class="meta"><b>Forbidden</b>Generic "No data" only.</div></div><div class="preview"><div class="empty"><div><b>No companies yet</b><br><span>Create a company after DB is ready.</span></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-35 Loading / skeleton</b><span class="id">CORE-35</span></div><div class="module-body"><p>Loading placeholder for tables/sections.</p><div class="meta-grid"><div class="meta"><b>Use</b>Async data loading.</div><div class="meta"><b>Do not use</b>Static page placeholder.</div><div class="meta"><b>Location</b>Inside panel/table.</div><div class="meta"><b>With</b>Table rows, fields.</div><div class="meta"><b>Classes/tokens</b><code>sk-row</code>, <code>sk-cell</code>.</div><div class="meta"><b>Forbidden</b>Spinner for long table load.</div></div><div class="preview"><div class="sk" style="width:80%"></div><div class="sk" style="width:65%"></div><div class="sk" style="width:92%"></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-36 Modal dialog</b><span class="id">CORE-36</span></div><div class="module-body"><p>Focused dialog for short tasks.</p><div class="meta-grid"><div class="meta"><b>Use</b>Short form or focused choice.</div><div class="meta"><b>Do not use</b>Large workflow page.</div><div class="meta"><b>Location</b>Overlay.</div><div class="meta"><b>With</b>Modal footer buttons.</div><div class="meta"><b>Classes/tokens</b><code>modal</code>, <code>modal-md</code>.</div><div class="meta"><b>Forbidden</b>Heavy shadow blur > 8px in PLANEX.</div></div><div class="preview"><div class="modal-demo"><div class="modal-head">Edit value</div><div class="mini-panel-body"><input class="field-input" value="Value"></div><div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary">Save</button></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-37 Danger confirmation dialog</b><span class="id">CORE-37</span></div><div class="module-body"><p>Explicit confirmation for destructive actions.</p><div class="meta-grid"><div class="meta"><b>Use</b>Delete/reset/revoke.</div><div class="meta"><b>Do not use</b>Ordinary save.</div><div class="meta"><b>Location</b>Modal overlay.</div><div class="meta"><b>With</b>Danger button, warning text.</div><div class="meta"><b>Classes/tokens</b><code>btn-danger</code>, danger bg.</div><div class="meta"><b>Forbidden</b>Danger without exact object name.</div></div><div class="preview"><div class="modal-demo"><div class="modal-head">Delete company?</div><div class="mini-panel-body">This action requires confirmation.</div><div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-danger">Delete</button></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-38 Tabs / section switcher</b><span class="id">CORE-38</span></div><div class="module-body"><p>Switch between page or inspector sections.</p><div class="meta-grid"><div class="meta"><b>Use</b>Related sections of same object.</div><div class="meta"><b>Do not use</b>Unrelated navigation.</div><div class="meta"><b>Location</b>Page or inspector top.</div><div class="meta"><b>With</b>Entity card, inspector.</div><div class="meta"><b>Classes/tokens</b><code>tabs-page</code>, <code>tabs-insp</code>.</div><div class="meta"><b>Forbidden</b>Tabs as decoration.</div></div><div class="preview"><div class="tabs"><div class="tab active">Main</div><div class="tab">Documents</div><div class="tab">History</div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-39 Toast / notification</b><span class="id">CORE-39</span></div><div class="module-body"><p>Short result notification.</p><div class="meta-grid"><div class="meta"><b>Use</b>Save success, background result.</div><div class="meta"><b>Do not use</b>Critical page error.</div><div class="meta"><b>Location</b>Bottom-right stack.</div><div class="meta"><b>With</b>Form actions.</div><div class="meta"><b>Classes/tokens</b><code>toast</code>, semantic colors.</div><div class="meta"><b>Forbidden</b>Toast-only validation.</div></div><div class="preview"><div class="toast"><span class="dot"></span><div><b>Saved</b><br><span>Changes are applied.</span></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-40 Context menu</b><span class="id">CORE-40</span></div><div class="module-body"><p>Secondary action menu.</p><div class="meta-grid"><div class="meta"><b>Use</b>Less frequent row/entity actions.</div><div class="meta"><b>Do not use</b>Main page action.</div><div class="meta"><b>Location</b>Near trigger.</div><div class="meta"><b>With</b>Icon button.</div><div class="meta"><b>Classes/tokens</b><code>ctx-menu</code>, <code>ctx-item</code>.</div><div class="meta"><b>Forbidden</b>Hidden critical actions only.</div></div><div class="preview"><div class="ctx"><div>Open <span>O</span></div><div>Edit <span>E</span></div><div style="color:var(--danger)">Delete</div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-41 Chart card</b><span class="id">CORE-41</span></div><div class="module-body"><p>Report/analytics visualization container.</p><div class="meta-grid"><div class="meta"><b>Use</b>Reports and analytics.</div><div class="meta"><b>Do not use</b>Operational registry replacement.</div><div class="meta"><b>Location</b>Report page.</div><div class="meta"><b>With</b>Chart legend, filters, detail table.</div><div class="meta"><b>Classes/tokens</b><code>chart-card</code>, <code>chart-wrap</code>.</div><div class="meta"><b>Forbidden</b>KPI dashboard for admin/settings.</div></div><div class="preview"><div class="mini-panel"><div class="mini-panel-head">Revenue</div><div class="mini-panel-body"><div class="bars"><div class="bar" style="height:35px"></div><div class="bar" style="height:60px;background:var(--chart-2)"></div><div class="bar" style="height:48px;background:var(--chart-3)"></div></div></div></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-42 Chart legend / palette</b><span class="id">CORE-42</span></div><div class="module-body"><p>Chart series identity and palette rules.</p><div class="meta-grid"><div class="meta"><b>Use</b>Multi-series charts.</div><div class="meta"><b>Do not use</b>UI semantic statuses.</div><div class="meta"><b>Location</b>Chart card header/body.</div><div class="meta"><b>With</b>Chart card.</div><div class="meta"><b>Classes/tokens</b><code>--chart-1</code> ... <code>--chart-8</code>.</div><div class="meta"><b>Forbidden</b>Using danger/success as series colors.</div></div><div class="preview"><div style="display:flex;gap:6px;align-items:center"><span class="tag" style="border-color:var(--chart-1)">chart-1</span><span class="tag" style="border-color:var(--chart-2)">chart-2</span><span class="tag" style="border-color:var(--chart-3)">chart-3</span></div><div class="donut" style="margin-top:8px"></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-43 Document section</b><span class="id">CORE-43</span></div><div class="module-body"><p>Document list, file metadata and verification status.</p><div class="meta-grid"><div class="meta"><b>Use</b>Entity documents.</div><div class="meta"><b>Do not use</b>As generic attachment dump.</div><div class="meta"><b>Location</b>Inspector/entity card.</div><div class="meta"><b>With</b>Upload, status badge, activity log.</div><div class="meta"><b>Classes/tokens</b><code>doc-list</code>, <code>doc-row</code>.</div><div class="meta"><b>Forbidden</b>Files without status/type.</div></div><div class="preview"><div class="doc-row"><div class="doc-type">PDF</div><div>Contract<br><span class="faint">840 KB</span></div><span class="badge badge-ok">Verified</span></div><div class="doc-row"><div class="doc-type">IMG</div><div>Passport<br><span class="faint">1.8 MB</span></div><span class="badge badge-warn">Review</span></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-44 Activity log</b><span class="id">CORE-44</span></div><div class="module-body"><p>Timeline of actions, status changes and user events.</p><div class="meta-grid"><div class="meta"><b>Use</b>History, audit, operations.</div><div class="meta"><b>Do not use</b>As chat/comments substitute.</div><div class="meta"><b>Location</b>Inspector/entity card.</div><div class="meta"><b>With</b>Status badge, document section.</div><div class="meta"><b>Classes/tokens</b><code>activity-list</code>, <code>activity-row</code>.</div><div class="meta"><b>Forbidden</b>No timestamp/user.</div></div><div class="preview"><div class="activity-row"><div class="faint">Today</div><div>Feature enabled</div><span class="badge badge-ok">Done</span></div><div class="activity-row"><div class="faint">Yesterday</div><div>Record updated</div><span class="badge">Info</span></div></div></div></article>
+          <article class="module-card"><div class="module-head"><b>CORE-45 Bottom entity editor</b><span class="id">CORE-45</span></div><div class="module-body"><p>Inline editor below list/details for selected entity.</p><div class="meta-grid"><div class="meta"><b>Use</b>Fast edit without leaving list.</div><div class="meta"><b>Do not use</b>Long complex wizard.</div><div class="meta"><b>Location</b>Bottom of list-detail work area.</div><div class="meta"><b>With</b>Table, right inspector, form sections.</div><div class="meta"><b>Classes/tokens</b><code>bottom-editor</code>, <code>surface-form</code>.</div><div class="meta"><b>Forbidden</b>Personalized page-specific name.</div></div><div class="preview"><div class="editor"><div class="field"><label class="field-label">Selected entity</label><input class="field-input" value="ERP-01"></div><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary">Save</button></div></div></div></article>
+        </div>
+      </section>
+
+      <section class="section" id="patterns">
+        <div class="section-title"><h2>COMPOSITE PATTERNS</h2><span class="tag">10 ready combinations</span></div>
+        <div class="pattern-grid">
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-01 Table-only registry</b><span class="id">PATTERN-01</span></div><div class="pattern-body"><div><p>Simple directory/registry without detail inspector.</p><p class="muted">Uses CORE-05, 07, 10, 11, 13, 16, 24, 34, 35.</p><p><b>Use:</b> small or medium registries. <b>Forbidden:</b> cards instead of grid.</p></div><div class="preview"><div class="mini-panel"><div class="mini-panel-head">Registry</div><table class="tbl"><tbody><tr><td>Company A</td><td><span class="badge badge-ok">Active</span></td></tr><tr><td>Company B</td><td><span class="badge">Draft</span></td></tr></tbody></table><div class="pagination"><span>1-50</span><span><button class="pg-btn active">1</button></span></div></div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-02 Table + right inspector</b><span class="id">PATTERN-02</span></div><div class="pattern-body"><div><p>Operator selects row and reads details on the right.</p><p class="muted">Uses CORE-13, 14, 15, 24, 30, 31, 38.</p><p><b>Use:</b> entity scanning. <b>Forbidden:</b> inspector with no selected row.</p></div><div class="preview"><div style="display:grid;grid-template-columns:1fr 110px;gap:6px"><table class="tbl"><tbody><tr class="sel"><td>Entity A</td></tr><tr><td>Entity B</td></tr></tbody></table><div class="mini-panel"><div class="mini-panel-head">Detail</div><div class="mini-panel-body"><div class="kv"><div class="k">ID</div><div>01</div></div></div></div></div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-03 Table + filters + toolbar</b><span class="id">PATTERN-03</span></div><div class="pattern-body"><div><p>Working list with search, filters and data actions.</p><p class="muted">Uses CORE-10, 11, 12, 13, 15, 16, 20.</p><p><b>Use:</b> large operational lists. <b>Forbidden:</b> giant filter cards.</p></div><div class="preview"><div class="filters"><input class="field-input" value="Search"><button class="btn btn-toolbar">Columns</button></div><table class="tbl"><tbody><tr><td>TR-01</td><td><div class="row-actions"><span class="ra">O</span></div></td></tr></tbody></table></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-04 List + inspector + bottom entity editor</b><span class="id">PATTERN-04</span></div><div class="pattern-body"><div><p>Fast list review, detail reading and selected entity editing.</p><p class="muted">Uses CORE-13, 14, 30, 31, 43, 44, 45.</p><p><b>Use:</b> dense reference directories. <b>Forbidden:</b> page-specific module names.</p></div><div class="preview"><div style="display:grid;grid-template-columns:1fr 100px;gap:5px"><table class="tbl"><tbody><tr class="sel"><td>Selected</td></tr><tr><td>Other</td></tr></tbody></table><div class="mini-panel"><div class="mini-panel-head">Info</div></div></div><div class="editor" style="margin-top:5px"><input class="field-input" value="Edit selected"></div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-05 Admin/settings screen</b><span class="id">PATTERN-05</span></div><div class="pattern-body"><div><p>Settings, feature toggles, system parameters, SUPERADMIN.</p><p class="muted">Uses CORE-05, 08, 09, 23, 24, 31, 32, 33.</p><p><b>Use:</b> admin/control pages. <b>Forbidden:</b> KPI dashboard and random cards.</p></div><div class="preview"><div class="notice">Central system configuration</div><div class="mini-panel" style="margin-top:5px"><div class="mini-panel-head">Feature toggles <span class="badge">Reserved</span></div><div class="mini-panel-body">Compact admin section</div></div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-06 Entity card page</b><span class="id">PATTERN-06</span></div><div class="pattern-body"><div><p>Separate detailed card for client, contractor, vehicle or trip.</p><p class="muted">Uses CORE-05, 06, 08, 24, 31, 38, 43, 44.</p><p><b>Use:</b> deep entity details. <b>Forbidden:</b> mixing unrelated objects.</p></div><div class="preview"><div class="mini-panel"><div class="mini-panel-head">Entity card <span class="badge badge-ok">Active</span></div><div class="tabs"><div class="tab active">Main</div><div class="tab">Docs</div></div><div class="mini-panel-body"><div class="kv"><div class="k">Code</div><div>ENT-01</div></div></div></div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-07 Document management section</b><span class="id">PATTERN-07</span></div><div class="pattern-body"><div><p>Documents, uploads, verification status and file history.</p><p class="muted">Uses CORE-29, 32, 43, 44.</p><p><b>Use:</b> entity attachments. <b>Forbidden:</b> files without storage/status rules.</p></div><div class="preview"><div class="doc-row"><div class="doc-type">PDF</div><div>Document A</div><span class="badge badge-ok">Verified</span></div><div class="notice" style="margin-top:5px">Upload new document</div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-08 Activity/status history</b><span class="id">PATTERN-08</span></div><div class="pattern-body"><div><p>Event timeline, changes and user actions.</p><p class="muted">Uses CORE-24, 25, 31, 44.</p><p><b>Use:</b> audit/status history. <b>Forbidden:</b> unclear event source.</p></div><div class="preview"><div class="activity-row"><div class="faint">10:42</div><div>Status changed</div><span class="badge badge-ok">Done</span></div><div class="activity-row"><div class="faint">09:20</div><div>Document added</div><span class="badge">Info</span></div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-09 Report/analytics page</b><span class="id">PATTERN-09</span></div><div class="pattern-body"><div><p>Reports and charts with filters and detail table.</p><p class="muted">Uses CORE-05, 11, 13, 41, 42.</p><p><b>Use:</b> analytics. <b>Forbidden:</b> replacing operational grid with charts.</p></div><div class="preview"><div style="display:flex;gap:10px;align-items:center"><div class="donut"></div><div class="bars"><div class="bar" style="height:30px"></div><div class="bar" style="height:56px;background:var(--chart-2)"></div></div></div></div></div></article>
+          <article class="pattern-card"><div class="module-head"><b>PATTERN-10 Empty first-stage module</b><span class="id">PATTERN-10</span></div><div class="pattern-body"><div><p>Future section that is not implemented yet but must look production-grade.</p><p class="muted">Uses CORE-05, 08, 09, 23, 24, 31, 32, 34.</p><p><b>Use:</b> staged SUPERADMIN/business modules. <b>Forbidden:</b> debug/demo placeholders.</p></div><div class="preview"><div class="mini-panel"><div class="mini-panel-head">Reserved module <span class="badge">In progress</span></div><div class="mini-panel-body"><div class="notice">Module is reserved for the next implementation stage.</div><button class="btn btn-secondary disabled" style="margin-top:6px">Available later</button></div></div></div></div></article>
+        </div>
+      </section>
+
+      <section class="section" id="examples">
+        <div class="section-title"><h2>APPLIED EXAMPLES</h2><span class="tag">source examples, not module names</span></div>
+        <div class="example-grid">
+          <article class="example-card"><div class="module-head"><b>Drivers screen example</b></div><div class="module-body"><p><b>Extracted:</b> list + inspector + bottom entity editor, document section, activity log.</p><p><b>Derived modules:</b> CORE-13, 30, 43, 44, 45; PATTERN-04.</p><p><b>Do not copy:</b> personal page names as universal modules. Forbidden universal names: Drivers bottom editor, Drivers selected row, Drivers right inspector, Drivers table card, Drivers filters bar, Drivers page header.</p></div></article>
+          <article class="example-card"><div class="module-head"><b>Forms showcase example</b></div><div class="module-body"><p><b>Extracted:</b> field anatomy, error/success/disabled states, upload, lookup, multiselect.</p><p><b>Derived modules:</b> CORE-26, 27, 28, 29.</p><p><b>Do not copy:</b> demo-only arrangement or unused control zoo.</p></div></article>
+          <article class="example-card"><div class="module-head"><b>Tables showcase example</b></div><div class="module-body"><p><b>Extracted:</b> ERP grid, selected row, row actions, sortable head, pinned columns, totals.</p><p><b>Derived modules:</b> CORE-13, 14, 15, 16; PATTERN-01/02/03.</p><p><b>Do not copy:</b> showcase tables as business screens.</p></div></article>
+          <article class="example-card"><div class="module-head"><b>Navigation showcase example</b></div><div class="module-body"><p><b>Extracted:</b> shell, sidebar groups, active route, counters, topbar context.</p><p><b>Derived modules:</b> CORE-01, 02, 03, 04.</p><p><b>Do not copy:</b> UI Kit navigation labels to production pages.</p></div></article>
+          <article class="example-card"><div class="module-head"><b>Missing/system components example</b></div><div class="module-body"><p><b>Extracted:</b> tabs, modals, toasts, pagination, empty/loading, context menu.</p><p><b>Derived modules:</b> CORE-16, 34, 35, 36, 37, 38, 39, 40.</p><p><b>Do not copy:</b> demo triggers as real actions.</p></div></article>
+          <article class="example-card"><div class="module-head"><b>Charts example</b></div><div class="module-body"><p><b>Extracted:</b> chart cards, legends, palette, report composition.</p><p><b>Derived modules:</b> CORE-41, 42; PATTERN-09.</p><p><b>Do not copy:</b> dashboard charts into admin/settings screens.</p></div></article>
+        </div>
+      </section>
+
+      <section class="section box" id="buttons">
+        <div class="box-head"><h2>BUTTON DECISION MATRIX</h2></div>
+        <div class="box-body"><table><thead><tr><th>Button</th><th>When to use</th><th>Where</th><th>Amount</th><th>Pairs with</th><th>Forbidden</th></tr></thead><tbody>
+          <tr><td>Primary</td><td>Main page/form action</td><td>Page/form action area</td><td>Max 1 per work zone</td><td>Secondary, ghost</td><td>Delete/cancel/multiple competing primary</td></tr>
+          <tr><td>Secondary</td><td>Secondary action near primary</td><td>Action area</td><td>Several if clearly ranked</td><td>Primary, ghost</td><td>Making all actions equal</td></tr>
+          <tr><td>Ghost</td><td>Cancel, close, quiet action</td><td>Modal/form footer</td><td>As needed</td><td>Primary, secondary</td><td>Danger action as ghost-only</td></tr>
+          <tr><td>Toolbar</td><td>Compact data/tool action</td><td>Toolbar/filter bar</td><td>Small cluster</td><td>Search, filters</td><td>Using as page primary action</td></tr>
+          <tr><td>Icon</td><td>Utility/row action</td><td>Row actions, topbar</td><td>Only obvious actions</td><td>Tooltip if unclear</td><td>Emoji or pseudo-icon labels</td></tr>
+          <tr><td>Danger</td><td>Delete/reset/revoke</td><td>Confirm dialog/row action</td><td>Only when needed</td><td>Danger confirmation</td><td>No confirmation</td></tr>
+          <tr><td>Disabled/future</td><td>Unavailable reserved action</td><td>Admin/settings section</td><td>As staged functions require</td><td>Notice/status</td><td>Looking active/clickable</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section class="section box" id="layouts">
+        <div class="box-head"><h2>LAYOUT DECISION MATRIX</h2></div>
+        <div class="box-body"><table><thead><tr><th>Layout</th><th>When to use</th><th>Core modules</th><th>Forbidden</th></tr></thead><tbody>
+          <tr><td>table-only</td><td>Simple registry without details</td><td>CORE-05, 10, 11, 13, 16</td><td>Cards instead of rows</td></tr>
+          <tr><td>table + inspector</td><td>List where selected row has details</td><td>CORE-13, 14, 30, 31, 38</td><td>Inspector without selected row</td></tr>
+          <tr><td>table + bottom editor</td><td>Fast edit selected row</td><td>CORE-13, 14, 26, 27, 45</td><td>Long wizard in bottom area</td></tr>
+          <tr><td>admin/settings</td><td>Settings, feature toggles, SUPERADMIN</td><td>CORE-05, 08, 09, 23, 31, 32</td><td>KPI dashboard, random cards</td></tr>
+          <tr><td>entity card</td><td>Full entity details</td><td>CORE-05, 06, 08, 24, 31, 38, 43, 44</td><td>Mixing unrelated entities</td></tr>
+          <tr><td>report</td><td>Analytics and trends</td><td>CORE-11, 13, 41, 42</td><td>Replacing operational grid</td></tr>
+          <tr><td>document section</td><td>Uploads and verification</td><td>CORE-29, 32, 43, 44</td><td>Public storage, missing statuses</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section class="section box" id="rules">
+        <div class="box-head"><h2>DESIGNER RULES / CODER RULES / QA RULES</h2><span class="tag">workflow gates</span></div>
+        <div class="box-body rule-grid">
+          <div class="rule"><b>DESIGNER RULES</b>Choose CORE modules, choose one COMPOSITE pattern, explain why, list modules not used and why, never use private page names as module names, never invent UI without formalization. Missing module: <code>BLOCKED: NEEDS_UI_MODULE_EXPANSION</code>.</div>
+          <div class="rule"><b>CODER RULES</b>Work only from MD/handoff and this core kit. Do not open STYLE ERP for design choices. Do not invent modules. Unknown/private module in handoff: <code>BLOCKED: UNKNOWN_UI_MODULE</code>.</div>
+          <div class="rule"><b>QA rules</b>Check CORE modules, COMPOSITE pattern, visible states, no private/personalized module names in universal handoff. <code>Formal UI QA: PASS</code> is not owner visual acceptance.</div>
+        </div>
+      </section>
+
+      <section class="section box" id="superadmin">
+        <div class="box-head"><h2>SUPERADMIN READY SET</h2><span class="tag">nearest task</span></div>
+        <div class="box-body">
+          <div class="rule-grid">
+            <div class="rule"><b>Use for central panel</b>CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06, CORE-08, CORE-09, CORE-13, CORE-17 only for real primary action, CORE-18, CORE-23, CORE-24, CORE-31, CORE-32, CORE-33.</div>
+            <div class="rule"><b>Use patterns</b>PATTERN-05 Admin/settings screen and PATTERN-10 Empty first-stage module. Use production reserved sections, not debug/demo placeholders.</div>
+            <div class="rule"><b>Forbidden for SUPERADMIN</b>UI foundation text, demo showcase table, page-specific applied modules, KPI dashboard, random cards, abstract "Main action", big empty screen, debug badges as main UI.</div>
+          </div>
+          <div class="preview" style="margin-top:8px">
+            <div class="mini-panel"><div class="mini-panel-head">SUPERADMIN <span class="badge">Central panel</span></div><div class="mini-panel-body"><div class="notice">Central administration functions are reserved for the next implementation stages.</div><div class="kv" style="margin-top:6px"><div class="k">System</div><div>ERP PLANEX</div><div class="k">DB</div><div>Not connected in UI stage</div></div><button class="btn btn-secondary disabled" style="margin-top:6px">Configure features later</button></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section box" id="production-css">
+        <div class="box-head"><h2>PRODUCTION CSS REFERENCE</h2><span class="tag">mandatory for coder</span></div>
+        <div class="box-body">
+          <p class="muted">This section contains explicit, non-negotiable production CSS rules. Coder must copy these patterns exactly — no interpretation, no "similar" implementation, no self-made variants.</p>
+
+          <div class="rule-grid" style="margin-top:8px">
+            <div class="rule"><b>PANEL RULE (CORE-08)</b><code>.panel</code> must have <code>padding: 0; overflow: hidden;</code>. Internal padding lives in <code>.panel-body</code> only. <code>.panel-head</code> is flush to panel top. Adding padding to <code>.panel</code> when <code>.panel-head</code> or <code>.panel-body</code> are used is a BLOCKER.</div>
+            <div class="rule"><b>KEY-VALUE RULE (CORE-31)</b><code>.kv</code> rows must have <code>border-bottom: 1px solid var(--line-hair)</code>. Both <code>dl.kv &gt; dt/dd</code> and <code>div.kv &gt; div &gt; .k</code> markup are accepted. Row dividers are MANDATORY.</div>
+            <div class="rule"><b>NAV HOVER RULE (CORE-02)</b><code>.nav-item:hover { background: var(--nav-hover); color: var(--nav-text-act); }</code> is MANDATORY. Every interactive nav item must have a hover state.</div>
+            <div class="rule"><b>PAGE-HEAD RULE (CORE-05)</b>Official class name is <code>.page-head</code>. If <code>.page-header</code> exists in legacy code, it must be treated as an alias. New implementations must use <code>.page-head</code>.</div>
+            <div class="rule"><b>NAV-DOT (CORE-02 sub-element)</b><code>.nav-dot</code> is an OPTIONAL sub-element of sidebar navigation. If used, it must have the production CSS defined in this Core Kit. If not explicitly in designer handoff, coder must not add it.</div>
+            <div class="rule"><b>ENVIRONMENT-BADGE (CORE-03 sub-element)</b><code>.environment-badge</code> is an OPTIONAL sub-element of topbar. It must only appear if explicitly in designer handoff. Without handoff approval, the badge must not be added or must be removed.</div>
+            <div class="rule"><b>PANEL-HEAD-TITLE (CORE-08 sub-element)</b><code>.panel-head-title</code> is the official sub-element for titles inside <code>.panel-head</code>. Alternatively, <code>h2</code> may be used (already styled in Core Kit: 12px, 700, uppercase, 0.04em). Coders must not invent alternative title classes.</div>
+            <div class="rule"><b>SOURCE MAPPING RULE</b>Every page handoff must contain a SOURCE MAPPING table. Each UI element must trace back to its CORE module ID and exact location in this Core Kit. No designer handoff is DONE without SOURCE MAPPING.</div>
+            <div class="rule"><b>CSS COMPATIBILITY RULE</b>Before adding any child class inside a parent container, coder must check: (1) does parent have padding? (2) must child be flush to edge? (3) where do internal paddings belong? Panel pattern: head flush, body has padding, panel zero padding.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</body>
+</html>

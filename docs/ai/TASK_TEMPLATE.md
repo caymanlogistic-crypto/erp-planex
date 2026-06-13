@@ -17,6 +17,8 @@
 - `docs/ai/AGENT_WORK_LOG.md`
 - `docs/ai/AGENT_NETWORK.md`, если задача связана с KILO, ролями, промтами или агентным циклом
 - `docs/ui/DESIGN_CODE_INTEGRATION.md`, если задача связана с UI или дизайн-кодом
+- `docs/ui/ERP_UI_KIT_CORE.html`, если задача связана с UI или дизайн-кодом (PRIMARY)
+- `docs/ui/ERP_UI_MODULE_CATALOG.html`, если задача связана с UI или дизайн-кодом (legacy/reference)
 - профильные MD-файлы
 
 ## Что нужно сделать
@@ -79,6 +81,38 @@ DeepSeek/KILO агенты не являются vision-моделями. Они
 ## Formal UI QA
 
 QA обязан проверять UI формально. Запрещены субъективные оценки: «визуально красиво», «визуально принято», «дизайн выглядит хорошо». QA должен писать: `Formal UI QA: PASS/FAIL`, `Manual owner visual review required: YES/NO`, `Commit allowed before owner visual approval: YES/NO`.
+
+## UI Module Catalog Rule
+
+Для UI-задач дизайнер и архитектор обязаны использовать:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html  ← PRIMARY compact working UI-kit
+```
+
+Legacy extraction/reference only:
+
+```text
+docs/ui/ERP_UI_MODULE_CATALOG.html
+```
+
+Page handoff обязан содержать:
+
+- `CORE modules used` — номера и названия CORE-модулей;
+- `COMPOSITE pattern selected` — выбранный композитный паттерн;
+- `MODULE USAGE DECISIONS` — почему выбран модуль, почему не выбран другой, где расположен блок, роль блока, primary/secondary actions, disabled elements, states.
+
+Если подходящего модуля нет:
+
+```text
+BLOCKED: NEEDS_UI_MODULE_EXPANSION
+```
+
+Если кодер получил unknown UI module:
+
+```text
+BLOCKED: UNKNOWN_UI_MODULE
+```
 
 ## Ожидаемый результат
 
@@ -148,3 +182,62 @@ docs/ui/pages/[page-name].md
 ```
 
 Если такого файла нет, задача сначала идёт дизайнеру.
+
+## UI PRODUCTION LOOP
+
+Для важных UI-задач в задаче обязательно заполнить:
+
+- UI production loop required: YES/NO
+- Designer handoff file: `docs/ui/pages/[page-name].md`
+- UI Kit Core used: YES/NO (`docs/ui/ERP_UI_KIT_CORE.html`)
+- UI Module Catalog used: YES/NO (`docs/ui/ERP_UI_MODULE_CATALOG.html` — legacy/reference)
+- CORE modules used:
+- Missing UI modules: none / description
+- Module expansion required: YES/NO
+- Architect handoff review: PASS / NEEDS_DESIGNER_REWORK / NOT_DONE
+- Coder implementation files:
+- Formal UI QA result: PASS / FAIL / NOT_DONE
+- Architect pre-owner review: PASS / NEEDS_REPEAT_CYCLE / NOT_DONE
+- Repeat cycle required: YES/NO
+- VISUAL CHECK URL:
+- Manual owner visual review required: YES/NO
+- Commit allowed before owner visual approval: YES/NO
+
+Для важных UI-задач кодер не стартует, пока `Architect handoff review` не равен `PASS`.
+
+Если handoff слабый, противоречивый, устаревший или допускает разные трактовки, архитектор ставит `NEEDS_DESIGNER_REWORK`, а кодеру задача не передаётся.
+
+Если кодер получил слабый handoff, он обязан вернуть:
+
+```text
+BLOCKED: NEEDS_DESIGNER_REWORK
+```
+
+`Formal UI QA: PASS` не является visual acceptance. После QA обязателен `Architect pre-owner review`.
+
+Запрещено ставить кодеру задачу "смотри STYLE ERP". Если нужное правило есть только в STYLE ERP, задача сначала возвращается дизайнеру/архитектору для формализации в MD.
+---
+
+## CURRENT UI KIT OVERRIDE — 2026-06-12
+
+For UI/design-code tasks use the primary compact UI-kit:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+```
+
+Legacy extraction/reference only:
+
+```text
+docs/ui/ERP_UI_MODULE_CATALOG.html
+```
+
+Task fields for UI work:
+
+- UI Kit Core used: YES/NO (`docs/ui/ERP_UI_KIT_CORE.html`)
+- Legacy catalog touched: NO (`docs/ui/ERP_UI_MODULE_CATALOG.html`)
+- CORE modules used:
+- COMPOSITE pattern selected:
+- MODULE USAGE DECISIONS:
+
+STYLE ERP extracted rules: `docs/ui/STYLE_ERP_EXTRACTED_RULES.md` (reference, not runtime library).

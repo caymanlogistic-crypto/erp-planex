@@ -17,7 +17,8 @@ ChatGPT в проекте ERP PLANEX выполняет роль архитек�
 - следит за архитектурой, документацией, логами, статусами и запретами;
 - принимает/разбирает FINAL REPORT агентов;
 - помогает обновлять переносимый контекст и проектные MD;
-- не должен сам придумывать неизвестные бизнес-правила, юридические правила, налоговую логику или детали, которых нет в утверждённых документах.
+- не должен сам придумывать неизвестные бизнес-правила, юридические правила, налоговую логику или детали, которых нет в утверждённых документах;
+- учитывает заключения **Главного дизайнера / автора дизайн-системы ERP PLANEX** как контрольный слой целостности дизайн-системы и визуального соответствия STYLE ERP.
 
 Главное правило проекта: **не придумывать неизвестные детали**. Если данных не хватает, нужно задать вопрос владельцу или поставить статус `NEEDS_OWNER_DECISION`.
 
@@ -136,6 +137,20 @@ C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\
 .kilo/agent/erp-qa-tester.md
 ```
 
+### Внешний контрольный слой: Главный дизайнер / автор дизайн-системы ERP PLANEX
+
+Проект имеет внешний (не KILO) контрольный role-layer: **Главный дизайнер / автор дизайн-системы ERP PLANEX**.
+
+Эта роль не является обычным `erp-uiux-designer`. Главный дизайнер:
+
+- контролирует целостность дизайн-системы;
+- проверяет, что страницы действительно собраны по STYLE ERP / Core Kit, а не «по мотивам»;
+- проводит независимый дизайн-аудит спорных UI-результатов;
+- находит системные причины ошибок;
+- указывает, какие правила нужно добавить в Core Kit, page templates, agent rules и QA;
+- не заменяет регулярный `erp-uiux-designer` в обычной работе, но подключается при системных сбоях, расхождениях с дизайн-кодом или визуальном провале;
+- его заключения имеют приоритет при дизайн-системных спорах.
+
 ## Утверждённый агентный workflow
 
 Основная модель работы: владелец проекта общается преимущественно с `erp-architect`.
@@ -170,6 +185,8 @@ docs/ui/pages/[page-name].md
 - не проверена необходимость обновления этого файла;
 - в код или MD попали `.env`, пароли, токены или секреты.
 
+Если возникает UI foundation/design-system спор или визуальное расхождение со STYLE ERP — подключается **Главный дизайнер** как независимый контрольный слой.
+
 ## Текущий статус проекта
 
 Статус на момент этого контекста:
@@ -182,7 +199,7 @@ docs/ui/pages/[page-name].md
 - KILO-агенты настроены;
 - правила логирования, QA, KILO и переносимого контекста закреплены;
 - бизнес-код ещё не пишется;
-- SUPERADMIN Stage 1 принят (2026-06-12): страница-заглушка, UI-шаблон, CSS (14 классов), маршрут `/superadmin`, sidebar. QA пройден.
+- SUPERADMIN Stage 1 прошёл синтаксические/runtime проверки (2026-06-12), затем несколько UI rework cycles. Compliance-аудит (2026-06-13): 81 проверка, 76 COMPLIANT, 5 отклонений (0 BLOCKER). Точечный coder rework (2026-06-13): все 5 отклонений исправлены. Владелец принял текущий результат для продолжения разработки. Актуальный статус `/superadmin`: `OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`. Проверка Главным дизайнером / КЛАУД: pending, not blocking.
 - SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): создан `docs/architecture/SUPERADMIN_DATABASE.md` с точной спецификацией 4 таблиц, индексов, FK, статусных моделей, reserved-полей. Принято решение DECISION-0021.
 - SUPERADMIN Stage 3 — SQL-миграции созданы и проверены dry-run на MySQL 8.4.9 (2026-06-12): 4 таблицы созданы корректно, JSON/FK/индексы подтверждены.
 - SUPERADMIN Stage 4a — CLI migration runner создан (2026-06-12): `scripts/migrate.php` применяет миграции, отслеживает через `schema_migrations` с SHA256 checksum, идемпотентен. Протестирован на dev БД: первый запуск 4 applied, повторный 4 skipped.
@@ -192,22 +209,124 @@ docs/ui/pages/[page-name].md
 
 ## Текущий фокус
 
-Текущий фокус: **Исправление системной UI-проблемы** — правила агентов и MD-документация приводятся к утверждённому дизайн-коду TransportERP / ERP PLANEX. Причина: текущий `/superadmin` (Stage 1) отклонён владельцем визуально — не соответствует design code (выглядит как SaaS-dashboard demo с псевдоиконками). Следующий этап после исправления правил: **переделка /superadmin по обновлённому handoff**.
+Текущий фокус: **`OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`** для `/superadmin`.
 
-Причина UI-провала зафиксирована:
+### Targeted coder rework result (2026-06-13)
+
+Все 5 отклонений compliance-аудита исправлены:
+
+| # | Элемент | Severity | Файл | Статус |
+|---|---------|----------|------|--------|
+| 1 | Page-head subtitle color: `var(--text-muted)` | MAJOR | `app.css` | FIXED |
+| 2 | Body line-height: `1.35` | MINOR | `app.css` | FIXED |
+| 3 | `$pageContext` задан явно | MINOR | `index.php` | FIXED |
+| 4 | Body bg token: `var(--app-bg)` | MINOR | `app.css` | FIXED |
+| 5 | `.text-muted` унифицирован, override удалён | MINOR | `app.css` | FIXED |
+
+Foundation/shell/sidebar/topbar/IA — COMPLIANT, не менялись. Следующий шаг — **Owner visual review** в браузере. QA и commit не выполнять до owner approval.
+
+VISUAL CHECK URL: `http://127.0.0.1:[port]/superadmin`
+
+### История предыдущего UI-провала (зафиксирована, актуальна)
+
+Причина первого UI-провала:
 - erp-uiux-designer выдал слабый handoff с псевдоиконками `[=]`, `[#]`, `[~]`, `[v]` и карточным SaaS-dashboard подходом;
 - erp-coder реализовал handoff буквально, усилив demo-вид;
 - erp-qa-tester принял формально ("ACCEPTED") без visual review;
 - erp-architect принял как DONE без визуальной проверки владельца.
 
-Корень проблемы: отсутствие в правилах агентов запрета на demo-placeholder UI, отсутствие правила manual visual review, отсутствие formal UI QA.
+Корень проблемы: прежние правила запрещали demo-placeholder UI и требовали visual review, но ещё допускали слабый handoff, слишком раннюю передачу кодеру, Formal UI QA PASS как «почти финал» и показ владельцу результата до architect pre-owner review.
+
+### Обновлённый UI Production Loop для важных страниц (2026-06-13)
+
+```text
+Architect intake
+→ Designer foundation handoff
+→ Layout Foundation Gate
+→ Sidebar Information Architecture
+→ Component Source Mapping
+→ Architect handoff review
+→ Coder implementation
+→ Architect implementation review
+→ Layout Foundation QA
+→ Component-source QA
+→ Owner visual review
+→ commit only after owner approval
+```
+
+### Системный урок
+
+Агенты начали проверку с уровня компонентов (panel / badge / kv / hover), но не проверили базовые слои:
+
+```text
+app shell → sidebar/menu → topbar → page header → work area → components
+```
+
+Component-source audit alone is not enough. Foundation-first review order обязателен.
+
+Кодер обязан вернуть `BLOCKED: NEEDS_DESIGNER_REWORK`, если handoff слабый, противоречивый, содержит `REJECTED` как актуальный статус или не указывает точные sections/classes/tokens.
+
+`Formal UI QA: PASS` не является visual acceptance.
+
+Backend/auth/CRUD/feature toggles/business modules остаются заблокированы до visual acceptance `/superadmin`.
+
+STYLE ERP:
+
+- Папка: `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\`
+- Назначение: визуальные образцы TransportERP / ERP PLANEX.
+- Не является runtime-библиотекой, библиотекой компонентов или источником кода для копирования.
+- Значимые правила формализованы в `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`.
+- Визуальный каталог формализованных модулей создан в `docs/ui/ERP_UI_MODULE_CATALOG.html`.
+- Кодер не должен открывать STYLE ERP или выбирать оттуда блоки. Если handoff требует этого, статус `BLOCKED: NEEDS_DESIGNER_REWORK`.
+
+UI Module Catalog:
+
+- `docs/ui/ERP_UI_KIT_CORE.html` — **PRIMARY compact working UI-kit** для всей агентной цепочки (45 CORE-модулей, 10 COMPOSITE patterns, Button/Layout Decision Matrix, Designer/Coder/QA Rules, SUPERADMIN READY SET).
+- `docs/ui/ERP_UI_MODULE_CATALOG.html` — **legacy extraction/reference history only**. Содержит 224 модуля A-L и source map по STYLE ERP. Не является основным рабочим каталогом дизайнера. Не используется кодером как основание для самостоятельных UI-решений. Не удалять и не переписывать в обычной UI-работе.
+- Page handoff обязан содержать `CORE modules used`, selected `COMPOSITE pattern`, и `MODULE USAGE DECISIONS`.
+- Если нужного CORE-модуля нет, дизайнер возвращает `BLOCKED: NEEDS_UI_MODULE_EXPANSION`; архитектор запускает отдельную задачу на расширение Core Kit.
+- Если handoff использует неизвестный UI-модуль, кодер возвращает `BLOCKED: UNKNOWN_UI_MODULE`.
+- QA проверяет модульную формализацию по Core Kit; unknown module = `Formal UI QA: FAIL`.
+
+### Layout Foundation Gate
+
+Перед component-source audit дизайнер, архитектор и QA обязаны сначала проверить foundation:
+
+- app shell;
+- sidebar;
+- sidebar menu hierarchy;
+- section labels/groups/counters;
+- active/disabled/future states;
+- bottom settings block;
+- topbar;
+- topbar user block / right area;
+- page context/header;
+- work area spacing/density;
+- соответствие STYLE ERP foundation reference.
+
+Если хотя бы один foundation пункт = NO, страница не может получить `ACCEPTED_FOR_QA`, даже если panels/buttons/badges технически правильные.
+
+### Sidebar Information Architecture
+
+Для UI-страниц дизайнер обязан описывать не только блоки внутри страницы, но и навигационную структуру:
+
+- группы меню;
+- порядок пунктов;
+- где находится SUPERADMIN;
+- что относится к операциям;
+- что относится к системе;
+- какие пункты disabled/future;
+- где counters;
+- где bottom settings;
+- как выглядит active item;
+- какие пункты нельзя смешивать в одной группе.
 
 Ближайший порядок:
 
 1. ~~Проверить/утвердить UI-фундамент и дизайн-код.~~ **DONE (2026-06-11).**
 2. ~~Перейти к техническому ядру: PDO-обёртка и роутер.~~ **DONE (2026-06-11).**
 3. ~~Начать SUPERADMIN.~~ **DONE (2026-06-12) — Stage 1.**
-4. Любые бизнес-страницы делать только через workflow `erp-uiux-designer → erp-coder → erp-qa-tester` с MD-шаблоном страницы.
+4. Любые бизнес-страницы делать только через workflow `erp-uiux-designer → erp-coder → erp-qa-tester` с MD-шаблоном страницы, `CORE modules used`, selected `COMPOSITE pattern` и `MODULE USAGE DECISIONS` из `docs/ui/ERP_UI_KIT_CORE.html`.
 
 Главный запрет: **не давать агенту размытые задачи типа “делай ERP”**.
 
@@ -250,20 +369,37 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **Исправление системной проблемы UI-процесса ERP PLANEX** — приведение правил агентов и MD-документации к утверждённому дизайн-коду TransportERP / ERP PLANEX.
-
-Причина: текущий `/superadmin` (Stage 1, commit `acd5009`) отклонён владельцем визуально — не соответствует design code (SaaS-dashboard demo с псевдоиконками).
+Активная задача: **commit текущей контрольной точки и переход к SUPERADMIN business foundation. Статус: OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT.**
 
 Следующий рабочий шаг:
+1. ~~Foundation rework cycle: designer → architect → coder → architect review.~~ **DONE (2026-06-13).**
+2. ~~Manual owner visual review по скриншоту.~~ **DONE: не принято визуально.**
+3. ~~`erp-architect → erp-uiux-designer`: compliance-аудит текущего `/superadmin`.~~ **DONE (2026-06-13): PARTIALLY COMPLIANT, 5 отклонений, 0 BLOCKER.**
+4. ~~`erp-architect → erp-coder`: точечный UI rework по 5 отклонениям.~~ **DONE (2026-06-13): все 5 исправлены.**
+5. ~~Owner visual review / решение владельца по продолжению.~~ **DONE: принято для продолжения разработки, `DESIGN_REVIEW_PENDING` не блокирует.**
+6. Commit текущей точки.
+7. Следующий этап: SUPERADMIN business foundation.
+
+Исторический список завершённых шагов:
+
 1. ~~Проверить/утвердить UI-фундамент.~~ **DONE.**
 2. ~~Создать PDO-обёртку и роутер.~~ **DONE.**
 3. ~~SUPERADMIN Stage 1: архитектура, UI-шаблон, реализация.~~ **REJECTED BY OWNER (визуально).**
 4. ~~QA-проверка и исправление замечаний.~~ **DONE (формально, но визуально не принято).**
-5. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
-6. ~~SUPERADMIN Stage 3: создание миграций.~~ **DONE (2026-06-12).**
-7. ~~SUPERADMIN Stage 4a: migration runner.~~ **DONE (2026-06-12).**
-8. **Исправить системные правила UI-процесса (текущая задача).**
-9. **Переделать /superadmin по обновлённому handoff (следующий этап).**
+5. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE.**
+6. ~~SUPERADMIN Stage 3: создание миграций.~~ **DONE.**
+7. ~~SUPERADMIN Stage 4a: migration runner.~~ **DONE.**
+8. ~~Исправить системные правила UI-процесса.~~ **DONE.**
+9. ~~Переделать /superadmin (первый/второй круг реворка).~~ **DONE, но компонентный реворк недостаточен — foundation пропущен.**
+10. ~~STAGE B: усилить KILO UI production workflow.~~ **DONE.**
+11. ~~Формализовать STYLE ERP в MD.~~ **DONE.**
+12. ~~Создать UI Module Catalog.~~ **DONE (legacy/reference).**
+13. ~~Создать UI Kit Core (primary compact working UI-kit).~~ **DONE.**
+14. ~~Предтестовый аудит дизайн-системы.~~ **DONE (2026-06-12).**
+15. ~~Production handoff `/superadmin` по Core Kit.~~ **DONE, но handoff не покрыл foundation (shell/sidebar/topbar/menu).**
+16. ~~Coder реализовал `/superadmin`, architect review — PASS.~~ **DONE, но foundation не соответствует STYLE ERP.**
+17. ~~ACCEPTED_FOR_QA.~~ **ОТМЕНЁН (foundation audit 2026-06-13).**
+18. **Foundation rework cycle — ТЕКУЩИЙ ШАГ.**
 
 ## Утверждённая архитектура ERP PLANEX
 
@@ -320,7 +456,9 @@ SUPERADMIN — центральная административная пане�
 
 ### Статус SUPERADMIN
 
-SUPERADMIN Stage 1: **REJECTED BY OWNER** (2026-06-12). Текущий визуальный вариант (`/superadmin`) не соответствует утверждённому дизайн-коду. Новый handoff создан в `docs/ui/pages/superadmin-dashboard.md`. Следующий этап: **переделка /superadmin по обновлённому handoff**.
+SUPERADMIN Stage 1: **REJECTED BY OWNER** (2026-06-12) → **DESIGNER_HANDOFF_ACCEPTED_FOR_CODER** (2026-06-12) → ~~CODER_REWORK_ACCEPTED_FOR_QA (2026-06-13)~~ → **ОТМЕНЁН** → ~~NEEDS_LAYOUT_FOUNDATION_REWORK + NEEDS_MENU_ARCHITECTURE_REWORK~~ → `FOUNDATION_REWORK_ACCEPTED_FOR_VISUAL_REVIEW` (только разрешение на ручной visual review) → **PARTIALLY COMPLIANT / NEEDS_UI_REWORK** после просмотра владельцем → **compliance-аудит (2026-06-13): `PARTIALLY COMPLIANT`, 81 проверка, 76 COMPLIANT, 5 отклонений, 0 BLOCKER** → **точечный coder rework (2026-06-13): все 5 отклонений исправлены** → **OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT**.
+
+Текущий статус: **`OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`**. Все 5 отклонений исправлены. Foundation/shell/sidebar/topbar/IA — COMPLIANT, не менялись. Владелец принял текущий результат для продолжения разработки. Проверка Главным дизайнером / КЛАУД остаётся pending, но не блокирует дальнейший кодинг.
 
 ## Модель локальной ERP
 
@@ -659,6 +797,9 @@ FINAL REPORT должен содержать:
 - **Не коммитить UI-экран до получения Manual owner visual approval.**
 - **Не проверять файлы/UI/код/документацию по памяти или пересказу — только через фактические файлы/архив.**
 - **Не использовать demo-placeholder UI** (псевдоиконки `[=]`, `[#]`, `[~]`, `[v]`, emoji как иконки, карточный SaaS-dashboard для admin/settings, большие пустоты, blue/white corporate UI, debug badges).
+- **Не принимать UI-страницу без прохождения Layout Foundation Gate** (проверка shell/sidebar/menu/topbar/page header/work area на соответствие STYLE ERP foundation reference).
+- **Не начинать component-source audit до прохождения foundation gate.**
+- **Не считать component-pass = page-pass, если foundation не проверен.**
 
 ---
 
@@ -684,12 +825,91 @@ UI handoff и реализация не должны допускать: demo-pl
 
 Дизайнер обязан выдавать handoff так, чтобы кодер не искал примеры и не придумывал. В handoff обязательно: exact route/view, layout pattern, exact text, exact components, exact classes, prohibited elements, states, owner visual check, visual blockers, runtime URL, acceptance checklist. Неоднозначность — задача дизайнера не DONE.
 
-### 6. Правило Formal UI QA
+### 7. Правило Layout Foundation Gate
 
-QA обязан проверять UI формально. Запрещены субъективные оценки: «визуально красиво», «визуально принято», «дизайн выглядит хорошо». QA пишет: `Formal UI QA: PASS/FAIL`, `Manual owner visual review required: YES/NO`, `Commit allowed before owner visual approval: YES/NO`. Обязателен чеклист: MD-шаблон, DESIGN_CODE, PAGE_PATTERN, отсутствие псевдоиконок, demo-placeholder, случайных классов/цветов, Bootstrap/Tailwind/Material, radius ≤ 4px, shadow ≤ 8px, VISUAL CHECK URL.
+Перед component-source audit дизайнер, архитектор и QA обязаны сначала проверить foundation: app shell, sidebar, sidebar menu hierarchy, section labels/groups/counters, active/disabled/future states, bottom settings block, topbar, topbar user block / right area, page context/header, work area spacing/density, соответствие STYLE ERP foundation reference. Если хотя бы один foundation пункт = NO, страница не может получить `ACCEPTED_FOR_QA`, даже если panels/buttons/badges технически правильные.
+
+### 8. Правило Sidebar Information Architecture
+
+Для UI-страниц дизайнер обязан описывать не только блоки внутри страницы, но и навигационную структуру: группы меню, порядок пунктов, где находится SUPERADMIN, что относится к операциям, что относится к системе, какие пункты disabled/future, где counters, где bottom settings, как выглядит active item, какие пункты нельзя смешивать в одной группе.
+
+### 9. Правило Foundation-first review order
+
+Агенты обязаны проверять UI в порядке слоёв:
+
+```text
+app shell → sidebar/menu → topbar → page header → work area → components
+```
+
+Component-source audit alone is not enough. Запрещено начинать проверку с уровня компонентов (panel / badge / kv / hover), если не проверены базовые слои.
+
+### 10. Правило Главного дизайнера
+
+Главный дизайнер / автор дизайн-системы ERP PLANEX — внешний (не KILO) контрольный role-layer. Он контролирует целостность дизайн-системы, проверяет, что страницы действительно собраны по STYLE ERP / Core Kit, проводит независимый дизайн-аудит спорных UI-результатов, находит системные причины ошибок, указывает какие правила нужно добавить в Core Kit, page templates, agent rules и QA. При UI foundation/design-system споре подключается Главный дизайнер. Его заключения имеют приоритет при дизайн-системных спорах.
+
+### 11. Правило отмены QA-ready статуса
+
+Если владелец или Главный дизайнер визуально выявляет расхождение со STYLE ERP на уровне foundation (shell/sidebar/topbar/menu), все предыдущие агентские статусы `ACCEPTED_FOR_QA` / `QA-ready` отменяются. Страница возвращается на foundation rework независимо от результатов component-source audit.
 
 ## Последнее обновление этого файла
 
 2026-06-11 — ChatGPT: файл пересобран как единый самодостаточный переносимый контекст для нового ChatGPT-чата.
 
-2026-06-12 01:50 — KILO/erp-architect: commit `50f96a9` — системное исправление UI-процесса, 15 файлов, DECISION-0023. Блокер radius/shadow в erp-uiux-designer.md снят. Проект готов к переделке /superadmin.
+2026-06-12 01:50 — KILO/erp-architect: commit `50f96a9` — системное исправление UI-процесса, 15 файлов, DECISION-0023.
+
+2026-06-12 02:00 — KILO/erp-architect: переделка `/superadmin` завершена (первый круг). 3 файла изменены.
+
+2026-06-12 02:10 — KILO/erp-architect: второй круг UI rework. Исправлена палитра, font stack, ERP-плотность.
+
+2026-06-12 — ChatGPT/erp-architect: STAGE B начат. `/superadmin` остаётся `NEEDS_UI_REWORK`.
+
+2026-06-12 — Codex GPT/erp-architect: STYLE ERP formalization. Создан `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`.
+
+2026-06-12 — Codex GPT/erp-architect: UI Module Catalog. Создан `docs/ui/ERP_UI_MODULE_CATALOG.html` (legacy/reference).
+
+2026-06-12 — Codex GPT/erp-architect: UI Kit Core. Создан `docs/ui/ERP_UI_KIT_CORE.html` (PRIMARY, 45 CORE modules, 10 COMPOSITE patterns).
+
+2026-06-13 — KILO/erp-architect: ~~Corrective cycle complete. Coder rework accepted for QA.~~ **ОТМЕНЁН ВЛАДЕЛЬЦЕМ (foundation audit 2026-06-13).** Core Kit + template + agents + handoff обновлены. Coder rework: 10 fixes, BLOCKER `.panel` padding устранён. Однако foundation (shell/sidebar/topbar/menu) не был проверен и не соответствует STYLE ERP.
+
+2026-06-13 — KILO/erp-architect: **Foundation rework cycle COMPLETE. `/superadmin` status: FOUNDATION_REWORK_ACCEPTED_FOR_VISUAL_REVIEW.** Designer foundation handoff (6 разделов), architect review (PASS), coder foundation rewrite (main.php + app.css), architect implementation review (PASS). Это разрешение на ручной visual review, не финальное approval.
+
+2026-06-13 — Codex GPT/erp-architect: после переходного промта нового ChatGPT-чата зафиксировано: owner visual review по скриншоту не принял `/superadmin`. Актуальный статус: `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`. Следующий шаг: compliance-аудит дизайнером, не QA.
+
+2026-06-13 13:15 — KILO/erp-architect: точечный coder rework `/superadmin` завершён. Все 5 отклонений compliance-аудита исправлены (5 строк `app.css` + 1 строка `index.php`). Актуальный статус: `PARTIALLY COMPLIANT / READY_FOR_OWNER_VISUAL_REVIEW`. Следующий шаг: Owner visual review. MD обновлены: AGENT_WORK_LOG, PROJECT_STATUS, ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.
+
+2026-06-13 13:30 — Codex GPT/erp-architect: владелец принял текущий результат `/superadmin` для продолжения разработки. Актуальный статус: `OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`. Проверка Главным дизайнером / КЛАУД остаётся `DESIGN_REVIEW_PENDING`, но не блокирует дальнейший кодинг. Следующий этап — commit текущей точки и развитие SUPERADMIN business foundation.
+
+---
+## CURRENT CONTEXT OVERRIDE — 2026-06-13 — OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT
+
+Current UI source of truth:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+```
+
+Legacy extraction/reference only:
+
+```text
+docs/ui/ERP_UI_MODULE_CATALOG.html
+```
+
+STYLE ERP — reference/example library, not runtime library:
+
+```text
+C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\
+```
+
+Important update (2026-06-13 after owner decision):
+
+- `/superadmin` status: **`OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`**.
+- Compliance audit: 81 checks, 76 COMPLIANT, 5 deviations, 0 BLOCKER.
+- All 5 deviations FIXED: 5 lines in `app.css` + 1 line in `index.php`.
+- Foundation/shell/sidebar/topbar/IA: COMPLIANT, NOT modified.
+- `main.php` and `superadmin_dashboard.php`: NOT modified.
+- Backend/auth/CRUD/database/scripts/Core Kit: NO changes.
+- Owner accepted current result for continued development.
+- Chief designer / KLAUD design review: **PENDING, not blocking**.
+- QA not started for this checkpoint.
+- Commit is now allowed by owner request to finalize the checkpoint.
+- Next after commit: continue SUPERADMIN business foundation, recommended first module `SUPERADMIN Companies Registry`.

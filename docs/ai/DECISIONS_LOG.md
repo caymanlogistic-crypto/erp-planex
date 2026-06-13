@@ -480,3 +480,266 @@ active
 ### Статус
 
 active
+
+---
+
+## DECISION-0024 — UI Production Loop для важных UI-экранов
+
+### Решение
+
+Для важных UI-экранов ERP PLANEX вводится обязательный UI Production Loop:
+
+```text
+Architect intake
+→ Designer production handoff
+→ Architect handoff review
+→ Coder implementation
+→ Formal QA
+→ Architect pre-owner review
+→ repeat designer/coder/QA cycle if not enough
+→ Owner visual review
+→ commit only after owner approval
+```
+
+Ключевые правила:
+
+1. Важный UI нельзя отдавать кодеру без production-grade handoff от `erp-uiux-designer`.
+2. `erp-architect` обязан выполнить handoff review до передачи кодеру.
+3. Если handoff общий, противоречивый, устаревший, содержит `REJECTED` как актуальный статус или допускает разные трактовки, задача возвращается дизайнеру со статусом `NEEDS_DESIGNER_REWORK`.
+4. `erp-coder` обязан вернуть `BLOCKED: NEEDS_DESIGNER_REWORK`, если handoff слабый, отсутствует, противоречит design-code/PAGE_PATTERN или не указывает точные sections/classes/tokens.
+5. `Formal UI QA: PASS` не является visual acceptance.
+6. После QA `erp-architect` обязан выполнить pre-owner review.
+7. Если результат всё ещё похож на demo/foundation/showcase/web-page/SaaS-dashboard или не соответствует master UI-kit, владелец не получает экран как готовый; запускается повторный цикл designer/coder/QA.
+8. Owner visual review запускается только после того, как агентская цепочка сама довела экран максимально близко к master UI-kit.
+9. Commit UI-экрана разрешён только после явного owner approval.
+
+### Причина
+
+После двух rework `/superadmin` стало ясно, что прежние правила закрывали отдельные симптомы, но не закрывали процесс: designer мог выдать общий handoff, architect мог слишком рано передать задачу кодеру, coder формально реализовывал слабую спецификацию, QA давал Formal PASS, а владелец затем визуально видел несоответствие master UI-kit.
+
+Нужен производственный UI-конвейер с обязательными gate points до кодера, после QA и перед owner visual review.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0025 — STYLE ERP как визуальный reference, не runtime-библиотека
+
+### Решение
+
+Папка:
+
+```text
+C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\
+```
+
+является набором визуальных образцов TransportERP / ERP PLANEX.
+
+STYLE ERP не является:
+
+- runtime-библиотекой;
+- библиотекой компонентов;
+- dependency;
+- источником HTML/CSS для копирования кодером;
+- местом, куда кодер должен ходить и выбирать блоки.
+
+Все значимые правила из STYLE ERP должны быть формализованы в MD до передачи UI-задачи кодеру. Главный документ формализации:
+
+```text
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
+```
+
+Правило для workflow:
+
+1. Codex GPT / architect / designer изучают STYLE ERP.
+2. Значимые правила переносятся в MD и page handoff.
+3. `erp-uiux-designer` создаёт production-grade handoff по MD.
+4. `erp-coder` реализует строго по MD/handoff.
+5. Если handoff требует открыть STYLE ERP или выбрать оттуда блок, `erp-coder` возвращает `BLOCKED: NEEDS_DESIGNER_REWORK`.
+
+### Причина
+
+STYLE ERP содержит полезные визуальные паттерны, но также содержит showcase-экраны. Если дать кодеру прямой доступ к образцам как к библиотеке, он может скопировать showcase/demo composition вместо production ERP screen. Поэтому STYLE ERP используется только как материал для формализации правил в MD.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0026 — UI Module Catalog как обязательный gate для UI handoff
+
+### Решение
+
+Создан визуальный каталог формализованных UI-модулей:
+
+```text
+docs/ui/ERP_UI_MODULE_CATALOG.html
+```
+
+Каталог является обязательным источником для `erp-uiux-designer`, `erp-architect`, `erp-coder` и `erp-qa-tester`.
+
+Правила:
+
+1. Дизайнер проектирует страницы только из модулей, описанных в `ERP_UI_MODULE_CATALOG.html` и профильных MD.
+2. Page handoff обязан содержать `UI modules used` с номерами/названиями модулей.
+3. Page handoff обязан содержать `MODULE USAGE DECISIONS` с обоснованием выбора/отказа от модулей.
+4. Если подходящего модуля нет, дизайнер возвращает `BLOCKED: NEEDS_UI_MODULE_EXPANSION`.
+5. Архитектор не передаёт кодеру handoff с unknown UI module.
+6. Кодер не реализует неизвестные UI-модули и возвращает `BLOCKED: UNKNOWN_UI_MODULE`.
+7. QA проверяет, что все модули перечислены и существуют в catalog/MD; unknown UI module = `Formal UI QA: FAIL`.
+
+### Причина
+
+После визуального провала `/superadmin` и формализации STYLE ERP нужно исключить ситуацию, когда дизайнер создаёт page handoff из неформализованных блоков или кодер вынужден изобретать UI. Каталог превращает STYLE ERP из набора визуальных примеров в проверяемый набор разрешённых модулей.
+
+### Статус
+
+superseded by DECISION-0027. `ERP_UI_MODULE_CATALOG.html` remains legacy extraction/reference history only; primary UI source is `ERP_UI_KIT_CORE.html`.
+---
+
+## DECISION-0027 — UI Kit Core as primary compact designer catalog
+
+### Decision
+
+Created and adopted the compact primary UI-kit:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+```
+
+The previous extraction catalog remains legacy/reference only:
+
+```text
+docs/ui/ERP_UI_MODULE_CATALOG.html
+```
+
+Rules:
+
+1. `erp-uiux-designer` designs pages from CORE modules and COMPOSITE patterns in `ERP_UI_KIT_CORE.html`.
+2. Page handoff must contain `CORE modules used`, selected `COMPOSITE pattern`, and `MODULE USAGE DECISIONS`.
+3. Missing module = `BLOCKED: NEEDS_UI_MODULE_EXPANSION`.
+4. Unknown/private module for coder = `BLOCKED: UNKNOWN_UI_MODULE`.
+5. QA fails handoff/implementation when unknown modules or private/page-specific names are used as universal modules.
+6. `ERP_UI_MODULE_CATALOG.html` is not updated/overwritten in ordinary UI work.
+
+### Reason
+
+The 224-item extraction catalog was too large and source-oriented for daily designer work. The project needs a compact universal kit with stable IDs, previews, rules, and matrices.
+
+### Status
+
+active
+
+---
+
+## DECISION-0028 — Предтестовый аудит дизайн-системы: контрольная точка
+
+### Решение
+
+Завершён предтестовый аудит дизайн-системы ERP PLANEX. Зафиксирована контрольная точка:
+
+1. **`docs/ui/ERP_UI_KIT_CORE.html`** является primary compact working UI-kit для всей агентной цепочки (architect, designer, coder, QA). Содержит 45 CORE-модулей, 10 COMPOSITE patterns, Button Decision Matrix, Layout Decision Matrix, Designer/Coder/QA Rules, SUPERADMIN READY SET.
+
+2. **`docs/ui/ERP_UI_MODULE_CATALOG.html`** является legacy extraction/reference history only. Не удаляется, не переписывается в обычной UI-работе. Не является основным рабочим каталогом дизайнера.
+
+3. **STYLE ERP** (`C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\`) является reference/example library, не runtime library. Кодер не ходит туда за самостоятельными дизайнерскими решениями.
+
+4. **Агентский workflow** architect → designer → coder → QA теперь использует Core Kit как основной источник. Все agent files (AGENT_NETWORK.md, KILO_WORKFLOW.md, QA_CHECKLIST.md, TASK_TEMPLATE.md, KILO_PROJECT_RULES.md) синхронизированы.
+
+5. **`/superadmin`** остаётся UI-blocked. На момент DECISION-0028 следующий шаг был production-grade designer handoff по Core Kit. Актуальный статус после последующего owner visual review зафиксирован в DECISION-0029 и `PROJECT_STATUS.md`: `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`.
+
+6. **Commit не выполнялся** — документационная фиксация контрольной точки, код не менялся.
+
+### Причина
+
+После создания Core Kit и завершения аудита требуется явная фиксация состояния, чтобы новый ChatGPT-чат или агент понимал текущую контрольную точку, не возвращался к старому каталогу как основному и не начинал кодинг `/superadmin` без designer handoff.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0029 — Централизация app shell / sidebar / topbar и compliance-only UI review
+
+### Решение
+
+Для ERP PLANEX app shell, sidebar/menu, topbar/header, user block и общий content wrapper должны быть централизованы в:
+
+```text
+app/View/layouts/main.php
+```
+
+Позднее допускается вынести части shell в:
+
+```text
+app/View/components/sidebar.php
+app/View/components/topbar.php
+```
+
+Page view должен содержать только рабочий контент конкретной страницы:
+
+```text
+app/View/pages/[page].php
+```
+
+Страницы не должны копировать sidebar/topbar/header и не должны создавать page-specific shell.
+
+UI review выполняется только через compliance language:
+
+```text
+COMPLIANT / PARTIALLY COMPLIANT / NON-COMPLIANT
+```
+
+Каждое UI-отклонение должно ссылаться на источник нормы:
+
+```text
+STYLE ERP / Core Kit / page handoff / Layout Foundation Gate / Sidebar IA / Design Code
+```
+
+Субъективные оценки вида "лучше/хуже", "красиво/некрасиво", "нравится/не нравится" не используются в отчётах архитектора, дизайнера, кодера и QA.
+
+### Причина
+
+После visual review `/superadmin` стало ясно, что статусы `ACCEPTED_FOR_QA`, `PASS` и `FOUNDATION_REWORK_ACCEPTED_FOR_VISUAL_REVIEW` не могут считаться финальным visual approval. Чтобы исключить самодельные page-specific shell решения и неоднозначные UI-оценки, правила layout foundation и compliance-language фиксируются как архитектурное решение.
+
+### Статус
+
+active
+
+---
+
+## DECISION-0030 — `/superadmin` accepted for continued development; KLAUD design review pending
+
+### Решение
+
+Владелец принял текущий результат `/superadmin` для продолжения разработки системы:
+
+```text
+/superadmin = OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT
+```
+
+Проверка Главным дизайнером / КЛАУД остаётся обязательной позже, когда в системе будет больше функционала и страниц, но не является stop factor для дальнейшего кодинга.
+
+Текущая оговорка:
+
+```text
+Chief designer / KLAUD design review = PENDING, not blocking
+```
+
+Разработка может продолжаться в сторону SUPERADMIN business foundation. Рекомендуемый следующий модуль:
+
+```text
+SUPERADMIN Companies Registry
+```
+
+### Причина
+
+Текущий `/superadmin` прошёл compliance-аудит и точечный coder rework: 81 проверка, 76 `COMPLIANT`, 5 отклонений исправлены, 0 `BLOCKER`. Владелец принимает результат как достаточный для продолжения развития ERP, а комплексную дизайн-приёмку Главным дизайнером планирует выполнить позже по набору экранов.
+
+### Статус
+
+active

@@ -6,7 +6,13 @@
 
 ## Текущий фокус
 
-**Исправление системной проблемы UI-процесса ERP PLANEX** — правила агентов и MD-документация приводятся к утверждённому дизайн-коду TransportERP / ERP PLANEX. Причина: текущий `/superadmin` (Stage 1) отклонён владельцем визуально. После исправления правил следующий этап: **переделка /superadmin по обновлённому handoff**.
+**`OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`** для `/superadmin`.
+
+2026-06-13 — владелец принял текущий результат `/superadmin` для продолжения разработки. Точечный coder rework завершён: 5 отклонений исправлены (5 строк `app.css` + 1 строка `index.php`). Foundation/shell/sidebar/topbar/IA НЕ менялись. Проверка Главным дизайнером / КЛАУД остаётся pending, но не блокирует дальнейший кодинг.
+
+Previous `CODER_REWORK_ACCEPTED_FOR_QA`, `QA-ready`, `PASS` and `FOUNDATION_REWORK_ACCEPTED_FOR_VISUAL_REVIEW` were not final visual approval. Current owner decision allows continued development and commit of this checkpoint.
+
+Текущий статус `/superadmin`: **`OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`**. Все 5 отклонений compliance-аудита исправлены. Foundation/shell/sidebar/topbar/IA — COMPLIANT, не менялись. Следующий шаг — commit текущей точки, затем развитие SUPERADMIN business foundation.
 
 ## Уже принято
 
@@ -29,6 +35,14 @@
 - Первый этап — только линейная перевозка.
 - Сборные рейсы резервируются в архитектуре, но не реализуются на первом этапе.
 - SUPERADMIN управляет доступностью функций, модулей, страниц и отчётов по компаниям.
+- Основной рабочий UI-kit: `docs/ui/ERP_UI_KIT_CORE.html` (45 CORE-модулей, 10 COMPOSITE patterns, Button/Layout Decision Matrix, Designer/Coder/QA Rules, SUPERADMIN READY SET).
+- Legacy extraction/reference only: `docs/ui/ERP_UI_MODULE_CATALOG.html`.
+- STYLE ERP: reference/example library, не runtime library.
+- Дизайнер проектирует страницы только из CORE modules и COMPOSITE patterns Core Kit.
+- Если модуля нет — сначала расширяется Core Kit/MD (`BLOCKED: NEEDS_UI_MODULE_EXPANSION`).
+- Кодер не реализует unknown UI modules (`BLOCKED: UNKNOWN_UI_MODULE`).
+- QA проверяет модульную формализацию по Core Kit.
+- Архитектор обязан включать `MANDATORY CODER INVOCATION BLOCK FOR UI TASKS` в каждую UI-задачу для erp-coder. Запрещено запускать erp-coder по UI-задаче без этого блока.
 
 ## Уже сделано
 
@@ -84,22 +98,24 @@
 
 ## Заблокировано
 
-Текущий `/superadmin` (Stage 1) — **REJECTED BY OWNER** (визуально). Причина: не соответствует утверждённому дизайн-коду (SaaS-dashboard demo с псевдоиконками). Требуется переделка по обновлённому handoff `docs/ui/pages/superadmin-dashboard.md`. Правила агентов исправлены (2026-06-12), проект готов к следующему этапу.
+Текущий `/superadmin` (Stage 1) — **REJECTED BY OWNER** (визуально) → первый круг реворка завершён (2026-06-12 02:00) → **NEEDS_UI_REWORK** (владелец/ChatGPT, 2026-06-12 02:06) → второй круг улучшил компоненты, но не foundation → ~~CODER_REWORK_ACCEPTED_FOR_QA (2026-06-13)~~ → **ОТМЕНЁН** → foundation rework cycle → `FOUNDATION_REWORK_ACCEPTED_FOR_VISUAL_REVIEW` как разрешение на ручной visual review → после просмотра владельцем **`PARTIALLY COMPLIANT / NEEDS_UI_REWORK`** → **compliance-аудит дизайнером (2026-06-13): `PARTIALLY COMPLIANT`, 81 проверка, 76 COMPLIANT, 5 отклонений, 0 BLOCKER** → **точечный coder rework (2026-06-13): ВСЕ 5 ОТКЛОНЕНИЙ ИСПРАВЛЕНЫ** → **OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT**.
+
+Текущий статус: **`OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`**. Все 5 отклонений исправлены. Foundation/shell/sidebar/topbar/IA — COMPLIANT, не менялись. Владелец принял результат для продолжения разработки. Проверка Главным дизайнером / КЛАУД остаётся `DESIGN_REVIEW_PENDING`, но не является stop factor для дальнейшего кодинга.
+
+Backend/auth/CRUD/feature toggles/business modules разблокированы для следующего этапа разработки после фиксации текущей точки. Проверка дизайна КЛАУД будет выполнена позже, когда будет больше функционала и страниц.
 
 ## Следующий рекомендуемый шаг
 
-1. ~~Проверить/утвердить базовый UI-фундамент.~~ **DONE (2026-06-11).**
-2. ~~Создать PDO-обёртку для подключения к БД.~~ **DONE (2026-06-11).**
-3. ~~Создать простой роутер.~~ **DONE (2026-06-11).**
-4. ~~Создать MD-шаблон SUPERADMIN dashboard.~~ **DONE (2026-06-11).**
-5. ~~Реализовать страницу `/superadmin` по шаблону (erp-coder).~~ **DONE (2026-06-12).**
-6. ~~QA-проверка и исправление замечаний.~~ **DONE (2026-06-12).**
-7. ~~Приёмка архитектором (erp-architect).~~ **DONE (2026-06-12).**
-8. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE (2026-06-12).**
-9. ~~SUPERADMIN Stage 2 implementation: создание миграций для центральной БД.~~ **DONE (2026-06-12).**
-10. ~~SUPERADMIN Stage 3 dry-run на MySQL 8.4.9.~~ **DONE (2026-06-12).**
-11. ~~SUPERADMIN Stage 4a: migration runner.~~ **DONE (2026-06-12).**
-12. Commit после разрешения владельца.
+**Зафиксировать текущую точку и перейти к развитию системы.**
+
+1. ~~erp-architect ставит задачу `erp-uiux-designer` на compliance-аудит.~~ **DONE (2026-06-13).**
+2. ~~erp-uiux-designer проводит compliance-аудит.~~ **DONE: `PARTIALLY COMPLIANT`, 5 отклонений, 0 BLOCKER.**
+3. ~~erp-architect ставит задачу `erp-coder` на точечный UI rework по 5 отклонениям.~~ **DONE (2026-06-13): все 5 исправлены.**
+4. ~~Scope кодера: 5 строк `app.css` + 1 строка `index.php`.~~ **DONE.**
+5. ~~Foundation/shell/sidebar/topbar/IA НЕ перестраивать.~~ **DONE — не менялись.**
+6. ~~Owner visual review / решение владельца по продолжению.~~ **DONE: принято для продолжения разработки с оговоркой `DESIGN_REVIEW_PENDING`.**
+7. Зафиксировать текущую точку commit.
+8. Следующий этап: развитие SUPERADMIN business foundation, рекомендуемый первый модуль — `SUPERADMIN Companies Registry`.
 
 - Проведена верификация обновлённой папки `docs`. Удалён физически оставшийся `docs/ui/UI_UX_RULES.md`. Исправлены 3 устаревшие ссылки на него в агентах. Удалён временный `docs/_DOCS_AUDIT_AND_CLEANUP.md`. Папка `docs/ui/ui/` отсутствует. Ссылки в документации синхронизированы. Commit `bc8e2e9`.
 - Проверен и утверждён UI-фундамент: документация синхронизирована, `_PAGE_TEMPLATE.md` обновлён под формат handoff дизайнера, runtime/syntax checks пройдены. UI готов к использованию в business-coding workflow.
@@ -112,7 +128,7 @@
 - Создан MD-шаблон `docs/ui/pages/superadmin-dashboard.md` (272 строки) для SUPERADMIN Stage 1 dashboard (2026-06-11, агент: erp-uiux-designer).
 - SUPERADMIN Stage 1 реализован (2026-06-12, агент: erp-coder): создана страница `app/View/pages/superadmin_dashboard.php`, добавлены 14 CSS-классов в `app.css`, зарегистрирован маршрут `/superadmin`, обновлён sidebar `main.php`.
 - QA-замечания исправлены (2026-06-12, агент: erp-architect): `.module-card-status` CSS, `&mdash;` в заголовке. PowerShell-safe HTTP-проверки: `/superadmin`→200, `/`→200, `/test`→200, `/test-db`→200, `/nonexistent`→404.
-- SUPERADMIN Stage 1 принят. Все синтаксические и runtime проверки пройдены.
+- SUPERADMIN Stage 1 прошёл синтаксические и runtime проверки, но последующая визуальная приёмка владельцем отменила готовность UI. Актуальный статус `/superadmin`: `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`.
 
 - SUPERADMIN Stage 2 — документация центральной БД выполнена (2026-06-12): создан `docs/architecture/SUPERADMIN_DATABASE.md`.
 - SUPERADMIN Stage 3 — SQL-миграции созданы и проверены dry-run (2026-06-12): 4 таблицы на MySQL 8.4.9 без ошибок, JSON/FK/индексы подтверждены, временная БД удалена.
@@ -120,4 +136,32 @@
 
 ## Последнее обновление
 
-2026-06-12 01:35 — erp-architect: **системное исправление UI-процесса**. Зафиксирована корневая причина UI-провала /superadmin. Добавлены 6 системных правил. Обновлены 4 агента, QA_CHECKLIST, TASK_TEMPLATE, KILO_PROJECT_RULES, ERP_PLANEX_CONTEXT_FOR_NEW_CHAT, _PAGE_TEMPLATE, superadmin-dashboard.md, DESIGN_CODE_INTEGRATION, PAGE_PATTERN. Проект готов к переделке /superadmin.
+2026-06-13 13:30 — Codex GPT/erp-architect: владелец принял текущий результат `/superadmin` для продолжения разработки. Статус: `OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`. Проверка Главным дизайнером / КЛАУД: `DESIGN_REVIEW_PENDING`, не блокирует дальнейший кодинг. Следующий этап: commit текущей точки и развитие SUPERADMIN business foundation.
+
+2026-06-13 13:15 — KILO/erp-architect: точечный coder rework `/superadmin` завершён. Все 5 отклонений compliance-аудита исправлены (5 строк `app.css` + 1 строка `index.php`). Foundation/shell/sidebar/topbar/IA не менялись. Статус: `PARTIALLY COMPLIANT / READY_FOR_OWNER_VISUAL_REVIEW`. Следующий шаг: Owner visual review. Обновлены AGENT_WORK_LOG, PROJECT_STATUS, ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.
+
+2026-06-13 13:10 — KILO/erp-architect: compliance-аудит `/superadmin` завершён. Итог: `PARTIALLY COMPLIANT`. 81 проверка, 76 COMPLIANT, 5 отклонений (0 BLOCKER). Foundation/shell/sidebar/topbar/IA — COMPLIANT. Следующий шаг: точечный coder rework (4 строки `app.css` + 1 строка `index.php`). Обновлены AGENT_WORK_LOG, PROJECT_STATUS, ERP_PLANEX_CONTEXT_FOR_NEW_CHAT, superadmin-dashboard.md.
+
+2026-06-13 12:39 — Codex GPT/erp-architect: MD-документация приведена к единому актуальному состоянию перед продолжением работы. Убраны живые противоречия: KILO снова используется через `erp-architect`, Core Kit является primary UI source, legacy catalog — reference/history, `/superadmin` = **`PARTIALLY COMPLIANT / NEEDS_UI_REWORK`**, QA/commit запрещены до Manual owner visual approval, следующий шаг — compliance-аудит дизайнером.
+---
+## CURRENT STATUS OVERRIDE — 2026-06-13 — OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT
+
+Current focus: current `/superadmin` checkpoint accepted by owner for continued development.
+
+`/superadmin` status: **OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT**.
+
+Primary UI source:
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+```
+
+Key facts:
+- Compliance audit: 81 checks, 76 COMPLIANT, 5 deviations, 0 BLOCKER.
+- All 5 deviations fixed: 5 lines in `app.css` + 1 line in `index.php`.
+- Foundation/shell/sidebar/topbar/IA: COMPLIANT, not modified.
+- `main.php` and `superadmin_dashboard.php`: not modified.
+- Backend/database/scripts/Core Kit: NO changes.
+- Owner accepted current result for continued development.
+- Chief designer / KLAUD design review: PENDING, not blocking.
+- QA not started for this checkpoint.
+- Next: commit current checkpoint, then continue with SUPERADMIN business foundation.

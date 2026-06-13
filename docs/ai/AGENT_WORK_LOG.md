@@ -52,6 +52,337 @@ DONE / PARTIAL / BLOCKED / NEEDS_OWNER_DECISION / NEEDS_QA / NEEDS_REWORK
 
 ---
 
+## 2026-06-13 13:15 — KILO/erp-architect / Targeted coder rework /superadmin
+
+### Задача
+Выполнить точечный UI rework `/superadmin` по 5 отклонениям из compliance-аудита. Только 2 файла. Foundation/shell/sidebar/topbar/IA не трогать.
+
+### Исходный контекст
+- Compliance-аудит завершён (2026-06-13): `PARTIALLY COMPLIANT`, 5 отклонений, 0 BLOCKER.
+- Foundation/shell/sidebar/topbar/IA — COMPLIANT.
+- 5 отклонений: 1 MAJOR, 4 MINOR.
+
+### Что сделано
+Исправлены все 5 отклонений:
+
+1. **`app.css` body background**: `var(--color-bg)` → `var(--app-bg)` (Core Kit token)
+2. **`app.css` body line-height**: `1.45` → `1.35` (Core Kit spec)
+3. **`app.css` .page-head p**: `var(--color-muted)` → `var(--text-muted)` (MAJOR — subtitle readability)
+4. **`app.css` global .text-muted**: `var(--color-muted)` → `var(--text-muted)` (унификация токена)
+5. **`app.css` .panel-body .text-muted override**: удалён (устранение inconsistency)
+6. **`index.php`**: добавлен `$pageContext = 'Центральная панель управления';` для `/superadmin`
+
+**Итого**: 5 строк изменено в `app.css`, 1 строка добавлена в `index.php`.
+
+### Изменённые файлы
+- `public/assets/css/app.css` (5 строк: 4 замены + 1 удаление блока)
+- `public/index.php` (1 строка добавлена)
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён статус)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён статус)
+
+### Принятые решения
+Новых архитектурных решений не принималось. Выполнен точечный ремонт по результатам compliance-аудита.
+
+### Что НЕ сделано
+- `main.php` — не менялся
+- `superadmin_dashboard.php` — не менялся
+- Foundation/shell/sidebar/topbar/IA — не менялись
+- Backend/auth/CRUD/database/scripts — не менялись
+- Core Kit / legacy catalog — не менялись
+- QA не запускался
+- Commit не выполнялся
+
+### Проверки
+- `php -l public/index.php`: No syntax errors
+- `git diff --check -- public/assets/css/app.css public/index.php`: LF/CRLF warnings only (Windows standard)
+- `git status --short`: 24 modified + 3 untracked. Working tree NOT clean
+- Поиск `var(--color-bg)` в app.css: НЕ найден (FIXED)
+- Поиск `line-height: 1.45` в app.css: НЕ найден (FIXED)
+- Поиск `panel-body .text-muted` в app.css: НЕ найден (FIXED)
+- Поиск `.page-head p` с `var(--color-muted)`: НЕ найден — теперь `var(--text-muted)` (FIXED)
+- Поиск `$pageContext` в index.php: найден, `'Центральная панель управления'` (FIXED)
+
+### Результат проверок
+Все 5 отклонений исправлены. Проверки пройдены.
+
+### Риски
+- Два остаточных использования `var(--color-muted)` в `.info-list dt` и `th` — это компонентные стили, не входившие в scope аудита. Не являются blocker-ами для текущего экрана.
+- В рабочем дереве остаются незакоммиченные изменения.
+
+### Следующий шаг
+Owner visual review `/superadmin` в браузере. После approval — QA и commit.
+
+### Статус
+DONE — `/superadmin` → `PARTIALLY COMPLIANT / READY_FOR_OWNER_VISUAL_REVIEW`
+
+---
+
+## 2026-06-13 13:10 — KILO / erp-uiux-designer + erp-architect / Compliance audit /superadmin
+
+### Задача
+Провести compliance-аудит текущей реализации `/superadmin` по источникам нормы: STYLE ERP / Core Kit / page handoff / Layout Foundation Gate / Sidebar IA / Design Code. Аудит выполнять только по фактическим файлам реализации. Код не менять, QA не запускать, commit не делать.
+
+### Исходный контекст
+- `/superadmin` после owner visual review не принят визуально.
+- Статус был: `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`.
+- Foundation rework cycle завершён, но это не финальное approval.
+- Необходим формальный compliance-аудит перед точечным coder rework.
+
+### Что сделано
+- erp-architect сформировал задачу для erp-uiux-designer.
+- erp-uiux-designer прочитал все обязательные файлы: контекст проекта, источники нормы, файлы реализации (main.php, superadmin_dashboard.php, app.css, index.php).
+- Выполнен compliance-аудит по 12 слоям (app shell → sidebar/menu → Sidebar IA → topbar → user block → page header → work area → Core Kit modules → demo-placeholder UI → CSS compatibility → main.php shell centralization → process checks).
+- **81 проверка выполнена, 76 — COMPLIANT, 5 отклонений, 0 BLOCKER**.
+- Итоговый verdict: **`PARTIALLY COMPLIANT`**.
+- erp-architect принял результат аудита, обновил MD-документацию.
+
+### 5 отклонений (точечные, без структурных перестроек)
+
+| # | Элемент | Статус | Severity | Что привести к норме |
+|---|---------|--------|----------|---------------------|
+| 1 | Page-head subtitle color token | NON-COMPLIANT | MAJOR | `.page-head p` → `var(--text-muted)` вместо `var(--color-muted)` |
+| 2 | Body line-height | NON-COMPLIANT | MINOR | `line-height: 1.45` → `1.35` (Core Kit) |
+| 3 | `$pageContext` не задан явно | PARTIALLY COMPLIANT | MINOR | Добавить `$pageContext` в маршрут `/superadmin` |
+| 4 | Body background token | PARTIALLY COMPLIANT | MINOR | `var(--color-bg)` → `var(--app-bg)` |
+| 5 | `.text-muted` inconsistency | PARTIALLY COMPLIANT | MINOR | Удалить `panel-body .text-muted` override |
+
+### Что в целом COMPLIANT (ключевые проверки)
+- App shell grid, topbar position, topbar brand/user block — полностью соответствуют STYLE ERP MASTER.
+- Sidebar IA (ОПЕРАЦИИ → СИСТЕМА → Настройки), все SVG иконки 16×16, `::before` active state, hover state, nav-item sizing/font/font-weight.
+- Panel pattern (padding:0, head flush, body padding), KV dividers, badge, notice, disabled buttons.
+- Нет demo-placeholder UI, псевдоиконок, карточного SaaS-dashboard, debug badges.
+- `main.php` — централизованный shell; `superadmin_dashboard.php` — только page content.
+- Все PHP-файлы проходят `php -l`.
+
+### Изменённые файлы
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён статус)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (синхронизирован контекст)
+- `docs/ui/pages/superadmin-dashboard.md` (добавлена секция Compliance audit result)
+
+### Принятые решения
+Новых архитектурных решений не принималось. Зафиксирован результат compliance-аудита.
+
+### Что НЕ сделано
+- PHP/CSS/view/backend/database/scripts не менялись.
+- QA не запускался.
+- Commit не выполнялся.
+- Shell/sidebar/topbar/IA не перестраивались (они COMPLIANT).
+
+### Проверки
+- `git diff --check -- docs .kilo`: только LF/CRLF warnings (Windows standard).
+- `git status --short`: 23 modified + 3 untracked. Working tree NOT clean.
+- `php -l app/View/layouts/main.php`: No syntax errors.
+- `php -l app/View/pages/superadmin_dashboard.php`: No syntax errors.
+
+### Результат проверок
+Compliance-аудит завершён. `/superadmin` = `PARTIALLY COMPLIANT`. Foundation/shell/sidebar/topbar/IA — COMPLIANT. 5 точечных отклонений (0 BLOCKER) готовы к передаче кодеру.
+
+### Риски
+- В рабочем дереве остаются незакоммиченные изменения вне scope аудита.
+- Требуется отдельная задача на точечный coder rework.
+
+### Следующий шаг
+`erp-architect → erp-coder`: точечный UI rework по 5 отклонениям (4 строки `app.css` + 1 строка `index.php`). После rework — Owner visual review. QA и commit не выполнять до owner approval.
+
+### Статус
+DONE (compliance audit completed, PARTIALLY COMPLIANT, 5 deviations documented)
+
+---
+
+## 2026-06-13 13:30 — Codex GPT / erp-architect / Checkpoint finalization and commit approval
+
+### Задача
+Финализировать текущую точку во всех MD и сделать commit по явному разрешению владельца.
+
+### Исходный контекст
+- `/superadmin` прошёл compliance-аудит: 81 проверка, 76 `COMPLIANT`, 5 отклонений, 0 `BLOCKER`.
+- Точечный coder rework исправил все 5 отклонений.
+- Владелец принял текущий результат для продолжения разработки.
+- Главный дизайнер / КЛАУД должен подтвердить дизайн позже, но это не stop factor.
+
+### Что сделано
+- Обновлён `PROJECT_STATUS.md`: статус `/superadmin` изменён на `OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`.
+- Обновлён `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`: переносимый контекст синхронизирован с решением владельца.
+- Обновлён `DECISIONS_LOG.md`: добавлено DECISION-0030.
+- Зафиксировано, что `DESIGN_REVIEW_PENDING` от КЛАУД не блокирует дальнейший кодинг.
+- Подготовлена текущая точка к commit.
+
+### Изменённые файлы
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/DECISIONS_LOG.md`
+
+### Принятые решения
+- DECISION-0030: `/superadmin = OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`; `Chief designer / KLAUD design review = PENDING, not blocking`.
+
+### Что НЕ сделано
+- QA не запускался.
+- Нового бизнес-кода в этой финализации не писалось.
+- Дизайн-проверка КЛАУД не выполнялась.
+
+### Причина невыполнения
+QA и дизайн-проверка КЛАУД не входят в текущий scope. Владелец разрешил продолжить разработку и сделать commit текущей точки.
+
+### Проверки
+- `git diff --check`.
+- `php -l public/index.php`.
+- `git status --short`.
+
+### Результат проверок
+- `php -l public/index.php`: No syntax errors.
+- `git diff --check`: критических whitespace errors нет, только стандартные LF/CRLF warnings Windows.
+- `git status --short`: working tree NOT clean до commit, ожидаемо.
+- Поиск по `OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`, `DESIGN_REVIEW_PENDING`, `DECISION-0030`: актуальные записи найдены.
+
+### Риски
+- Дизайн-проверка КЛАУД остаётся pending и должна быть выполнена позже на наборе экранов.
+- До commit working tree остаётся NOT clean.
+
+### Следующий шаг
+После commit перейти к развитию SUPERADMIN business foundation. Рекомендуемый первый модуль: `SUPERADMIN Companies Registry`.
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 12:39 — Codex GPT / erp-architect / MD stabilization before continuation
+
+### Задача
+Привести все живые MD-инструкции проекта к единому актуальному состоянию перед продолжением работы. Scope: документация и agent MD. Код, QA и commit не выполнять.
+
+### Исходный контекст
+- `/superadmin` после owner visual review не принят визуально.
+- Актуальный статус: `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`.
+- Core Kit является primary UI source.
+- `ERP_UI_MODULE_CATALOG.html` является legacy extraction/reference history only.
+- QA и commit запрещены до Manual owner visual approval.
+
+### Что сделано
+- Убрана устаревшая формулировка, что KILO временно не используется для UI: KILO используется через `erp-architect`, но кодер получает UI-задачу только после accepted handoff.
+- Синхронизированы `AGENT_NETWORK.md`, `KILO_WORKFLOW.md`, `KILO_PROJECT_RULES.md`.
+- Синхронизированы `.kilo/agent/erp-architect.md`, `.kilo/agent/erp-uiux-designer.md`, `.kilo/agent/erp-coder.md`, `.kilo/agent/erp-qa-tester.md`.
+- Обновлены `QA_CHECKLIST.md` и QA-агент: foundation FAIL теперь фиксируется как `NON-COMPLIANT / NEEDS_UI_REWORK`, а не старый layout-only статус.
+- Обновлены UI standards: `DESIGN_CODE_INTEGRATION.md`, `FORMS_STANDARD.md`, `TABLES_STANDARD.md`.
+- Обновлён `docs/ui/pages/superadmin-dashboard.md`: текущий статус и следующий шаг приведены к compliance-аудиту, старый foundation handoff помечен как historical.
+- Обновлены `PROJECT_STATUS.md` и `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+- В `DECISIONS_LOG.md` DECISION-0026 помечен как superseded by DECISION-0027; DECISION-0027/0029 остаются актуальными.
+
+### Изменённые файлы
+- `.kilo/agent/erp-architect.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+- `.kilo/agent/erp-uiux-designer.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ui/FORMS_STANDARD.md`
+- `docs/ui/TABLES_STANDARD.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+
+### Принятые решения
+Новых архитектурных решений не принималось. Выполнена синхронизация с уже зафиксированными DECISION-0027 и DECISION-0029.
+
+### Что НЕ сделано
+- PHP/CSS/view/backend/database/scripts не менялись.
+- QA не запускался.
+- Commit не выполнялся.
+- Исторические записи `AGENT_WORK_LOG.md` не переписывались.
+
+### Причина невыполнения
+Перечисленное не входит в scope задачи и/или запрещено до Manual owner visual approval.
+
+### Проверки
+- `rg` по старым статусам и устаревшим формулировкам.
+- `rg` по актуальным статусам и Core Kit rules.
+- `git diff --check`.
+- `git status --short`.
+
+### Результат проверок
+- Живые инструкции синхронизированы.
+- Исторические упоминания старых статусов остались только как история/цепочка отменённых статусов.
+- Working tree NOT clean: в дереве остаются текущие MD-изменения, ранее существовавшие code changes и untracked UI-документы.
+
+### Риски
+- В рабочем дереве остаются незакоммиченные изменения вне scope текущей MD-стабилизации. Их нельзя считать clean working tree.
+- Исторические логи содержат старые формулировки и статусы как запись хода работ; это не актуальные инструкции.
+
+### Следующий шаг
+`erp-architect → erp-uiux-designer`: провести compliance-аудит текущего `/superadmin` по скриншоту и design code. Код не менять, QA не запускать, commit не делать.
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 12:21 — Codex GPT / erp-architect / MD rules sync
+
+### Задача
+Синхронизировать `CHATGPT_COORDINATOR_PROMPT.md` и `DEEPSEEK_CODER_RULES.md` с переходным промтом нового ChatGPT-чата. Scope: только MD. Код, QA и commit не выполнять.
+
+### Исходный контекст
+- Прочитаны обязательные файлы: `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`, `PROJECT_STATUS.md`, `DECISIONS_LOG.md`, `AGENT_WORK_LOG.md`, `AGENT_NETWORK.md`.
+- Прочитаны профильные файлы задачи: `CHATGPT_COORDINATOR_PROMPT.md`, `DEEPSEEK_CODER_RULES.md`.
+- Переходный промт требует зафиксировать: Главный дизайнер, compliance-only UI review, `/superadmin = PARTIALLY COMPLIANT / NEEDS_UI_REWORK`, запрет QA до owner visual approval, layout/header/sidebar centralization, working tree NOT clean rule.
+
+### Что сделано
+- Обновлён `CHATGPT_COORDINATOR_PROMPT.md`: добавлены compliance-only language, formula UI review, layout/shell/sidebar/topbar centralization, актуальный статус `/superadmin`, следующий шаг designer compliance audit, working tree NOT clean rule.
+- Обновлён `DEEPSEEK_CODER_RULES.md`: добавлены Layout / Shell / Header / Sidebar rules, запреты кодеру на самостоятельную menu/topbar/shell архитектуру, блокирующие статусы при отсутствии foundation spec, UI compliance language.
+- Обновлён `PROJECT_STATUS.md`: актуальный статус `/superadmin` заменён на `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`; следующий шаг изменён на compliance-аудит дизайнером; QA и commit запрещены до owner approval.
+- Обновлён `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`: добавлен актуальный override для нового чата и удалён статус `FOUNDATION_REWORK_ACCEPTED_FOR_VISUAL_REVIEW` как текущий финальный статус.
+- Обновлён `DECISIONS_LOG.md`: добавлен DECISION-0029 про централизацию app shell/sidebar/topbar и compliance-only UI review.
+
+### Изменённые файлы
+- `docs/ai/CHATGPT_COORDINATOR_PROMPT.md`
+- `docs/ai/DEEPSEEK_CODER_RULES.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+
+### Принятые решения
+- DECISION-0029: app shell/sidebar/topbar/header централизуются в `app/View/layouts/main.php`; page views содержат только page content; UI review использует только `COMPLIANT / PARTIALLY COMPLIANT / NON-COMPLIANT` с источником нормы.
+
+### Что НЕ сделано
+- PHP/CSS/view/backend/database/scripts не менялись.
+- QA не запускался.
+- Commit не выполнялся.
+- Бизнес-правила не придумывались.
+
+### Причина невыполнения
+Перечисленное запрещено scope текущей задачи.
+
+### Проверки
+- `rg` по ключевым статусам и правилам в обновлённых MD.
+- `git diff --check`.
+- `git status --short`.
+
+### Результат проверок
+- Ключевые правила и актуальный статус найдены в обновлённых MD.
+- `git diff --check` выполнен: критических whitespace errors нет; есть только стандартные LF/CRLF warnings.
+- `git status --short`: Working tree NOT clean. До и после задачи в дереве присутствуют ранее существовавшие изменения и untracked UI-документы.
+
+### Риски
+- В рабочем дереве остаются изменения вне scope этой задачи (`.kilo`, `app/View`, `public/assets/css`, UI docs). Они не были изменены и не откатывались.
+- Исторические строки в MD могут упоминать старые статусы как историю; актуальный статус задан через CURRENT STATUS/CONTEXT OVERRIDE.
+
+### Следующий шаг
+`erp-architect → erp-uiux-designer`: провести compliance-аудит текущего `/superadmin` по скриншоту и design code. Код не менять, QA не запускать, commit не делать.
+
+### Статус
+DONE
+
+---
+
 ## 2026-06-11 — Стартовый пакет документации
 
 ### Задача
@@ -956,6 +1287,254 @@ DONE
 
 ### Статус
 DONE
+
+---
+
+## 2026-06-12 23:55 — KILO/erp-architect / Mandatory coder invocation block and coder task
+
+### Задача
+Добавить в правила архитектора обязательный раздел `MANDATORY CODER INVOCATION BLOCK FOR UI TASKS`. Сформировать и запустить задачу erp-coder на реализацию `/superadmin` строго по accepted designer handoff.
+
+### Исходный контекст
+- `/superadmin` имеет статус `DESIGNER_HANDOFF_ACCEPTED_FOR_CODER`.
+- Designer handoff принят архитектором.
+- `docs/ui/pages/superadmin-dashboard.md` — 794 строки, полный production handoff.
+- `docs/ui/ERP_UI_KIT_CORE.html` — PRIMARY UI-kit.
+
+### Что сделано
+- В `.kilo/agent/erp-architect.md` добавлен раздел `MANDATORY CODER INVOCATION BLOCK FOR UI TASKS`.
+- В раздел "Запрещено" добавлен пункт: запрет запускать erp-coder по UI-задаче без mandatory coder invocation block.
+- Сформирована задача erp-coder с жёстким блоком ограничений (mandatory coder invocation block).
+- erp-coder реализовал `/superadmin`: переписал `app/View/pages/superadmin_dashboard.php`, обновил `public/assets/css/app.css`.
+- Архитектор выполнил review: обнаружено расхождение фона `.panel` — исправлено архитектором (`var(--color-surface)` → `var(--surface-strong)`, border `var(--color-border)` → `var(--line)`).
+- Реализация соответствует handoff: 7 секций в правильном порядке, 11 CORE modules, PATTERN-05 + PATTERN-10, все CSS tokens применены.
+- Backend/auth/CRUD/database/scripts не тронуты.
+- `ERP_UI_KIT_CORE.html` и `ERP_UI_MODULE_CATALOG.html` не менялись.
+- `php -l` для всех PHP-файлов — без ошибок.
+- Результат передан erp-architect для pre-owner review.
+
+### Изменённые файлы
+- `.kilo/agent/erp-architect.md` (добавлен MANDATORY CODER INVOCATION BLOCK + запрет)
+- `public/assets/css/app.css` (19 новых CSS-переменных, 10 новых классов, обновлены существующие классы)
+- `app/View/pages/superadmin_dashboard.php` (полностью переписан по handoff: 76 строк, 7 секций)
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён фокус и статус)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён контекст)
+
+### Принятые решения
+- Mandatory coder invocation block — обязательное правило для всех UI-задач, передаваемых erp-coder.
+- Архитектор не имеет права запускать erp-coder по UI-задаче без включения mandatory coder invocation block в промт.
+
+### Что НЕ сделано
+- Commit не выполнялся (запрещено задачей).
+- QA ещё не запущен.
+- Owner visual review ещё не выполнен.
+
+### Проверки
+- Обновлённый `.kilo/agent/erp-architect.md` содержит секцию `MANDATORY CODER INVOCATION BLOCK`: OK.
+- `php -l app/View/pages/superadmin_dashboard.php`: No syntax errors.
+- `php -l public/index.php`: No syntax errors.
+- Backend/auth/CRUD/database/scripts: NO changes.
+- `ERP_UI_KIT_CORE.html`: NO changes.
+- `ERP_UI_MODULE_CATALOG.html`: NO changes.
+- `git diff --check`: CRLF warnings only (Windows standard).
+- Architect review: PASS. Minor fix applied (panel background token).
+- Реализация соответствует superadmin-dashboard.md раздел B: YES.
+- Кодер не придумывал дизайн: YES.
+- STYLE ERP не использовался: YES.
+- forbidden classes/texts/patterns отсутствуют: YES.
+
+### Результат проверок
+Все проверки пройдены. Реализация `/superadmin` соответствует accepted designer handoff. Готово к передаче erp-qa-tester.
+
+### Риски
+- `app/View/layouts/main.php` изменён (pre-existing changes до сессии кодера) — содержит handoff-совместимые изменения (убраны "UI foundation", "technical UI", "Без БД и бизнес-логики"; добавлены динамический topbar и conditional sidebar active state). Эти изменения необходимы для корректной работы `/superadmin`, но не были сделаны кодером в этой сессии.
+- Визуальная приёмка остаётся за владельцем (Manual owner visual review required).
+
+### Следующий шаг
+1. Передать задачу erp-qa-tester на формальную проверку по QA formal checklist из `superadmin-dashboard.md` раздел B.
+2. После QA — architect pre-owner review.
+3. Owner visual review.
+4. Commit после явного owner approval.
+
+### Статус
+CODER_IMPLEMENTATION_ACCEPTED_FOR_QA
+
+---
+
+## 2026-06-13 00:20 — KILO/erp-architect / Independent design audit — REJECTED for QA
+
+### Задача
+Главный дизайнер дизайн-системы провёл независимый дизайн-аудит реализации `/superadmin`. Итог: `NEEDS_CODER_REWORK + NEEDS_CORE_KIT_REWORK`.
+
+### Исходный контекст
+- `/superadmin` был реализован кодером, architect review — PASS.
+- Статус был: `CODER_IMPLEMENTATION_ACCEPTED_FOR_QA`.
+- QA ещё не запускался.
+
+### Результат аудита — главный BLOCKER
+`.panel { padding: 12px }` + `.panel-head` как дочерний элемент → panel-head рендерится внутри панели с отступом, а не flush к верхнему краю. Это ломает реальный panel pattern.
+
+### Другие проблемы аудита
+- Нет `.nav-item:hover`;
+- `.kv` строки без border-bottom;
+- `page-header` не совпадает с Core Kit `page-head`;
+- `panel-head-title` введён как новый класс без оформления в Core Kit;
+- `environment-badge` появился без дизайнерского решения;
+- `nav-dot` используется, но не описан в Core Kit;
+- Core Kit не дал production-ready CSS snippet для `.panel + .panel-head + .panel-body`;
+- Handoff не содержал обязательный SOURCE MAPPING для каждого элемента.
+
+### Что сделано (архитектор)
+- Зафиксирован результат аудита: `/superadmin` НЕ передавать QA.
+- Текущий статус: `NEEDS_CODER_REWORK + NEEDS_CORE_KIT_REWORK`.
+- Причина: component-source mismatch / self-made CSS pattern.
+- Начат корректирующий цикл: Core Kit → template → agent rules → handoff → coder rework.
+- Обновлён `ERP_UI_KIT_CORE.html` — добавлена секция Production CSS Reference (9 production rules: panel, kv, nav-hover, page-head, nav-dot, environment-badge, panel-head-title, source mapping rule, CSS compatibility rule). Добавлены production CSS: `.panel` (padding:0), `.panel-head`, `.panel-body`, `.panel-head-title`, `.kv > *` (dividers), `.nav-item:hover`, `.badge`, `.notice`, `.disabled`, `.environment-badge`, `.nav-dot`.
+- Обновлён `_PAGE_TEMPLATE.md` — секции 15a (SOURCE MAPPING) и 15b (CSS COMPATIBILITY CHECK).
+- Обновлены все 4 агента:
+  - `erp-uiux-designer.md` — SOURCE MAPPING RULE, CSS CLASS FORMALIZATION RULE, CSS COMPATIBILITY RULE, REQUIRED STATES RULE.
+  - `erp-architect.md` — Architect SOURCE MAPPING review, Architect CSS compatibility review.
+  - `erp-coder.md` — 5.3 CSS class discipline, 5.4 CSS compatibility rule, 5.5 Hover states rule, 5.6 Post-implementation CSS audit.
+  - `erp-qa-tester.md` — 5.2 Component-source audit.
+- Обновлён `superadmin-dashboard.md` — секции 0.3 (SOURCE MAPPING: 15 rows) и 0.4 (CSS COMPATIBILITY CHECK: 8 rows).
+- Запущен erp-coder на rework `/superadmin` (10 fixes + Core Kit compliance).
+- erp-coder выполнил все исправления:
+  - **FIX 1 (BLOCKER)**: `.panel` padding 12px → 0, overflow:hidden, border `--line` → `--line-hair`.
+  - **FIX 2**: `.nav-item:hover` добавлен (`background: var(--nav-hover); color: var(--nav-text-act)`).
+  - **FIX 3**: `.kv` переписан: gap→0, `.kv > *` row dividers с `border-bottom: 1px solid var(--line-hair)`.
+  - **FIX 4**: `.page-head` добавлен как официальный класс (alias к `.page-header`).
+  - **FIX 5-8**: `.panel-head-title`, `.environment-badge`, `.nav-dot`, `.nav-item.is-active` проверены/исправлены.
+  - **FIX 9**: 18 missing CSS variables добавлены.
+  - **FIX 10**: PHP `.page-header` → `.page-head`.
+  - Дополнительно: `.panel-head` min-height 36→34px, `.badge` приведён к Core Kit, `h2` глобальный стиль, `.disabled` глобальный класс.
+- Architect review: PASS. Все 10 fixes подтверждены.
+- Backend/auth/CRUD/database/scripts: NO changes.
+- Core Kit / Module Catalog: NOT modified by coder.
+
+### Изменённые файлы
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ui/ERP_UI_KIT_CORE.html`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-architect.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+
+### Что НЕ сделано
+- QA не запускался (остановлен результатом аудита).
+- Commit не выполнялся.
+- Coder rework ещё не выполнен.
+
+### Проверки
+- QA не запускался: YES.
+- Причина блокировки зафиксирована: component-source mismatch.
+- Core Kit обновлён production snippets: PENDING.
+
+### Следующий шаг
+QA (erp-qa-tester) формальная проверка → architect pre-owner review → owner visual review → commit после approve.
+
+### Статус
+CODER_REWORK_ACCEPTED_FOR_QA
+
+---
+
+## 2026-06-13 01:10 — KILO/erp-architect / Foundation audit — REJECTED foundation
+
+### Задача
+Владелец и Главный дизайнер провели foundation-аудит `/superadmin`. Итог: компоненты panel/kv/badge/hover исправлены, но foundation (shell/sidebar/topbar/menu) не соответствует STYLE ERP. Статус `CODER_REWORK_ACCEPTED_FOR_QA` отменён.
+
+### Исходный контекст
+- `/superadmin` был принят архитектором после coder rework (10 fixes component level).
+- Статус был: `CODER_REWORK_ACCEPTED_FOR_QA`.
+- QA ещё не запускался.
+
+### Foundation audit result
+Foundation mismatches:
+- Topbar тёмный (должен быть светлый `#fefdf8`)
+- Nav icons: `nav-dot` (6px dot) вместо SVG inline 16×16 с opacity .45
+- Nav item height не задан (должен быть 34px)
+- Nav item font-weight не задан (должен быть 600)
+- Nav section label неправильный (нет letter-spacing .12em)
+- Nav active state: `border-left` на элементе (должен быть `::before` pseudo)
+- Sidebar IA нарушена: SUPERADMIN смешан с Клиентами/Рейсами в группе "Управление"
+- Есть тавтологичный placeholder "Навигация"
+- Нет nav-spacer, nav-bottom, Настройки
+- Нет user block в topbar
+- Topbar не занимает полную ширину grid
+
+Layout Foundation Gate: FAIL (13/14).
+
+### Что сделано (архитектор)
+- Зафиксирован результат foundation аудита.
+- Предыдущий `CODER_REWORK_ACCEPTED_FOR_QA` отменён.
+- Новый статус: `NEEDS_LAYOUT_FOUNDATION_REWORK + NEEDS_MENU_ARCHITECTURE_REWORK`.
+- Обновлены `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` и `CHATGPT_COORDINATOR_PROMPT.md`:
+  - Добавлена роль Главного дизайнера.
+  - Добавлены правила: Layout Foundation Gate, Sidebar Information Architecture, Foundation-first review order, правило отмены QA-ready.
+  - Обновлены: текущий фокус, текущая задача, статус SUPERADMIN, главные запреты, системные правила UI-процесса, CURRENT CONTEXT OVERRIDE.
+- Обновлён `PROJECT_STATUS.md` — все ссылки на QA-ready статус заменены на NEEDS_LAYOUT_FOUNDATION_REWORK.
+- Запущен foundation rework cycle (дизайнер → foundation handoff → architect review → coder foundation fix → visual review → QA only after foundation PASS).
+- QA не запускать. Commit не делать.
+- `superadmin-dashboard.md` содержит актуальную foundation diagnostics (раздел 0, 0a, 0b).
+
+### Изменённые файлы
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/CHATGPT_COORDINATOR_PROMPT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+
+### Что НЕ сделано
+- QA не запускался.
+- Commit не выполнялся.
+- Foundation rework coder ещё не запущен.
+
+### Статус
+NEEDS_LAYOUT_FOUNDATION_REWORK + NEEDS_MENU_ARCHITECTURE_REWORK
+
+---
+
+## 2026-06-13 01:20 — KILO/erp-architect / Foundation rework cycle — COMPLETE
+
+### Задача
+Запущен foundation rework cycle для `/superadmin` после foundation-аудита Главного дизайнера.
+
+### Выполненные этапы
+1. **Architect intake**: исправлены противоречия в PROJECT_STATUS.md и AGENT_WORK_LOG.md.
+2. **erp-uiux-designer**: обновлён `superadmin-dashboard.md` (1303 строки). Добавлены разделы 0a–0f: LAYOUT FOUNDATION SOURCE MAPPING (35 rows), SIDEBAR IA (full HTML + 6-point table), TOPBAR SPEC, SHELL SPEC, FOUNDATION ACCEPTANCE CHECKLIST (40 criteria), CODER FOUNDATION TASK SPEC.
+3. **Architect handoff review**: PASS. Все 10 критериев приняты.
+4. **erp-coder**: foundation rework выполнен. Изменены `main.php` (полный rewrite shell/sidebar/topbar/nav) и `app.css` (16+ классов добавлено, 11 исправлено, 6 удалено). Изменения строго по handoff 0f.
+5. **Architect implementation review**: PASS. Все 10 foundation проверок пройдены. Компоненты не тронуты. Backend/database/scripts/Core Kit без изменений.
+
+### Результат foundation rework
+- Topbar: светлый фон (#fefdf8), 3-колоночный grid с brand/crumbs/user блоком
+- Sidebar: тёмный, flex-column, border-right, кастомный scrollbar
+- SVG иконки 16×16 в nav items (заменили nav-dot)
+- Nav items: height 34px, font-weight 600, ::before active pseudo
+- SIDEBAR IA: ОПЕРАЦИИ (disabled) → nav-spacer → СИСТЕМА (SUPERADMIN is-active) → nav-bottom (Настройки disabled)
+- Удалены: "Навигация", "Управление", brand из sidebar, environment-badge
+- Nav section labels: 9px, 700, uppercase, letter-spacing .12em
+
+### Статус
+**FOUNDATION_REWORK_ACCEPTED_FOR_VISUAL_REVIEW**
+
+QA не запускать. Commit не делать. Требуется Manual owner visual review (скриншот в браузере).
+
+### Изменённые файлы
+- `app/View/layouts/main.php` — foundation rewrite
+- `public/assets/css/app.css` — foundation CSS rewrite
+- `docs/ui/pages/superadmin-dashboard.md` — foundation handoff обновлён
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+
+### Что НЕ сделано
+- QA не запускался
+- Commit не выполнялся
+- Business/backend код не менялся
 
 ---
 
@@ -2171,3 +2750,708 @@ Commit после разрешения владельца. Затем отдел
 ### Статус
 
 DONE
+
+---
+
+## 2026-06-12 01:56 — erp-qa-tester
+
+### Задача
+
+Формальная QA-проверка переделки `/superadmin`, выполненной erp-coder по handoff `docs/ui/pages/superadmin-dashboard.md`.
+
+### Исходный контекст
+
+Предыдущий вариант SUPERADMIN (Stage 1) был REJECTED BY OWNER визуально. Причины: SaaS-dashboard подход, псевдоиконки, debug badges, карточная сетка. Выполнена переделка по обновлённому handoff с admin/sections pattern.
+
+### Что сделано
+
+- Прочитаны все обязательные документы: handoff, DESIGN_CODE_INTEGRATION, PAGE_PATTERN, QA_CHECKLIST.
+- Прочитаны фактические файлы: superadmin_dashboard.php, main.php, app.css, index.php.
+- Выполнены PHP syntax checks: все 3 файла PASS.
+- Выполнены HTTP runtime checks: /superadmin->200, /->200, /test->200, /test-db->200, /nonexistent->404 — все PASS.
+- Выполнена Formal UI QA по всем чеклистам:
+  - Соответствие handoff: 4 admin sections с правильными названиями, page-head SUPERADMIN, нейтральный alert, status-neutral — базово PASS.
+  - DESIGN_CODE_INTEGRATION: нет псевдоиконок, emoji, demo-placeholder UI, inline styles, Bootstrap/Tailwind/Material, border-radius <= 4px (новые), box-shadow blur <= 8px — PASS.
+  - PAGE_PATTERN: sidebar 224px, topbar 38px, Industrial Graphite + Warm Accent — PASS.
+  - Forbidden classes (PHP): ни одного совпадения в superadmin_dashboard.php и main.php — PASS.
+  - Forbidden classes (CSS): ни одного определения запрещённых классов в app.css — PASS.
+  - CSS master UI-kit: все токены соответствуют — PASS.
+- Security checks: .env не в git, нет секретов в изменённых файлах, миграции/runner/auth/CRUD не трогались — PASS.
+
+### Изменённые файлы
+
+Нет (QA-агент не менял production-файлы). Проверялись:
+- app/View/pages/superadmin_dashboard.php
+- app/View/layouts/main.php
+- public/assets/css/app.css
+
+### Принятые решения
+
+Не применимо (QA-проверка).
+
+### Что НЕ сделано
+
+Не выполнено (не в зоне ответственности QA):
+- Добавление блока Системная информация (handoff section 5).
+
+### Причина невыполнения
+
+Блок Системная информация пропущен кодером при реализации. Требуется rework.
+
+### Проверки
+
+Все runtime/syntax/security проверки PASS. Formal UI QA: FAIL (1 блокирующая проблема).
+
+### Результат проверок
+
+- PHP syntax: 3/3 PASS
+- HTTP runtime: 5/5 PASS
+- Forbidden classes (PHP): чисто
+- Forbidden classes (CSS): чисто
+- CSS master UI-kit: PASS
+- Security: PASS
+- Formal UI QA: FAIL
+
+### Риски
+
+Без блока Системная информация страница не полностью соответствует handoff. Владелец может запросить его наличие.
+
+### Следующий шаг
+
+1. erp-coder добавляет блок Системная информация в superadmin_dashboard.php.
+2. Повторная QA-проверка.
+3. Визуальная приёмка владельцем (manual owner visual review required: YES).
+4. Commit только после визуального approve владельца.
+
+### Статус
+
+NEEDS_REWORK
+
+---
+
+## 2026-06-12 02:00 — erp-architect / Завершение переделки /superadmin
+
+### Задача
+
+Координация переделки `/superadmin` по обновлённому handoff. Исправление блокирующего замечания QA (отсутствие блока «Системная информация»). Финальная подготовка к визуальной приёмке владельца.
+
+### Исходный контекст
+
+- Предыдущий `/superadmin` (Stage 1) — REJECTED BY OWNER визуально.
+- Handoff `superadmin-dashboard.md` переписан и утверждён (commit `50f96a9`).
+- erp-coder выполнил переделку: 3 файла изменены, 14+ запрещённых классов удалены, master UI-kit применён.
+- erp-qa-tester проверил: 1 блокирующее замечание — отсутствует блок «Системная информация».
+
+### Что сделано
+
+- Прочитаны все обязательные документы (19 файлов).
+- Сформирована задача для erp-coder с явным разрешением на изменение layout/main.php и app.css (конфликт с ограничениями handoff разрешён координатором).
+- Принят FINAL REPORT кодера: 3 файла изменены, все проверки PASS.
+- Сформирована задача для erp-qa-tester с полным Formal UI QA checklist.
+- Принят QA REPORT: NEEDS_REWORK (1 блокирующее замечание).
+- Блокирующее замечание исправлено архитектором: добавлен блок «Системная информация» в `superadmin_dashboard.php`.
+- Выполнены проверки: `php -l` PASS, runtime HTTP 200 PASS, блок найден в контенте.
+- Обновлены AGENT_WORK_LOG.md, PROJECT_STATUS.md.
+
+### Изменённые файлы
+
+- `app/View/layouts/main.php` — erp-coder: sidebar 224px conditional is-active, topbar 38px тёмный динамический, brand без "technical UI", nav-section "Управление"
+- `app/View/pages/superadmin_dashboard.php` — erp-coder + архитектор: полный rewrite (page-head + alert + 4 admin sections + системная информация), без псевдоиконок/emoji/запрещённых классов
+- `public/assets/css/app.css` — erp-coder: master UI-kit (:root, sidebar 224px, topbar 38px, copper accent, radius 2/4px, удалены 14+ запрещённых классов, нейтральный alert, text-muted utility)
+
+### Принятые решения
+
+Не применимо (координация, новых решений не принималось).
+
+### Что НЕ сделано
+
+- Commit — запрещён до визуальной приёмки владельца.
+- Повторная полная QA — блокирующее замечание единственное и исправлено, runtime подтверждён.
+- Изменения backend/auth/CRUD/migrations/runner — не требовались и не выполнялись.
+
+### Причина невыполнения
+
+Commit: требуется Manual owner visual review. Повторная QA: замечание изолированное, исправление верифицировано архитектором.
+
+### Проверки
+
+- `php -l` для 3 PHP-файлов: PASS
+- Runtime `/superadmin` HTTP 200: PASS (2929 bytes)
+- Блок «Системная информация» в контенте: FOUND
+- `.env` не в git: OK
+- Нет secrets: OK
+- Migrations/runner/auth/CRUD не трогались: OK
+- Git status: 5 модифицированных файлов (3 code + 2 docs), чисто
+
+### Результат проверок
+
+Все проверки пройдены. Страница готова к визуальной приёмке владельца.
+
+### Риски
+
+- `.status-neutral` сохраняет холодный фон `#eef2f7` — не соответствует тёплой палитре. Дизайнеру рекомендуется утвердить тёплый вариант (например `#f2f0eb`).
+- Без визуальной приёмки владельца страница не считается финально approved.
+
+### Следующий шаг
+
+1. Владелец выполняет ручную визуальную проверку `/superadmin` по чеклисту из handoff.
+2. При визуальном approve — отдельное разрешение на commit.
+3. При отклонении — статус NEEDS_UI_REWORK, второй круг.
+
+### Статус
+
+DONE (готово к визуальной приёмке владельца)
+
+---
+
+## 2026-06-12 02:10 — erp-architect / Второй круг UI rework /superadmin
+
+### Задача
+
+Второй круг UI rework `/superadmin`. Владелец/ChatGPT проверил первый результат по архиву — статус NEEDS_UI_REWORK. Причина: визуальная система не соответствует утверждённому TransportERP / ERP PLANEX master UI-kit (слишком упрощённая, не хватает плотности промышленной ERP).
+
+### Исходный контекст
+
+- Первый круг: страница переделана (admin sections, sidebar 224px, topbar 38px, 14+ классов удалены).
+- Владелец поставил NEEDS_UI_REWORK с конкретными требованиями по палитре и плотности.
+
+### Что сделано
+
+- Исправлен `public/assets/css/app.css`:
+  - Font stack: `"IBM Plex Sans", "Segoe UI", Arial, sans-serif`
+  - Body: `font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;`
+  - Surface: `#f5f3ee` (тёплая) вместо `#ffffff`
+  - Text: `#131210` вместо `#1f2937`
+  - Muted: `#78726a` вместо `#667085`
+  - `.status-neutral`: `background: #e3e0da; color: #625d57; border: 1px solid #c9c3b8` (тёплый)
+  - H1: 20px (было 28px)
+  - Body: 13px (было 14px)
+  - Panel padding: 12px (было 20px)
+  - Panel h2: 13px uppercase (было 18px)
+  - Page-header/alert/content/brand: сжаты для плотности
+  - Input/btn: уменьшены для ERP-плотности
+  - Nav-item: padding/color приведены к тёплой схеме
+  - Добавлен `.info-list` + `.panel-info` для компактного key-value блока
+- Исправлен `app/View/pages/superadmin_dashboard.php`:
+  - Системная информация переделана в `dl.info-list` (dt/dd) вместо `<p>`
+  - Panel: `panel-info` с медным левым бордером
+- Layout `main.php`: не изменялся (плотность управляется CSS)
+- Верифицировано: `#eef2f7`, `#1f2937`, `#667085`, `#344054` отсутствуют в CSS
+
+### Изменённые файлы
+
+- `public/assets/css/app.css` — вторая волна плотности и тёплой палитры (12 правок)
+- `app/View/pages/superadmin_dashboard.php` — key-value рефакторинг системной информации
+
+### Принятые решения
+
+Не применимо (исполнение указаний владельца).
+
+### Что НЕ сделано
+
+- Commit — запрещён.
+- Backend/auth/CRUD/migrations/runner — не трогались.
+- Изменения layout/main.php — не требовались.
+
+### Проверки
+
+- `php -l`: 3/3 PASS
+- Runtime `/superadmin` HTTP 200: PASS (2986 bytes)
+- `.info-list` в контенте: FOUND
+- Холодные blue-gray токены в CSS: ОТСУТСТВУЮТ (grep подтверждён)
+- `.env` не в git: OK
+- Нет secrets: OK
+- Migrations/runner/auth/CRUD не трогались: OK
+
+### Результат проверок
+
+Все проверки пройдены. Страница готова к повторной визуальной приёмке.
+
+### Риски
+
+- Без визуальной приёмки владельца статус не может быть финальным.
+
+### Следующий шаг
+
+1. erp-qa-tester выполняет формальную проверку (Formal UI QA).
+2. Владелец выполняет вторую визуальную приёмку.
+3. Commit только после визуального approve.
+
+### Статус
+
+DONE (готово к QA и визуальной приёмке)
+
+---
+
+## 2026-06-12 02:15 — erp-architect / Фикс QA-замечания второго круга
+
+### Задача
+Исправить минорное замечание QA: `.panel-info` использовал accent border (#7c4718), что противоречит handoff (системная информация — muted, без акцентных цветов).
+
+### Что сделано
+- `.panel-info { border-left: 2px solid var(--color-border); }` — заменён accent на muted border.
+
+### Статус
+DONE (готово к визуальной приёмке)
+
+---
+
+## 2026-06-12 — ChatGPT / erp-architect / STAGE B KILO UI Production Loop
+
+### Задача
+
+Перестроить KILO UI workflow в agent files и MD-документации так, чтобы важные UI-экраны не уходили кодеру без production-grade handoff, а агентская цепочка сама доводила результат до максимально близкого соответствия master UI-kit до owner visual review.
+
+### Исходный контекст
+
+- STAGE A audit выполнен и признан полезным.
+- Найдено, что текущий workflow уже усилен, но всё ещё допускает слабый дизайнерский handoff, слишком раннюю передачу кодеру, формальный QA PASS и последующее визуальное отклонение владельцем.
+- Второй круг `/superadmin` улучшил экран, но не достиг 100% master design code.
+- На диске уже были незакоммиченные изменения в PHP/CSS/view и части MD после второго круга `/superadmin`; текущая задача не должна смешивать их с кодовыми правками.
+
+### Что сделано
+
+- Усилен `erp-architect`: добавлены architect handoff review до кодера и architect pre-owner review после QA.
+- Усилен `erp-uiux-designer`: добавлен production-grade visual handoff с current diagnosis, target result, exact layout/tokens/sections/classes/checklists/failure signs.
+- Усилен `erp-coder`: добавлен обязательный `BLOCKED: NEEDS_DESIGNER_REWORK` для слабого/противоречивого UI handoff.
+- Усилен `erp-qa-tester`: добавлены known formal signs of weak UI и обязательные строки QA report.
+- В `KILO_WORKFLOW.md` добавлен раздел `UI PRODUCTION LOOP`.
+- В `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md`, `_PAGE_TEMPLATE.md` добавлены production-loop правила и checklists.
+- В `superadmin-dashboard.md` разделены rejected previous implementation и current target production handoff.
+- Обновлены `PROJECT_STATUS.md` и `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+- Добавлено решение DECISION-0024.
+
+### Изменённые файлы
+
+- `.kilo/agent/erp-architect.md`
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/DECISIONS_LOG.md`
+
+### Принятые решения
+
+DECISION-0024: UI Production Loop обязателен для важных UI-экранов.
+
+### Что НЕ сделано
+
+- PHP/CSS/view файлы не изменялись в рамках STAGE B.
+- Backend/auth/CRUD/migrations/migration runner не трогались.
+- Commit не выполнялся.
+
+### Проверки
+
+- Проверить git status до/после.
+- Проверить, что изменены только MD/agent instruction files в рамках STAGE B.
+- Проверить наличие ключевых правил: designer production handoff, architect handoff review before coder, `BLOCKED: NEEDS_DESIGNER_REWORK`, formal QA != visual acceptance, architect pre-owner review, repeat cycles before owner, owner approval before commit.
+
+### Риски
+
+- В рабочем дереве уже были незакоммиченные PHP/CSS/view изменения второго круга `/superadmin`; при будущем commit нужно использовать явный pathspec только для MD/agent files, если владелец разрешит commit документации.
+
+### Следующий шаг
+
+STAGE C: владелец/ChatGPT проверяет изменённые MD/agent-файлы. После принятия — запуск production-grade designer handoff для `/superadmin`, затем architect handoff review до кодера.
+
+### Статус
+
+DONE (ожидает STAGE C review)
+
+---
+
+## 2026-06-12 — Codex GPT / erp-architect / STYLE ERP formalization
+
+### Задача
+
+Изучить `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\` как набор визуальных образцов ERP-дизайна и перенести значимые правила в рабочие MD-документы и agent instructions. PHP/CSS/view, backend/auth/CRUD/migrations не трогать.
+
+### Исходный контекст
+
+- KILO временно не используется, пока agent workflow и UI-документация не доведены до идеального состояния.
+- `/superadmin` остаётся `NEEDS_UI_REWORK`.
+- STYLE ERP не должен стать runtime-библиотекой/библиотекой компонентов или местом, куда кодер ходит выбирать блоки.
+
+### Что изучено
+
+- `TransportERP_MASTER_UI_RULES.md`
+- `transporterp_ui_showcase.html`
+- `transporterp_nav_v1.html`
+- `transporterp_tables_v1.html`
+- `transporterp_forms_v1.html`
+- `transporterp_drivers_v19.html`
+- `transporterp_missing_v1.html`
+- `transporterp_charts_v1.html`
+
+### Что сделано
+
+- Создан `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`.
+- Из STYLE ERP извлечены правила: app shell, sidebar/topbar, page header, layout patterns, ERP-grid, forms, filters, inspector, key-value, admin/settings sections, statuses, empty/loading/error, tabs/modals/toasts/pagination, charts, typography, spacing, color tokens, density and forbidden patterns.
+- Обновлены UI docs, page templates, agent files и AI workflow docs.
+- Зафиксировано, что кодер не ходит в STYLE ERP и не копирует оттуда HTML/CSS.
+- Зафиксировано, что если handoff требует STYLE ERP lookup, кодер возвращает `BLOCKED: NEEDS_DESIGNER_REWORK`.
+
+### Изменённые файлы
+
+- `docs/ui/STYLE_ERP_EXTRACTED_RULES.md` (создан)
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ui/PAGE_PATTERN.md`
+- `docs/ui/FORMS_STANDARD.md`
+- `docs/ui/TABLES_STANDARD.md`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+- `.kilo/agent/erp-architect.md`
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/DECISIONS_LOG.md`
+
+### Принятые решения
+
+DECISION-0025: STYLE ERP is visual reference only; all usable rules must be formalized in MD before KILO/coder work.
+
+### Что НЕ сделано
+
+- `/superadmin` не правился.
+- PHP/CSS/view файлы не изменялись в рамках этой задачи.
+- Backend/auth/CRUD/migrations/migration runner не трогались.
+- Commit не выполнялся.
+
+### Проверки
+
+- Выполнить git status после работы.
+- Выполнить `git diff --check` по `.kilo` и `docs`.
+- Проверить опасные формулировки по документам.
+- Проверить обязательные маркеры в agent files.
+
+### Риски
+
+- В рабочем дереве остаются ранее существовавшие незакоммиченные изменения PHP/CSS/view после второго круга `/superadmin`; при будущем commit документации использовать явный pathspec.
+
+### Следующий шаг
+
+Проверка изменённых MD/agent-файлов владельцем/ChatGPT. После принятия — запуск KILO через `erp-architect` на production-grade handoff `/superadmin`.
+
+### Статус
+
+DONE (ожидает review владельцем/ChatGPT)
+
+---
+
+## 2026-06-12 — Codex GPT / erp-architect / UI Module Catalog
+
+### Задача
+
+Создать точный визуальный HTML-каталог всех UI-модулей ERP PLANEX, извлечённых из STYLE ERP, и обновить правила агентов так, чтобы дизайнер не мог проектировать экран из неформализованных блоков. KILO не использовать, PHP/CSS/view production-файлы не менять, `/superadmin` не править, commit не делать.
+
+### Исходный контекст
+
+- STYLE ERP — visual reference, не runtime-библиотека и не component library.
+- `/superadmin` остаётся `NEEDS_UI_REWORK`.
+- KILO временно не используется для production UI до проверки владельцем/ChatGPT.
+- В рабочем дереве уже были существующие незакоммиченные изменения в `app/View/layouts/main.php`, `app/View/pages/superadmin_dashboard.php`, `public/assets/css/app.css`; текущая задача не должна их трогать.
+
+### Что изучено
+
+- `TransportERP_MASTER_UI_RULES.md`
+- `transporterp_nav_v1.html`
+- `transporterp_ui_showcase.html`
+- `transporterp_forms_v1.html`
+- `transporterp_tables_v1.html`
+- `transporterp_missing_v1.html`
+- `transporterp_charts_v1.html`
+- `transporterp_drivers_v19.html`
+- `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`
+- UI docs, page templates, agent files, AI workflow docs.
+
+### Что сделано
+
+- Создан `docs/ui/ERP_UI_MODULE_CATALOG.html`.
+- В каталог внесено 224 UI-модуля по группам A-L.
+- Добавлены Source map, MODULE AVAILABILITY RULE, DESIGNER MODULE SELECTION RULES, визуальные примеры, правила WHEN TO USE / WHEN NOT TO USE.
+- Обновлены UI docs: `STYLE_ERP_EXTRACTED_RULES.md`, `DESIGN_CODE_INTEGRATION.md`, `PAGE_PATTERN.md`, `FORMS_STANDARD.md`, `TABLES_STANDARD.md`, `_PAGE_TEMPLATE.md`, `superadmin-dashboard.md`.
+- Обновлены agent files: architect, designer, coder, QA.
+- Обновлены AI workflow docs: `KILO_WORKFLOW.md`, `KILO_PROJECT_RULES.md`, `TASK_TEMPLATE.md`, `QA_CHECKLIST.md`, `AGENT_NETWORK.md`.
+- Обновлены `PROJECT_STATUS.md`, `ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`, `DECISIONS_LOG.md`.
+- Добавлено решение DECISION-0026.
+
+### Изменённые файлы
+
+- `docs/ui/ERP_UI_MODULE_CATALOG.html` (создан)
+- `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ui/PAGE_PATTERN.md`
+- `docs/ui/FORMS_STANDARD.md`
+- `docs/ui/TABLES_STANDARD.md`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+- `.kilo/agent/erp-architect.md`
+- `.kilo/agent/erp-uiux-designer.md`
+- `.kilo/agent/erp-coder.md`
+- `.kilo/agent/erp-qa-tester.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/DECISIONS_LOG.md`
+
+### Принятые решения
+
+DECISION-0026: UI Module Catalog является обязательным gate для UI handoff. Дизайнер использует только формализованные модули; отсутствующий модуль = `BLOCKED: NEEDS_UI_MODULE_EXPANSION`; unknown module для кодера = `BLOCKED: UNKNOWN_UI_MODULE`; QA валит Formal UI QA при неформализованном модуле.
+
+### Что НЕ сделано
+
+- PHP/CSS/view production-файлы не менялись.
+- `/superadmin` не правился.
+- Backend/auth/CRUD/migrations/runner не трогались.
+- Commit не выполнялся.
+
+### Проверки
+
+- `git status` до работы выполнен.
+- Проверить наличие `docs/ui/ERP_UI_MODULE_CATALOG.html`.
+- Проверить 224 модуля и группы A-L.
+- Проверить Source map, Module Availability Rule, Designer Module Selection Rules.
+- Проверить agent files на `BLOCKED: NEEDS_UI_MODULE_EXPANSION`, `BLOCKED: UNKNOWN_UI_MODULE`, modules used и запреты unknown modules.
+- Проверить docs на ссылки на `ERP_UI_MODULE_CATALOG.html`.
+- Проверить, что PHP/CSS/view/backend не менялись в рамках задачи.
+- Выполнить `git diff --check` по `.kilo` и `docs`.
+- Проверить опасные формулировки.
+
+### Результат проверок
+
+- `docs/ui/ERP_UI_MODULE_CATALOG.html` существует.
+- Размер каталога: 44498 bytes.
+- Счётчик модулей: 224.
+- Группы A-L присутствуют: A=17, B=13, C=14, D=14, E=26, F=32, G=12, H=22, I=31, J=19, K=13, L=11.
+- Source map, MODULE AVAILABILITY RULE, DESIGNER MODULE SELECTION RULES и WHEN TO USE / WHEN NOT TO USE присутствуют.
+- Обязательные поля модуля в HTML-шаблоне присутствуют: источник, применение, classes/tokens, состояния, правила, запреты, when designer can use, when to stop.
+- Agent files содержат `BLOCKED: NEEDS_UI_MODULE_EXPANSION`, `BLOCKED: UNKNOWN_UI_MODULE`, `UI modules used`, `MODULE USAGE DECISIONS`.
+- UI/AI docs содержат ссылки на `ERP_UI_MODULE_CATALOG.html`.
+- Опасные формулировки из задания не найдены.
+- `git diff --check -- .kilo docs`: критических ошибок нет, только CRLF warnings.
+- Новый HTML проверен на trailing whitespace: нет совпадений.
+- PHP/CSS/view/backend/migrations/runner в рамках этой задачи не менялись.
+
+### Риски
+
+- HTML-каталог является справочным документом, не production-страницей ERP.
+- Рабочее дерево содержит ранее существовавшие code changes после `/superadmin` rework; при будущем commit документации использовать явный pathspec.
+
+### Следующий шаг
+
+Владелец/ChatGPT проверяет `docs/ui/ERP_UI_MODULE_CATALOG.html` и изменённые MD/agent-файлы. После принятия — новый production-grade handoff `/superadmin` через каталог.
+
+### Статус
+
+DONE (ожидает review владельцем/ChatGPT)
+---
+
+## 2026-06-12 — Codex GPT / erp-architect / UI Kit Core
+
+### Status
+
+DONE
+
+### Task
+
+Create a compact primary UI-kit and update docs/agent rules so `docs/ui/ERP_UI_KIT_CORE.html` becomes the working designer catalog, while `docs/ui/ERP_UI_MODULE_CATALOG.html` remains legacy extraction/reference only.
+
+### Done
+
+- Created `docs/ui/ERP_UI_KIT_CORE.html`.
+- Included `CORE-01`..`CORE-45`, each with preview and usage/rule metadata.
+- Included `PATTERN-01`..`PATTERN-10`, each with preview.
+- Added applied examples, button decision matrix, layout decision matrix, designer/coder/QA rules, and SUPERADMIN ready set.
+- Updated UI docs, page templates, `/superadmin` handoff doc, KILO agent prompts, AI workflow docs, project status, transferable context, decisions log, and work log.
+- Preserved `docs/ui/ERP_UI_MODULE_CATALOG.html` as legacy extraction/reference; no edit intended.
+
+### Not done
+
+- No production PHP/CSS/view/backend/migration/runner files were intentionally edited.
+- No commit was made.
+
+### Decision
+
+DECISION-0027: `ERP_UI_KIT_CORE.html` is the primary compact designer catalog; `ERP_UI_MODULE_CATALOG.html` is legacy/reference only.
+
+### Next step
+
+Owner/ChatGPT reviews the new core kit and updated rules. After acceptance, `erp-uiux-designer` prepares the next production-grade `/superadmin` handoff using `ERP_UI_KIT_CORE.html`.
+
+---
+
+## 2026-06-12 23:38 — KILO/erp-architect / Контрольная точка: фиксация дизайн-системы
+
+### Задача
+Зафиксировать текущую контрольную точку проекта после завершения настройки дизайн-системы, UI Kit Core и правил взаимодействия агентов. Документационная задача, код не менять, commit не делать.
+
+### Исходный контекст
+Прочитаны все обязательные файлы:
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/DECISIONS_LOG.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ai/CHATGPT_COORDINATOR_PROMPT.md`
+- `docs/ai/QA_CHECKLIST.md`
+- `docs/ai/TASK_TEMPLATE.md`
+- `docs/ai/KILO_PROJECT_RULES.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+
+### Что сделано
+- Проведён предтестовый аудит дизайн-системы: все агентские файлы проверены на согласованность.
+- Выявлены и устранены противоречия в `AGENT_NETWORK.md` и `KILO_WORKFLOW.md` (синхронизированы правила Core Kit primary / legacy catalog reference-only).
+- Обновлён `docs/ai/PROJECT_STATUS.md`: текущий фокус, принятые пункты, заблокированное, следующий шаг, последнее обновление, CURRENT STATUS OVERRIDE.
+- Обновлён `docs/ai/DECISIONS_LOG.md`: добавлено решение DECISION-0028 (контрольная точка).
+- Обновлён `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`: актуализирован контекст, текущий фокус, следующая задача, статус `/superadmin`, CURRENT CONTEXT OVERRIDE.
+- Обновлён `docs/ai/CHATGPT_COORDINATOR_PROMPT.md`: добавлены правила Core Kit primary, designer handoff gate, следующий шаг, предупреждение о недопустимости бесконечной полировки.
+- Обновлён `docs/ai/QA_CHECKLIST.md`: синхронизированы ссылки на Core Kit в Formal UI QA checklist.
+- Обновлён `docs/ai/TASK_TEMPLATE.md`: синхронизированы ссылки на Core Kit в UI Module Catalog Rule и контексте.
+- Проверены `AGENT_NETWORK.md` и `KILO_WORKFLOW.md` — уже содержат корректные CURRENT UI KIT OVERRIDE, дополнительных правок не требуют.
+- Проверено, что кодовые файлы (`app/**`, `public/**`, `database/**`, `scripts/**`, `.env`) не менялись.
+- Проверено, что `ERP_UI_KIT_CORE.html`, `ERP_UI_MODULE_CATALOG.html`, `STYLE_ERP_EXTRACTED_RULES.md` — untracked в git (зафиксировано как важное замечание).
+
+### Изменённые файлы
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/DECISIONS_LOG.md` (обновлён — DECISION-0028)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+- `docs/ai/CHATGPT_COORDINATOR_PROMPT.md` (обновлён)
+- `docs/ai/QA_CHECKLIST.md` (обновлён — синхронизация ссылок)
+- `docs/ai/TASK_TEMPLATE.md` (обновлён — синхронизация ссылок)
+
+### Принятые решения
+- DECISION-0028: зафиксирована контрольная точка. Core Kit primary, legacy catalog reference-only, STYLE ERP reference-only, `/superadmin` NEEDS_UI_REWORK, следующий шаг — designer handoff, кодер не запускается до accepted handoff.
+
+### Что НЕ сделано
+- Код не менялся (`app/**`, `public/**`, `database/**`, `scripts/**`, `.env`).
+- `/superadmin` не переделывался.
+- Новый designer handoff для `/superadmin` не создавался.
+- Commit не выполнялся (документационная фиксация, запрещено задачей).
+- `ERP_UI_KIT_CORE.html` и `ERP_UI_MODULE_CATALOG.html` не редактировались.
+- `docs/ui/pages/superadmin-dashboard.md` не изменялся.
+
+### Проверки
+- `git status` до работы: 22 modified + 3 untracked.
+- Кодовые файлы не менялись: проверено — только MD-документация.
+- `ERP_UI_KIT_CORE.html` указан как PRIMARY во всех обновлённых документах: OK.
+- `ERP_UI_MODULE_CATALOG.html` указан как legacy/reference во всех обновлённых документах: OK.
+- `/superadmin` указан как NEEDS_UI_REWORK: OK.
+- Следующий шаг — designer handoff: OK.
+- Coder не запускается до accepted handoff: OK.
+- AGENT_NETWORK.md и KILO_WORKFLOW.md не требуют правок (уже содержат CURRENT UI KIT OVERRIDE): OK.
+- `git diff --check -- docs/ai`: выполнено (см. FINAL REPORT).
+
+### Результат проверок
+Все проверки пройдены. Документация синхронизирована. Контрольная точка зафиксирована.
+
+### Риски
+- `ERP_UI_KIT_CORE.html` и `ERP_UI_MODULE_CATALOG.html` — untracked. При будущем commit нужно убедиться, что они попадут в Git.
+- `STYLE_ERP_EXTRACTED_RULES.md` — также untracked.
+- Кодовые файлы в рабочем дереве имеют незакоммиченные изменения от предыдущих задач. Это не мешает документационной фиксации.
+
+### Следующий шаг
+Запустить erp-architect, выдать задачу erp-uiux-designer на production-grade handoff `/superadmin` по Core Kit. Designer выбирает CORE modules и COMPOSITE pattern, заполняет MODULE USAGE DECISIONS. Architect проверяет handoff. Только после accepted handoff — coder.
+
+### Статус
+DONE
+
+---
+
+## 2026-06-12 23:45 — KILO/erp-architect / Designer handoff test for /superadmin
+
+### Задача
+Запустить тестовый цикл erp-uiux-designer для подготовки production-grade handoff страницы `/superadmin` по новой дизайн-системе `ERP_UI_KIT_CORE.html`. Код не менять, coder не запускать, commit не делать.
+
+### Исходный контекст
+Прочитаны все обязательные файлы:
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/CHATGPT_COORDINATOR_PROMPT.md`
+- `docs/ai/AGENT_NETWORK.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/ai/KILO_WORKFLOW.md`
+- `docs/ui/ERP_UI_KIT_CORE.html` — PRIMARY (все 45 CORE modules, 10 COMPOSITE patterns, SUPERADMIN READY SET)
+- `docs/ui/PAGE_PATTERN.md`
+- `docs/ui/DESIGN_CODE_INTEGRATION.md`
+- `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`
+- `docs/ui/pages/_PAGE_TEMPLATE.md`
+- `docs/ui/pages/superadmin-dashboard.md`
+- `.kilo/agent/erp-uiux-designer.md`
+
+### Что сделано
+- Сформирована детальная задача для erp-uiux-designer с полным перечнем требований, запретов и проверок.
+- erp-uiux-designer (sub-agent) выполнил production-grade handoff для `/superadmin`:
+  - Заполнил `CORE modules used` — 11 модулей из SUPERADMIN READY SET (CORE-01, 02, 03, 04, 05, 08, 09, 23, 24, 31, 32).
+  - Выбрал COMPOSITE pattern: PATTERN-05 Admin/settings screen + PATTERN-10 Empty first-stage module.
+  - Заполнил MODULE USAGE DECISIONS с 4 детальными таблицами (why chosen, why NOT chosen from READY SET, why NOT chosen other 34 CORE modules).
+  - Добавил секцию 0.2 "Designer production handoff details" из 17 подсекций: current visual diagnosis (9 пунктов), target visual result (7 пунктов), exact layout, typography scale (12 строк), spacing scale (13 значений), color tokens (18 токенов), required sections (7 секций), required states (8 состояний), forbidden texts/classes/patterns, coder checklist (32 пункта), QA checklist (30 пунктов), architect pre-owner review checklist (11 пунктов), owner visual checklist (VISUAL CHECK URL, 15 визуальных проверок, 6 блокеров), failure signs (19 признаков).
+- Выполнен architect handoff review — все проверки пройдены.
+- Handoff признан production-grade: конкретный, однозначный, без ссылок на STYLE ERP, без "на усмотрение кодера", без unknown/private modules.
+- Статус: `DESIGNER_HANDOFF_ACCEPTED_FOR_CODER`.
+
+### Изменённые файлы
+- `docs/ui/pages/superadmin-dashboard.md` (обновлён — 794 строки, было 429)
+- `docs/ai/AGENT_WORK_LOG.md` (обновлён — эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+
+### Принятые решения
+Нет. Новых архитектурных решений не принималось. Handoff принят как production-grade.
+
+### Что НЕ сделано
+- PHP/CSS/view/backend/database/scripts не менялись.
+- Кодер (erp-coder) не запускался.
+- QA (erp-qa-tester) не запускался.
+- Commit не выполнялся (запрещено задачей).
+- `ERP_UI_KIT_CORE.html` не менялся.
+- `ERP_UI_MODULE_CATALOG.html` не менялся.
+
+### Проверки
+- `git diff --check -- docs`: OK (только LF/CRLF warnings, без whitespace errors).
+- `git diff --stat -- docs`: 16 MD-файлов изменено (2268 insertions, 37 deletions), включая `superadmin-dashboard.md` (+550 строк).
+- PHP/CSS/view/backend/database/scripts не менялись: подтверждено — только MD-документация.
+- CORE modules used (11 шт.) существуют в `ERP_UI_KIT_CORE.html`: OK.
+- COMPOSITE pattern (PATTERN-05 + PATTERN-10) существует в `ERP_UI_KIT_CORE.html`: OK.
+- MODULE USAGE DECISIONS заполнены: YES.
+- Handoff достаточно конкретен для кодера: YES.
+- Forbidden/private modules: NO — все модули из Core Kit SUPERADMIN READY SET.
+- Риск, что кодер начнёт изобретать дизайн: NO — handoff не оставляет пробелов.
+- `ERP_UI_KIT_CORE.html` не менялся: подтверждено.
+- `ERP_UI_MODULE_CATALOG.html` не менялся: подтверждено.
+- Кодер не запускался: подтверждено.
+
+### Результат проверок
+Все проверки пройдены. Designer handoff принят архитектором. Production-grade handoff готов к передаче кодеру.
+
+### Риски
+- 3 файла (`ERP_UI_KIT_CORE.html`, `ERP_UI_MODULE_CATALOG.html`, `STYLE_ERP_EXTRACTED_RULES.md`) остаются untracked в git.
+- Кодовые файлы имеют незакоммиченные изменения от предыдущих задач — не блокирует designer handoff, но требует отдельного commit в будущем.
+
+### Следующий шаг
+После принятия этого handoff владельцем/ChatGPT: сформировать отдельную задачу для erp-coder на реализацию `/superadmin` строго по принятому handoff. Затем QA, pre-owner review, owner visual review, commit только после owner approval.
+
+### Статус
+DESIGNER_HANDOFF_ACCEPTED_FOR_CODER

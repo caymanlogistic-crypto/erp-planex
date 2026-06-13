@@ -33,6 +33,24 @@ ERP PLANEX разрабатывается по цепочке:
 
 Пользователь в основном общается с `erp-architect`. Архитектор делегирует задачи дизайнеру, кодеру и тестировщику через агентскую сеть.
 
+KILO снова используется через `erp-architect`, но UI-задачи проходят только по формализованным MD-правилам, Core Kit и page handoff. Кодер не получает UI-задачу без accepted handoff и обязательного блока ограничений.
+
+Текущий статус `/superadmin`: `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`. Следующий шаг — compliance-аудит текущего экрана дизайнером, не QA и не commit.
+
+STYLE ERP — это визуальные образцы, не runtime-библиотека и не библиотека компонентов. К агентам и кодеру передаются только формализованные MD-правила, прежде всего `docs/ui/STYLE_ERP_EXTRACTED_RULES.md` и page handoff.
+
+Первичный рабочий UI-kit для всей агентной цепочки:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html  ← PRIMARY compact working UI-kit
+```
+
+`docs/ui/ERP_UI_MODULE_CATALOG.html` — legacy extraction/reference history only; не основной рабочий каталог дизайнера.
+
+Дизайнер проектирует page handoff только из CORE modules и COMPOSITE patterns из `ERP_UI_KIT_CORE.html`. Если нужного CORE-модуля нет, дизайнер возвращает `BLOCKED: NEEDS_UI_MODULE_EXPANSION`; архитектор запускает отдельную задачу на расширение Core Kit. Кодер не реализует unknown UI modules и возвращает `BLOCKED: UNKNOWN_UI_MODULE`.
+
+UI оценивается только через `COMPLIANT` / `PARTIALLY COMPLIANT` / `NON-COMPLIANT` с указанием источника нормы: STYLE ERP / Core Kit / page handoff / Layout Foundation Gate / Sidebar IA / Design Code. Слова "лучше/хуже", "красиво/некрасиво", "нравится/не нравится" не используются.
+
 ## Обязательный входной контекст для всех агентов
 
 Перед любой задачей агент обязан прочитать:
@@ -45,6 +63,9 @@ ERP PLANEX разрабатывается по цепочке:
 - профильные MD-файлы по задаче.
 
 Если задача затрагивает UI, обязательно читать:
+- `docs/ui/ERP_UI_KIT_CORE.html` — PRIMARY compact working UI-kit;
+- `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`;
+- `docs/ui/ERP_UI_MODULE_CATALOG.html` — legacy extraction/reference history only;
 - `docs/ui/PAGE_PATTERN.md`;
 - `docs/ui/FORMS_STANDARD.md`;
 - `docs/ui/TABLES_STANDARD.md`;
@@ -84,6 +105,7 @@ ERP PLANEX разрабатывается по цепочке:
 - подготовку понятных требований для erp-coder.
 
 Работает по:
+- `docs/ui/ERP_UI_KIT_CORE.html` — PRIMARY compact working UI-kit;
 - `docs/ui/PAGE_PATTERN.md`;
 - `docs/ui/FORMS_STANDARD.md`;
 - `docs/ui/TABLES_STANDARD.md`;
@@ -319,3 +341,21 @@ erp-qa-tester
 ### erp-qa-tester
 
 Проверяет ТЗ, UI-шаблон, архитектуру, runtime, безопасность, MD и логи. Возвращает `ACCEPTED / NEEDS_REWORK / REJECTED / BLOCKED`.
+---
+
+## CURRENT UI KIT OVERRIDE — 2026-06-12
+
+UI tasks now use:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+```
+
+`docs/ui/ERP_UI_MODULE_CATALOG.html` is legacy extraction/reference history only.
+
+Agent handoff rules:
+
+- Designer selects CORE modules and one or more COMPOSITE patterns from `ERP_UI_KIT_CORE.html`.
+- Architect checks those IDs before coder handoff.
+- Coder blocks unknown/private modules.
+- QA checks that all used modules/patterns exist in the core kit or profile MD.

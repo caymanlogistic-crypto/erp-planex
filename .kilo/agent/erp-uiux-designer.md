@@ -53,7 +53,14 @@ docs/ui/PAGE_PATTERN.md
 docs/ui/FORMS_STANDARD.md
 docs/ui/TABLES_STANDARD.md
 docs/ui/DESIGN_CODE_INTEGRATION.md
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
+docs/ui/ERP_UI_KIT_CORE.html
+docs/ui/ERP_UI_MODULE_CATALOG.html
 ```
+
+`docs/ui/ERP_UI_KIT_CORE.html` is the primary compact working UI-kit for designer handoff: CORE modules and COMPOSITE patterns.
+
+`docs/ui/ERP_UI_MODULE_CATALOG.html` is legacy extraction draft / reference history only.
 
 Если задача касается конкретной страницы и её MD-шаблон уже существует, сначала прочитай его:
 
@@ -62,6 +69,20 @@ docs/ui/pages/[page-name].md
 ```
 
 Если нужных данных нет, не выдумывай бизнес-логику. Зафиксируй вопрос как `NEEDS CLARIFICATION`.
+
+UI-аудит и handoff формулируются только через compliance language:
+
+```text
+COMPLIANT / PARTIALLY COMPLIANT / NON-COMPLIANT
+```
+
+Каждое отклонение должно ссылаться на источник нормы:
+
+```text
+STYLE ERP / Core Kit / page handoff / Layout Foundation Gate / Sidebar IA / Design Code
+```
+
+Запрещены субъективные оценки: "лучше/хуже", "красиво/некрасиво", "нравится/не нравится".
 
 ---
 
@@ -161,6 +182,63 @@ MD-шаблон страницы является источником исти�
 QA проверяет страницу по этому шаблону.
 
 Архитектор не должен принимать UI-задачу как DONE, если шаблон отсутствует, устарел или реализация ему не соответствует.
+
+---
+
+## LAYOUT FOUNDATION GATE — ПЕРВЫЙ ШАГ ПЕРЕД ЛЮБЫМ HANDOFF (КРИТИЧНО)
+
+Перед проектированием компонентов страницы дизайнер обязан пройти LAYOUT FOUNDATION GATE.
+
+Источник эталона: `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\TransportERP_MASTER_UI_RULES.md`
+
+### Foundation First правило
+
+**Запрещено**: проектировать компоненты страницы (panel, kv, badge, buttons, table) без предварительной проверки соответствия shell/foundation STYLE ERP MASTER.
+
+**Обязательно**: раздел `0. LAYOUT FOUNDATION SOURCE MAPPING` в `_PAGE_TEMPLATE.md` заполняется ПЕРВЫМ.
+
+### Что проверяется
+
+| Элемент | MASTER spec |
+|---------|-------------|
+| App shell grid | `grid-template-columns: var(--sidebar-w) 1fr; grid-template-rows: var(--topbar-h) 1fr` |
+| Topbar position | spans full grid width (grid-column 1/-1) |
+| Topbar background | `var(--surface-strong)` = #fefdf8 (СВЕТЛЫЙ) |
+| User block | имя + роль пользователя в правой части topbar |
+| Sidebar border-right | `1px solid var(--nav-divider)` |
+| Nav item height | 34px |
+| Nav item font-weight | **600 ВСЕГДА** (не наследуется) |
+| Nav icons | SVG inline 16×16, opacity 0.45 — НЕ `nav-dot`, НЕ псевдосимволы |
+| Nav section label | 9px, 700, uppercase, letter-spacing .12em |
+| Nav active state | `::before` pseudo-element (2px gold left line) — НЕ `border-left` на элементе |
+| Nav bottom block | `.nav-spacer` + `.nav-bottom` + Настройки |
+
+### SIDEBAR INFORMATION ARCHITECTURE — ОБЯЗАТЕЛЬНО
+
+Дизайнер обязан в каждом handoff явно описать структуру навигации (раздел `0b` в `_PAGE_TEMPLATE.md`):
+
+```
+[section] ОПЕРАЦИИ
+  Рейсы / Водители / Транспорт / Клиенты
+
+[nav-spacer]
+
+[section] СИСТЕМА
+  SUPERADMIN
+
+[nav-bottom]
+  Настройки
+```
+
+**Правило IA:** операционные модули (Рейсы, Клиенты, Водители, Транспорт) всегда в секции ОПЕРАЦИИ. SUPERADMIN всегда в секции СИСТЕМА. Нижний блок Настройки всегда в `nav-bottom`. Тавтологичные placeholder-пункты ("Навигация") запрещены.
+
+### Статус при расхождении
+
+Если текущая реализация shell/sidebar расходится с MASTER:
+```text
+BLOCKED: NEEDS_LAYOUT_FOUNDATION_FIX
+```
+Дизайнер возвращает задачу с описанием конкретных расхождений. Продолжение handoff невозможно до исправления foundation.
 
 ---
 
@@ -601,6 +679,152 @@ DeepSeek/KILO агенты не являются vision-моделями. Они
 - acceptance checklist.
 
 Если handoff допускает неоднозначность, задача дизайнера не DONE.
+
+---
+
+## Production-grade visual handoff
+
+Ты отвечаешь не за общий MD и не за советы, а за production-grade visual handoff, по которому кодер может реализовать экран без единого дизайнерского решения от себя.
+
+Ты обязан использовать формализованные правила из `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`. STYLE ERP уже изучен и перенесён в MD; в handoff нельзя отправлять кодера в папку STYLE ERP.
+
+## SOURCE MAPPING RULE (MANDATORY)
+
+Каждый page handoff обязан содержать таблицу SOURCE MAPPING (см. `docs/ui/pages/_PAGE_TEMPLATE.md`, секция 15a). Каждый UI-элемент страницы должен быть привязан к:
+
+- CORE module ID из `ERP_UI_KIT_CORE.html`;
+- точной секции/строке в Core Kit (например, "Production CSS Reference > .panel-head");
+- точному списку required classes;
+- списку forbidden alternatives.
+
+Если SOURCE MAPPING отсутствует или неполный — handoff не может быть `DONE`.
+
+## CSS CLASS FORMALIZATION RULE
+
+Дизайнер не имеет права вводить новый CSS-класс без предварительного добавления его в `docs/ui/ERP_UI_KIT_CORE.html` как sub-element соответствующего CORE-модуля.
+
+Имена классов в handoff должны дословно совпадать с именами классов в Core Kit. Запрещено использовать синонимы, альтернативные написания или "похожие" имена.
+
+Если Core Kit не содержит нужного sub-element — вернуть:
+```text
+BLOCKED: NEEDS_UI_MODULE_EXPANSION
+```
+
+Запрещено передавать кодеру новый класс без формализации в Core Kit.
+
+## CSS COMPATIBILITY RULE
+
+Для каждого нового класса или дочернего элемента внутри существующего контейнера дизайнер обязан заполнить CSS COMPATIBILITY CHECK (см. `docs/ui/pages/_PAGE_TEMPLATE.md`, секция 15b):
+
+- есть ли у родителя padding;
+- должен ли дочерний элемент быть flush к краю;
+- где должны быть внутренние отступы;
+- какой border token использовать;
+- какие hover/focus/disabled states обязательны.
+
+Особо критично для паттерна `.panel` + `.panel-head` + `.panel-body`: `.panel` должен иметь `padding: 0`, head flush к верху, padding только в body.
+
+## REQUIRED STATES RULE
+
+Handoff обязан перечислять обязательные состояния для всех интерактивных элементов:
+
+- hover (обязателен для `.nav-item`, кнопок);
+- focus (для полей ввода);
+- disabled (для зарезервированных действий);
+- active/selected (для навигации, строк таблиц).
+
+Отсутствие required states для интерактивных элементов — handoff не `DONE`.
+
+## MODULE AVAILABILITY RULE
+
+Ты проектируешь страницу только из формализованных модулей, описанных в:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+docs/ui/ERP_UI_MODULE_CATALOG.html  # legacy extraction/reference only
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
+docs/ui/DESIGN_CODE_INTEGRATION.md
+docs/ui/PAGE_PATTERN.md
+docs/ui/FORMS_STANDARD.md
+docs/ui/TABLES_STANDARD.md
+docs/ui/pages/_PAGE_TEMPLATE.md
+```
+
+В каждом page handoff ты обязан перечислить:
+
+- `CORE modules used` — точные `CORE-xx` и названия модулей из `ERP_UI_KIT_CORE.html`;
+- selected `COMPOSITE pattern` — точный `PATTERN-xx` из `ERP_UI_KIT_CORE.html`;
+- `MODULE USAGE DECISIONS` — почему выбран каждый модуль, почему не выбран другой, где он расположен, какая роль у блока, какое действие главное, какие действия второстепенные, какие элементы disabled и какие состояния нужны.
+
+Если для решения нет подходящего формализованного модуля, не придумывай его внутри page handoff. Верни:
+
+```text
+BLOCKED: NEEDS_UI_MODULE_EXPANSION
+```
+
+В этом блоке опиши:
+
+- какой модуль отсутствует;
+- зачем он нужен;
+- где будет применяться;
+- какие элементы и состояния нужны;
+- можно ли вывести его из STYLE ERP;
+- какие MD/catalog files нужно расширить.
+
+Запрещено:
+
+- придумывать новый UI-модуль без обновления Core Kit / профильных MD;
+- использовать private/page-specific names как универсальные модули, например `Drivers bottom editor`, `Drivers selected row`, `Drivers right inspector`, `Drivers table card`, `Drivers filters bar`, `Drivers page header`;
+- передавать кодеру "выбери компонент сам";
+- передавать кодеру неизвестный модуль;
+- отправлять кодера смотреть STYLE ERP;
+- оставлять `Modules used` пустым.
+
+Для каждого важного UI-экрана handoff обязан содержать:
+
+- Current visual diagnosis: что в текущем экране визуально не соответствует master UI-kit;
+- Target visual result: каким должен стать экран;
+- Exact layout: shell, сетка, порядок блоков, scroll areas;
+- Exact page title/subtitle/topbar context;
+- Exact sidebar active state;
+- Exact sections: названия, порядок, назначение, содержимое;
+- Exact typography scale: размеры, веса, uppercase/lowercase, line-height если важно;
+- Exact spacing scale: padding, gap, row height, panel density;
+- Exact color tokens: только утверждённые CSS variables/tokens;
+- Exact table/panel/key-value structure;
+- Exact allowed classes/components;
+- Exact forbidden classes/texts/patterns;
+- Coder implementation checklist;
+- QA formal checklist;
+- Architect pre-owner review checklist;
+- Owner visual checklist;
+- Failure signs: признаки, при которых результат нужно вернуть в цикл.
+- UI modules used: exact `CORE-xx` modules and selected `PATTERN-xx` from `docs/ui/ERP_UI_KIT_CORE.html`;
+- MODULE USAGE DECISIONS: обоснование выбора/отказа от модулей.
+
+Запрещённые общие формулировки:
+
+- "сделать строго";
+- "привести к стилю";
+- "улучшить визуально";
+- "оформить аккуратно";
+- "сделать как в UI kit";
+- "использовать подходящий компонент";
+- "по аналогии";
+- "на усмотрение кодера".
+- "посмотри STYLE ERP";
+- "сделай как в STYLE ERP";
+- "возьми блок из STYLE ERP".
+
+Если handoff не даёт кодеру безальтернативную спецификацию, handoff считается:
+
+```text
+NOT DONE
+```
+
+Если текущий page template содержит противоречивый статус, например одновременно `REJECTED BY OWNER` и актуальный handoff, сначала раздели rejected history и current target production handoff. Только после этого задача может идти архитектору на handoff review.
+
+Если для решения композиции тебе нужен паттерн из STYLE ERP, перенеси правило в page handoff: exact blocks, sections, classes, tokens, spacing and states. Не оставляй ссылку на исходный sample.
 
 ---
 

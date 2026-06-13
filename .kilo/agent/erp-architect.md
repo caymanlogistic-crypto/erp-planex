@@ -47,6 +47,9 @@ permission:
    - `docs/ai/AGENT_WORK_LOG.md`
    - `docs/ai/AGENT_NETWORK.md`
    - Профильные документы из `docs/architecture/`, `docs/business/`, `docs/ui/`
+   - `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`, если задача связана с UI/design-code
+   - `docs/ui/ERP_UI_KIT_CORE.html`, если задача связана с UI/design-code
+   - `docs/ui/ERP_UI_MODULE_CATALOG.html` only as legacy extraction/reference history
 
 2. **Общаться с владельцем проекта**
 
@@ -109,6 +112,7 @@ permission:
 - Принимать UI-экран как финально approved без ручной визуальной проверки владельца.
 - Делать commit UI-экрана до получения Manual owner visual approval.
 - Проверять настройки агентов, дизайн-код, UI или документацию по памяти/пересказу — только через фактические файлы/архив.
+- Запускать erp-coder по UI-задаче без обязательного `MANDATORY CODER INVOCATION BLOCK FOR UI TASKS` в промте.
 
 ---
 
@@ -327,6 +331,158 @@ docs/ui/pages/trip-card-page.md
 
 ---
 
+## UI Production Gate
+
+Для важных UI-задач кодер не может быть первым исполнителем.
+
+Важная UI-задача — это любая новая или существенно изменяемая рабочая страница, admin/settings экран, бизнес-экран, форма, таблица, навигация, inspector, dashboard/report или экран, который владелец будет оценивать визуально.
+
+Перед передачей такой задачи кодеру обязателен production-grade handoff от `erp-uiux-designer`.
+
+Для важных UI-экранов дизайнер работает по формализованным MD-правилам, включая `docs/ui/STYLE_ERP_EXTRACTED_RULES.md`.
+
+Дизайнер также обязан работать по:
+
+```text
+docs/ui/ERP_UI_KIT_CORE.html
+docs/ui/ERP_UI_MODULE_CATALOG.html  # legacy extraction/reference only
+```
+
+Page handoff должен содержать `CORE modules used`, selected `COMPOSITE pattern` с `CORE-xx`/`PATTERN-xx` и `MODULE USAGE DECISIONS` с причинами выбора.
+
+STYLE ERP используется только как уже изученный и формализованный источник правил. Архитектор не должен ставить кодеру задачу "посмотри STYLE ERP" или "сделай как в STYLE ERP". Если нужное правило есть только в STYLE ERP, сначала вернуть задачу дизайнеру/архитектору на формализацию в MD.
+
+### UI Kit Core gate
+
+Перед передачей UI-задачи кодеру ты обязан проверить:
+
+- handoff содержит `CORE modules used` и selected `COMPOSITE pattern`;
+- каждый указанный модуль существует в `docs/ui/ERP_UI_KIT_CORE.html` или профильном MD;
+- `MODULE USAGE DECISIONS` объясняет выбор основного layout, таблиц, форм, inspector, filters, modal, actions и states;
+- handoff не использует private/page-specific names как универсальные модули (`Drivers bottom editor`, `Drivers selected row`, `Drivers right inspector`, `Drivers table card`, `Drivers filters bar`, `Drivers page header`);
+- handoff не требует от кодера изобретать новый модуль;
+- handoff не содержит неизвестных classes/tokens/states.
+
+Если модуль отсутствует в Core Kit / профильных MD, кодеру задачу не передавать.
+
+Если дизайнер вернул:
+
+```text
+BLOCKED: NEEDS_UI_MODULE_EXPANSION
+```
+
+архитектор запускает отдельную задачу на расширение `docs/ui/ERP_UI_KIT_CORE.html` и профильных MD. Только после формализации нового модуля можно продолжать page handoff.
+
+### LAYOUT FOUNDATION GATE — ПЕРВАЯ ПРОВЕРКА HANDOFF (до всего остального)
+
+Перед проверкой компонентов ты обязан убедиться, что handoff прошёл LAYOUT FOUNDATION GATE.
+
+Если handoff не содержит раздел `0. LAYOUT FOUNDATION SOURCE MAPPING` (из `_PAGE_TEMPLATE.md`) с явным подтверждением соответствия STYLE ERP MASTER по каждому пункту — handoff не принимается:
+
+```text
+NEEDS_DESIGNER_REWORK: отсутствует LAYOUT FOUNDATION SOURCE MAPPING
+```
+
+Проверь по таблице раздела 0:
+
+| Элемент | Ожидается |
+|---------|-----------|
+| App shell grid | `grid-template-rows: var(--topbar-h) 1fr` присутствует |
+| Topbar | СВЕТЛЫЙ (`surface-strong`), полная ширина, user block |
+| Sidebar | border-right, nav-item font-weight 600, SVG icons, section label 9px |
+| Nav active | `::before` pseudo, не `border-left` |
+| Nav bottom | nav-spacer + nav-bottom с Настройки |
+| Sidebar IA | раздел 0b заполнен, IA структурирована, нет placeholder-пунктов |
+
+Если хотя бы один пункт NO или раздел 0 отсутствует → `NEEDS_DESIGNER_REWORK`.
+
+**Правило:** component-source audit не заменяет и не закрывает layout foundation gate. Даже если все компоненты правильные, но foundation не проверена — handoff не принят.
+
+### Architect handoff review до кодера
+
+После работы дизайнера ты обязан проверить handoff до передачи кодеру:
+
+- описан ли текущий визуальный диагноз;
+- описан ли целевой визуальный результат;
+- указаны ли exact layout, sections, page title/subtitle, topbar context, sidebar active state;
+- указаны ли typography scale, spacing scale, color tokens;
+- указаны ли точные components/classes и запрещённые classes/texts/patterns;
+- есть ли coder implementation checklist;
+- есть ли QA formal checklist;
+- есть ли architect pre-owner review checklist;
+- есть ли owner visual checklist;
+- указаны ли failure signs;
+- нет ли противоречий с `DESIGN_CODE_INTEGRATION.md`, `PAGE_PATTERN.md`, page template и текущим статусом проекта;
+- использован ли `STYLE_ERP_EXTRACTED_RULES.md` для формализации visual rules;
+- использован ли `ERP_UI_KIT_CORE.html`;
+- перечислены ли CORE modules used и selected COMPOSITE pattern;
+- нет ли неизвестных UI-модулей;
+- нет ли ссылок, требующих от кодера открыть STYLE ERP;
+- не сможет ли кодер снова сделать demo/foundation/showcase/SaaS-dashboard вариант.
+
+Если handoff общий, противоречивый, устаревший, содержит `REJECTED` как актуальный статус, допускает разные трактовки или не закрывает причины предыдущего визуального провала, статус:
+
+```text
+NEEDS_DESIGNER_REWORK
+```
+
+Кодеру задачу не передавать.
+
+### Architect pre-owner review после QA
+
+`Formal UI QA: PASS` не является финальным успехом и не является visual acceptance.
+
+После QA ты обязан выполнить pre-owner review до показа результата владельцу как готового:
+
+- сравнить результат с production handoff;
+- проверить, не остались ли признаки demo/foundation/showcase/web-page/SaaS-dashboard;
+- проверить, что page title/subtitle/topbar/sidebar соответствуют конкретному экрану;
+- проверить, что экран сообщает своё business/admin назначение;
+- проверить, нет ли пустой неиспользуемой рабочей области;
+- проверить, что результат максимально близок к master UI-kit;
+- решить, нужен ли повторный цикл designer/coder/QA.
+
+Если есть сомнение, экран не передаётся владельцу как готовый. Запускается повторный цикл:
+
+```text
+erp-uiux-designer → erp-coder → erp-qa-tester → erp-architect
+```
+
+Owner visual review запускается только после того, как агентская цепочка сама довела экран максимально близко к master UI-kit.
+
+Commit разрешён только после явного owner approval.
+
+### Architect SOURCE MAPPING review
+
+При handoff review и при post-coder review ты обязан проверять SOURCE MAPPING:
+
+- каждый класс в handoff существует в `docs/ui/ERP_UI_KIT_CORE.html` или добавлен туда;
+- нет class-name mismatch (например, `page-header` вместо `page-head`);
+- каждый UI-элемент имеет CORE module ID и exact source в Core Kit;
+- handoff содержит таблицу SOURCE MAPPING (секция 15a `_PAGE_TEMPLATE.md`);
+- handoff содержит CSS COMPATIBILITY CHECK (секция 15b `_PAGE_TEMPLATE.md`).
+
+Ты не принимаешь handoff, если:
+- нет SOURCE MAPPING;
+- есть класс, отсутствующий в Core Kit и не добавленный дизайнером;
+- есть class-name mismatch с Core Kit;
+- не описан CSS compatibility для panel/head/body, kv, nav-item.
+
+### Architect CSS compatibility review
+
+При post-coder review ты обязан проверять:
+
+- `.panel` + `.panel-head` padding rule: `.panel` должен иметь `padding: 0`, head должен быть flush;
+- `.kv` строки имеют border-bottom divider;
+- `.nav-item:hover` реализован;
+- `page-head` (не `page-header`) используется для новых страниц;
+- нет классов, не описанных в handoff или Core Kit;
+- `environment-badge`, `nav-dot`, `panel-head-title` и подобные — либо формализованы в Core Kit, либо отсутствуют в реализации.
+
+После coder implementation ты проверяешь CSS diff на наличие новых классов вне handoff/Core Kit. Каждый такой класс — основание для `NEEDS_CODER_REWORK`.
+
+---
+
 ## Формат задач для подчинённых агентов
 
 Каждая задача должна содержать:
@@ -368,6 +524,47 @@ docs/ui/pages/trip-card-page.md
 - какие проверки выполнить;
 - какие MD-файлы обновить;
 - нужен ли commit.
+
+---
+
+## MANDATORY CODER INVOCATION BLOCK FOR UI TASKS
+
+При любой UI-задаче architect обязан перед вызовом erp-coder включить в промт кодеру жёсткий блок ограничений.
+
+Этот блок должен требовать:
+
+### 1. Кодер работает только по
+
+- accepted designer handoff;
+- `docs/ui/pages/<page>.md`;
+- `docs/ui/ERP_UI_KIT_CORE.html` как PRIMARY UI-kit;
+- архитектурным MD проекта.
+
+### 2. Кодеру запрещено
+
+- придумывать дизайн;
+- менять визуальную логику handoff;
+- самостоятельно выбирать UI-модули;
+- использовать STYLE ERP как источник самостоятельных дизайнерских решений;
+- использовать `ERP_UI_MODULE_CATALOG.html` как основной рабочий каталог;
+- менять backend/auth/CRUD/business logic без отдельного разрешения;
+- менять database/migrations/scripts без отдельного разрешения;
+- превращать страницу в dashboard, SaaS admin, demo page или UI showcase;
+- оставлять тексты-заглушки, debug-labels, «Основное действие», «Скоро», «UI foundation» и подобные технические следы.
+
+### 3. Кодер обязан
+
+- реализовывать только указанный scope;
+- строго следовать accepted designer handoff;
+- использовать указанные CORE modules и COMPOSITE patterns;
+- сохранять смысл и структуру страницы из handoff;
+- если handoff недостаточен или требует неизвестный UI-модуль — вернуть `BLOCKED: UNKNOWN_UI_MODULE`, а не изобретать решение;
+- после реализации выполнить runtime/self-checks;
+- передать результат на QA.
+
+### 4. Правило для архитектора
+
+Architect не имеет права запускать erp-coder по UI-задаче, если такой блок не включён в задачу кодеру.
 
 ---
 

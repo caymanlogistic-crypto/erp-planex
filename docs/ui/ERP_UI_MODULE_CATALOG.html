@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ERP PLANEX UI Module Catalog</title>
+  <style>
+    :root {
+      --sidebar-w: 224px;
+      --topbar-h: 38px;
+      --app-bg: #e2dfd8;
+      --nav-bg: #191816;
+      --nav-hover: #272522;
+      --nav-active-bg: rgba(140,82,28,.28);
+      --nav-gold: #c8933a;
+      --nav-text: rgba(240,238,232,.65);
+      --nav-text-act: #d4a254;
+      --surface-muted: #e8e4db;
+      --surface-form: #f0ede6;
+      --surface-inspector: #f3f1eb;
+      --surface: #f5f3ee;
+      --surface-strong: #fefdf8;
+      --surface-field: #fefdf8;
+      --line-hair: #dedad0;
+      --line-soft: #c9c3b8;
+      --line: #a8a196;
+      --line-strong: #827b70;
+      --text-main: #131210;
+      --text-muted: #4c4840;
+      --text-faint: #78726a;
+      --inverse: #f5f3ee;
+      --accent: #7c4718;
+      --accent-hover: #683c13;
+      --accent-deep: #4e2d0e;
+      --accent-bg: #e8dbc8;
+      --success: #1f6b43;
+      --success-bg: #ddeee5;
+      --warning: #7a5210;
+      --warning-bg: #fdf0d5;
+      --danger: #992e26;
+      --danger-bg: #fcecea;
+      --neutral: #625d57;
+      --neutral-bg: #e3e0da;
+      --chart-1: #c07830;
+      --chart-2: #4a7a9b;
+      --chart-3: #3a8278;
+      --chart-4: #b84c3a;
+      --chart-5: #b89228;
+      --chart-6: #6a6ea0;
+      --chart-7: #6a8a50;
+      --chart-8: #5c7a88;
+      --control-h: 28px;
+      --btn-h: 30px;
+      --toolbar-h: 26px;
+      --row-h: 32px;
+      --thead-h: 30px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--app-bg);
+      color: var(--text-main);
+      font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.35;
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+    }
+    .catalog-shell {
+      min-width: 1440px;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+    }
+    .side {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      background: var(--nav-bg);
+      color: var(--nav-text);
+      border-right: 1px solid rgba(255,255,255,.055);
+      padding: 10px 8px;
+    }
+    .brand { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 8px; color: var(--inverse); font-weight: 700; }
+    .brand-mark { width: 18px; height: 18px; border: 1px solid var(--nav-gold); background: rgba(200,147,58,.16); border-radius: 2px; }
+    .nav-sec { margin: 14px 8px 6px; font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(240,238,232,.28); }
+    .side a { display: flex; height: 28px; align-items: center; padding: 0 8px; color: var(--nav-text); text-decoration: none; border-radius: 2px; font-size: 12px; font-weight: 600; }
+    .side a:hover { background: var(--nav-hover); color: var(--nav-text-act); }
+    .main { min-width: 0; }
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--surface-strong);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .crumbs { color: var(--text-faint); font-size: 12px; }
+    .crumbs strong { color: var(--text-main); }
+    .top-note { color: var(--text-muted); font-size: 12px; }
+    .content { padding: 12px 14px 24px; }
+    .page-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--line-hair);
+      border-radius: 2px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    h1 { margin: 0 0 4px; font-size: 16px; line-height: 1.2; }
+    h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .sub { color: var(--text-muted); }
+    .pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid var(--line-soft); background: var(--surface-muted); border-radius: 2px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+    .rule-box, .source-map, .decision-rules {
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      margin-bottom: 10px;
+    }
+    .box-head { display: flex; align-items: center; justify-content: space-between; min-height: 34px; padding: 8px 10px; background: var(--surface-muted); border-bottom: 1px solid var(--line-hair); }
+    .box-body { padding: 10px; }
+    .rule-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .rule-cell { border: 1px solid var(--line-hair); background: var(--surface); padding: 8px; border-radius: 2px; }
+    .rule-cell b { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { height: 30px; padding: 0 8px; border-bottom: 1px solid var(--line-hair); text-align: left; vertical-align: top; }
+    th { background: var(--surface-muted); color: var(--text-faint); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    td { background: var(--surface-strong); font-size: 12px; }
+    .group-title { margin: 16px 0 6px; display: flex; align-items: center; gap: 8px; }
+    .module {
+      display: grid;
+      grid-template-columns: 70px 310px 1fr 330px;
+      gap: 0;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      margin-bottom: 8px;
+    }
+    .mod-num { padding: 10px; background: var(--surface-muted); border-right: 1px solid var(--line-hair); font-size: 18px; font-weight: 700; color: var(--accent); }
+    .mod-title { padding: 10px; border-right: 1px solid var(--line-hair); }
+    .mod-title h3 { margin: 0 0 5px; font-size: 13px; }
+    .mod-title p { margin: 0; color: var(--text-muted); font-size: 12px; }
+    .mod-spec { padding: 8px 10px; border-right: 1px solid var(--line-hair); }
+    .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 10px; }
+    .spec { min-height: 28px; }
+    .spec b { display: block; color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    .spec span { color: var(--text-main); font-size: 12px; }
+    .mod-example { padding: 8px; background: var(--surface); }
+    .example-stage { min-height: 120px; border: 1px solid var(--line-hair); background: var(--surface-strong); border-radius: 2px; padding: 8px; overflow: hidden; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: var(--btn-h); padding: 0 10px; border-radius: 2px; border: 1px solid var(--line-soft); font-size: 12px; font-weight: 600; background: var(--surface-field); color: var(--text-main); margin: 2px; }
+    .btn-primary { background: var(--accent); border-color: var(--accent-deep); color: var(--inverse); }
+    .btn-secondary { background: linear-gradient(180deg, #fffefc 0%, #e2dbd0 100%); border-color: var(--line-strong); }
+    .btn-ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+    .btn-toolbar { height: var(--toolbar-h); font-size: 11px; }
+    .btn-icon { width: var(--btn-h); padding: 0; }
+    .btn-danger { background: var(--danger-bg); border-color: #ca8880; color: var(--danger); }
+    .btn[disabled], .is-disabled { opacity: .45; cursor: not-allowed; }
+    .badge, .status { display: inline-flex; align-items: center; gap: 5px; min-height: 20px; padding: 0 7px; border-radius: 2px; border: 1px solid var(--line-soft); font-size: 11px; font-weight: 700; }
+    .ok { background: var(--success-bg); color: var(--success); border-color: #7eb89b; }
+    .warn { background: var(--warning-bg); color: var(--warning); border-color: #c9a450; }
+    .bad { background: var(--danger-bg); color: var(--danger); border-color: #ca8880; }
+    .neutral { background: var(--neutral-bg); color: var(--neutral); }
+    .dot { width: 6px; height: 6px; border-radius: 1px; background: currentColor; }
+    .mini-panel { border: 1px solid var(--line-hair); background: var(--surface); border-radius: 2px; }
+    .mini-head { height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; background: var(--surface-muted); border-bottom: 1px solid var(--line-hair); font-size: 12px; font-weight: 700; }
+    .mini-body { padding: 8px; }
+    .mini-tbl { font-size: 12px; }
+    .mini-tbl th, .mini-tbl td { height: 24px; padding: 0 6px; }
+    .field { margin-bottom: 6px; }
+    .field-label { display: block; margin-bottom: 3px; font-size: 10.5px; font-weight: 700; color: var(--text-muted); }
+    .req { color: var(--danger); }
+    .field-input, .field-select, .field-textarea { width: 100%; min-height: var(--control-h); border: 1px solid var(--line-soft); background: var(--surface-field); color: var(--text-main); border-radius: 2px; padding: 4px 7px; font: inherit; font-size: 12px; }
+    .field-textarea { min-height: 54px; resize: vertical; }
+    .field-msg { margin-top: 3px; font-size: 11px; color: var(--text-faint); }
+    .filters { display: flex; gap: 6px; align-items: center; min-height: 36px; background: var(--surface-muted); border: 1px solid var(--line-hair); padding: 4px; }
+    .chip { height: 22px; display: inline-flex; align-items: center; padding: 0 7px; border: 1px solid var(--line-soft); background: var(--surface-field); border-radius: 2px; font-size: 11px; }
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line-hair); }
+    .tab { height: 30px; display: flex; align-items: center; padding: 0 10px; border-bottom: 2px solid transparent; color: var(--text-faint); font-weight: 600; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 0; font-size: 12px; }
+    .kv div { padding: 5px 0; border-bottom: 1px solid var(--line-hair); }
+    .kv .k { color: var(--text-faint); font-weight: 700; }
+    .bars { display: flex; align-items: end; gap: 6px; height: 70px; padding: 8px; }
+    .bar { width: 24px; background: var(--chart-1); border-radius: 2px 2px 0 0; }
+    .line { height: 68px; background: linear-gradient(135deg, transparent 48%, var(--chart-2) 49%, var(--chart-2) 51%, transparent 52%); border-bottom: 1px solid var(--line-soft); }
+    .donut { width: 68px; height: 68px; border-radius: 50%; background: conic-gradient(var(--chart-1) 0 35%, var(--chart-2) 35% 62%, var(--chart-3) 62% 82%, var(--chart-4) 82%); position: relative; }
+    .donut:after { content: ""; position: absolute; inset: 17px; background: var(--surface-strong); border-radius: 50%; }
+    .source-note { margin-top: 8px; color: var(--text-faint); font-size: 11px; }
+    code { background: var(--surface-muted); border: 1px solid var(--line-hair); padding: 1px 4px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div class="catalog-shell">
+  <aside class="side">
+    <div class="brand"><span class="brand-mark"></span><span>ERP PLANEX</span></div>
+    <div class="nav-sec">Catalog</div>
+    <a href="#availability">Module Availability Rule</a>
+    <a href="#source-map">Source map</a>
+    <a href="#designer-rules">Designer selection rules</a>
+    <div class="nav-sec">Groups</div>
+    <div id="side-links"></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs">docs/ui <span>›</span> <strong>ERP_UI_MODULE_CATALOG.html</strong></div>
+      <div class="top-note">Visual reference of formalized UI modules, not production ERP page</div>
+    </div>
+    <div class="content">
+      <section class="page-head">
+        <div>
+          <h1>ERP PLANEX UI Module Catalog</h1>
+          <div class="sub">Формализованный HTML-каталог UI-модулей, извлечённых из STYLE ERP. Дизайнер проектирует page handoff только из этих модулей и профильных MD.</div>
+        </div>
+        <span class="pill">Industrial Graphite + Warm Accent</span>
+      </section>
+
+      <section class="rule-box" id="availability">
+        <div class="box-head"><h2>MODULE AVAILABILITY RULE</h2><span class="pill">mandatory gate</span></div>
+        <div class="box-body">
+          <div class="rule-grid">
+            <div class="rule-cell"><b>Allowed sources</b>Дизайнер имеет право проектировать страницу только из формализованных модулей, описанных в этом каталоге и MD: <code>STYLE_ERP_EXTRACTED_RULES.md</code>, <code>DESIGN_CODE_INTEGRATION.md</code>, <code>PAGE_PATTERN.md</code>, <code>FORMS_STANDARD.md</code>, <code>TABLES_STANDARD.md</code>, <code>pages/_PAGE_TEMPLATE.md</code>.</div>
+            <div class="rule-cell"><b>Missing module</b>Если подходящего модуля нет, дизайнер обязан остановиться и вернуть <code>BLOCKED: NEEDS_UI_MODULE_EXPANSION</code>. Нужно описать отсутствующий модуль, назначение, место применения, элементы, состояния, возможность вывести из STYLE ERP и какие MD/HTML files расширить.</div>
+            <div class="rule-cell"><b>Forbidden</b>Нельзя придумывать новый модуль прямо в page handoff, заставлять кодера изобретать UI, писать "посмотри STYLE ERP", ссылаться на STYLE ERP вместо точного MD/handoff/catalog.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="source-map" id="source-map">
+        <div class="box-head"><h2>Source map</h2><span class="pill">all STYLE ERP files</span></div>
+        <div class="box-body">
+          <table>
+            <thead><tr><th>Source file</th><th>Extracted module groups</th><th>Key classes</th><th>Notes</th><th>Is production-ready pattern</th></tr></thead>
+            <tbody>
+              <tr><td>TransportERP_MASTER_UI_RULES.md</td><td>A-L foundations</td><td>:root tokens, btn, tbl, field, inspector, modal, toast, chart</td><td>Master rules, tokens, density, forbidden patterns.</td><td>YES</td></tr>
+              <tr><td>transporterp_nav_v1.html</td><td>A Shell, B Navigation, G top search</td><td>app, topbar, topbar-brand, logo-mark, brand-tag, topbar-crumbs, top-search, avatar, sidebar, nav-group, nav-section-label, nav-item, nav-count, nav-sub</td><td>Navigation source; UI Kit labels are sample context only.</td><td>PARTIAL</td></tr>
+              <tr><td>transporterp_ui_showcase.html</td><td>C Buttons, D Badges, base tokens</td><td>btn, btn-primary, btn-secondary, btn-ghost, btn-toolbar, btn-icon, badge, status</td><td>Component anatomy; showcase composition is not a production screen.</td><td>PARTIAL</td></tr>
+              <tr><td>transporterp_forms_v1.html</td><td>F Forms, filters, advanced controls</td><td>field, field-label, req, field-input, field-select, field-textarea, field-msg, custom-select, multi-select, lookup, upload</td><td>Form controls and states; page handoff must choose only required controls.</td><td>YES</td></tr>
+              <tr><td>transporterp_tables_v1.html</td><td>E ERP Grid, bulk, expandable, pinned, totals</td><td>panel, toolbar, bulk-bar, tbl-wrap, tbl, th-sort, sort-arrows, cb, row-acts, ra, tr-main, tr-exp-cell, col-pin, tr-total</td><td>Canonical table source for list/grid modules.</td><td>YES</td></tr>
+              <tr><td>transporterp_missing_v1.html</td><td>G Filters, I system components</td><td>tabs-page, tab-btn, modal-overlay, modal, toast-stack, filters-bar, filter-chip, pagination-wrap, empty-state, sk-cell, stepper, ctx-menu</td><td>System components; demo triggers are not production actions.</td><td>PARTIAL</td></tr>
+              <tr><td>transporterp_charts_v1.html</td><td>J Charts/Data visualization</td><td>chart-card, chart-head, chart-body, chart-wrap, legend, legend-item, stat-row, stat-cell, palette-strip, chart-1...chart-8</td><td>Charts allowed only for reporting/analytics with Chart.js task approval.</td><td>YES</td></tr>
+              <tr><td>transporterp_drivers_v19.html</td><td>K Applied drivers pattern, A/H/F/E/D composition</td><td>work, left-stack, drivers-card, driver-form, inspector, inspector-header, inspector-tabs, panel-section, doc-list, activity-list, flight-status</td><td>Best applied screen pattern: list + inspector + bottom editor.</td><td>YES</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="decision-rules" id="designer-rules">
+        <div class="box-head"><h2>DESIGNER MODULE SELECTION RULES</h2><span class="pill">required in page handoff</span></div>
+        <div class="box-body">
+          <div class="rule-grid">
+            <div class="rule-cell"><b>Decision proof</b>Дизайнер обязан указать, почему выбран модуль, почему не выбран другой, где он расположен, какая роль блока на странице, какое действие главное, какие действия второстепенные, какие элементы временно disabled и какие состояния нужны.</div>
+            <div class="rule-cell"><b>Page handoff</b>В page handoff обязательны: main page purpose, primary work object, main layout, primary/secondary actions, table/form/inspector/filters/modal required YES/NO with reasons, states, modules used with reasons, modules explicitly not used with reasons.</div>
+            <div class="rule-cell"><b>Blocked rule</b>Если дизайнер не может выбрать подходящий модуль из каталога, статус только <code>BLOCKED: NEEDS_UI_MODULE_EXPANSION</code>. Кодеру нельзя передавать неизвестный UI-модуль.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="modules"></section>
+    </div>
+  </main>
+</div>
+
+<script>
+const groups = [
+  ["A", "Shell / Layout", ["App Shell","Full sidebar layout 224px","Compact sidebar 44px","Topbar 38px","Brand zone / logo mark / brand tag","Breadcrumbs / page context","Top search / global search","User block / avatar","Page wrapper / content area","Page header","Page title / subtitle / eyebrow","Page actions","Work area","Split layout: main table + right inspector","Left stack / bottom editor layout","Grid rows: 2-column / 3-column / full-width","Content body / dense page sections"]],
+  ["B", "Navigation", ["Nav group","Nav section label","Nav item","Active nav item","Parent nav item","Nav counter","Alert counter","Expand/collapse nav item","Nav sub-menu","Nav sub-item","Nav bottom/system section","Sidebar scrollbar","Nav icon rules"]],
+  ["C", "Buttons / Actions", ["Button base","Primary button","Secondary button","Ghost button","Toolbar button","Icon button","Danger button","Disabled button","Row action button","Action toolbar","Toolbar separator","Bulk action bar","Dropdown/action menu trigger","Confirm dangerous action pattern"]],
+  ["D", "Badges / Status", ["Generic badge","Success badge","Warning badge","Danger badge","Neutral badge","Flight status: search","Flight status: found","Flight status: started","Flight status: completed","Flight status: attention","Flight status: planned_route","Status marker dot","Panel tag","Mini status/stat marker"]],
+  ["E", "Tables / ERP Grid", ["Table panel","Table toolbar","Table scroll wrapper","ERP table base","Sticky table header","Sortable header","Sort arrows","Compact table","Striped table","Selected row","Hover row","Checkbox column","Numeric column","Mono/code column","Muted column","Actions column","Row actions on hover","Expandable row","Expanded row key-value area","Pinned/sticky column","Totals row","Bulk selection bar","Table pagination area","Mini progress in table","Stars/rating cell","Empty table state"]],
+  ["F", "Forms / Fields", ["Field wrapper","Field label","Required marker","Text input","Select","Textarea","Field message","Error field state","Success field state","Readonly field","Disabled field","Radio group","Radio item","Checkbox group","Checkbox item","Indeterminate checkbox","Number input with stepper","Input group with prefix/suffix","Input with icon","Clearable input","Input with action button","Masked input","Searchable custom select","Multi-select with tags","Entity lookup","Date/date-range input","File upload / document upload","Form grid 2 columns","Form grid 3 columns","Form section","Form alert","Validation summary"]],
+  ["G", "Filters / Search", ["Filters bar","Filter field","Filter search","Filter select","Filter date","Filter separator","Filter count","Filter chips strip","Filter chip","Clear filters action","Search input with icon","Top/global search with keyboard hint"]],
+  ["H", "Panels / Cards / Sections", ["Panel base","Panel head","Panel title","Panel subtitle","Panel body","Admin/settings section","System notice","Warning notice","Info notice","Inspector panel","Inspector header","Inspector title","Inspector tabs","Inspector body","Inspector section","Key-value row","Key-value list","Entity header","Operational info block","Document/log section","Bottom editor form","Demo/showcase cards - forbidden/reference only"]],
+  ["I", "System Components", ["Page-level tabs","Inspector compact tabs","Modal overlay","Small modal","Medium modal","Large modal","Modal header/body/footer","Danger confirm modal","Modal icon variants","Toast stack","Success toast","Warning toast","Danger toast","Info toast","Context menu","Context menu item","Context menu separator","Context menu keyboard hint","Pagination","Pagination button","Pagination active state","Pagination disabled state","Page size select","Empty state","Compact empty state","Error empty state/code","Skeleton/loading","Skeleton row/cell","Stepper","Loading overlay/spinner","Tooltip/hint"]],
+  ["J", "Charts / Data Visualization", ["Chart card","Chart card header","Chart card body","Chart wrapper","Line chart","Bar chart","Donut chart","Pie chart","Stacked chart","Chart legend","Legend item","Legend dot","Legend line","Stat row","Stat cell","Stat value/delta","Donut center label","Palette strip","Chart color system: chart-1 ... chart-8"]],
+  ["K", "Drivers full module / Applied ERP Screen Patterns", ["Drivers/list screen shell","Drivers page header","Drivers filters bar","Drivers table card","Drivers table row","Drivers selected row","Drivers right inspector","Drivers tabs/details","Drivers bottom editor","Drivers document/status/log sections","Driver/vehicle/entity avatar","Applied split work area pattern","Applied table + inspector + editor composition"]],
+  ["L", "SUPERADMIN-specific future modules", ["SUPERADMIN central panel shell","Company/system table","Company/system status badge","Feature/module toggle list","Central DB status key-value","System readiness notice","Reserved sections list","Admin/settings compact section","Disabled future action","Needs implementation marker, without debug badge","SUPERADMIN owner visual checklist block"]]
+];
+
+const groupMeta = {
+  A: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_nav_v1.html; transporterp_drivers_v19.html", classes:"app, sidebar, topbar, topbar-brand, page, page-head, work, left-stack, inspector", applies:"Структура экрана, рабочая область, shell and layout.", states:"desktop/FHD, active context, scroll, split, compact", use:"Применять как каркас страницы: сначала shell/topbar/sidebar, затем page-head и рабочая зона. Вариант list+inspector выбирать для реестров, admin/settings - для настроек, table-only - для простых списков.", forbid:"Не делать landing hero, mobile-first, пустую рабочую область, случайную сетку, showcase composition."},
+  B: {src:"transporterp_nav_v1.html", classes:"sidebar, nav-group, nav-section-label/nav-sec, nav-item, is-active, is-parent, nav-count, is-alert, nav-sub, nav-sub-item, nav-bottom", applies:"Левая навигация ERP.", states:"default, hover, active, parent active, open/closed, alert counter", use:"Строить меню группами. Section label нужен для смыслового раздела. Active ставится текущему route, parent active - когда активен подпункт. Counter только для полезного количества, alert counter - для требующих внимания задач.", forbid:"Не добавлять случайные пункты, случайные иконки/цвета, UI foundation/demo context на бизнес-странице, a.nav-item color: inherit."},
+  C: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_ui_showcase.html; transporterp_tables_v1.html; transporterp_drivers_v19.html", classes:"btn, btn-primary, btn-secondary, btn-ghost, btn-toolbar, btn-icon, btn-danger, row-acts, ra, bulk-bar", applies:"Действия страницы, форм, таблиц и toolbar.", states:"default, hover, focus, disabled, danger confirm", use:"btn-primary - главное действие страницы или формы, не больше 1 в рабочей зоне. btn-secondary - вторичное рядом с primary. btn-ghost - отмена и тихие действия. btn-toolbar - действия внутри toolbar/table/filter bar. btn-icon - компактные utility/row actions. btn-danger - удаление только с подтверждением. disabled - будущая или недоступная операция.", forbid:"Не делать несколько primary в одной зоне, не маскировать danger под primary, не оставлять disabled похожим на active."},
+  D: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_ui_showcase.html; transporterp_drivers_v19.html", classes:"badge, badge-ok, badge-warning, badge-danger, flight-status, status-search, status-found, status-started, status-completed, status-attention, status-planned_route, flight-status-dot, panel-tag", applies:"Статусы объектов, рейсов, документов, системных секций.", states:"success, warning, danger, neutral, 6 flight statuses", use:"Использовать компактно рядом с сущностью или в таблице. Flight status только для рейсов/операционного движения. Marker dot помогает быстро сканировать статус.", forbid:"Не использовать кислотные Bootstrap цвета, chart colors для UI-status, debug badge как основной смысл."},
+  E: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_tables_v1.html; transporterp_drivers_v19.html", classes:"panel, toolbar, tbl-wrap, tbl, th-sort, sort-arrows, tbl-compact, tbl-striped, is-sel, cb, col-num, col-mono, col-muted, col-actions, row-acts, tr-exp-cell, col-pin, tr-total, bulk-bar, pagination-wrap", applies:"Реестры, списки сущностей, отчёты с деталями.", states:"hover, selected, sorted, checked, expanded, pinned, totals, empty, loading", use:"ERP grid обязателен для списков сущностей. Table toolbar нужен для действий над таблицей. Filters нужны при большом наборе записей. Bulk bar - только когда выбраны строки. Row actions - действия одной строки, toolbar - действия списка. Pinned columns - при горизонтальном скролле; expandable rows - для коротких деталей; totals row - для отчётов.", forbid:"Не заменять реестры карточками, не показывать row actions постоянно, не смешивать массовые действия со строковыми."},
+  F: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_forms_v1.html; transporterp_missing_v1.html; transporterp_drivers_v19.html", classes:"field, field-label, req, field-input, field-select, field-textarea, field-msg, is-error, is-success, readonly, disabled, radio, cb, stepper, input-group, custom-select, multiselect, lookup, upload, form-grid, form-alert, validation-summary", applies:"Формы создания, редактирования, фильтры, modal forms, bottom editor.", states:"required, focus, error, success, readonly, disabled, indeterminate, upload progress", use:"Обычная форма - для отдельной операции. Bottom editor - когда список и редактирование живут на одной странице. Right inspector form - для быстрых фактов выбранной строки. Modal form - для короткого действия. Grid 2/3 columns - для плотных редакторов. Lookup/select/multiselect использовать только когда выбор связан с сущностями или множественными значениями. Validation summary - сверху формы при нескольких ошибках.", forbid:"Не использовать browser-default controls, не делать длинную простыню полей, не путать readonly с disabled."},
+  G: {src:"transporterp_missing_v1.html; transporterp_nav_v1.html; transporterp_tables_v1.html; transporterp_drivers_v19.html", classes:"filters-bar, filter-field, filter-chip, top-search, kbd, field-input, field-select, btn-toolbar", applies:"Поиск, фильтры списков, глобальный поиск.", states:"empty, active filters, chips, clear action, keyboard hint", use:"Filters bar ставится над таблицей. Search - первым, select/date - после него. Filter chips показывать только активные фильтры. Global search в topbar нужен для межразделового поиска; keyboard hint только для действительно поддержанной команды.", forbid:"Не делать большой filter card, не показывать fake Ctrl K, если поиска нет."},
+  H: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_missing_v1.html; transporterp_drivers_v19.html", classes:"panel, panel-head, panel-title, panel-sub, panel-body, admin-section, notice, inspector, inspector-header, inspector-tabs, inspector-body, panel-section, kv-row, dl, entity-head, doc-list, activity-list, driver-form", applies:"Рабочие секции страницы, inspector, admin/settings, key-value, documents/log.", states:"normal, warning, info, active tab, selected entity, empty section", use:"Panel - рабочая секция. Admin/settings section - настройки и зарезервированные модули. Key-value list - факты и статусы. System notice - системное состояние. Warning notice - риск. Inspector - детали выбранной строки. Tabs - когда есть несколько типов данных. Decorative cards не заменяют рабочие секции.", forbid:"Не превращать секции в декоративные карточки или KPI dashboard, не использовать showcase cards как production pattern."},
+  I: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_missing_v1.html", classes:"tabs-page, tab-btn, tabs-insp, insp-tab-btn, modal-overlay, modal, modal-sm, modal-md, modal-lg, modal-head, modal-body, modal-foot, toast-stack, toast, ctx-menu, ctx-item, pagination-wrap, pg-btn, pg-select, empty-state, sk-cell, sk-row, stepper, tooltip", applies:"Системные UI-компоненты и состояния.", states:"active, disabled, open, success/warning/danger/info, empty, error, loading, skeleton, done/active step", use:"Tabs - для разделов страницы/inspector. Modal - короткое фокусное действие; danger confirm обязателен для удаления. Toast - результат операции. Context menu - дополнительные действия. Pagination - длинные списки. Empty/error/loading - каждый async/list state. Tooltip - только для иконок/неочевидных действий.", forbid:"Не использовать modal для больших рабочих процессов, toast как замену error state, spinner вместо table skeleton при длинной загрузке."},
+  J: {src:"TransportERP_MASTER_UI_RULES.md; transporterp_charts_v1.html", classes:"chart-card, chart-head, chart-body, chart-wrap, legend, legend-item, legend-dot, legend-line, stat-row, stat-cell, stat-value, stat-delta, donut-center, palette-strip, chart-1...chart-8", applies:"Отчёты и аналитика.", states:"empty, loading, selected series, legend toggle", use:"Charts использовать только для report/analytics. Line - динамика во времени. Bar - сравнение категорий. Donut/pie - структура долей. Stacked - состав по периодам. Stat row - краткое числовое сопровождение, не замена ERP grid.", forbid:"Не использовать charts вместо операционной таблицы; не использовать semantic status colors как chart series."},
+  K: {src:"transporterp_drivers_v19.html", classes:"drivers-card, drivers-toolbar, work, left-stack, inspector, driver-form, doc-list, activity-list, flight-status, avatar", applies:"Прикладной экран справочника водителей и аналогичные ERP list-detail screens.", states:"selected row, active tab, bottom editor, document status, activity status", use:"Использовать как эталон композиции для справочников: left table + right inspector + bottom editor. Выбирать, когда пользователь сканирует список и редактирует выбранную сущность без ухода со страницы.", forbid:"Не копировать данные/тексты водителей в другие модули; не превращать этот pattern в generic dashboard."},
+  L: {src:"docs/ui/pages/superadmin-dashboard.md; STYLE ERP rules derived from admin/settings", classes:"page-head, admin-section, panel, tbl, status-neutral, kv-row, notice, is-disabled", applies:"Будущие SUPERADMIN экраны.", states:"ready, needs implementation, disabled future action, reserved, warning/notice", use:"Для SUPERADMIN центральной панели разрешены page header, system notice, company/system table, key-value status, reserved sections, disabled future actions, compact admin/settings sections. Обязателен owner visual checklist.", forbid:"Запрещены demo form, UI foundation, showcase table, random action button, KPI dashboard, debug badge."}
+};
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function example(m) {
+  const g = m.group;
+  if (g === "C") return `<button class="btn btn-primary">Primary</button><button class="btn btn-secondary">Secondary</button><button class="btn btn-ghost">Ghost</button><button class="btn btn-toolbar">Toolbar</button><button class="btn btn-icon">...</button><button class="btn btn-danger">Danger</button>`;
+  if (g === "D") return `<span class="badge ok"><span class="dot"></span>Активен</span> <span class="badge warn"><span class="dot"></span>Внимание</span> <span class="badge bad"><span class="dot"></span>Ошибка</span><div style="height:6px"></div><span class="status neutral"><span class="dot"></span>${escapeHtml(m.name)}</span>`;
+  if (g === "E") return `<div class="mini-panel"><div class="mini-head"><span>${escapeHtml(m.name)}</span><button class="btn btn-toolbar">Действие</button></div><table class="mini-tbl"><thead><tr><th>Код</th><th>Статус</th><th class="col-num">Сумма</th></tr></thead><tbody><tr><td>TR-428</td><td><span class="badge ok">OK</span></td><td class="col-num">48 500</td></tr><tr><td>TR-429</td><td><span class="badge warn">Проверка</span></td><td class="col-num">12 800</td></tr></tbody></table></div>`;
+  if (g === "F") return `<div class="field"><label class="field-label">${escapeHtml(m.name)} <span class="req">*</span></label><input class="field-input" value="Значение"></div><div class="field"><label class="field-label">Комментарий</label><textarea class="field-textarea">Текст</textarea><div class="field-msg">Сообщение поля / ошибка / помощь</div></div>`;
+  if (g === "G") return `<div class="filters"><input class="field-input" style="max-width:130px" value="Поиск"><select class="field-select" style="max-width:120px"><option>Статус</option></select><span class="chip">Активный фильтр</span><button class="btn btn-toolbar">Сбросить</button></div>`;
+  if (g === "H") return `<div class="mini-panel"><div class="mini-head"><span>${escapeHtml(m.name)}</span><span class="pill">section</span></div><div class="mini-body"><div class="kv"><div class="k">Сущность</div><div>ERP PLANEX</div><div class="k">Статус</div><div><span class="badge neutral">В работе</span></div></div></div></div>`;
+  if (g === "I") return `<div class="tabs"><div class="tab active">Основное</div><div class="tab">Документы</div><div class="tab">История</div></div><div class="mini-body"><button class="btn btn-secondary">Открыть</button><span class="chip">${escapeHtml(m.name)}</span></div>`;
+  if (g === "J") return `<div class="mini-panel"><div class="mini-head"><span>${escapeHtml(m.name)}</span><span class="pill">chart</span></div><div class="mini-body" style="display:flex;gap:12px;align-items:center"><div class="donut"></div><div style="flex:1"><div class="bars"><div class="bar" style="height:35px"></div><div class="bar" style="height:58px;background:var(--chart-2)"></div><div class="bar" style="height:44px;background:var(--chart-3)"></div></div></div></div></div>`;
+  if (g === "K") return `<div class="mini-panel"><div class="mini-head"><span>Drivers pattern</span><span class="badge ok">selected</span></div><div class="mini-body" style="display:grid;grid-template-columns:1fr 110px;gap:6px"><table class="mini-tbl"><tbody><tr><td>Смирнов А. П.</td></tr><tr><td>Volvo FH</td></tr></tbody></table><div class="kv" style="grid-template-columns:42px 1fr"><div class="k">ВУ</div><div>2027</div><div class="k">Док.</div><div>3</div></div></div></div>`;
+  if (g === "L") return `<div class="mini-panel"><div class="mini-head"><span>SUPERADMIN</span><span class="badge neutral">В разработке</span></div><div class="mini-body"><div class="kv"><div class="k">Компания</div><div>PLANEX</div><div class="k">Feature</div><div>module.trips</div><div class="k">Действие</div><div><button class="btn btn-secondary is-disabled">Будущее</button></div></div></div></div>`;
+  if (g === "B") return `<div style="background:var(--nav-bg);padding:8px;border-radius:2px"><div class="nav-sec" style="margin:0 0 5px">Раздел</div><div style="height:28px;background:var(--nav-active-bg);color:var(--nav-text-act);display:flex;align-items:center;padding:0 8px;border-left:2px solid var(--nav-gold);font-weight:600">${escapeHtml(m.name)} <span style="margin-left:auto">28</span></div><div style="height:28px;color:var(--nav-text);display:flex;align-items:center;padding:0 8px">Подпункт</div></div>`;
+  return `<div class="mini-panel"><div class="mini-head"><span>${escapeHtml(m.name)}</span><span class="pill">${m.group}</span></div><div class="mini-body"><div style="height:28px;background:var(--surface-muted);border:1px solid var(--line-hair);margin-bottom:6px"></div><div style="display:grid;grid-template-columns:1fr 120px;gap:6px"><div style="height:54px;border:1px solid var(--line-hair);background:var(--surface-strong)"></div><div style="height:54px;border:1px solid var(--line-hair);background:var(--surface-inspector)"></div></div></div></div>`;
+}
+
+function moduleRule(m) {
+  const meta = groupMeta[m.group];
+  return {
+    description: `${m.name}: формализованный UI-модуль группы ${m.groupName}. Используется как точная единица handoff, а не как свободная идея.`,
+    source: meta.src,
+    applies: meta.applies,
+    classes: meta.classes,
+    states: meta.states,
+    rules: meta.use,
+    forbidden: meta.forbid,
+    designerUse: `Дизайнер может использовать модуль, если задача страницы явно совпадает с назначением: ${meta.applies}`,
+    stop: `Остановиться и вернуть BLOCKED: NEEDS_UI_MODULE_EXPANSION, если для "${m.name}" нужны новые элементы, состояния, размеры, классы или поведение, которых нет в catalog/MD.`,
+    when: `WHEN TO USE: ${meta.use} WHERE: располагать в зоне страницы, соответствующей группе ${m.groupName}. PAIRS WITH: соседние модули этой группы и базовые shell/buttons/status modules. VARIANTS: выбирать только описанный вариант; расширение через catalog/MD. WHEN NOT TO USE: ${meta.forbid}`
+  };
+}
+
+const modules = [];
+let n = 1;
+for (const [code, title, names] of groups) {
+  for (const name of names) modules.push({n:n++, group:code, groupName:title, name});
+}
+
+const sideLinks = document.getElementById("side-links");
+sideLinks.innerHTML = groups.map(([code, title]) => `<a href="#group-${code}">${code}. ${escapeHtml(title)}</a>`).join("");
+
+const host = document.getElementById("modules");
+host.innerHTML = groups.map(([code, title]) => {
+  const items = modules.filter(m => m.group === code);
+  const cards = items.map(m => {
+    const r = moduleRule(m);
+    return `<article class="module" data-module="${m.n}">
+      <div class="mod-num">${m.n}</div>
+      <div class="mod-title"><h3>${escapeHtml(m.name)}</h3><p>${escapeHtml(r.description)}</p><p class="source-note">Group ${m.group}: ${escapeHtml(m.groupName)}</p></div>
+      <div class="mod-spec"><div class="spec-grid">
+        <div class="spec"><b>Источник STYLE ERP</b><span>${escapeHtml(r.source)}</span></div>
+        <div class="spec"><b>Где применяется</b><span>${escapeHtml(r.applies)}</span></div>
+        <div class="spec"><b>Обязательные classes/tokens</b><span>${escapeHtml(r.classes)}</span></div>
+        <div class="spec"><b>Состояния</b><span>${escapeHtml(r.states)}</span></div>
+        <div class="spec"><b>Правила использования</b><span>${escapeHtml(r.rules)}</span></div>
+        <div class="spec"><b>Запрещённые ошибки</b><span>${escapeHtml(r.forbidden)}</span></div>
+        <div class="spec"><b>Когда дизайнер может использовать</b><span>${escapeHtml(r.designerUse)}</span></div>
+        <div class="spec"><b>Когда остановиться</b><span>${escapeHtml(r.stop)}</span></div>
+        <div class="spec" style="grid-column:1/-1"><b>WHEN TO USE / WHEN NOT TO USE</b><span>${escapeHtml(r.when)}</span></div>
+      </div></div>
+      <div class="mod-example"><div class="example-stage">${example(m)}</div></div>
+    </article>`;
+  }).join("");
+  return `<section id="group-${code}"><div class="group-title"><h2>${code}. ${escapeHtml(title)}</h2><span class="pill">${items.length} modules</span></div>${cards}</section>`;
+}).join("");
+</script>
+</body>
+</html>

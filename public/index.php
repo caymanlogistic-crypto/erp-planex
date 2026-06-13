@@ -55,6 +55,7 @@ $router->get('/test-db', function () use ($db) {
 
 $router->get('/superadmin', function () use ($config) {
     $pageTitle = 'SUPERADMIN';
+    $pageContext = 'Центральная панель управления';
 
     ob_start();
     require base_path('app/View/pages/superadmin_dashboard.php');

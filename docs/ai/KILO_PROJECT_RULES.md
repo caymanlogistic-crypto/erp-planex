@@ -136,3 +136,63 @@ SUPERADMIN — центральная административная пане�
 - **запрещены** KPI dashboard cards (если явно не approved);
 - **запрещены** псевдоиконки;
 - **запрещены** debug badges как основной визуальный элемент.
+
+---
+
+## Правило UI Production Loop
+
+UI-задачи не являются обычными coding-задачами.
+
+Важный UI нельзя отдавать кодеру без production-grade handoff от `erp-uiux-designer`.
+
+Перед кодером `erp-architect` обязан выполнить handoff review. Если handoff общий, противоречивый, устаревший, содержит `REJECTED` как актуальный статус или допускает разные трактовки, статус `NEEDS_DESIGNER_REWORK`, кодеру не передавать.
+
+`erp-coder` обязан вернуть `BLOCKED: NEEDS_DESIGNER_REWORK`, если handoff слабый, отсутствует, противоречит design-code/PAGE_PATTERN или не указывает точные sections/classes/tokens.
+
+`Formal UI QA: PASS` не является visual acceptance.
+
+После QA `erp-architect` обязан выполнить pre-owner review и удерживать задачу в loop до соответствия master UI-kit. Если экран всё ещё похож на demo/foundation/showcase/SaaS-dashboard или не сообщает конкретное business/admin назначение, запускать повторный цикл designer/coder/QA.
+
+Owner visual review и commit разрешены только после того, как агентская цепочка сама довела экран максимально близко к master UI-kit. Commit UI — только после явного owner approval.
+
+---
+
+## Правило STYLE ERP
+
+Папка `C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\` является набором визуальных образцов, а не runtime-библиотекой или библиотекой компонентов.
+
+STYLE ERP изучается Codex GPT / архитектором / дизайнером и формализуется в:
+
+```text
+docs/ui/STYLE_ERP_EXTRACTED_RULES.md
+docs/ui/ERP_UI_KIT_CORE.html
+```
+
+Кодеру запрещено выбирать дизайн из STYLE ERP, копировать HTML/CSS из STYLE ERP или получать задачу "посмотри STYLE ERP". Если handoff требует этого, кодер возвращает `BLOCKED: NEEDS_DESIGNER_REWORK`.
+
+KILO используется через `erp-architect`, но UI-задачи передаются кодеру только после accepted handoff по Core Kit и page MD. QA и commit для `/superadmin` запрещены до Manual owner visual approval.
+
+## Правило UI Kit Core
+
+`docs/ui/ERP_UI_KIT_CORE.html` — основной рабочий UI-kit ERP PLANEX.
+
+- Дизайнер проектирует страницу только из CORE modules и COMPOSITE patterns, описанных в Core Kit и профильных MD.
+- Дизайнер обязан перечислять `CORE modules used` и selected `COMPOSITE pattern` в page handoff.
+- Дизайнер обязан заполнить `MODULE USAGE DECISIONS` с причинами выбора и отказа от альтернатив.
+- Если модуля нет, дизайнер возвращает `BLOCKED: NEEDS_UI_MODULE_EXPANSION`.
+- Архитектор не передаёт кодеру handoff с unknown UI module.
+- Кодер реализует только формализованные UI-модули.
+- Если handoff использует неизвестный модуль, кодер возвращает `BLOCKED: UNKNOWN_UI_MODULE`.
+- QA проверяет, что все UI-модули перечислены и существуют в `ERP_UI_KIT_CORE.html` / профильных MD.
+- Unknown UI module = `Formal UI QA: FAIL`.
+- `docs/ui/ERP_UI_MODULE_CATALOG.html` остаётся legacy extraction/reference history only и не является основным рабочим каталогом.
+- `/superadmin` остаётся `PARTIALLY COMPLIANT / NEEDS_UI_REWORK` до точечного UI rework и Manual owner visual approval.
+---
+
+## CURRENT UI KIT OVERRIDE — 2026-06-12
+
+`docs/ui/ERP_UI_KIT_CORE.html` is the primary compact working UI-kit for ERP PLANEX.
+
+`docs/ui/ERP_UI_MODULE_CATALOG.html` is legacy extraction/reference history only.
+
+Designer handoff must use `CORE modules used`, selected `COMPOSITE pattern`, and `MODULE USAGE DECISIONS`. Missing module means `BLOCKED: NEEDS_UI_MODULE_EXPANSION`; coder unknown module means `BLOCKED: UNKNOWN_UI_MODULE`; QA fails unknown/private modules.
