@@ -1296,4 +1296,277 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
     require base_path('app/View/layouts/main.php');
 });
 
+$router->get('/company/drivers', function () use ($config, $db) {
+    $pageTitle = 'Водители';
+    $pageContext = 'Водители — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $drivers = [];
+        $dbError = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_drivers.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $drivers = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_drivers.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Водители — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $drivers = [];
+            $dbError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_drivers.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/004_create_company_drivers.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $driverStmt = $localPdo->query("SELECT * FROM drivers ORDER BY created_at DESC");
+        $drivers = $driverStmt->fetchAll(PDO::FETCH_ASSOC);
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $drivers = [];
+        $dbError = 'Не удалось подключиться к базе данных компании.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_drivers.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/drivers/create', function () use ($config, $db) {
+    $pageTitle = 'Создать водителя';
+    $pageContext = 'Водители — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdDriver = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_drivers_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $success = false;
+            $errors = [];
+            $old = [];
+            $formError = null;
+            $createdDriver = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_drivers_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Водители — Компания: ' . $company['name'];
+
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+        $createdDriver = null;
+    } catch (\Exception $e) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+        $createdDriver = null;
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_drivers_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/drivers/create', function () use ($config, $db) {
+    $pageTitle = 'Создать водителя';
+    $pageContext = 'Водители — Компания';
+
+    $companyId = (int)($_GET['company_id'] ?? 0);
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $createdDriver = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        $formError = 'Компания не найдена';
+
+        ob_start();
+        require base_path('app/View/pages/company_drivers_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/company_drivers_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Водители — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $formError = 'Создание водителей недоступно';
+
+            ob_start();
+            require base_path('app/View/pages/company_drivers_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        try {
+            $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/004_create_company_drivers.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $fullName = trim($_POST['full_name'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $licenseNumber = trim($_POST['license_number'] ?? '');
+        $licenseCategory = trim($_POST['license_category'] ?? '');
+        $licenseIssueDate = trim($_POST['license_issue_date'] ?? '');
+        $licenseExpireDate = trim($_POST['license_expire_date'] ?? '');
+        $comments = trim($_POST['comments'] ?? '');
+
+        if ($fullName === '') {
+            $errors['full_name'] = 'Обязательное поле';
+        }
+
+        if ($phone === '') {
+            $errors['phone'] = 'Обязательное поле';
+        }
+
+        if (empty($errors['phone'])) {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM drivers WHERE phone = ?');
+            $checkStmt->execute([$phone]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['phone'] = 'Телефон уже используется в этой компании';
+            }
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/company_drivers_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO drivers (full_name, phone, license_number, license_category,
+             license_issue_date, license_expire_date, status, comments)
+             VALUES (:full_name, :phone, :license_number, :license_category,
+             :license_issue_date, :license_expire_date, :status, :comments)'
+        );
+        $insert->execute([
+            ':full_name'           => $fullName,
+            ':phone'               => $phone,
+            ':license_number'      => $licenseNumber !== '' ? $licenseNumber : null,
+            ':license_category'    => $licenseCategory !== '' ? $licenseCategory : null,
+            ':license_issue_date'  => $licenseIssueDate !== '' ? $licenseIssueDate : null,
+            ':license_expire_date' => $licenseExpireDate !== '' ? $licenseExpireDate : null,
+            ':status'              => 'active',
+            ':comments'            => $comments !== '' ? $comments : null,
+        ]);
+
+        $createdDriver = [
+            'id'                => $localPdo->lastInsertId(),
+            'full_name'         => $fullName,
+            'phone'             => $phone,
+            'license_number'    => $licenseNumber !== '' ? $licenseNumber : null,
+            'license_category'  => $licenseCategory !== '' ? $licenseCategory : null,
+        ];
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка создания водителя: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_drivers_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
