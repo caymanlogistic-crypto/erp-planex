@@ -1,27 +1,39 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — FULL_REFERENCE_FUNCTIONAL_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — FULL_RUNTIME_ACCEPTED
 
-**ПОЛНЫЙ ФУНКЦИОНАЛЬНЫЙ КОНТУР СПРАВОЧНОГО БЛОКА ЗАВЕРШЁН. QA: 65/65 PASS, 0 BLOCKER.**
+**RUNTIME-ПРОВЕРКА ЗАВЕРШЕНА. 3 БАГА ИСПРАВЛЕНЫ. DOCUMENT DELETE/REPLACE РЕАЛИЗОВАНЫ. ГОТОВО К РУЧНОЙ ПРОВЕРКЕ ВЛАДЕЛЬЦЕМ.**
 
 ## Состояние
-- 79 маршрутов (Auth + SUPERADMIN + Company 6 entities CRUD + Documents + Ownership)
-- 16 новых view-файлов (view + edit для каждой сущности)
-- 2 новые миграции (008 ownership columns, 009 entity_access_grants)
-- index.php: 6864 строк
+- 81 маршрут (Auth + SUPERADMIN + Company 6 entities CRUD + Documents upload/list/download/delete/replace + Ownership)
+- 16 view-файлов
+- 9 локальных миграций (001-009)
+- index.php: ~7036 строк
 - All php -l clean
+- Server: http://127.0.0.1:8016
 
 ## Реализовано
 - Auth: login/logout/sessions/route guards (3 роли)
 - SUPERADMIN: companies CRUD + owner management + password reset
 - Company Logists: list/create/view/edit/reset-password/archive
 - Company Clients/Contractors/Drivers/Vehicles/Crews: list/create/view/edit/archive
-- Documents: upload/list/download
+- Documents: upload/list/download + delete (archive) + replace
 - Ownership: created_by_user_id/role, entity_access_grants, filtering, grant UI
 
+## Баги исправлены (runtime session)
+- B1: documents table missing in local DBs → migration 007 applied
+- B2: document delete/replace missing → implemented 2 routes + UI
+- B3: archived docs visible in list → added status filter
+
 ## Статус
-FULL_REFERENCE_FUNCTIONAL_ACCEPTED. Готово к ручной проверке владельцем.
+FULL_RUNTIME_ACCEPTED. Готово к ручной проверке владельцем.
+
+## Тестовые учётные данные
+- SUPERADMIN: admin@planex.local / test1234
+- Owner (company 1): test_owner / owner123
+- Owner (company 2): spugov / owner123
+- Logists: any login in company 1 / owner123
 
 ## Next step
-Владелец проверяет → commit → UI-полировка Главным дизайнером / КЛАУД.
+Владелец проверяет в браузере → commit → UI-полировка Главным дизайнером / КЛАУД.
 
 ---
 
@@ -73,8 +85,9 @@ Code status:
 - Auth & Sessions: AUTH_BLOCK_ACCEPTED (73/73 PASS)
 - **Document Upload: DOCUMENT_UPLOAD_ACCEPTED (45/48 PASS, 0 BLOCKER)**
 
-Latest commit: `21fdddc` feat(superadmin): add company and owner management
-Working tree: dirty (31 files changed/new: Auth Block + Document Upload)
+Latest commit: `3c4f34d` feat(reference): complete functional management block
+
+Working tree: clean
 Push: NO
 
 New routes (6 total, including auth):
@@ -655,7 +668,7 @@ docs/ui/pages/[page-name].md
 
 ## Текущий фокус
 
-Текущий фокус: **`REFERENCE_BLOCK_ACCEPTED`** — справочный фундамент завершён и проверен. Готов к ручной проверке владельцем.
+Текущий фокус: **`FULL_RUNTIME_ACCEPTED`** — runtime-проверка завершена, все баги исправлены, document delete/replace реализованы. Готово к ручной проверке владельцем.
 
 ### Targeted coder rework result (2026-06-13)
 
@@ -778,10 +791,13 @@ UI Module Catalog:
 
 ## Последние commits
 
-Актуальные последние commits на момент начала этой задачи:
-
 ```text
-7100015 feat(superadmin): add companies registry provisioning
+3c4f34d feat(reference): complete functional management block with auth, documents, CRUD, ownership and access grants
+21fdddc feat(superadmin): add company and owner management
+cecdebb docs: add final QA report for reference block
+7df0821 feat(company): add crews registry
+8f2bb00 feat(company): add vehicles registry
+```
 50f96a9 Fix ERP PLANEX UI process rules and SUPERADMIN handoff
 be55198 Create SUPERADMIN Stage 4a migration runner
 b3c60c4 Update portable context after SUPERADMIN Stage 4a runner commit
@@ -816,20 +832,16 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **Справочный фундамент — REFERENCE_BLOCK_ACCEPTED (2026-06-13).**
+Активная задача: **Runtime-проверка справочного блока — FULL_RUNTIME_ACCEPTED (2026-06-13).**
 
-Все 8 модулей реализованы и проверены:
-1. ~~SUPERADMIN Companies Registry.~~ **FUNCTIONAL_ACCEPTED.**
-2. ~~SUPERADMIN Company Owner User.~~ **FUNCTIONAL_ACCEPTED.**
-3. ~~Company Logist User.~~ **FUNCTIONAL_ACCEPTED.**
-4. ~~Company Clients Registry.~~ **FUNCTIONAL_ACCEPTED.**
-5. ~~Company Contractors Registry.~~ **FUNCTIONAL_ACCEPTED.**
-6. ~~Company Drivers Registry.~~ **FUNCTIONAL_ACCEPTED.**
-7. ~~Company Vehicles Registry.~~ **FUNCTIONAL_ACCEPTED.**
-8. ~~Company Crews Registry.~~ **FUNCTIONAL_ACCEPTED.**
-9. ~~Комплексная проверка справочного блока.~~ **REFERENCE_BLOCK_ACCEPTED (78/78 PASS).**
-10. **Owner manual functional review — NEXT.**
-11. Главный дизайнер / КЛАУД UI-полировка — после ручной приёмки.
+Результаты runtime-сессии:
+- 94+ проверок через HTTP/browser
+- 3 бага найдено и исправлено (B1: documents table missing, B2: delete/replace gap, B3: archived docs filter)
+- Document delete/replace реализованы (2 новых маршрута)
+- Все CRUD-операции, auth, ownership, grants — подтверждены работающими
+- Server URL: http://127.0.0.1:8016
+
+Следующий шаг: **Владелец выполняет ручную проверку в браузере.**
 
 Исторический список завершённых шагов:
 

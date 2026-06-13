@@ -119,20 +119,32 @@
 <div class="page-head">
     <div>
         <a href="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-ghost" style="margin-bottom:4px">&larr; Назад к документам</a>
-        <h1>Загрузить документ</h1>
+        <h1><?= $replaceDocId > 0 ? 'Заменить документ' : 'Загрузить документ' ?></h1>
         <p class="text-muted"><?= e($entityLabel) ?> &laquo;<?= e($entityName) ?>&raquo; &bull; Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
+
+<?php if ($replacedDoc): ?>
+    <div class="notice" style="margin-bottom:8px;background:var(--surface-strong);border:1px solid var(--border)">
+        Замена файла <strong><?= e($replacedDoc['original_name']) ?></strong> (<?= e($replacedDoc['mime_type']) ?>, <?= e(formatFileSize($replacedDoc['file_size'])) ?>).
+        Текущий файл будет заменён новым.
+    </div>
+<?php endif; ?>
 
 <?php if ($formError): ?>
     <div class="notice warn" style="margin-bottom:8px"><?= e($formError) ?></div>
 <?php endif; ?>
 
 <form method="post"
-      action="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>"
+      action="/company/documents/<?= $replaceDocId > 0 ? 'replace' : 'upload' ?>?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>"
       enctype="multipart/form-data"
       class="panel">
     <div class="panel-body">
+
+        <?php if ($replaceDocId > 0): ?>
+            <input type="hidden" name="replace_doc_id" value="<?= $replaceDocId ?>">
+            <input type="hidden" name="redirect" value="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>">
+        <?php endif; ?>
 
         <div class="form-section">
             <h3 class="panel-head-title">Документ</h3>
@@ -140,7 +152,7 @@
             <div class="field">
                 <label class="field-label">Тип документа <span class="req">*</span></label>
                 <input type="text" name="document_type" class="field-input" required
-                       value="<?= e($old['document_type'] ?? '') ?>"
+                       value="<?= e($old['document_type'] ?? $replacedDoc['document_type'] ?? '') ?>"
                        placeholder="Например: Договор, Паспорт, СТС, Свидетельство">
                 <div class="field-msg">Укажите тип документа (договор, паспорт, доверенность и т.д.)</div>
                 <?php if (!empty($errors['document_type'])): ?>
@@ -173,7 +185,7 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Загрузить</button>
+            <button type="submit" class="btn btn-primary"><?= $replaceDocId > 0 ? 'Заменить' : 'Загрузить' ?></button>
             <a href="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-ghost">&larr; Назад к документам</a>
         </div>
 

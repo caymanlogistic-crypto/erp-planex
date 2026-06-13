@@ -117,6 +117,10 @@
                         <td class="col-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><?= e($doc['comments'] ?? '') ?></td>
                         <td class="col-actions">
                             <a href="/company/documents/download?id=<?= $doc['id'] ?>" class="btn btn-toolbar">Скачать</a>
+                            <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>&replace=<?= $doc['id'] ?>" class="btn btn-toolbar">Заменить</a>
+                            <form method="post" action="/company/documents/delete?id=<?= $doc['id'] ?>&redirect=<?= urlencode('/company/documents?entity_type=' . $entityType . '&entity_id=' . $entityId) ?>" style="display:inline" onsubmit="return confirm('Архивировать документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
+                                <button type="submit" class="btn btn-toolbar" style="color:var(--danger)">Архивировать</button>
+                            </form>
                         </td>
                     </tr>
                     <?php endforeach; ?>

@@ -1,5 +1,49 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 21:20 — KILO/erp-architect — Full Runtime Verification Before Owner Review
+
+### Задача
+Выполнить полный runtime-test перед ручной проверкой владельца: проверить все CRUD-операции, документы, права доступа, ownership, grants, исправить ошибки.
+
+### Результат
+**FULL_RUNTIME_ACCEPTED**. 94+ проверок, все критические баги исправлены.
+
+### Найденные баги и исправления
+
+| # | Баг | Причина | Исправление |
+|---|-----|---------|-------------|
+| B1 | Таблица `documents` отсутствовала в локальных БД | Миграция 007 не была авто-применена | Применена вручную к `erp_company_1` и `erp_company_2` |
+| B2 | Document delete/replace не реализованы | Функциональный gap | Реализованы: POST `/company/documents/delete` (архивирование), POST `/company/documents/replace` (замена файла), кнопки «Заменить»/«Архивировать» в UI |
+| B3 | Архивные документы отображались в списке | SQL-запрос не фильтровал по статусу | Добавлен `AND status != 'archived'` |
+
+### Реализовано (document delete/replace)
+- 2 новых маршрута: POST `/company/documents/delete`, POST `/company/documents/replace`
+- View `company_documents.php`: кнопки «Заменить» и «Архивировать» в каждой строке
+- View `company_documents_upload.php`: режим замены (title, hidden fields, form action)
+- Безопасность: проверка компании, entity, прав доступа, whitelist расширений, path traversal
+
+### Подтверждено работающим
+- Auth: SUPERADMIN login/logout/guards, Owner login, Logist login, Logist blocked from /company/logists (403)
+- SUPERADMIN: companies list, create, view, edit, status change, owner view/edit/password reset
+- Company: logists CRUD, clients CRUD, contractors CRUD, drivers CRUD, vehicles CRUD, crews CRUD
+- Documents: upload PDF/JPG/PNG, PHP/HTML blocked, download with secure headers, storage outside public, cross-company access blocked
+- Ownership: logist sees own records, logist doesn't see others' records without grant
+- Grants: owner grants access, logist sees granted records, `entity_access_grants` table works
+
+### Изменённые файлы
+- `public/index.php` (+170 строк: delete/replace routes, archived filter fix)
+- `app/View/pages/company_documents.php` (delete/replace buttons)
+- `app/View/pages/company_documents_upload.php` (replace mode support)
+- `docs/ai/AGENT_WORK_LOG.md` (эта запись)
+- `docs/ai/PROJECT_STATUS.md` (обновлён)
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` (обновлён)
+- `docs/qa/QA_FULL_RUNTIME_REPORT_REFERENCE_BLOCK.md` (создан)
+
+### Статус
+DONE — FULL_RUNTIME_ACCEPTED, готово к ручной проверке владельца
+
+---
+
 ## 2026-06-13 23:50 — KILO/erp-architect — Full Reference Functional Completion
 
 ### Задача

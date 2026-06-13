@@ -6092,7 +6092,7 @@ $router->get('/company/documents', function () use ($config, $db) {
         }
 
         $docStmt = $localPdo->prepare(
-            "SELECT * FROM documents WHERE entity_type = ? AND entity_id = ? ORDER BY created_at DESC"
+            "SELECT * FROM documents WHERE entity_type = ? AND entity_id = ? AND status != 'archived' ORDER BY created_at DESC"
         );
         $docStmt->execute([$entityType, $entityId]);
         $documents = $docStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -6128,8 +6128,11 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
                    'vehicle' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicles', 'backRoute' => '/company/vehicles'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
-    $pageTitle = 'Загрузить документ';
-    $pageContext = 'Загрузка документа — Компания';
+    $replaceDocId = (int)($_GET['replace'] ?? 0);
+    $replacedDoc = null;
+
+    $pageTitle = $replaceDocId > 0 ? 'Заменить документ' : 'Загрузить документ';
+    $pageContext = ($replaceDocId > 0 ? 'Замена документа — ' : 'Загрузка документа — ') . 'Компания';
     $entityTypeError = false;
     $entityNotFound = false;
     $success = false;
@@ -6237,6 +6240,19 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
         $company = $company ?? null;
         $entityName = '';
         $dbError = 'Не удалось подключиться к базе данных компании. Проверьте, что локальная БД создана.';
+    }
+
+    if ($replaceDocId > 0 && !$entityNotFound && !$dbError && $company && $company['status'] === 'active') {
+        try {
+            $docStmt = $localPdo->prepare('SELECT * FROM documents WHERE id = ? AND entity_type = ? AND entity_id = ?');
+            $docStmt->execute([$replaceDocId, $entityType, $entityId]);
+            $replacedDoc = $docStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$replacedDoc) {
+                $replaceDocId = 0;
+            }
+        } catch (\Exception $e) {
+            $replaceDocId = 0;
+        }
     }
 
     ob_start();
@@ -6583,6 +6599,162 @@ $router->get('/company/documents/download', function () use ($config, $db) {
     } catch (\Exception $e) {
         http_response_code(500);
         echo 'Error downloading file';
+    }
+});
+
+$router->post('/company/documents/delete', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+
+    $companyId = getSessionCompanyId();
+    $docId = (int)($_GET['id'] ?? 0);
+    $redirect = $_GET['redirect'] ?? '/company/dashboard';
+
+    if ($docId <= 0 || !$companyId) {
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || $company['status'] !== 'active') {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        $docStmt = $localPdo->prepare('SELECT * FROM documents WHERE id = ?');
+        $docStmt->execute([$docId]);
+        $doc = $docStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$doc) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $updateStmt = $localPdo->prepare('UPDATE documents SET status = :status, updated_at = NOW() WHERE id = :id');
+        $updateStmt->execute([':status' => 'archived', ':id' => $docId]);
+
+        header('Location: ' . $redirect);
+        exit;
+    } catch (\Exception $e) {
+        header('Location: ' . $redirect);
+        exit;
+    }
+});
+
+$router->post('/company/documents/replace', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+
+    $companyId = getSessionCompanyId();
+    $docId = (int)($_POST['replace_doc_id'] ?? 0);
+    $redirect = $_POST['redirect'] ?? '/company/dashboard';
+
+    if ($docId <= 0 || !$companyId) {
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || $company['status'] !== 'active') {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        $docStmt = $localPdo->prepare('SELECT * FROM documents WHERE id = ?');
+        $docStmt->execute([$docId]);
+        $oldDoc = $docStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$oldDoc) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $fileError = $_FILES['document_file']['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($fileError !== UPLOAD_ERR_OK) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $originalName = $_FILES['document_file']['name'];
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+        if (!in_array($ext, $allowedExt, true)) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $fileSize = $_FILES['document_file']['size'];
+        if ($fileSize > 10 * 1024 * 1024) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        if (strpos($originalName, '../') !== false || strpos($originalName, '..\\') !== false
+            || strpos($originalName, '/') !== false || strpos($originalName, '\\') !== false) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $storageBase = storage_path('companies/' . $companyId . '/documents/');
+        $entityDir = $storageBase . $oldDoc['entity_type'] . '/' . $oldDoc['entity_id'] . '/';
+        if (!is_dir($entityDir)) {
+            mkdir($entityDir, 0755, true);
+        }
+
+        $storedName = 'doc_' . uniqid() . '.' . $ext;
+        $tmpPath = $_FILES['document_file']['tmp_name'];
+
+        if (!move_uploaded_file($tmpPath, $entityDir . $storedName)) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $mimeType = $_FILES['document_file']['type'] ?: mime_content_type($entityDir . $storedName);
+        $documentType = trim($_POST['document_type'] ?? $oldDoc['document_type'] ?? '');
+
+        $updateStmt = $localPdo->prepare(
+            'UPDATE documents SET original_name = :oname, stored_name = :sname, mime_type = :mime,
+             file_size = :fsize, document_type = :dtype, status = :status,
+             uploaded_by_user_id = :uid, uploaded_by_role = :urole, updated_at = NOW()
+             WHERE id = :id'
+        );
+        $updateStmt->execute([
+            ':oname' => $originalName,
+            ':sname' => $storedName,
+            ':mime' => $mimeType,
+            ':fsize' => $fileSize,
+            ':dtype' => $documentType ?: null,
+            ':status' => 'uploaded',
+            ':uid' => (int)$_SESSION['user_id'],
+            ':urole' => $_SESSION['role_code'] ?? null,
+            ':id' => $docId,
+        ]);
+
+        header('Location: ' . $redirect);
+        exit;
+    } catch (\Exception $e) {
+        header('Location: ' . $redirect);
+        exit;
     }
 });
 
