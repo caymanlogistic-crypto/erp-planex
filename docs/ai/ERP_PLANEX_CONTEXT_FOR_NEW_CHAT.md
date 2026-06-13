@@ -1,4 +1,109 @@
+# CURRENT CONTEXT OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANIES_REGISTRY_FUNCTIONAL_ACCEPTED
+
+**First functional module `SUPERADMIN Companies Registry` — FUNCTIONAL_ACCEPTED. QA passed (67/67).**
+
+**ACCELERATED FUNCTIONAL DEVELOPMENT MODE active.** Manual visual approval deferred. UI polish deferred.
+
+Latest stable commit remains: `91c6911`. Working tree has uncommitted functional changes.
+
+Code status: module implemented, migration 005 applied, provisioning flow works (central record → local DB → storage).
+
+Approved owner decisions for the next module:
+
+1. Fields entered by `SUPERADMIN` when creating an expeditor/company:
+   - use the same basic business fields as the current contractor/client standard for now;
+   - this must be a separate SUPERADMIN expeditor/company registry table/model, not reuse the local contractor table;
+   - baseline fields for the first implementation: `name`, `inn`, `kpp`, `ogrn`, `legal_address`, `physical_address`, `contact_person`, `contact_phone`, `contact_email`, `status`, `comments`;
+   - `name` and `inn` are required at minimum because the current contractor/client standard marks them required;
+   - do not invent extra legal/tax fields beyond this without owner approval.
+
+2. Local DB name generation:
+   - local DB name is generated automatically from company ID;
+   - do not ask the user to enter the local DB name manually;
+   - do not use slug/key as the source of truth for DB name generation.
+
+3. Storage folder generation:
+   - storage folder is generated/named by company ID;
+   - do not use slug/key as the source of truth for storage folder generation.
+
+Important correction to older docs:
+- older mentions that `key/slug` is used in URL/path/DB names are superseded for DB and storage generation by this owner decision;
+- `key/slug` may remain as a UI/URL/display machine code only if already required by existing schema, but it must not drive local DB name or storage folder name in the first Companies Registry implementation.
+
+Next required action:
+1. Keep MD updated with this decision.
+2. Prepare exact `erp-coder` task for the first code module `SUPERADMIN Companies Registry`.
+3. Coder must not implement extra functionality beyond Companies Registry/provisioning foundation.
+
+---
+
 # ERP PLANEX — переносимый контекст для нового ChatGPT-чата
+
+## CURRENT CONTEXT OVERRIDE — 2026-06-13 15:04 — READY_FOR_NEW_CHAT_TRANSFER
+
+Этот файл обновлен для перехода в новый ChatGPT-чат.
+
+Latest stable commit: `91c6911`.
+
+Current working tree after planning docs: dirty, because documentation for the next business path was updated and not committed yet.
+
+Current focus: подготовка первого кодового модуля нового цикла — `SUPERADMIN Companies Registry`.
+
+Already documented:
+- `docs/business/EXPEDITOR_ONBOARDING_WORKFLOW.md`
+- `docs/architecture/SUPERADMIN_COMPANIES.md`
+- `docs/architecture/PERMISSIONS_MODEL.md`
+- `docs/architecture/DOCUMENT_STORAGE_MODEL.md`
+- `docs/ai/DECISIONS_LOG.md` — DECISION-0031
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+
+The 3 concrete technical details have now been clarified by the owner and documented in the newer override above plus DECISION-0032.
+
+Next action after reading this file: prepare a precise `erp-coder` task for the first module `SUPERADMIN Companies Registry`; do not ask these 3 questions again unless the owner reopens the decision.
+
+---
+
+## CURRENT CONTEXT OVERRIDE — 2026-06-13 14:52 — EXPEDITOR_ONBOARDING_PLAN_DOCUMENTED
+
+Latest stable commit before this planning task: `91c6911`.
+
+Current project focus: start business development after accepted `/superadmin` checkpoint.
+
+Owner-approved next functional path:
+
+```text
+SUPERADMIN создает экспедитора
+→ SUPERADMIN отдельным действием создает главного пользователя экспедитора
+→ главный пользователь / Руководитель создает локального Логиста
+→ Логист ведет клиентов, подрядчиков, транспорт, водителей и связки
+```
+
+Key decisions:
+- Экспедитор = отдельная локальная ERP / компания.
+- Создание экспедитора из SUPERADMIN автоматом создает центральную запись, локальную БД и storage-папку.
+- Кодовая база общая; в папке экспедитора хранятся только uploaded documents.
+- Главный пользователь экспедитора = `Руководитель`.
+- `Руководитель` создается SUPERADMIN отдельным действием после создания экспедитора.
+- `Руководитель` хранится в центральной БД SUPERADMIN и привязывается к экспедитору.
+- После общего логина `Руководитель` попадает в локальную ERP своего экспедитора.
+- Локальные пользователи, включая `Логист`, хранятся в локальной БД экспедитора.
+- Клиенты и подрядчики — отдельные справочники / таблицы / формы.
+- Термины первого этапа: `клиент` и `подрядчик`; отдельный `перевозчик` не вводится.
+
+Primary planning docs:
+- `docs/business/EXPEDITOR_ONBOARDING_WORKFLOW.md`
+- `docs/architecture/SUPERADMIN_COMPANIES.md`
+- `docs/architecture/PERMISSIONS_MODEL.md`
+- `docs/architecture/DOCUMENT_STORAGE_MODEL.md`
+- `docs/ai/DECISIONS_LOG.md` — DECISION-0031.
+
+Next step:
+Перед кодингом уточнить техническую схему `SUPERADMIN Companies Registry`: поля экспедитора, генерацию имени локальной БД, генерацию storage-папки, хранение параметров подключения без секретов в git, применение локальных миграций, обработку provisioning failure.
+
+Do not write business code until these technical details are clarified.
+
+---
 
 ## Назначение файла
 
@@ -209,7 +314,11 @@ docs/ui/pages/[page-name].md
 
 ## Текущий фокус
 
-Текущий фокус: **`OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT`** для `/superadmin`.
+Текущий фокус: **`FUNCTIONAL_ACCEPTED`** — первый бизнес-модуль `SUPERADMIN Companies Registry` реализован и прошёл QA.
+
+Следующий модуль: **Главный пользователь экспедитора (Руководитель)** — отдельное действие SUPERADMIN после создания экспедитора.
+
+**ACCELERATED FUNCTIONAL DEVELOPMENT MODE** — приоритет функционала над визуальной полировкой.
 
 ### Targeted coder rework result (2026-06-13)
 
@@ -369,16 +478,14 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **commit текущей контрольной точки и переход к SUPERADMIN business foundation. Статус: OWNER_ACCEPTED_FOR_CONTINUED_DEVELOPMENT.**
+Активная задача: **SUPERADMIN Companies Registry — FUNCTIONAL_ACCEPTED (2026-06-13).**
 
 Следующий рабочий шаг:
-1. ~~Foundation rework cycle: designer → architect → coder → architect review.~~ **DONE (2026-06-13).**
-2. ~~Manual owner visual review по скриншоту.~~ **DONE: не принято визуально.**
-3. ~~`erp-architect → erp-uiux-designer`: compliance-аудит текущего `/superadmin`.~~ **DONE (2026-06-13): PARTIALLY COMPLIANT, 5 отклонений, 0 BLOCKER.**
-4. ~~`erp-architect → erp-coder`: точечный UI rework по 5 отклонениям.~~ **DONE (2026-06-13): все 5 исправлены.**
-5. ~~Owner visual review / решение владельца по продолжению.~~ **DONE: принято для продолжения разработки, `DESIGN_REVIEW_PENDING` не блокирует.**
-6. Commit текущей точки.
-7. Следующий этап: SUPERADMIN business foundation.
+1. ~~Foundation rework cycle.~~ **DONE.**
+2. ~~SUPERADMIN Companies Registry — designer handoff.~~ **DONE (architect-created, accelerated mode).**
+3. ~~SUPERADMIN Companies Registry — coder implementation.~~ **DONE (2026-06-13).**
+4. ~~SUPERADMIN Companies Registry — QA.~~ **DONE: FUNCTIONAL_ACCEPTED (67/67).**
+5. Следующий модуль: Главный пользователь экспедитора (Руководитель).
 
 Исторический список завершённых шагов:
 

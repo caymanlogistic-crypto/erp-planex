@@ -1,3 +1,20 @@
+# UPDATE — 2026-06-13 — ID-BASED DB/STORAGE GENERATION OVERRIDE
+
+Owner-approved correction for the first `SUPERADMIN Companies Registry` code module:
+
+- local DB name is generated automatically from company ID;
+- storage folder is generated/named by company ID;
+- SUPERADMIN does not manually enter local DB name;
+- `key/slug` must not be used as the source of truth for DB name or storage folder generation.
+
+The older `companies.key` description below says it may be used in URL, paths and DB names. That older statement is superseded for DB and storage generation. For the first implementation, `key/slug` can remain only as a separate machine/display/URL code if required by existing schema, but not as the driver of DB/storage identity.
+
+The `companies` schema may need an additional migration or separate registry table/model to store the owner-approved expeditor fields: `inn`, `kpp`, `ogrn`, `legal_address`, `physical_address`, `contact_person`, `contact_phone`, `contact_email`, `comments`.
+
+Do not invent extra fields or credentials storage without owner approval.
+
+---
+
 # ERP PLANEX — SUPERADMIN_DATABASE
 
 ## Назначение

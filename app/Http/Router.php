@@ -17,6 +17,17 @@ class Router
         return $this;
     }
 
+    public function post(string $path, callable $handler): self
+    {
+        $this->routes[] = [
+            'method'  => 'POST',
+            'path'    => $path,
+            'handler' => $handler,
+        ];
+
+        return $this;
+    }
+
     public function dispatch(string $method, string $uri): mixed
     {
         $uri = parse_url($uri, PHP_URL_PATH);

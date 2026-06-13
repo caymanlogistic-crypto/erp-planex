@@ -1,5 +1,176 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-13 — KILO/erp-qa-tester — QA SUPERADMIN Companies Registry
+
+### Задача
+Провести QA-проверку модуля SUPERADMIN Companies Registry по чеклисту из handoff и архитектурных требований.
+
+### Результат
+**FUNCTIONAL_ACCEPTED**. 67 проверок, 67 PASS, 0 FAIL, 0 BLOCKER.
+
+- Функционал: форма создания (10 полей, валидация name/inn), список компаний (таблица, badge-статусы, empty/error states), provisioning flow (центральная запись → локальная БД → storage → status active).
+- БД/Storage: `erp_company_{id}`, `storage/companies/{id}/` — оба от company_id, не от slug/key.
+- Миграции: 5 applied, идемпотентны.
+- Архитектура: main.php не изменён, SQL не во view, shell/topbar/sidebar не сломаны.
+- Безопасность: паролей в БД/миграциях/git нет, `.env` не tracked, `e()` используется.
+- PHP syntax: 5/5 clean.
+- UI handoff: структура страниц/классы соответствуют, demo-placeholder UI отсутствует.
+- Документация: AGENT_WORK_LOG.md и PROJECT_STATUS.md обновлены.
+
+### Что НЕ проверялось
+- Ручная визуальная приёмка (отложена per accelerated mode).
+- Runtime HTTP-тесты через браузер (локальный сервер не запускался).
+- FILTERS search/pagination (только UI skeleton, backend не реализован).
+
+### Статус
+DONE — FUNCTIONAL_ACCEPTED
+
+---
+
+## 2026-06-13 — KILO/erp-coder — Реализация SUPERADMIN Companies Registry
+
+### Задача
+Реализовать первый функциональный модуль: SUPERADMIN Companies Registry — центральный реестр экспедиторов / компаний в панели SUPERADMIN.
+
+### Что сделано
+- Создана миграция 005: `database/migrations/005_add_expeditor_fields_to_companies.sql` — ALTER TABLE companies добавлены поля `inn`, `kpp`, `ogrn`, `legal_address`, `physical_address`, `contact_person`, `contact_phone`, `contact_email`, `comments`, `error_message`, индекс `idx_inn`.
+- Миграция применена (1 applied). Идемпотентность подтверждена (повторный запуск: 5 skipped).
+- Добавлен метод `post()` в `app/Http/Router.php`.
+- Модифицирован `app/Core/Database.php`: поддержка пустого `database` параметра для соединения без указания БД (нужно для CREATE DATABASE).
+- Добавлены маршруты в `public/index.php`:
+  - `GET /superadmin/companies` — список компаний (SELECT * FROM companies ORDER BY created_at DESC).
+  - `GET /superadmin/companies/create` — форма создания экспедитора.
+  - `POST /superadmin/companies/create` — обработка создания экспедитора с provisioning flow.
+- Создан view `app/View/pages/superadmin_companies.php` — реестр компаний: page-head, filters-bar, таблица с колонками ID/Название/ИНН/Статус/Создан, empty state, error state.
+- Создан view `app/View/pages/superadmin_companies_create.php` — форма создания: 4 секции (Основные данные, Адреса, Контакты, Дополнительно), валидация name/inn, ошибки под полями (.is-error), сохранение старых значений.
+- Добавлены CSS-классы в `app.css`: `.page-head-actions`, `.form-section`, `.filters-bar`, `.field-label`, `.field-input`, `.field-select`, `.field-textarea`, `.field-msg`, `.is-error`, `.req`, `.btn-ghost`, `.btn-toolbar`, `.badge-ok`, `.badge-warn`, `.badge-danger`, `.dot`, `.notice.warn`, `.notice.success`, `.notice.danger`, `.tbl-wrap`, `.tbl`, `.col-mono`, `.col-muted`, `.col-actions`.
+- Provisioning flow: INSERT с status=provisioning → lastInsertId → CREATE DATABASE erp_company_{id} → mkdir storage/companies/{id} → UPDATE status=active/error.
+- Обработка ошибок: при ошибке CREATE DATABASE или mkdir — статус error, сообщение в error_message, пользователю показывается читаемое сообщение.
+- Исправлен баг: `key` (зарезервированное слово MySQL) обёрнут в backticks в INSERT.
+- Валидация: пустой name → .is-error + сообщение, пустой inn → .is-error + сообщение.
+
+### Проверки
+- `php -l` для всех 5 PHP-файлов: без ошибок.
+- Миграция 005: 1 applied, повторно 0 applied (idempotent).
+- `DESCRIBE companies`: 22 поля, включая все 10 новых, индекс idx_inn.
+- Runtime: `/superadmin` → 200, `/superadmin/companies` → 200, `/superadmin/companies/create` GET → 200.
+- POST создание: статус 302 → `/superadmin/companies`. Центральная запись: id=1, status=active, db_identifier=erp_company_1, storage_path=storage/companies/1/.
+- Локальная БД: `erp_company_1` создана (SHOW DATABASES LIKE 'erp_company_%').
+- Storage: `storage/companies/1/` существует (isdir).
+- Страница списка: компания «Тестовая компания» отображается.
+- Валидация: пустой name → .is-error в ответе, пустой inn → .is-error в ответе.
+- Git diff: секретов не обнаружено.
+
+### Что НЕ сделано
+- Commit не выполнялся (нет команды).
+- Фильтры поиска не реализованы (только UI).
+- Pagination не реализован (одна компания).
+- Руководитель не создавался.
+- Логист, клиенты, подрядчики — не в scope.
+- UI-полировка отложена (accelerated mode).
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 — ChatGPT/erp-architect — Уточнение SUPERADMIN Companies Registry перед ТЗ кодеру
+
+### Задача
+Зафиксировать ответы владельца на 3 обязательных вопроса перед подготовкой первого кодового модуля `SUPERADMIN Companies Registry`.
+
+### Входные решения владельца
+- Поля экспедитора: пока стандартные как при создании контрагента / клиента, но экспедитор должен быть отдельной таблицей / сущностью SUPERADMIN.
+- Имя локальной БД: генерируется автоматически из `ID компании`.
+- Storage-папка: называется / генерируется по `ID компании`.
+
+### Что сделано
+- Обновлен `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+- Обновлен `docs/ai/PROJECT_STATUS.md`.
+- Добавлено `DECISION-0032` в `docs/ai/DECISIONS_LOG.md`.
+- Обновлен `docs/architecture/SUPERADMIN_COMPANIES.md`.
+- Обновлен `docs/business/EXPEDITOR_ONBOARDING_WORKFLOW.md`.
+- Обновлен `docs/architecture/DOCUMENT_STORAGE_MODEL.md`.
+- Обновлен `docs/architecture/SUPERADMIN_DATABASE.md` для снятия конфликта со старой slug/key-логикой.
+
+### Что НЕ сделано
+- Код не писался.
+- Миграции не создавались.
+- Commit не выполнялся.
+- ТЗ кодеру ещё не выполнено агентом в проекте; оно должно быть передано отдельной задачей.
+
+### Следующий шаг
+Подготовить точное ТЗ для `erp-coder` на первый кодовый модуль `SUPERADMIN Companies Registry` с запретом на лишний функционал и обязательными проверками.
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 15:04 — Codex GPT/erp-architect — Подготовка перехода в новый ChatGPT-чат
+
+### Задача
+Обновить MD для перехода в новый чат и подготовить владельцу первое сообщение, которое нужно вставить в новый ChatGPT-чат.
+
+### Что сделано
+- Обновлен `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`: добавлен свежий `CURRENT CONTEXT OVERRIDE — READY_FOR_NEW_CHAT_TRANSFER`.
+- Обновлен `docs/ai/PROJECT_STATUS.md`: добавлен свежий статус перехода и список 3 вопросов для следующего шага.
+- Обновлен `docs/ai/AGENT_WORK_LOG.md`: добавлена эта запись.
+- Подтверждено, что следующий чат не должен начинать кодинг до уточнения технических деталей `SUPERADMIN Companies Registry`.
+
+### Что НЕ сделано
+- Код не менялся.
+- Миграции не создавались.
+- Commit не выполнялся.
+
+### Следующий шаг
+Открыть новый ChatGPT-чат, вставить подготовленное первое сообщение и продолжить с уточнения 3 технических вопросов.
+
+### Статус
+DONE
+
+---
+
+## 2026-06-13 14:52 — Codex GPT/erp-architect — План развития: onboarding экспедитора
+
+### Задача
+Зафиксировать в MD согласованный владельцем путь развития системы после принятия текущей точки `/superadmin`.
+
+### Входные решения владельца
+- Экспедитор в системе — отдельная локальная ERP / компания.
+- SUPERADMIN при создании экспедитора автоматически создает запись, локальную БД и папку документов.
+- В папке экспедитора хранятся только загруженные документы; скрипты и кодовая база общие.
+- Главный пользователь экспедитора — роль `Руководитель`.
+- Главный пользователь создается отдельным действием после создания экспедитора.
+- Главный пользователь хранится в центральной БД, локальные пользователи — в локальной БД экспедитора.
+- Главный пользователь входит через общий логин и попадает в ERP своего экспедитора.
+- Клиенты и подрядчики ведутся отдельно, не через общую таблицу `counterparties`.
+- Термины первого этапа: `клиент` и `подрядчик`; отдельный `перевозчик` не вводится.
+
+### Что сделано
+- Создан `docs/business/EXPEDITOR_ONBOARDING_WORKFLOW.md`.
+- Создан `docs/architecture/SUPERADMIN_COMPANIES.md`.
+- Обновлен `docs/architecture/PERMISSIONS_MODEL.md`.
+- Обновлен `docs/architecture/DOCUMENT_STORAGE_MODEL.md`.
+- Добавлено решение DECISION-0031 в `docs/ai/DECISIONS_LOG.md`.
+- Обновлены `docs/ai/PROJECT_STATUS.md` и `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`.
+- Зафиксирована последовательность будущей разработки: SUPERADMIN Companies Registry → главный пользователь → локальный логист → клиенты/подрядчики → транспорт/водители → связки.
+
+### Что НЕ сделано
+- Код не менялся.
+- Миграции не создавались.
+- Схема БД не менялась.
+- UI не менялся.
+- Commit не выполнялся.
+
+### Следующий шаг
+Уточнить технические детали первого кодового модуля `SUPERADMIN Companies Registry`: поля экспедитора, генерацию имени БД, генерацию storage-папки, хранение параметров подключения, локальные миграции, обработку provisioning failure.
+
+### Статус
+DONE
+
+---
+
 ## Назначение
 
 Этот файл является обязательным журналом работы ИИ-агентов.

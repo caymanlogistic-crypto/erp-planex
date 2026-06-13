@@ -1,3 +1,66 @@
+# CURRENT STATUS OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANIES_REGISTRY_FUNCTIONAL_ACCEPTED
+
+Current focus: SUPERADMIN Companies Registry — **FUNCTIONAL_ACCEPTED**. QA passed (67/67). Ready for next module.
+
+## Accelerated mode
+- Manual visual approval: DEFERRED
+- UI polish cycle: deferred to separate task
+- Chief designer / KLAUD review: deferred
+- Functional coding was NOT blocked by design approval
+
+## Implementation results
+- Migration 005: 10 expeditor fields added to `companies` table (inn, kpp, ogrn, legal_address, physical_address, contact_person, contact_phone, contact_email, comments, error_message) + index idx_inn
+- Router: `post()` method added, routes `/superadmin/companies` (GET) + `/superadmin/companies/create` (GET/POST)
+- Views: `superadmin_companies.php` (list), `superadmin_companies_create.php` (form)
+- Database: support for connection without specific DB (CREATE DATABASE)
+- CSS: ~200 lines added (all from Core Kit Production CSS Reference)
+
+## Provisioning flow
+- INSERT → ID → DB name `erp_company_{id}` → CREATE DATABASE → mkdir `storage/companies/{id}/` → status = 'active'
+- Error handling: on failure → status = 'error', error_message populated, partial state not hidden
+
+## Runtime URLs
+- `/superadmin` → 200
+- `/superadmin/companies` → 200 (list with companies)
+- `/superadmin/companies/create` → 200 (creation form)
+
+## QA result
+- **FUNCTIONAL_ACCEPTED**: 67/67 checks passed, 0 failures, 0 blockers
+- Architecture: main.php not modified, SQL not in views, shell intact
+- Security: no passwords in DB/migrations/git, .env not tracked
+- PHP syntax: 5/5 clean
+- UI handoff: structure/classes match, no demo-placeholder
+
+## Commit status
+- NOT committed (no owner command)
+- Validation: empty name/inn → .is-error displayed.
+- Migration: idempotent (repeat run skipped).
+- No secrets in git diff.
+
+Next step: erp-qa-tester verification.
+
+---
+
+# CURRENT STATUS OVERRIDE — 2026-06-13 — SUPERADMIN_COMPANIES_REGISTRY_DETAILS_APPROVED
+
+Current focus: first code module of the next cycle — `SUPERADMIN Companies Registry`.
+
+Stable commit remains: `91c6911`.
+
+Owner-approved technical details:
+- Expeditor creation fields: same baseline as current contractor/client standard for now, but stored/implemented as a separate SUPERADMIN expeditor/company registry entity, not as a local contractor.
+- Baseline fields: `name`, `inn`, `kpp`, `ogrn`, `legal_address`, `physical_address`, `contact_person`, `contact_phone`, `contact_email`, `status`, `comments`.
+- Required at minimum: `name`, `inn`.
+- Local DB name: generated automatically from company ID.
+- Storage folder: generated/named by company ID.
+- Slug/key must not be used as the source of truth for DB name or storage folder generation.
+
+Code status: no code written in this documentation update.
+
+Next step: prepare exact `erp-coder` task for `SUPERADMIN Companies Registry` with MD update requirements, runtime checks, migration checks, provisioning failure handling, and no extra modules.
+
+---
+
 # ERP PLANEX — PROJECT_STATUS
 
 ## Текущий этап проекта
@@ -165,3 +228,68 @@ Key facts:
 - Chief designer / KLAUD design review: PENDING, not blocking.
 - QA not started for this checkpoint.
 - Next: commit current checkpoint, then continue with SUPERADMIN business foundation.
+
+---
+
+## CURRENT STATUS OVERRIDE — 2026-06-13 14:52 — EXPEDITOR_ONBOARDING_PLAN_DOCUMENTED
+
+Current focus: развитие business foundation после принятого `/superadmin` checkpoint.
+
+Latest commit before this planning task: `91c6911`.
+
+Owner-approved direction:
+- `SUPERADMIN` создает экспедитора как отдельную локальную ERP / компанию.
+- Создание экспедитора автоматически создает центральную запись, локальную БД и storage-папку.
+- Кодовая база общая; в папке экспедитора хранятся только загруженные документы.
+- Главный пользователь экспедитора = `Руководитель`.
+- `Руководитель` создается SUPERADMIN отдельным действием после создания экспедитора.
+- `Руководитель` хранится в центральной БД и после общего логина попадает в локальную ERP своего экспедитора.
+- Локальные пользователи, включая `Логист`, хранятся в локальной БД экспедитора.
+- Клиенты и подрядчики остаются отдельными справочниками / таблицами / формами.
+- Термины первого этапа: `клиент` и `подрядчик`; отдельный `перевозчик` не вводится.
+
+Documented plan:
+- `docs/business/EXPEDITOR_ONBOARDING_WORKFLOW.md`
+- `docs/architecture/SUPERADMIN_COMPANIES.md`
+- `docs/architecture/PERMISSIONS_MODEL.md`
+- `docs/architecture/DOCUMENT_STORAGE_MODEL.md`
+- `docs/ai/DECISIONS_LOG.md` — DECISION-0031.
+
+Next recommended step:
+1. Три базовых вопроса по `SUPERADMIN Companies Registry` уже уточнены владельцем и закреплены в DECISION-0032.
+2. Подготовить точное ТЗ для `erp-coder` на первый кодовый модуль: создание экспедитора из SUPERADMIN.
+
+Code status: NO code changes in this planning task.
+
+Commit status: NOT committed after this planning task.
+
+---
+
+## CURRENT STATUS OVERRIDE — 2026-06-13 15:04 — READY_FOR_NEW_CHAT_TRANSFER
+
+Status: документация подготовлена для перехода в новый ChatGPT-чат.
+
+Latest stable commit: `91c6911`.
+
+Current focus:
+- перейти к первому модулю нового business foundation цикла: `SUPERADMIN Companies Registry`;
+- перед кодингом уточнить 3 технических решения у владельца.
+
+MD updated for transfer:
+- `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md`
+- `docs/ai/PROJECT_STATUS.md`
+- `docs/ai/AGENT_WORK_LOG.md`
+- `docs/business/EXPEDITOR_ONBOARDING_WORKFLOW.md`
+- `docs/architecture/SUPERADMIN_COMPANIES.md`
+- `docs/architecture/PERMISSIONS_MODEL.md`
+- `docs/architecture/DOCUMENT_STORAGE_MODEL.md`
+- `docs/ai/DECISIONS_LOG.md`
+
+Next questions for owner:
+1. Какие поля SUPERADMIN вводит при создании экспедитора?
+2. Имя локальной БД генерируется автоматически из slug/кода компании или вводится вручную?
+3. Storage-папка называется по slug/коду компании или по ID компании?
+
+Code status: NO code changes.
+
+Commit status: NOT committed after this documentation handoff update.

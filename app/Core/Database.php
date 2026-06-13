@@ -48,13 +48,22 @@ class Database
 
     private function createConnection(): PDO
     {
-        $dsn = sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-            $this->host,
-            $this->port,
-            $this->database,
-            $this->charset
-        );
+        if ($this->database !== '') {
+            $dsn = sprintf(
+                'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+                $this->host,
+                $this->port,
+                $this->database,
+                $this->charset
+            );
+        } else {
+            $dsn = sprintf(
+                'mysql:host=%s;port=%s;charset=%s',
+                $this->host,
+                $this->port,
+                $this->charset
+            );
+        }
 
         try {
             $pdo = new PDO($dsn, $this->username, $this->password, [

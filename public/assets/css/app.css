@@ -686,6 +686,208 @@ tr:last-child td {
     pointer-events: none;
 }
 
+/* === page-head-actions / form-section === */
+.page-head-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.form-section {
+    margin-bottom: 16px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+/* === form labels / controls === */
+.field-label {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.field-input,
+.field-select,
+.field-textarea {
+    width: 100%;
+    min-height: var(--control-h);
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    background: var(--surface-field);
+    color: var(--text-main);
+    padding: 4px 7px;
+    font: inherit;
+    font-size: 12px;
+}
+
+.field-textarea {
+    min-height: 50px;
+    resize: vertical;
+}
+
+.field-msg {
+    margin-top: 3px;
+    color: var(--text-faint);
+    font-size: 11px;
+}
+
+.is-error .field-input,
+.is-error .field-select,
+.is-error .field-textarea {
+    border-color: #ca8880;
+    background: #fff8f7;
+}
+
+.is-error .field-msg {
+    color: var(--danger);
+}
+
+.req {
+    color: var(--danger);
+}
+
+/* === filters bar === */
+.filters-bar {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    min-height: 34px;
+    padding: 4px;
+    margin-bottom: 8px;
+    background: var(--surface-muted);
+    border: 1px solid var(--line-hair);
+}
+
+/* === buttons === */
+.btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-muted);
+}
+
+.btn-toolbar {
+    height: var(--toolbar-h);
+    font-size: 11px;
+}
+
+/* === badge variants === */
+.badge-ok {
+    background: var(--success-bg);
+    color: var(--success);
+    border-color: #7eb89b;
+}
+
+.badge-warn {
+    background: var(--warning-bg);
+    color: var(--warning);
+    border-color: #c9a450;
+}
+
+.badge-danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-color: #ca8880;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background: currentColor;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* === notice variants === */
+.notice.warn {
+    background: var(--warning-bg);
+    border-color: #c9a450;
+    color: var(--warning);
+}
+
+.notice.success {
+    background: var(--success-bg);
+    border-color: #7eb89b;
+    color: var(--success);
+}
+
+.notice.danger {
+    background: var(--danger-bg);
+    border-color: #ca8880;
+    color: var(--danger);
+}
+
+/* === ERP table === */
+.tbl-wrap {
+    overflow-x: auto;
+}
+
+.tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.tbl th,
+.tbl td {
+    height: var(--row-h);
+    padding: 0 8px;
+    border-bottom: 1px solid var(--line-hair);
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.tbl th {
+    background: var(--surface-muted);
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.tbl td {
+    background: var(--surface-strong);
+}
+
+.tbl tbody tr:hover td {
+    background: var(--surface);
+}
+
+.col-mono {
+    font-family: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
+    font-size: 11.5px;
+}
+
+.col-muted {
+    color: var(--text-faint);
+}
+
+.col-actions {
+    text-align: right;
+    width: 1%;
+}
+
+/* === empty-state inside panel === */
+.panel .empty-state {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: var(--space-4);
+    margin-top: 0;
+}
+
+/* === page-head-actions inside page-head === */
+.page-head .page-head-actions {
+    padding-top: 2px;
+}
+
 @media (max-width: 860px) {
     .app-shell {
         grid-template-columns: 1fr;
