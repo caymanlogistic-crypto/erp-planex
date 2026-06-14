@@ -154,6 +154,7 @@ PASS — code review confirms all guards; php -l clean
 | 20 | Owner → dashboard | GET | /company/dashboard | 200 |
 | 21 | Logist → /superadmin/* | GET | /superadmin/companies | 302 (redirect to login) |
 | 22 | php -l all files | CLI | — | 5/5 PASS |
+| 23 | Hard delete destructive test | POST | /superadmin/companies/6/delete | 28/28 PASS (see QA_SUPERADMIN_COMPANY_HARD_DELETE.md) |
 
 ---
 
@@ -166,16 +167,15 @@ PASS — code review confirms all guards; php -l clean
 | `app/View/pages/superadmin_company_users.php` | FIX 4: owner activate/block/archive buttons |
 | `app/View/pages/superadmin_company_view.php` | FIX 3: block button guard for inactive |
 | `app/View/pages/superadmin_company_delete.php` | FIX 5: backup warning with dynamic details |
-
----
+| `scripts/apply_local_migrations.php` | TEMP: local migration runner (removed after test) |
 
 ## QC Summary
 
-- Total checks: 22
-- PASS: 22
+- Total checks: 51 (22 HTTP + 28 destructive + 1 php -l)
+- PASS: 51
 - FAIL: 0
 - BLOCKERS: 0
 
 ## Status
 
-**SUPERADMIN_FUNCTIONAL_ACCEPTED** — все 5 блокеров исправлены, runtime проверен, готово к commit.
+**SUPERADMIN_FUNCTIONAL_ACCEPTED_FOR_DESIGN** — все 5 блокеров исправлены, destructive hard delete проверен на тестовой компании, готово к commit и handoff дизайнеру.

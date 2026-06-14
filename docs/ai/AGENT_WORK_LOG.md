@@ -1,5 +1,39 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-14 19:15 — KILO/erp-architect — SUPERADMIN Destructive Hard Delete Runtime Test
+
+### Задача
+Выполнить реальный end-to-end hard delete test на тестовой компании по требованию владельца.
+
+### Результат
+**RUNTIME_VERIFIED**. 28/28 проверок PASS. Hard delete работает корректно.
+
+### Выполнено
+1. Создана тестовая компания ID 6 (TEST DELETE COMPANY, INN 9999999999)
+2. Применены локальные миграции (9 SQL) к `erp_company_6`
+3. Создан owner (testdelowner), logist (testdellogist)
+4. Созданы 5 сущностей (client, contractor, driver, vehicle, crew) + документ
+5. Pre-delete верификация: central records, local DB, storage — всё EXISTS
+6. Delete page preview: все 13 полей + 6 counts подтверждены
+7. Wrong/empty phrase → blocked
+8. DELETE COMPANY 6 → 302 redirect
+9. Post-delete верификация: central records DELETED, local DB DROPPED, storage REMOVED
+10. Backup создан: central_snapshot.json, local_db_dump.sql, delete_report.json, deleted_storage/
+11. Deleted owner/logist → login BLOCKED
+12. Старые URL → 200, без 500
+
+### Создан/изменён
+- `scripts/apply_local_migrations.php` — временный скрипт (удалён после теста)
+
+### Обновлены QA-отчёты
+- `docs/qa/QA_SUPERADMIN_COMPANY_HARD_DELETE.md` — DEFERRED → RUNTIME_VERIFIED, +28 проверок
+- `docs/qa/QA_SUPERADMIN_FUNCTIONAL_CLOSURE.md` — +29 проверок (28 destructive + php -l)
+
+### Статус
+DONE — SUPERADMIN_FUNCTIONAL_ACCEPTED_FOR_DESIGN
+
+---
+
 ## 2026-06-14 19:00 — KILO/erp-architect — SUPERADMIN Functional Blocker Fixes Before Design Handoff
 
 ### Задача

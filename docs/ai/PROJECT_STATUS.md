@@ -1,25 +1,33 @@
-# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_BLOCKERS_FIXED
+# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_ACCEPTED_FOR_DESIGN
 
-Current focus: **5 БЛОКЕРОВ SUPERADMIN ИСПРАВЛЕНЫ. RUNTIME QA: 22/22 PASS. ГОТОВО К COMMIT.**
+Current focus: **5 БЛОКЕРОВ ИСПРАВЛЕНЫ + DESTRUCTIVE HARD DELETE RUNTIME ПРОВЕРЕН. ГОТОВО К HANDOFF ДИЗАЙНЕРУ.**
 
-Status: **SUPERADMIN_FUNCTIONAL_ACCEPTED**.
+Status: **SUPERADMIN_FUNCTIONAL_ACCEPTED_FOR_DESIGN**.
 
 ## Исправленные блокеры
 1. Document download: путь исправлен (relative_path из БД)
-2. Provisioning filter: удалён (не было provisioning_status в схеме)
+2. Provisioning filter: удалён
 3. Company status transitions: block из inactive разрешён
 4. Owner quick status actions: 3 новых маршрута + UI
 5. Hard delete safety: ZipArchive/mysqldump проверки, escapeshellarg
 
-## Изменённые файлы (5)
-- `public/index.php`, `superadmin_companies.php`, `superadmin_company_users.php`, `superadmin_company_view.php`, `superadmin_company_delete.php`
+## Destructive Hard Delete Runtime Test
+- Создана тестовая компания ID 6 с owner, logist, 5 справочниками, документом
+- Delete page preview: все 13 полей + 6 counts подтверждены
+- Wrong/empty phrase blocked
+- DELETE COMPANY 6 выполнено
+- Central records удалены, local DB dropped, storage удалён
+- Backup создан: central_snapshot.json, local_db_dump.sql, delete_report.json, deleted_storage/
+- Deleted owner/logist login blocked
+- Старые URL: 200, без 500
+- **28/28 PASS**
 
-## Новые QA-отчёты
-- `docs/qa/QA_SUPERADMIN_FUNCTIONAL_CLOSURE.md` (22 PASS)
-- `docs/qa/QA_SUPERADMIN_COMPANY_HARD_DELETE.md` (18 PASS, code-verified)
+## QA-отчёты
+- `docs/qa/QA_SUPERADMIN_FUNCTIONAL_CLOSURE.md` (51 PASS total)
+- `docs/qa/QA_SUPERADMIN_COMPANY_HARD_DELETE.md` (46 PASS, destructive verified)
 
 ## Next step
-Commit → ручная визуальная проверка владельцем → handoff дизайнеру для UI-полировки.
+Commit → Owner visual review → UI-полировка дизайнером.
 
 ## Что сделано в реворке
 - Owner login: проверка company_status через JOIN (критический баг исправлен)
