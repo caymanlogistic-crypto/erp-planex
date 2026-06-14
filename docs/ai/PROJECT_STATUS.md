@@ -1,4 +1,57 @@
-# CURRENT STATUS OVERRIDE — 2026-06-13 — FULL_RUNTIME_ACCEPTED
+# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_MANAGEMENT_COMPLETE
+
+Current focus: **SUPERADMIN-АДМИНКА ЗАКРЫТА КАК ПОЛНОЦЕННЫЙ ЦЕНТР УПРАВЛЕНИЯ. ГОТОВО К РУЧНОЙ ВИЗУАЛЬНОЙ ПРОВЕРКЕ ВЛАДЕЛЬЦЕМ.**
+
+QA: **SUPERADMIN_MANAGEMENT_ACCEPTED** (65/65 PASS, 0 BLOCKER).
+
+## Что реализовано
+
+### SUPERADMIN Management Center (27 маршрутов)
+- Расширенный реестр компаний (10 колонок: ID, Название, ИНН, Статус, Provisioning, Локальная БД, Руководитель, Пользователей, Создан, Действия + row actions + фильтры)
+- Расширенная карточка компании (секции: Пользователи, Справочники, Документы, Доступы, Действия + расширенное Техинфо)
+- Управление статусами: activate/block/archive (POST, confirm, без destructive операций)
+- Пользователи компании: объединённая таблица Руководитель + Логисты
+- Управление логистами из SUPERADMIN: карточка, редактирование, сброс пароля, активация/блокировка/архивирование
+- Мониторинг справочников (counts: clients/contractors/drivers/vehicles/crews)
+- Мониторинг документов (таблица + download)
+- Мониторинг доступов (entity_access_grants, REVOKE DEFERRED)
+
+### Статистика
+- **95 маршрутов** (было 81)
+- **22 view-файла** (было 16)
+- **index.php**: ~8008 строк
+- **php -l**: все чисты
+- **main.php, app.css, Database.php, Router.php**: НЕ изменены
+
+## Next step
+1. **Владелец выполняет ручную визуальную проверку** SUPERADMIN-блока в браузере
+2. После ручной приёмки — UI-полировка Главным дизайнером / КЛАУД
+
+## Code status
+- Companies Registry: FUNCTIONAL_ACCEPTED
+- Company Owner User: FUNCTIONAL_ACCEPTED
+- Company Logist User: FUNCTIONAL_ACCEPTED
+- Company Clients Registry: FUNCTIONAL_ACCEPTED
+- Company Contractors Registry: FUNCTIONAL_ACCEPTED
+- Company Drivers Registry: FUNCTIONAL_ACCEPTED
+- Company Vehicles Registry: FUNCTIONAL_ACCEPTED
+- Company Crews Registry: FUNCTIONAL_ACCEPTED
+- Company & Owner Management: FUNCTIONAL_ACCEPTED
+- Auth & Sessions: AUTH_BLOCK_ACCEPTED
+- Document Upload/Download/Delete/Replace: RUNTIME_ACCEPTED
+- Ownership & Access Grants: RUNTIME_ACCEPTED
+- **SUPERADMIN Management Center: SUPERADMIN_MANAGEMENT_ACCEPTED (65/65 PASS)**
+
+Latest commit: `ce251d8` feat(superadmin): complete management center
+Working tree: clean
+Push: NO
+
+## Последнее обновление
+2026-06-14 17:35 — KILO/erp-architect: полный SUPERADMIN Management Center реализован, QA 65/65 PASS, DECISION-0048 зафиксировано.
+
+---
+
+# CURRENT STATUS OVERRIDE — 2026-06-13 — FULL_RUNTIME_ACCEPTED (архив)
 
 Current focus: **RUNTIME-ПРОВЕРКА ЗАВЕРШЕНА. ВСЕ БАГИ ИСПРАВЛЕНЫ. ГОТОВО К РУЧНОЙ ПРОВЕРКЕ ВЛАДЕЛЬЦЕМ.**
 

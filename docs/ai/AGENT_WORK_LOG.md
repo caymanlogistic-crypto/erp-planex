@@ -1,5 +1,107 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-14 17:30 — KILO/erp-architect — SUPERADMIN Management Center Complete
+
+### Задача
+Закрыть SUPERADMIN-админку как полноценный центр управления: компании, пользователи, логисты, справочники, документы, доступы.
+
+### Результат
+**SUPERADMIN_MANAGEMENT_ACCEPTED**. QA: 65/65 PASS, 0 FAIL, 0 BLOCKER.
+
+### Цепочка агентов
+```
+erp-architect (аудит + координация)
+→ erp-uiux-designer (7 handoff: A-G, все HANDOFF_READY)
+→ erp-coder (реализация: 14 новых маршрутов, 6 новых views, 2 обновлённых views)
+→ erp-qa-tester (65 проверок, все PASS)
+→ erp-architect (pre-owner review + документация + commit)
+```
+
+### Реализовано
+
+**Обновлённые страницы (2):**
+- `/superadmin/companies` — расширенная таблица (10 колонок, user_count, provisioning badge, row actions V/E/O/U + статусные кнопки)
+- `/superadmin/companies/{id}` — расширенная карточка (секции 6-11: Пользователи, Справочники, Документы, Доступы, Действия + Техинфо расширено)
+
+**Новые страницы (6):**
+- `/superadmin/companies/{id}/users` — объединённая таблица Руководитель + Логисты
+- `/superadmin/companies/{id}/directories` — таблица counts справочников
+- `/superadmin/companies/{id}/documents` — таблица документов с download
+- `/superadmin/companies/{id}/access-grants` — таблица доступов (REVOKE DEFERRED)
+- `/superadmin/companies/{company_id}/users/logists/{user_id}` — карточка логиста (view)
+- `/superadmin/companies/{company_id}/users/logists/{user_id}/edit` — форма редактирования логиста
+
+**Новые статусные маршруты (3):**
+- `POST /superadmin/companies/{id}/activate`
+- `POST /superadmin/companies/{id}/block`
+- `POST /superadmin/companies/{id}/archive`
+
+**Новые маршруты управления логистом (7):**
+- `POST /superadmin/companies/{company_id}/users/logists/{user_id}/edit`
+- `POST .../reset-password` (generatePassword + bcrypt + показать один раз)
+- `POST .../activate`, `POST .../block`, `POST .../archive`
+
+**Всего: 27 SUPERADMIN маршрутов** (13 существующих + 14 новых).
+
+### Созданные/изменённые файлы
+
+**Изменены (3):**
+- `public/index.php` (+~1000 строк, 14 новых маршрутов + 2 обновлённых)
+- `app/View/pages/superadmin_companies.php` (106→159 строк)
+- `app/View/pages/superadmin_company_view.php` (146→297 строк)
+
+**Созданы (6 views):**
+- `app/View/pages/superadmin_company_users.php` (133 строки)
+- `app/View/pages/superadmin_company_logist_view.php` (165 строк)
+- `app/View/pages/superadmin_company_logist_edit.php` (98 строк)
+- `app/View/pages/superadmin_company_directories.php` (91 строка)
+- `app/View/pages/superadmin_company_documents.php` (102 строки)
+- `app/View/pages/superadmin_company_access_grants.php` (87 строк)
+
+**Созданы (7 handoff):**
+- `docs/ui/pages/superadmin-companies-registry.md` (v2.0, обновлён)
+- `docs/ui/pages/superadmin-company-management.md` (v2.0, обновлён)
+- `docs/ui/pages/superadmin-company-users.md` (новый)
+- `docs/ui/pages/superadmin-company-logist-management.md` (новый)
+- `docs/ui/pages/superadmin-company-directories.md` (новый)
+- `docs/ui/pages/superadmin-company-documents.md` (новый)
+- `docs/ui/pages/superadmin-company-access-grants.md` (новый)
+
+**Созданы (1 QA report):**
+- `docs/qa/QA_SUPERADMIN_MANAGEMENT_CENTER.md`
+
+**НЕ изменены (подтверждено):**
+- `app/View/layouts/main.php`
+- `public/assets/css/app.css`
+- `app/Core/Database.php`
+- `app/Http/Router.php`
+- Все существующие company-views
+
+### Ключевые проверки
+- `php -l`: 14/14 файлов чисты
+- `password_hash(PASSWORD_BCRYPT)`: все парольные операции
+- `e()`: все пользовательские данные
+- Prepared statements: все SQL
+- Route guards: `requireRole('superadmin')` на всех 27 маршрутах
+- No hard delete: archive/block только UPDATE status
+- `.env` не tracked
+
+### Архитектурное решение
+- DECISION-0048: Полный SUPERADMIN Management Center
+
+### QA
+- QA report: `docs/qa/QA_SUPERADMIN_MANAGEMENT_CENTER.md`
+- 65/65 PASS, 0 FAIL, 0 BLOCKER
+- 2 MINOR observations (non-blocking)
+
+### Commit
+- Выполнен после QA PASS
+
+### Статус
+DONE — SUPERADMIN_MANAGEMENT_ACCEPTED
+
+---
+
 ## 2026-06-13 21:20 — KILO/erp-architect — Full Runtime Verification Before Owner Review
 
 ### Задача

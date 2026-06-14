@@ -8,6 +8,8 @@ function statusBadge(string $status): string
         'error'        => ['class' => 'badge-danger','label' => 'Ошибка'],
         'inactive'     => ['class' => '',             'label' => 'Неактивен'],
         'suspended'    => ['class' => 'badge-warn',  'label' => 'Приостановлен'],
+        'blocked'      => ['class' => 'badge-danger', 'label' => 'Заблокирован'],
+        'archived'     => ['class' => '',             'label' => 'Архивирован'],
     ];
 
     $item = $map[$status] ?? ['class' => '', 'label' => $status];
@@ -16,7 +18,6 @@ function statusBadge(string $status): string
 }
 
 ?>
-
 <?php if ($company === null): ?>
 
 <div class="panel">
@@ -99,10 +100,16 @@ function statusBadge(string $status): string
         <div class="form-section">
             <h3 class="panel-head-title">Техническая информация</h3>
             <dl class="kv">
+                <dt>Company ID</dt>
+                <dd><?= $company['id'] ?></dd>
                 <dt>Локальная БД</dt>
                 <dd><?= e($company['db_identifier'] ?? '') ?: '—' ?></dd>
+                <dt>Локальная БД существует</dt>
+                <dd><?= !empty($localDbExists) ? 'YES' : 'NO' ?></dd>
                 <dt>Storage</dt>
                 <dd><?= e($company['storage_path'] ?? '') ?: '—' ?></dd>
+                <dt>Storage существует</dt>
+                <dd><?= !empty($storageExists) ? 'YES' : 'NO' ?></dd>
                 <dt>Provisioning</dt>
                 <dd>
                     <?= e($company['status']) ?>
@@ -140,6 +147,150 @@ function statusBadge(string $status): string
             <?php endif; ?>
         </div>
 
+    </div>
+</div>
+
+<!-- Section 6: Users -->
+<div class="panel">
+    <div class="panel-head">
+        <h2>Пользователи компании</h2>
+    </div>
+    <div class="panel-body">
+        <dl class="kv">
+            <dt>Всего</dt>
+            <dd><?= $userStats['total'] ?></dd>
+            <dt>Активных</dt>
+            <dd><?= $userStats['active'] ?></dd>
+            <dt>Заблокированных</dt>
+            <dd><?= $userStats['blocked'] ?></dd>
+            <dt>Руководитель</dt>
+            <dd><?= $userStats['owner_count'] ?></dd>
+            <dt>Логистов</dt>
+            <dd><?= $userStats['logist_count'] ?></dd>
+        </dl>
+        <div class="form-actions">
+            <a href="/superadmin/companies/<?= $id ?>/users" class="btn btn-secondary">Все пользователи</a>
+        </div>
+    </div>
+</div>
+
+<!-- Section 7: Directories -->
+<div class="panel">
+    <div class="panel-head">
+        <h2>Справочники компании</h2>
+    </div>
+    <div class="panel-body">
+        <div class="tbl-wrap">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Справочник</th>
+                        <th>Всего</th>
+                        <th>Активных</th>
+                        <th>Архивированных</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Клиенты</td>
+                        <td class="col-num"><?= $dirs['clients_total'] ?></td>
+                        <td class="col-num"><?= $dirs['clients_active'] ?></td>
+                        <td class="col-num"><?= $dirs['clients_archived'] ?></td>
+                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                    </tr>
+                    <tr>
+                        <td>Подрядчики</td>
+                        <td class="col-num"><?= $dirs['contractors_total'] ?></td>
+                        <td class="col-num"><?= $dirs['contractors_active'] ?></td>
+                        <td class="col-num"><?= $dirs['contractors_archived'] ?></td>
+                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                    </tr>
+                    <tr>
+                        <td>Водители</td>
+                        <td class="col-num"><?= $dirs['drivers_total'] ?></td>
+                        <td class="col-num"><?= $dirs['drivers_active'] ?></td>
+                        <td class="col-num"><?= $dirs['drivers_archived'] ?></td>
+                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                    </tr>
+                    <tr>
+                        <td>Транспорт</td>
+                        <td class="col-num"><?= $dirs['vehicles_total'] ?></td>
+                        <td class="col-num"><?= $dirs['vehicles_active'] ?></td>
+                        <td class="col-num"><?= $dirs['vehicles_archived'] ?></td>
+                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                    </tr>
+                    <tr>
+                        <td>Экипажи</td>
+                        <td class="col-num"><?= $dirs['crews_total'] ?></td>
+                        <td class="col-num"><?= $dirs['crews_active'] ?></td>
+                        <td class="col-num"><?= $dirs['crews_archived'] ?></td>
+                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions">
+            <a href="/superadmin/companies/<?= $id ?>/directories" class="btn btn-secondary">Все справочники</a>
+        </div>
+    </div>
+</div>
+
+<!-- Section 8: Documents -->
+<div class="panel">
+    <div class="panel-head">
+        <h2>Документы компании</h2>
+    </div>
+    <div class="panel-body">
+        <dl class="kv">
+            <dt>Всего документов</dt>
+            <dd><?= $docStats['total'] ?></dd>
+            <dt>Активных (не archived)</dt>
+            <dd><?= $docStats['active'] ?></dd>
+        </dl>
+        <div class="form-actions">
+            <a href="/superadmin/companies/<?= $id ?>/documents" class="btn btn-secondary">Все документы</a>
+        </div>
+    </div>
+</div>
+
+<!-- Section 9: Access grants -->
+<div class="panel">
+    <div class="panel-head">
+        <h2>Доступы</h2>
+    </div>
+    <div class="panel-body">
+        <dl class="kv">
+            <dt>Выданных доступов</dt>
+            <dd><?= $accessStats['total'] ?></dd>
+        </dl>
+        <div class="form-actions">
+            <a href="/superadmin/companies/<?= $id ?>/access-grants" class="btn btn-secondary">Все доступы</a>
+        </div>
+    </div>
+</div>
+
+<!-- Section 10: Actions -->
+<div class="panel">
+    <div class="panel-head">
+        <h2>Действия</h2>
+    </div>
+    <div class="panel-body">
+        <div class="form-actions">
+            <?php if ($company['status'] !== 'active'): ?>
+            <form method="post" action="/superadmin/companies/<?= $id ?>/activate" style="display:inline" onsubmit="return confirm('Активировать компанию?')">
+                <button type="submit" class="btn btn-primary">Активировать</button>
+            </form>
+            <?php endif; ?>
+            <?php if ($company['status'] === 'active'): ?>
+            <form method="post" action="/superadmin/companies/<?= $id ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
+                <button type="submit" class="btn btn-danger">Заблокировать</button>
+            </form>
+            <?php endif; ?>
+            <form method="post" action="/superadmin/companies/<?= $id ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
+                <button type="submit" class="btn btn-danger">Архивировать</button>
+            </form>
+        </div>
     </div>
 </div>
 

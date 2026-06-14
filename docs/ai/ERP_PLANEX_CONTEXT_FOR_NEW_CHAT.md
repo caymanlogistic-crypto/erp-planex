@@ -1,39 +1,55 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-13 — FULL_RUNTIME_ACCEPTED
+# CURRENT CONTEXT OVERRIDE — 2026-06-14 — SUPERADMIN_MANAGEMENT_COMPLETE
 
-**RUNTIME-ПРОВЕРКА ЗАВЕРШЕНА. 3 БАГА ИСПРАВЛЕНЫ. DOCUMENT DELETE/REPLACE РЕАЛИЗОВАНЫ. ГОТОВО К РУЧНОЙ ПРОВЕРКЕ ВЛАДЕЛЬЦЕМ.**
+**SUPERADMIN-АДМИНКА ЗАКРЫТА КАК ПОЛНОЦЕННЫЙ ЦЕНТР УПРАВЛЕНИЯ. QA: 65/65 PASS. ГОТОВО К РУЧНОЙ ВИЗУАЛЬНОЙ ПРОВЕРКЕ ВЛАДЕЛЬЦЕМ.**
 
 ## Состояние
-- 81 маршрут (Auth + SUPERADMIN + Company 6 entities CRUD + Documents upload/list/download/delete/replace + Ownership)
-- 16 view-файлов
+- 95 маршрутов (27 SUPERADMIN + Auth + Company 6 entities CRUD + Documents + Ownership)
+- 22 view-файла (8 SUPERADMIN существующих + 6 новых SUPERADMIN)
 - 9 локальных миграций (001-009)
-- index.php: ~7036 строк
+- index.php: ~8008 строк
 - All php -l clean
+- main.php, app.css, Database.php, Router.php — НЕ изменены
 - Server: http://127.0.0.1:8016
 
 ## Реализовано
+- **SUPERADMIN Management Center (27 маршрутов):**
+  - Расширенный реестр компаний (10 колонок, row actions, фильтры)
+  - Расширенная карточка компании (секции 6-11: Пользователи, Справочники, Документы, Доступы, Действия)
+  - Статусные действия: activate/block/archive (POST, confirm, без destructive)
+  - Пользователи компании: объединённая таблица owner + logists
+  - Управление логистами из SUPERADMIN: view, edit, reset-password, activate/block/archive
+  - Мониторинг справочников (counts 5 таблиц)
+  - Мониторинг документов (таблица + download)
+  - Мониторинг доступов (entity_access_grants, REVOKE DEFERRED)
 - Auth: login/logout/sessions/route guards (3 роли)
-- SUPERADMIN: companies CRUD + owner management + password reset
 - Company Logists: list/create/view/edit/reset-password/archive
 - Company Clients/Contractors/Drivers/Vehicles/Crews: list/create/view/edit/archive
 - Documents: upload/list/download + delete (archive) + replace
 - Ownership: created_by_user_id/role, entity_access_grants, filtering, grant UI
 
-## Баги исправлены (runtime session)
-- B1: documents table missing in local DBs → migration 007 applied
-- B2: document delete/replace missing → implemented 2 routes + UI
-- B3: archived docs visible in list → added status filter
+## Политика безопасности паролей (DECISION-0048)
+- Существующие пароли видеть нельзя (только bcrypt password_hash)
+- Пароли хранятся только как bcrypt password_hash
+- Из bcrypt нельзя восстановить исходный пароль
+- SUPERADMIN может только сбросить пароль и увидеть новый временный пароль один раз
+- Открытые пароли нельзя хранить в БД, логах, MD, git или отчётах
 
 ## Статус
-FULL_RUNTIME_ACCEPTED. Готово к ручной проверке владельцем.
+SUPERADMIN_MANAGEMENT_ACCEPTED. Готово к ручной визуальной проверке владельцем.
 
 ## Тестовые учётные данные
 - SUPERADMIN: admin@planex.local / test1234
 - Owner (company 1): test_owner / owner123
 - Owner (company 2): spugov / owner123
-- Logists: any login in company 1 / owner123
+- Logists: любой login в company 1 / owner123
+
+## Latest commits
+ce251d8 feat(superadmin): complete management center
+442ff2c fix(reference): complete runtime fixes including document delete/replace
+3c4f34d feat(reference): complete functional management block
 
 ## Next step
-Владелец проверяет в браузере → commit → UI-полировка Главным дизайнером / КЛАУД.
+Владелец проверяет SUPERADMIN-блок в браузере → UI-полировка Главным дизайнером / КЛАУД.
 
 ---
 
@@ -785,18 +801,19 @@ UI Module Catalog:
 1. ~~Проверить/утвердить UI-фундамент и дизайн-код.~~ **DONE (2026-06-11).**
 2. ~~Перейти к техническому ядру: PDO-обёртка и роутер.~~ **DONE (2026-06-11).**
 3. ~~Начать SUPERADMIN.~~ **DONE (2026-06-12) — Stage 1.**
-4. Любые бизнес-страницы делать только через workflow `erp-uiux-designer → erp-coder → erp-qa-tester` с MD-шаблоном страницы, `CORE modules used`, selected `COMPOSITE pattern` и `MODULE USAGE DECISIONS` из `docs/ui/ERP_UI_KIT_CORE.html`.
+4. ~~Закрыть SUPERADMIN Management Center.~~ **DONE (2026-06-14) — 27 маршрутов, 65/65 QA PASS.**
+5. Любые бизнес-страницы делать только через workflow `erp-uiux-designer → erp-coder → erp-qa-tester` с MD-шаблоном страницы, `CORE modules used`, selected `COMPOSITE pattern` и `MODULE USAGE DECISIONS` из `docs/ui/ERP_UI_KIT_CORE.html`.
 
-Главный запрет: **не давать агенту размытые задачи типа “делай ERP”**.
+Главный запрет: **не давать агенту размытые задачи типа "делай ERP"**.
 
 ## Последние commits
 
 ```text
+ce251d8 feat(superadmin): complete management center
+442ff2c fix(reference): complete runtime fixes including document delete/replace
 3c4f34d feat(reference): complete functional management block with auth, documents, CRUD, ownership and access grants
 21fdddc feat(superadmin): add company and owner management
 cecdebb docs: add final QA report for reference block
-7df0821 feat(company): add crews registry
-8f2bb00 feat(company): add vehicles registry
 ```
 50f96a9 Fix ERP PLANEX UI process rules and SUPERADMIN handoff
 be55198 Create SUPERADMIN Stage 4a migration runner
@@ -832,16 +849,17 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **Runtime-проверка справочного блока — FULL_RUNTIME_ACCEPTED (2026-06-13).**
+Активная задача: **SUPERADMIN Management Center — SUPERADMIN_MANAGEMENT_ACCEPTED (2026-06-14).**
 
-Результаты runtime-сессии:
-- 94+ проверок через HTTP/browser
-- 3 бага найдено и исправлено (B1: documents table missing, B2: delete/replace gap, B3: archived docs filter)
-- Document delete/replace реализованы (2 новых маршрута)
-- Все CRUD-операции, auth, ownership, grants — подтверждены работающими
+Результаты:
+- 27 SUPERADMIN маршрутов (13 существующих + 14 новых)
+- 6 новых views + 2 обновлённых views
+- QA: 65/65 PASS, 0 FAIL, 0 BLOCKER
+- main.php, app.css, Database.php, Router.php — НЕ изменены
+- DECISION-0048: полный SUPERADMIN Management Center + политика безопасности паролей
 - Server URL: http://127.0.0.1:8016
 
-Следующий шаг: **Владелец выполняет ручную проверку в браузере.**
+Следующий шаг: **Владелец выполняет ручную визуальную проверку SUPERADMIN-блока в браузере.**
 
 Исторический список завершённых шагов:
 
@@ -850,6 +868,21 @@ dc75ab4 Create minimal PHP application skeleton
 3. ~~SUPERADMIN Stage 1: архитектура, UI-шаблон, реализация.~~ **REJECTED BY OWNER (визуально).**
 4. ~~QA-проверка и исправление замечаний.~~ **DONE (формально, но визуально не принято).**
 5. ~~SUPERADMIN Stage 2: документация центральной БД.~~ **DONE.**
+6. ~~SUPERADMIN Stage 3: создание миграций.~~ **DONE.**
+7. ~~SUPERADMIN Stage 4a: migration runner.~~ **DONE.**
+8. ~~Исправить системные правила UI-процесса.~~ **DONE.**
+9. ~~Переделать /superadmin (первый/второй круг реворка).~~ **DONE, но компонентный реворк недостаточен — foundation пропущен.**
+10. ~~STAGE B: усилить KILO UI production workflow.~~ **DONE.**
+11. ~~Формализовать STYLE ERP в MD.~~ **DONE.**
+12. ~~Создать UI Module Catalog.~~ **DONE (legacy/reference).**
+13. ~~Создать UI Kit Core (primary compact working UI-kit).~~ **DONE.**
+14. ~~Предтестовый аудит дизайн-системы.~~ **DONE (2026-06-12).**
+15. ~~SUPERADMIN Companies Registry → Company Owner → Company Logist → Clients → Contractors → Drivers → Vehicles → Crews.~~ **DONE (2026-06-13).**
+16. ~~Auth & Sessions.~~ **DONE (2026-06-13).**
+17. ~~Documents upload/list/download/delete/replace.~~ **DONE (2026-06-13).**
+18. ~~Ownership & Access Grants.~~ **DONE (2026-06-13).**
+19. ~~Full Runtime Verification.~~ **DONE (2026-06-13).**
+20. ~~**SUPERADMIN Management Center (complete).**~~ **DONE (2026-06-14).**
 6. ~~SUPERADMIN Stage 3: создание миграций.~~ **DONE.**
 7. ~~SUPERADMIN Stage 4a: migration runner.~~ **DONE.**
 8. ~~Исправить системные правила UI-процесса.~~ **DONE.**

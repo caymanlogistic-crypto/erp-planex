@@ -1,18 +1,30 @@
 # UI PAGE HANDOFF — SUPERADMIN Companies Registry
 
 ## Status
-**FUNCTIONALLY ACCEPTED** (accelerated mode). Manual visual approval deferred. UI polish cycle later.
+**HANDOFF_READY** (v2.0 — expanded registry). Supersedes v1.0 (FUNCTIONALLY ACCEPTED). This is a production-grade handoff per `_PAGE_TEMPLATE.md`.
 
-## A. Foundation
+---
 
-### FOUNDATION STATUS: COMPLIANT
-Existing foundation from `superadmin-dashboard.md §0` — NO REBUILD NEEDED.
+## 0. LAYOUT FOUNDATION SOURCE MAPPING
 
-### 0. LAYOUT FOUNDATION SOURCE MAPPING (reference)
+### 0a. App Shell Foundation
 
-All foundation parameters are COMPLIANT per `superadmin-dashboard.md §0a`. Shell grid, topbar (светлый, 38px, brand+ crumbs+user), sidebar (тёмный, 224px, nav-groups), nav items (34px, 600, 12.5px, SVG icons 16×16, ::before active) — all COMPLIANT. No changes needed.
+All foundation parameters are COMPLIANT per `superadmin-dashboard.md §0a`. Shell grid, topbar (светлый, 38px, brand+crumbs+user), sidebar (тёмный, 224px, nav-groups), nav items (34px, 600, 12.5px, SVG icons 16×16, ::before active) — all COMPLIANT.
 
-### 0b. Sidebar IA (unchanged)
+**FOUNDATION STATUS: COMPLIANT. NO REBUILD NEEDED.**
+
+| Параметр | MASTER spec | Текущая реализация | Соответствие |
+|----------|-------------|-------------------|--------------|
+| App shell grid | `grid-template-columns: var(--sidebar-w) 1fr; grid-template-rows: var(--topbar-h) 1fr` | `main.php` | YES |
+| Topbar background | `var(--surface-strong)` #fefdf8 СВЕТЛЫЙ | `main.php` | YES |
+| Topbar border-bottom | `1px solid var(--line)` | `main.php` | YES |
+| Sidebar background | `var(--nav-bg)` #191816 | `main.php` | YES |
+| Nav item height | 34px | `main.php` | YES |
+| Nav item font-weight | 600 ВСЕГДА | `main.php` | YES |
+| Nav item font-size | 12.5px | `main.php` | YES |
+| Nav active state | `::before` pseudo (2px gold left) | `main.php` | YES |
+
+### 0b. Sidebar IA
 
 ```
 ОПЕРАЦИИ
@@ -27,7 +39,7 @@ All foundation parameters are COMPLIANT per `superadmin-dashboard.md §0a`. Shel
   Настройки    disabled
 ```
 
-### 0c. Topbar context for this page
+### 0c. Topbar context
 
 ```
 SUPERADMIN — Реестр компаний
@@ -38,10 +50,17 @@ SUPERADMIN — Реестр компаний
 ## 1. Страница
 
 - **Route:** `/superadmin/companies`
-- **View file:** `app/View/pages/superadmin_companies.php`
-- **Тип:** PATTERN-01 Table-only registry + creation form
+- **View file:** `app/View/pages/superadmin_companies.php` (существующий — ОБНОВИТЬ)
+- **Тип:** PATTERN-01 Table-only registry (extended)
 - **Роль:** SUPERADMIN
-- **Задача:** Просмотр реестра компаний, создание нового экспедитора
+- **Главная задача:** Просмотр полного реестра компаний, быстрые действия по статусу, навигация к управлению
+- **Что нельзя менять:** main.php shell/sidebar/topbar, DB naming от ID, business logic
+
+### Дополнительные роуты (статусные действия):
+
+- `POST /superadmin/companies/{id}/activate`
+- `POST /superadmin/companies/{id}/block`
+- `POST /superadmin/companies/{id}/archive`
 
 ---
 
@@ -50,8 +69,8 @@ SUPERADMIN — Реестр компаний
 - App shell: СУЩЕСТВУЮЩИЙ (main.php) — НЕ МЕНЯТЬ
 - Структура страницы сверху вниз:
   1. `page-head` — заголовок + кнопка «Создать экспедитора»
-  2. `filters-bar` — поиск по названию, ИНН, статусу
-  3. `panel` с таблицей компаний
+  2. `filters-bar` — поиск по названию/ИНН (text), статус (select), provisioning status (select)
+  3. `panel` с таблицей компаний (расширенные колонки)
   4. `pagination` (если записей > 1 страницы)
 
 ---
@@ -76,21 +95,34 @@ SUPERADMIN — Реестр компаний
 
 ```html
 <div class="filters-bar">
-    <input type="text" class="field-input" placeholder="Поиск по названию" name="search_name" style="max-width:200px">
-    <input type="text" class="field-input" placeholder="ИНН" name="search_inn" style="max-width:140px">
+    <input type="text" class="field-input" placeholder="Поиск по названию или ИНН" name="search" style="max-width:240px">
     <select class="field-select" name="status" style="max-width:150px">
         <option value="">Все статусы</option>
         <option value="active">Активен</option>
+        <option value="inactive">Неактивен</option>
+        <option value="blocked">Заблокирован</option>
+        <option value="archived">Архивирован</option>
         <option value="provisioning">Настройка</option>
         <option value="error">Ошибка</option>
+    </select>
+    <select class="field-select" name="provisioning" style="max-width:160px">
+        <option value="">Все provisioning</option>
+        <option value="active">active</option>
+        <option value="inactive">inactive</option>
+        <option value="blocked">blocked</option>
+        <option value="archived">archived</option>
+        <option value="error">error</option>
+        <option value="provisioning">provisioning</option>
     </select>
     <button class="btn btn-toolbar">Сбросить</button>
 </div>
 ```
 
+**Примечание:** Фильтры могут быть реализованы как client-side или deferred, но UI-скелет обязателен. В v2.0 ожидается server-side фильтрация при наличии времени.
+
 ---
 
-## 5. Main table
+## 5. Main table (расширенная)
 
 ```html
 <div class="panel">
@@ -106,20 +138,56 @@ SUPERADMIN — Реестр компаний
                     <th>Название</th>
                     <th>ИНН</th>
                     <th>Статус</th>
+                    <th>Provisioning</th>
+                    <th>Локальная БД</th>
+                    <th>Руководитель</th>
+                    <th>Пользователей</th>
                     <th>Создан</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                <!-- row per company -->
                 <tr>
                     <td class="col-mono"><?= $c['id'] ?></td>
                     <td><?= e($c['name']) ?></td>
                     <td class="col-mono"><?= e($c['inn']) ?></td>
                     <td><?= statusBadge($c['status']) ?></td>
-                    <td class="col-muted"><?= e($c['created_at']) ?></td>
+                    <td><?= provisioningBadge($c['status'], $c['db_identifier']) ?></td>
+                    <td class="col-mono col-muted"><?= e($c['db_identifier'] ?? '—') ?></td>
+                    <td>
+                        <?php if (in_array($c['status'], ['error', 'provisioning'], true)): ?>
+                            <span class="col-muted">—</span>
+                        <?php elseif (!empty($c['owner_name'])): ?>
+                            <span class="dot" style="background:var(--success)"></span>
+                            <?= e($c['owner_name']) ?>
+                        <?php else: ?>
+                            <a href="/superadmin/companies/<?= $c['id'] ?>/create-owner" class="btn btn-primary" style="font-size:11px;padding:2px 10px">
+                                Создать
+                            </a>
+                        <?php endif; ?>
+                    </td>
+                    <td class="col-mono"><?= (int)($c['user_count'] ?? 0) ?></td>
+                    <td class="col-muted"><?= e($c['created_at'] ?? '') ?></td>
                     <td class="col-actions">
-                        <!-- row actions on hover -->
+                        <div class="row-actions">
+                            <a href="/superadmin/companies/<?= $c['id'] ?>" class="ra" title="Карточка">V</a>
+                            <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="ra" title="Редактировать">E</a>
+                            <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="ra" title="Руководитель">O</a>
+                            <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="ra" title="Пользователи">U</a>
+                            <?php if ($c['status'] !== 'active'): ?>
+                            <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать компанию?')">
+                                <button class="ra" title="Активировать">✓</button>
+                            </form>
+                            <?php endif; ?>
+                            <?php if ($c['status'] === 'active'): ?>
+                            <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
+                                <button class="ra" title="Заблокировать">⊗</button>
+                            </form>
+                            <?php endif; ?>
+                            <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
+                                <button class="ra del" title="Архивировать">A</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             </tbody>
@@ -136,140 +204,126 @@ SUPERADMIN — Реестр компаний
 | 1 | ID | integer | `.col-mono` | Company ID |
 | 2 | Название | text | — | Company name |
 | 3 | ИНН | text | `.col-mono` | Tax ID |
-| 4 | Статус | badge | — | `.badge-ok` / `.badge-warn` / `.badge-danger` |
-| 5 | Создан | datetime | `.col-muted` | created_at |
-| 6 | Действия | — | `.col-actions` | View action |
+| 4 | Статус | badge | — | `.badge-ok` / `.badge-warn` / `.badge-danger` / `.badge` |
+| 5 | Provisioning | badge | — | DB identifier + provisioning status badge |
+| 6 | Локальная БД | text | `.col-mono`, `.col-muted` | db_identifier value or «—» |
+| 7 | Руководитель | text/action | — | Owner name + green dot OR «Создать» button OR «—» |
+| 8 | Пользователей | integer | `.col-mono` | owner (1) + logists count from local DB |
+| 9 | Создан | datetime | `.col-muted` | created_at |
+| 10 | Действия | — | `.col-actions` | Row actions (V/E/O/U + status buttons) |
+
+### Данные для колонки «Пользователей»
+
+```php
+// Для каждой компании:
+// 1. SELECT COUNT(*) as owner_count FROM company_users WHERE company_id=? AND role='company_owner'
+// 2. Подключиться к локальной БД через db_identifier
+//    SELECT COUNT(*) as logist_count FROM users WHERE role_code='logist'
+// 3. $c['user_count'] = $owner_count + $logist_count
+```
 
 ---
 
-## 6. Status badges
+## 6. Status badges (расширенные)
 
 | Status | Badge class | Dot | Text |
 |--------|------------|-----|------|
 | `active` | `.badge-ok` | yes | Активен |
+| `inactive` | `.badge` | yes | Неактивен |
+| `blocked` | `.badge-danger` | yes | Заблокирован |
+| `archived` | `.badge` | yes | Архивирован |
 | `provisioning` | `.badge-warn` | yes | Настройка |
 | `error` | `.badge-danger` | yes | Ошибка |
 
----
-
-## 7. Creation form (separate page: `/superadmin/companies/create`)
-
-**View file:** `app/View/pages/superadmin_companies_create.php`
-
-### Form structure
-
-```html
-<div class="page-head">
-    <div>
-        <h1>Создать экспедитора</h1>
-        <p class="text-muted">Новая локальная ERP-система</p>
-    </div>
-    <div class="page-head-actions">
-        <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
-    </div>
-</div>
-
-<form method="post" action="/superadmin/companies/create" class="panel">
-    <!-- FORM SECTIONS -->
-
-    <!-- Section: Основные данные -->
-    <div class="panel-body">
-        <div class="form-section">
-            <h3 class="panel-head-title">Основные данные</h3>
-            <div class="field">
-                <label class="field-label">Наименование <span class="req">*</span></label>
-                <input type="text" name="name" class="field-input" required value="<?= e($old['name'] ?? '') ?>">
-                <div class="field-msg is-error" style="display:none">Обязательное поле</div>
-            </div>
-            <div class="field">
-                <label class="field-label">ИНН <span class="req">*</span></label>
-                <input type="text" name="inn" class="field-input" required value="<?= e($old['inn'] ?? '') ?>">
-                <div class="field-msg is-error" style="display:none">Обязательное поле</div>
-            </div>
-            <div class="field">
-                <label class="field-label">КПП</label>
-                <input type="text" name="kpp" class="field-input" value="<?= e($old['kpp'] ?? '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">ОГРН</label>
-                <input type="text" name="ogrn" class="field-input" value="<?= e($old['ogrn'] ?? '') ?>">
-            </div>
-        </div>
-
-        <!-- Section: Адреса -->
-        <div class="form-section">
-            <h3 class="panel-head-title">Адреса</h3>
-            <div class="field">
-                <label class="field-label">Юридический адрес</label>
-                <input type="text" name="legal_address" class="field-input" value="<?= e($old['legal_address'] ?? '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Фактический адрес</label>
-                <input type="text" name="physical_address" class="field-input" value="<?= e($old['physical_address'] ?? '') ?>">
-            </div>
-        </div>
-
-        <!-- Section: Контакты -->
-        <div class="form-section">
-            <h3 class="panel-head-title">Контакты</h3>
-            <div class="field">
-                <label class="field-label">Контактное лицо</label>
-                <input type="text" name="contact_person" class="field-input" value="<?= e($old['contact_person'] ?? '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Телефон</label>
-                <input type="text" name="contact_phone" class="field-input" value="<?= e($old['contact_phone'] ?? '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Email</label>
-                <input type="email" name="contact_email" class="field-input" value="<?= e($old['contact_email'] ?? '') ?>">
-            </div>
-        </div>
-
-        <!-- Section: Дополнительно -->
-        <div class="form-section">
-            <h3 class="panel-head-title">Дополнительно</h3>
-            <div class="field">
-                <label class="field-label">Комментарий</label>
-                <textarea name="comments" class="field-textarea" rows="3"><?= e($old['comments'] ?? '') ?></textarea>
-            </div>
-        </div>
-
-        <!-- Form actions -->
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Создать экспедитора</button>
-            <a href="/superadmin/companies" class="btn btn-ghost">Отмена</a>
-        </div>
-    </div>
-</form>
+```php
+function statusBadge(string $status): string
+{
+    $map = [
+        'active'       => ['class' => 'badge-ok',    'label' => 'Активен'],
+        'inactive'     => ['class' => '',             'label' => 'Неактивен'],
+        'blocked'      => ['class' => 'badge-danger', 'label' => 'Заблокирован'],
+        'archived'     => ['class' => '',             'label' => 'Архивирован'],
+        'provisioning' => ['class' => 'badge-warn',   'label' => 'Настройка'],
+        'error'        => ['class' => 'badge-danger', 'label' => 'Ошибка'],
+        'suspended'    => ['class' => 'badge-warn',   'label' => 'Приостановлен'],
+    ];
+    $item = $map[$status] ?? ['class' => '', 'label' => $status];
+    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
+}
 ```
 
-### Form fields specification
+### Provisioning badge (отдельная функция)
 
-| # | Field | Type | Required | Validation | Class |
-|---|-------|------|----------|------------|-------|
-| 1 | `name` | text | **YES** | required, not empty | `.field-input` |
-| 2 | `inn` | text | **YES** | required, not empty | `.field-input` |
-| 3 | `kpp` | text | no | — | `.field-input` |
-| 4 | `ogrn` | text | no | — | `.field-input` |
-| 5 | `legal_address` | text | no | — | `.field-input` |
-| 6 | `physical_address` | text | no | — | `.field-input` |
-| 7 | `contact_person` | text | no | — | `.field-input` |
-| 8 | `contact_phone` | text | no | — | `.field-input` |
-| 9 | `contact_email` | email | no | valid email if filled | `.field-input` |
-| 10 | `comments` | textarea | no | — | `.field-textarea` |
-
-### Validation states (CORE-28)
-
-- Empty `name` → field `.is-error`, message «Обязательное поле»
-- Empty `inn` → field `.is-error`, message «Обязательное поле»
-- Failed save → error notice at top of form
+```php
+function provisioningBadge(string $status, ?string $dbIdentifier): string
+{
+    if (!empty($dbIdentifier)) {
+        $label = e($dbIdentifier);
+    } else {
+        $label = '—';
+    }
+    $map = [
+        'active'       => ['class' => 'badge-ok',    'label' => 'active'],
+        'inactive'     => ['class' => '',             'label' => 'inactive'],
+        'blocked'      => ['class' => 'badge-danger', 'label' => 'blocked'],
+        'archived'     => ['class' => '',             'label' => 'archived'],
+        'error'        => ['class' => 'badge-danger', 'label' => 'error'],
+        'provisioning' => ['class' => 'badge-warn',   'label' => 'provisioning'],
+    ];
+    $item = $map[$status] ?? ['class' => '', 'label' => $status];
+    return '<span class="badge ' . $item['class'] . '" style="margin-left:4px"><span class="dot"></span>' . e($item['label']) . '</span>';
+    // Above row also shows db_identifier as text before the provisioning badge
+}
+```
 
 ---
 
-## 8. Empty state (CORE-34)
+## 7. Status action routes (NEW)
 
-When no companies exist:
+### POST /superadmin/companies/{id}/activate
+
+```php
+// Обработчик:
+1. Загрузить company по id → если нет: ошибка
+2. UPDATE companies SET status='active', updated_at=NOW() WHERE id=?
+3. Redirect 302 → /superadmin/companies
+// Только если текущий статус не active
+```
+
+### POST /superadmin/companies/{id}/block
+
+```php
+// Обработчик:
+1. Загрузить company по id → если нет: ошибка
+2. UPDATE companies SET status='blocked', updated_at=NOW() WHERE id=?
+3. Redirect 302 → /superadmin/companies
+// Только если текущий статус active
+```
+
+### POST /superadmin/companies/{id}/archive
+
+```php
+// Обработчик:
+1. Загрузить company по id → если нет: ошибка
+2. UPDATE companies SET status='archived', updated_at=NOW() WHERE id=?
+3. Redirect 302 → /superadmin/companies
+// Всегда доступно, confirm перед POST
+// НЕ удаляет локальную БД, storage, company_users — только статус
+```
+
+---
+
+## 8. Creation form (существующая)
+
+**Route:** `/superadmin/companies/create`
+**View file:** `app/View/pages/superadmin_companies_create.php`
+**Без изменений** относительно v1.0 handoff. Полная спецификация формы сохранена из предыдущей версии.
+
+Краткий перечень: name*, inn*, kpp, ogrn, legal_address, physical_address, contact_person, contact_phone, contact_email, comments.
+
+---
+
+## 9. Empty state (CORE-34)
 
 ```html
 <div class="panel">
@@ -285,7 +339,7 @@ When no companies exist:
 
 ---
 
-## 9. Error states
+## 10. Error states
 
 ### Page load error
 ```html
@@ -294,147 +348,223 @@ When no companies exist:
 </div>
 ```
 
-### Provisioning error display (in table row or detail)
-- Status badge: `.badge-danger` «Ошибка»
-- Technical message accessible to SUPERADMIN (e.g., error_details column/field)
-
-### Success after creation
+### DB error (центральная или локальная)
 ```html
-<div class="notice">
-    Экспедитор создан. Выполняется настройка инфраструктуры.
+<div class="notice danger">
+    Ошибка подключения к базе данных. <?= e($errorMessage) ?>
 </div>
 ```
-Redirect to `/superadmin/companies` with status visible in list.
+
+### Success after status change
+```html
+<div class="notice success">
+    Статус компании изменён.
+</div>
+```
 
 ---
 
-## 10. Loading state (CORE-35)
+## 11. Loading state (CORE-35)
 
-Skeleton rows for table while data loads.
+Skeleton rows for table while data loads:
+```html
+<div class="tbl-wrap">
+    <table class="tbl">
+        <tbody>
+            <?php for ($i = 0; $i < 5; $i++): ?>
+            <tr><td colspan="10"><div class="sk" style="width:<?= rand(60,95) ?>%"></div></td></tr>
+            <?php endfor; ?>
+        </tbody>
+    </table>
+</div>
+```
 
 ---
 
-## 11. CORE modules used
+## 12. CORE modules used
 
 | ID | Module | Usage |
 |----|--------|-------|
 | CORE-01 | App shell | Existing foundation |
 | CORE-02 | Sidebar navigation | Existing — SUPERADMIN is-active |
 | CORE-03 | Topbar | Existing — context «Реестр компаний» |
-| CORE-05 | Page header | Page head with title + action |
-| CORE-06 | Page actions | «Создать экспедитора» button |
-| CORE-08 | Panel | Table container, form container |
-| CORE-11 | Filter toolbar | filters-bar with search/select |
-| CORE-12 | Search field | Search inputs |
+| CORE-05 | Page header (page-head) | Title + «Создать экспедитора» |
+| CORE-06 | Page actions | «Создать экспедитора» btn-primary |
+| CORE-08 | Panel | Table container |
+| CORE-11 | Filter toolbar (filters-bar) | Search + status select + provisioning select |
+| CORE-12 | Search field | Search input |
 | CORE-13 | Data table / ERP grid | Companies table |
-| CORE-14 | Table row states | hover, selected |
+| CORE-14 | Table row states | Row hover |
+| CORE-15 | Table row actions | Quick action buttons per row |
 | CORE-16 | Pagination | When needed |
 | CORE-17 | Primary button | «Создать экспедитора» |
-| CORE-18 | Secondary button | Disabled actions |
-| CORE-19 | Ghost button | «Отмена», «← К реестру» |
+| CORE-19 | Ghost button | Navigation links |
 | CORE-20 | Toolbar button | «Сбросить» filter |
-| CORE-24 | Status badge | provisioning/active/error |
-| CORE-26 | Form field | All form inputs |
-| CORE-27 | Form section | Grouped fields |
+| CORE-22 | Danger button | Status change confirmations |
+| CORE-24 | Status badge | Company + provisioning statuses |
+| CORE-26 | Form field | Creation form fields |
+| CORE-27 | Form section | Creation form sections |
 | CORE-28 | Validation/error | Required field errors |
-| CORE-32 | Notice | System messages |
-| CORE-33 | Warning notice | Error messages |
+| CORE-29 | Confirm (CORE-37) | Status change confirmations |
+| CORE-32 | Notice | System messages, success |
+| CORE-33 | Warning notice | DB errors |
 | CORE-34 | Empty state | No companies |
 | CORE-35 | Loading skeleton | Table loading |
 
-**COMPOSITE pattern:** PATTERN-01 Table-only registry
+**COMPOSITE pattern:** PATTERN-01 Table-only registry (extended with expanded columns and row actions)
 
 ---
 
-## 12. SOURCE MAPPING (summary)
+## 13. MODULE USAGE DECISIONS
 
-| UI element | CORE module | Classes |
-|------------|-------------|---------|
-| Page head | CORE-05 | `.page-head h1`, `.text-muted` |
-| Primary action | CORE-06, CORE-17 | `.btn-primary` |
-| Filter bar | CORE-11 | `.filters-bar`, `.field-input`, `.field-select` |
-| Table | CORE-13 | `.panel`, `.tbl-wrap`, `.tbl` |
-| Status badge active | CORE-24 | `.badge-ok` |
-| Status badge provisioning | CORE-24 | `.badge-warn` |
-| Status badge error | CORE-24 | `.badge-danger` |
-| Form field | CORE-26 | `.field`, `.field-label`, `.field-input`, `.req` |
-| Form section | CORE-27 | `.form-section` |
-| Validation error | CORE-28 | `.is-error`, `.field-msg` |
-| Empty state | CORE-34 | `.empty-state`, `.btn-primary` |
-| Notice | CORE-32 | `.notice` |
-| Warning | CORE-33 | `.notice.warn` |
-| Ghost button | CORE-19 | `.btn-ghost` |
+- **Main page purpose:** Central registry of all local ERP systems with monitoring and quick status actions.
+- **Primary work object:** Companies table with 10 columns.
+- **Main layout selected:** table-only (PATTERN-01).
+- **Primary action:** «Создать экспедитора» (CORE-17 btn-primary).
+- **Secondary actions:** Row-level status changes + navigation links.
+- **Table required:** YES — central monitoring view.
+- **Form required:** NO on this page (creation is separate page, unchanged).
+- **Inspector required:** NO — detail is via navigation to company card.
+- **Filters required:** YES — search by name/INN + two selects (status, provisioning).
+- **Modal required:** NO — confirm via JS confirm() for status actions.
+- **Modules explicitly not used:** CORE-30 Inspector (detail via card page, not inline), CORE-36 Modal (simple confirm for now).
 
 ---
 
-## 13. CSS COMPATIBILITY CHECK
+## 14. SOURCE MAPPING
 
-| Parent | Child | Parent padding | Flush |
-|--------|-------|---------------|-------|
-| `.panel` | `.panel-head` | 0 | YES — head flush |
-| `.panel` | `.panel-body` | 0 | Padding in body (10px) |
-| `.panel-body` | `.form-section` | 10px | — |
-| `.filters-bar` | `.field-input` | — | Controls inside bar |
+| # | UI element | CORE module ID | Exact source in ERP_UI_KIT_CORE.html | Required classes | Forbidden alternatives |
+|---|------------|----------------|--------------------------------------|-----------------|------------------------|
+| 1 | App shell | CORE-01 | Production CSS > .app-shell | `.app-shell` | Bootstrap container |
+| 2 | Sidebar nav | CORE-02 | Production CSS > .nav-item, .nav-item:hover, .nav-item.is-active | `.nav-item`, `.is-active` | `a.nav-item { color: inherit }` |
+| 3 | Topbar | CORE-03 | Production CSS > .topbar | `.topbar` | Hero header |
+| 4 | Page head | CORE-05 | Production CSS > .page-head | `.page-head h1` | Demo title |
+| 5 | Primary action | CORE-06, CORE-17 | Button Decision Matrix > Primary | `.btn-primary` | Multiple primaries |
+| 6 | Filter bar | CORE-11 | CORE-11 module card > .filters-bar | `.filters-bar`, `.field-input`, `.field-select` | Giant filter cards |
+| 7 | Search field | CORE-12 | CORE-12 module card | `.field-input` | Decorative topbar search |
+| 8 | Table | CORE-13 | Production CSS > .tbl, .tbl-wrap | `.panel`, `.tbl-wrap`, `.tbl` | Bootstrap table, cards |
+| 9 | Table row | CORE-14 | CORE-14 module card | `tr` hover | Bright hover colors |
+| 10 | Row actions | CORE-15 | CORE-15 module card > .row-actions, .ra | `.row-actions`, `.ra`, `.ra.del` | Always-visible clutter |
+| 11 | Status badge (active) | CORE-24 | Production CSS > .badge-ok | `.badge-ok`, `.dot` | Bootstrap alert-success |
+| 12 | Status badge (provisioning) | CORE-24 | Production CSS > .badge-warn | `.badge-warn`, `.dot` | Bootstrap alert-warning |
+| 13 | Status badge (error/blocked) | CORE-24 | Production CSS > .badge-danger | `.badge-danger`, `.dot` | Bootstrap alert-danger |
+| 14 | Status badge (archived) | CORE-24 | Production CSS > .badge (neutral) | `.badge`, `.dot` | Random color |
+| 15 | Empty state | CORE-34 | CORE-34 module card > .empty-state | `.empty-state`, `.btn-primary` | Blank workspace |
+| 16 | Notice success | CORE-32 | Production CSS > .notice | `.notice.success` | Bootstrap alert |
+| 17 | Notice warn | CORE-33 | Production CSS > .notice.warn | `.notice.warn` | Bootstrap alert-warning |
+| 18 | Notice danger | CORE-33 | Production CSS > .notice | `.notice.danger` | Bootstrap alert-danger |
+| 19 | Toolbar button | CORE-20 | Button Decision Matrix > Toolbar | `.btn-toolbar` | Normal .btn in toolbar |
+| 20 | Ghost button | CORE-19 | Button Decision Matrix > Ghost | `.btn-ghost` | Ghost danger action |
 
 ---
 
-## 14. Forbidden
+## 15. CSS COMPATIBILITY CHECK
+
+| Parent | Child | Parent padding | Flush requirement | Padding belongs to | Border token | Required states |
+|--------|-------|---------------|-------------------|--------------------|-------------|-----------------|
+| `.panel` | `.panel-head` | 0 (by rule) | Yes — head flush to top | `.panel-body` (10px) | `--line-hair` | `h3.panel-head-title` |
+| `.panel` | `.panel-body` | 0 | — | `.panel-body` (10px) | — | text-muted, btn |
+| `.filters-bar` | `.field-input` | — | — | Internal bar padding | — | focus, placeholder |
+| `.filters-bar` | `.field-select` | — | — | Internal bar padding | — | focus |
+| `.tbl-wrap` | `.tbl` | — | — | — | `--line-hair` | sticky thead, row hover |
+| `.row-actions` | `.ra` | — | — | — | `--line-soft` | hover, `.ra.del` danger |
+| `.nav-item` | `.nav-icon` | — | — | — | `--nav-gold` on active | hover: opacity .7, active: .85 |
+
+---
+
+## 16. Strict prohibitions for coder
 
 - Не менять `main.php` shell/sidebar/topbar
-- Не придумывать новые CSS-классы
+- Не придумывать новые CSS-классы без source в Core Kit
 - Не использовать `slug/key` для DB/storage генерации
-- Не использовать `ERP_UI_MODULE_CATALOG.html` как primary source
 - Не хранить DB-пароли в БД
 - Не коммитить `.env` и секреты
+- Не удалять локальную БД при archive/block
+- Не удалять storage при archive/block
+- Не удалять company_users при смене статуса
 - Demo-placeholder UI запрещён (псевдоиконки, SaaS-dashboard, debug badges)
+- Не использовать emoji как иконки
+- `border-radius` ≤ 4px для новых элементов
+- `box-shadow` blur ≤ 8px для новых элементов
 
 ---
 
-## 15. Coder implementation checklist
+## 17. Coder implementation checklist
 
-- [ ] Реализовать маршруты `/superadmin/companies` и `/superadmin/companies/create`
-- [ ] Создать view `superadmin_companies.php` (список)
-- [ ] Создать view `superadmin_companies_create.php` (форма)
-- [ ] Создать/обновить таблицу `companies` в центральной БД
-- [ ] Реализовать создание экспедитора: запись → ID → DB name → create DB → storage folder → status update
-- [ ] Реализовать обработку ошибок provisioning (статус error, сообщение)
-- [ ] Валидация обязательных полей (name, inn)
+- [ ] Обновить view `superadmin_companies.php`: расширенные колонки (10 вместо 7)
+- [ ] Добавить колонку «Локальная БД» (db_identifier)
+- [ ] Добавить колонку «Provisioning» (provisioningBadge)
+- [ ] Добавить колонку «Пользователей» (owner_count + logist_count)
+- [ ] Расширить колонку «Действия»: V/E/O/U + статусные кнопки
+- [ ] Добавить фильтр «provisioning status» в filters-bar
+- [ ] Реализовать loading skeleton для таблицы
+- [ ] Реализовать маршруты `POST /superadmin/companies/{id}/activate`
+- [ ] Реализовать маршруты `POST /superadmin/companies/{id}/block`
+- [ ] Реализовать маршруты `POST /superadmin/companies/{id}/archive`
+- [ ] Добавить `confirm()` на статусные действия
+- [ ] Обновить `statusBadge()` — добавить inactive/blocked/archived
+- [ ] Создать `provisioningBadge()` функцию
 - [ ] Соответствовать этому handoff по структуре и классам
 - [ ] Не менять main.php
 - [ ] Не добавлять новых CSS-классов без source в Core Kit
-
-## 16. QA formal checklist
-
-- [ ] Страница `/superadmin/companies` открывается
-- [ ] Форма `/superadmin/companies/create` открывается
-- [ ] Создание экспедитора работает (центральная запись)
-- [ ] Локальная БД создаётся с именем `erp_company_{id}`
-- [ ] Storage-папка создаётся `storage/companies/{id}/`
-- [ ] Slug/key не используется для DB/storage
-- [ ] Валидация: пустой name → ошибка
-- [ ] Валидация: пустой inn → ошибка
-- [ ] Статус provisioning отображается
-- [ ] Статус active отображается после успешного provisioning
-- [ ] Статус error отображается при ошибке provisioning
-- [ ] Shell не сломан
-- [ ] main.php не изменён
-- [ ] Нет новых CSS-классов вне Core Kit
-- [ ] Нет секретов в git diff
 - [ ] `php -l` для всех изменённых PHP — OK
 
 ---
 
-## 17. Owner review
+## 18. QA formal checklist
 
-- **VISUAL CHECK URL:** `http://127.0.0.1:[port]/superadmin/companies`
-- **Manual owner visual review required:** YES (deferred to UI polish cycle)
-- **Commit allowed before owner visual approval:** NO (functional checkpoint commit allowed separately)
+- [ ] Страница `/superadmin/companies` открывается с расширенными колонками
+- [ ] Колонка «ID» видна и корректна
+- [ ] Колонка «Название» видна и кликабельна в карточку
+- [ ] Колонка «ИНН» видна
+- [ ] Колонка «Статус» показывает badge с dot
+- [ ] Колонка «Provisioning» показывает db_identifier + provisioning badge
+- [ ] Колонка «Локальная БД» показывает db_identifier или «—»
+- [ ] Колонка «Руководитель» показывает имя + dot или «Создать» или «—»
+- [ ] Колонка «Пользователей» показывает число (owner + logists)
+- [ ] Колонка «Создан» показывает дату
+- [ ] Колонка «Действия» содержит V/E/O/U кнопки
+- [ ] Кнопка «Активировать» (✓) видна для не-active компаний
+- [ ] Кнопка «Заблокировать» (⊗) видна для active компаний
+- [ ] Кнопка «Архивировать» (A) видна всегда
+- [ ] Статусные действия требуют confirm
+- [ ] Фильтр «Все статусы» работает
+- [ ] Фильтр «Все provisioning» работает
+- [ ] Фильтр поиска работает (client-side или server-side)
+- [ ] Empty state показывает «Нет созданных компаний»
+- [ ] Кнопка «Создать экспедитора» в page-head работает
+- [ ] Кнопка «Сбросить» в filters-bar работает
+- [ ] Shell не сломан (main.php не изменён)
+- [ ] Нет новых CSS-классов вне Core Kit
+- [ ] Нет секретов в git diff
+- [ ] `php -l` для всех изменённых PHP — OK
+- [ ] Все предыдущие SUPERADMIN-маршруты работают
 
 ---
 
-## 18. Notes
+## 19. Owner visual check
 
-- Handoff created by erp-architect in ACCELERATED FUNCTIONAL DEVELOPMENT MODE
-- UI polish (exact spacing, column widths, visual refinement) deferred to separate designer cycle
-- Coder must not wait for visual approval to implement functionality
-- Chief designer / KLAUD review: deferred
+- **VISUAL CHECK URL:** `http://127.0.0.1:[port]/superadmin/companies`
+- **Что владелец должен проверить глазами:**
+  - [ ] Industrial Graphite + Warm Accent сохранён.
+  - [ ] Таблица плотная, читаемая, 10 колонок.
+  - [ ] Статусные бейджи с точками.
+  - [ ] Кнопки действий видны на hover строки.
+  - [ ] Нет псевдоиконок `[=]`, `[#]`, `[~]`, `[v]`.
+  - [ ] Нет emoji как иконок.
+  - [ ] Нет demo-placeholder/SaaS-dashboard вида.
+  - [ ] Нет больших пустот.
+  - [ ] Нет случайных цветов вне утверждённой палитры.
+- **Manual owner visual review required:** YES
+- **Commit allowed before owner visual approval:** NO
+
+---
+
+## 20. Design notes
+
+- Handoff v2.0 расширяет v1.0 (FUNCTIONALLY ACCEPTED). Сохранена обратная совместимость с созданием экспедитора.
+- Provisioning badge показывает как статус provisioning, так и db_identifier.
+- Колонка «Пользователей» требует запроса к двум БД (центральной и локальной). Падение локальной БД не должно ломать всю таблицу — показывать «—» или 0.
+- Фильтры могут быть client-side (JS filter по загруженным данным) на v2.0 с deferred server-side фильтрацией.
+- Статусные кнопки (активировать/заблокировать/архивировать) показываются условно в зависимости от текущего статуса.
+- Row actions скрыты до hover (стандарт CORE-15).
