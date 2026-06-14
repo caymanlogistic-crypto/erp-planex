@@ -1,26 +1,27 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-14 — SUPERADMIN_MANAGEMENT_COMPLETE
+# CURRENT CONTEXT OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_BLOCKERS_FIXED
 
-**SUPERADMIN-АДМИНКА ЗАКРЫТА КАК ПОЛНОЦЕННЫЙ ЦЕНТР УПРАВЛЕНИЯ. QA: 65/65 PASS. ГОТОВО К РУЧНОЙ ВИЗУАЛЬНОЙ ПРОВЕРКЕ ВЛАДЕЛЬЦЕМ.**
+**5 БЛОКЕРОВ SUPERADMIN ИСПРАВЛЕНЫ. RUNTIME QA: 22/22 PASS. ГОТОВО К COMMIT И HANDOFF ДИЗАЙНЕРУ.**
 
 ## Состояние
-- 95 маршрутов (27 SUPERADMIN + Auth + Company 6 entities CRUD + Documents + Ownership)
-- 22 view-файла (8 SUPERADMIN существующих + 6 новых SUPERADMIN)
-- 9 локальных миграций (001-009)
-- index.php: ~8008 строк
+- 108 маршрутов (105 + 3 owner status)
+- 22 view-файла
+- index.php: ~9034 строк
 - All php -l clean
 - main.php, app.css, Database.php, Router.php — НЕ изменены
 - Server: http://127.0.0.1:8016
 
 ## Реализовано
-- **SUPERADMIN Management Center (27 маршрутов):**
-  - Расширенный реестр компаний (10 колонок, row actions, фильтры)
-  - Расширенная карточка компании (секции 6-11: Пользователи, Справочники, Документы, Доступы, Действия)
-  - Статусные действия: activate/block/archive (POST, confirm, без destructive)
-  - Пользователи компании: объединённая таблица owner + logists
+- **SUPERADMIN Management Center (30 маршрутов):**
+  - Расширенный реестр компаний (9 колонок, row actions, фильтры)
+  - Расширенная карточка компании (секции 6-11: Пользователи, Справочники, Документы, Доступы, Действия, Опасная зона)
+  - Статусные действия: activate/deactivate/block/archive (POST, confirm, без destructive)
+  - Пользователи компании: объединённая таблица owner + logists с быстрыми статусными действиями
+  - Owner status actions: activate/block/archive (3 новых маршрута)
   - Управление логистами из SUPERADMIN: view, edit, reset-password, activate/block/archive
   - Мониторинг справочников (counts 5 таблиц)
   - Мониторинг документов (таблица + download)
-  - Мониторинг доступов (entity_access_grants, REVOKE DEFERRED)
+  - Мониторинг доступов (entity_access_grants, REVOKE)
+  - Hard delete компании (guarded: confirm phrase, db pattern, backup, ZipArchive/mysqldump safety)
 - Auth: login/logout/sessions/route guards (3 роли)
 - Company Logists: list/create/view/edit/reset-password/archive
 - Company Clients/Contractors/Drivers/Vehicles/Crews: list/create/view/edit/archive
@@ -809,11 +810,12 @@ UI Module Catalog:
 ## Последние commits
 
 ```text
-ce251d8 feat(superadmin): complete management center
+[новый] fix(superadmin): close functional blockers before design handoff
+69b6f60 feat(superadmin): add guarded company hard delete
+e868208 feat(superadmin): close management center functionality
+846c2d2 feat(superadmin): complete management center
 442ff2c fix(reference): complete runtime fixes including document delete/replace
 3c4f34d feat(reference): complete functional management block with auth, documents, CRUD, ownership and access grants
-21fdddc feat(superadmin): add company and owner management
-cecdebb docs: add final QA report for reference block
 ```
 50f96a9 Fix ERP PLANEX UI process rules and SUPERADMIN handoff
 be55198 Create SUPERADMIN Stage 4a migration runner
@@ -849,13 +851,19 @@ dc75ab4 Create minimal PHP application skeleton
 
 ## Текущая задача
 
-Активная задача: **SUPERADMIN Management Center — SUPERADMIN_MANAGEMENT_ACCEPTED (2026-06-14).**
+Активная задача: **SUPERADMIN Functional Blocker Fixes — SUPERADMIN_FUNCTIONAL_ACCEPTED (2026-06-14).**
 
-Результаты:
-- 27 SUPERADMIN маршрутов (13 существующих + 14 новых)
-- 6 новых views + 2 обновлённых views
-- QA: 65/65 PASS, 0 FAIL, 0 BLOCKER
-- main.php, app.css, Database.php, Router.php — НЕ изменены
+Исправлены 5 блокеров:
+1. Document download: путь исправлен (использует `relative_path` из БД)
+2. Provisioning filter: удалён (декоративный, фильтровал `status`, не `provisioning_status`)
+3. Company status transitions: block из `inactive` разрешён
+4. Owner quick status actions: 3 новых маршрута + UI-кнопки
+5. Hard delete safety: ZipArchive/mysqldump availability checks, `escapeshellarg()`
+
+Runtime QA: 22/22 PASS. php -l: 5/5 clean.
+QA reports: `docs/qa/QA_SUPERADMIN_FUNCTIONAL_CLOSURE.md`, `docs/qa/QA_SUPERADMIN_COMPANY_HARD_DELETE.md`.
+
+Next step: Commit → Owner visual review → UI-полировка дизайнером.
 - DECISION-0048: полный SUPERADMIN Management Center + политика безопасности паролей
 - Server URL: http://127.0.0.1:8016
 

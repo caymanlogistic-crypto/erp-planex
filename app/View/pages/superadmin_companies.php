@@ -15,24 +15,6 @@ function statusBadge(string $status): string
     return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
 }
 
-function provisioningBadge(string $status, ?string $dbIdentifier): string
-{
-    if (!empty($dbIdentifier)) {
-        $label = e($dbIdentifier);
-    } else {
-        $label = '—';
-    }
-    $map = [
-        'active'       => ['class' => 'badge-ok',    'label' => 'active'],
-        'inactive'     => ['class' => '',             'label' => 'inactive'],
-        'blocked'      => ['class' => 'badge-danger', 'label' => 'blocked'],
-        'archived'     => ['class' => '',             'label' => 'archived'],
-        'error'        => ['class' => 'badge-danger', 'label' => 'error'],
-        'provisioning' => ['class' => 'badge-warn',   'label' => 'provisioning'],
-    ];
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-    return e($label) . ' <span class="badge ' . $item['class'] . '" style="margin-left:4px"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
 
 ?>
 <div class="page-head">
@@ -70,15 +52,7 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
         <option value="provisioning" <?= ($filterStatus ?? '') === 'provisioning' ? 'selected' : '' ?>>Настройка</option>
         <option value="error" <?= ($filterStatus ?? '') === 'error' ? 'selected' : '' ?>>Ошибка</option>
     </select>
-    <select class="field-select" name="provisioning" style="max-width:160px">
-        <option value="">Все provisioning</option>
-        <option value="active" <?= ($filterProvisioning ?? '') === 'active' ? 'selected' : '' ?>>active</option>
-        <option value="inactive" <?= ($filterProvisioning ?? '') === 'inactive' ? 'selected' : '' ?>>inactive</option>
-        <option value="blocked" <?= ($filterProvisioning ?? '') === 'blocked' ? 'selected' : '' ?>>blocked</option>
-        <option value="archived" <?= ($filterProvisioning ?? '') === 'archived' ? 'selected' : '' ?>>archived</option>
-        <option value="error" <?= ($filterProvisioning ?? '') === 'error' ? 'selected' : '' ?>>error</option>
-        <option value="provisioning" <?= ($filterProvisioning ?? '') === 'provisioning' ? 'selected' : '' ?>>provisioning</option>
-    </select>
+
     <button type="submit" class="btn btn-toolbar">Применить</button>
     <a href="/superadmin/companies" class="btn btn-ghost">Сбросить</a>
 </form>
@@ -107,7 +81,6 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
                         <th>Название</th>
                         <th>ИНН</th>
                         <th>Статус</th>
-                        <th>Provisioning</th>
                         <th>Локальная БД</th>
                         <th>Руководитель</th>
                         <th>Пользователей</th>
@@ -122,7 +95,6 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
                         <td><?= e($c['name']) ?></td>
                         <td class="col-mono"><?= e($c['inn']) ?></td>
                         <td><?= statusBadge($c['status']) ?></td>
-                        <td><?= provisioningBadge($c['status'], $c['db_identifier'] ?? null) ?></td>
                         <td class="col-mono col-muted"><?= e($c['db_identifier'] ?? '—') ?></td>
                         <td>
                             <?php if (in_array($c['status'], ['error', 'provisioning'], true)): ?>
@@ -149,7 +121,7 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
                                     <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Активировать</button>
                                 </form>
                                 <?php endif; ?>
-                                <?php if ($c['status'] === 'active'): ?>
+                                <?php if (in_array($c['status'], ['active', 'inactive'], true)): ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
                                     <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Заблокировать</button>
                                 </form>

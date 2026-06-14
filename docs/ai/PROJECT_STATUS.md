@@ -1,8 +1,25 @@
-# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_REWORK_COMPLETE
+# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_BLOCKERS_FIXED
 
-Current focus: **SUPERADMIN-БЛОК ПРОШЁЛ ФУНКЦИОНАЛЬНЫЙ РЕВОРК ПО ЗАМЕЧАНИЯМ ВЛАДЕЛЬЦА. ГОТОВО К ПОВТОРНОЙ РУЧНОЙ ПРОВЕРКЕ.**
+Current focus: **5 БЛОКЕРОВ SUPERADMIN ИСПРАВЛЕНЫ. RUNTIME QA: 22/22 PASS. ГОТОВО К COMMIT.**
 
-Status: **IMPLEMENTED**. 10 новых маршрутов, 6 новых views, 10 изменённых views.
+Status: **SUPERADMIN_FUNCTIONAL_ACCEPTED**.
+
+## Исправленные блокеры
+1. Document download: путь исправлен (relative_path из БД)
+2. Provisioning filter: удалён (не было provisioning_status в схеме)
+3. Company status transitions: block из inactive разрешён
+4. Owner quick status actions: 3 новых маршрута + UI
+5. Hard delete safety: ZipArchive/mysqldump проверки, escapeshellarg
+
+## Изменённые файлы (5)
+- `public/index.php`, `superadmin_companies.php`, `superadmin_company_users.php`, `superadmin_company_view.php`, `superadmin_company_delete.php`
+
+## Новые QA-отчёты
+- `docs/qa/QA_SUPERADMIN_FUNCTIONAL_CLOSURE.md` (22 PASS)
+- `docs/qa/QA_SUPERADMIN_COMPANY_HARD_DELETE.md` (18 PASS, code-verified)
+
+## Next step
+Commit → ручная визуальная проверка владельцем → handoff дизайнеру для UI-полировки.
 
 ## Что сделано в реворке
 - Owner login: проверка company_status через JOIN (критический баг исправлен)

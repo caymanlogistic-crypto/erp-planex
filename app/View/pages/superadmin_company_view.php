@@ -282,7 +282,7 @@ function statusBadge(string $status): string
                 <button type="submit" class="btn btn-primary">Активировать</button>
             </form>
             <?php endif; ?>
-            <?php if ($company['status'] === 'active'): ?>
+            <?php if (in_array($company['status'], ['active', 'inactive'], true)): ?>
             <form method="post" action="/superadmin/companies/<?= $id ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
                 <button type="submit" class="btn btn-danger">Заблокировать</button>
             </form>

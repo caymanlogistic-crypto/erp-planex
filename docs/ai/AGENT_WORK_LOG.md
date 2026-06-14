@@ -1,5 +1,43 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-14 19:00 — KILO/erp-architect — SUPERADMIN Functional Blocker Fixes Before Design Handoff
+
+### Задача
+Исправить 5 блокеров SUPERADMIN, выявленных при проверке архива: document download, provisioning filter, status transitions, owner status actions, hard delete safety.
+
+### Результат
+**SUPERADMIN_FUNCTIONAL_ACCEPTED**. 5 блокеров исправлены. Runtime QA: 22/22 PASS, 0 BLOCKER.
+
+### Исправлено
+1. **Document download**: путь теперь использует `relative_path` из БД (было: `storage/companies/{id}/documents/{stored_name}`, стало: `storage_path($document['relative_path'])`)
+2. **Provisioning filter**: удалён полностью (фильтровал `status`, дублируя основной фильтр; `provisioning_status` в схеме нет)
+3. **Company status transitions**: block теперь доступен из `active` И `inactive`
+4. **Owner status actions**: 3 новых маршрута + UI-кнопки (activate/block/archive) в `/users` таблице
+5. **Hard delete safety**: ZipArchive `class_exists` check + rename fallback; mysqldump `where` check; `escapeshellarg()` на всех аргументах
+
+### Изменённые файлы (5)
+- `public/index.php` — document download fix, provisioning removal, block guard, 3 owner routes, mysqldump/ZipArchive safety
+- `app/View/pages/superadmin_companies.php` — provisioningBadge/select/column removed
+- `app/View/pages/superadmin_company_users.php` — owner activate/block/archive buttons
+- `app/View/pages/superadmin_company_view.php` — block button guard
+- `app/View/pages/superadmin_company_delete.php` — backup warning with dynamic details
+
+### Созданные файлы (2 QA reports)
+- `docs/qa/QA_SUPERADMIN_FUNCTIONAL_CLOSURE.md` — 22 проверки, все PASS
+- `docs/qa/QA_SUPERADMIN_COMPANY_HARD_DELETE.md` — 18 проверок кода и безопасности
+
+### Runtime QA
+- 22 HTTP-проверок: все PASS
+- php -l: 5/5 файлов чисты
+- Access control: owner 403 на /superadmin/*, logist 302 на /superadmin/*
+- Delete protection: wrong/empty phrase blocked
+- Provisioning filter: подтверждено отсутствие в HTML
+
+### Статус
+DONE — SUPERADMIN_FUNCTIONAL_ACCEPTED, готово к commit
+
+---
+
 ## 2026-06-14 18:10 — KILO/erp-architect — SUPERADMIN Functional Closure (QA fix + commit)
 
 ### Задача

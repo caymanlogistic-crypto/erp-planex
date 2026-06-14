@@ -120,7 +120,6 @@ $router->get('/superadmin/companies', function () use ($config, $db) {
 
     $search = trim($_GET['search'] ?? '');
     $filterStatus = trim($_GET['status'] ?? '');
-    $filterProvisioning = trim($_GET['provisioning'] ?? '');
 
     try {
         $pdo = $db->connection();
@@ -137,11 +136,7 @@ $router->get('/superadmin/companies', function () use ($config, $db) {
             $sql .= ' AND status = ?';
             $params[] = $filterStatus;
         }
-        if ($filterProvisioning !== '') {
-            $sql .= ' AND status = ?';
-            $params[] = $filterProvisioning;
-        }
-
+        
         $sql .= ' ORDER BY created_at DESC';
 
         $stmt = $pdo->prepare($sql);
@@ -7201,7 +7196,7 @@ $router->post('/superadmin/companies/{id}/block', function ($id) use ($config, $
         echo 'Company not found';
         return;
     }
-    if ($company['status'] === 'active') {
+    if (in_array($company['status'], ['active', 'inactive'], true)) {
         $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')
             ->execute(['blocked', (int)$id]);
     }
@@ -7803,10 +7798,16 @@ $router->get('/superadmin/companies/{company_id}/documents/{document_id}/downloa
             return;
         }
 
-        $storageBase = storage_path('companies/' . $company_id . '/documents/');
-        $filePath = realpath($storageBase . $document['stored_name']);
+        $docRelativePath = $document['relative_path'] ?? '';
+        if (!empty($docRelativePath)) {
+            $filePath = realpath(storage_path($docRelativePath));
+        } else {
+            $storageBase = storage_path('companies/' . $company_id . '/documents/');
+            $filePath = realpath($storageBase . $document['stored_name']);
+        }
 
-        if ($filePath === false || !str_starts_with($filePath, realpath($storageBase))) {
+        $companyStorageRoot = realpath(storage_path('companies/' . $company_id));
+        if ($filePath === false || ($companyStorageRoot !== false && !str_starts_with($filePath, $companyStorageRoot))) {
             http_response_code(403);
             echo 'Access denied';
             return;
@@ -8585,6 +8586,37 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
     }
 });
 
+// ============================================================
+// SUPERADMIN: Owner status actions (NEW)
+// ============================================================
+
+$router->post('/superadmin/companies/{company_id}/users/owner/{user_id}/activate', function ($company_id, $user_id) use ($config, $db) {
+    requireRole('superadmin');
+    $pdo = $db->connection();
+    $pdo->prepare("UPDATE company_users SET status = 'active', updated_at = NOW() WHERE id = ? AND company_id = ? AND role = 'company_owner'")
+        ->execute([(int)$user_id, (int)$company_id]);
+    header('Location: /superadmin/companies/' . $company_id . '/users?status_changed=1');
+    exit;
+});
+
+$router->post('/superadmin/companies/{company_id}/users/owner/{user_id}/block', function ($company_id, $user_id) use ($config, $db) {
+    requireRole('superadmin');
+    $pdo = $db->connection();
+    $pdo->prepare("UPDATE company_users SET status = 'blocked', updated_at = NOW() WHERE id = ? AND company_id = ? AND role = 'company_owner'")
+        ->execute([(int)$user_id, (int)$company_id]);
+    header('Location: /superadmin/companies/' . $company_id . '/users?status_changed=1');
+    exit;
+});
+
+$router->post('/superadmin/companies/{company_id}/users/owner/{user_id}/archive', function ($company_id, $user_id) use ($config, $db) {
+    requireRole('superadmin');
+    $pdo = $db->connection();
+    $pdo->prepare("UPDATE company_users SET status = 'archived', updated_at = NOW() WHERE id = ? AND company_id = ? AND role = 'company_owner'")
+        ->execute([(int)$user_id, (int)$company_id]);
+    header('Location: /superadmin/companies/' . $company_id . '/users?status_changed=1');
+    exit;
+});
+
 $router->get('/superadmin/companies/{id}/delete', function ($id) use ($config, $db) {
     requireRole('superadmin');
     $pageTitle = 'Удаление компании';
@@ -8828,42 +8860,75 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
         $dbHost = $config['database']['host'] ?? '127.0.0.1';
         $dbPort = $config['database']['port'] ?? '3306';
 
-        $cmd = "mysqldump --host={$dbHost} --port={$dbPort} --user={$dbUser} ";
-        if ($dbPass !== '') { $cmd .= "--password={$dbPass} "; }
-        $cmd .= "--no-tablespaces --single-transaction --routines --triggers {$dbIdentifier}";
+        $mysqldumpAvailable = false;
+        $mysqldumpPath = trim(shell_exec('where mysqldump 2>NUL') ?? '');
+        if (!empty($mysqldumpPath)) {
+            $mysqldumpAvailable = true;
+        }
 
-        $output = null; $retval = 0;
-        exec($cmd . ' 2>&1', $output, $retval);
-        if ($retval === 0) {
-            file_put_contents($dumpFile, implode("\n", $output));
-            $dumpCreated = true;
-            $report['steps'][] = 'local_db_dump_created';
+        if ($mysqldumpAvailable) {
+            $cmd = "mysqldump --host=" . escapeshellarg($dbHost) . " --port=" . escapeshellarg($dbPort) . " --user=" . escapeshellarg($dbUser) . " ";
+            if ($dbPass !== '') { $cmd .= "--password=" . escapeshellarg($dbPass) . " "; }
+            $cmd .= "--no-tablespaces --single-transaction --routines --triggers " . escapeshellarg($dbIdentifier);
+        }
+
+        if ($mysqldumpAvailable) {
+            $output = null; $retval = 0;
+            exec($cmd . ' 2>&1', $output, $retval);
+            if ($retval === 0) {
+                file_put_contents($dumpFile, implode("\n", $output));
+                $dumpCreated = true;
+                $report['steps'][] = 'local_db_dump_created';
+            } else {
+                $report['steps'][] = 'local_db_dump_failed: ' . implode(' ', array_slice($output, 0, 3));
+            }
         } else {
-            $report['steps'][] = 'local_db_dump_failed: ' . implode(' ', $output);
+            $report['steps'][] = 'local_db_dump_skipped: mysqldump unavailable';
         }
     }
 
     $storageAbs = storage_path('companies/' . $companyId);
     $storageBackedUp = false;
     if (is_dir($storageAbs)) {
-        $zipFile = $backupDir . '/storage_backup.zip';
-        $zip = new ZipArchive();
-        if ($zip->open($zipFile, ZipArchive::CREATE) === TRUE) {
-            $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($storageAbs, RecursiveDirectoryIterator::SKIP_DOTS));
-            foreach ($files as $file) {
-                $filePath = $file->getRealPath();
-                $relativePath = substr($filePath, strlen($storageAbs) + 1);
-                $zip->addFile($filePath, $relativePath);
+        if (!class_exists('ZipArchive')) {
+            $report['steps'][] = 'storage_backup_skipped: ZipArchive unavailable';
+            // Fallback: move storage folder to backup instead of zipping
+            $deletedStorageDir = $backupDir . '/deleted_storage';
+            if (rename($storageAbs, $deletedStorageDir)) {
+                $storageBackedUp = true;
+                $report['steps'][] = 'storage_moved_to_backup (fallback, no ZipArchive)';
+            } else {
+                $report['steps'][] = 'storage_backup_failed: cannot move folder';
             }
-            $zip->close();
-            $storageBackedUp = true;
-            $report['steps'][] = 'storage_backup_created';
         } else {
-            $report['steps'][] = 'storage_backup_failed: zip_open_error';
+            $zipFile = $backupDir . '/storage_backup.zip';
+            $zip = new ZipArchive();
+            if ($zip->open($zipFile, ZipArchive::CREATE) === TRUE) {
+                $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($storageAbs, RecursiveDirectoryIterator::SKIP_DOTS));
+                foreach ($files as $file) {
+                    $filePath = $file->getRealPath();
+                    $relativePath = substr($filePath, strlen($storageAbs) + 1);
+                    $zip->addFile($filePath, $relativePath);
+                }
+                $zip->close();
+                $storageBackedUp = true;
+                $report['steps'][] = 'storage_backup_created';
+            } else {
+                $report['steps'][] = 'storage_backup_failed: zip_open_error';
+            }
         }
     } else {
         $report['steps'][] = 'storage_folder_not_found';
     }
+
+    $backupDetails = [];
+    if (!$dumpCreated) {
+        $backupDetails[] = 'SQL дамп не создан (mysqldump ' . ($mysqldumpAvailable ?? false ? 'ошибка выполнения' : 'недоступен') . ')';
+    }
+    if (!$storageBackedUp) {
+        $backupDetails[] = 'Storage backup не создан';
+    }
+    $backupDetails = implode('; ', $backupDetails);
 
     $backupOk = $dumpCreated || $storageBackedUp;
     $skipBackup = isset($_POST['skip_backup']) && $_POST['skip_backup'] === '1';

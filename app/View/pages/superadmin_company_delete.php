@@ -58,8 +58,8 @@
 
                 <?php if (!empty($backupWarning)): ?>
                 <div class="notice warn" style="margin-top:12px">
-                    SQL дамп не создан: mysqldump недоступен или не настроен.<br>
-                    Storage backup не создан. Локальная БД и файлы будут удалены без резервной копии.
+                    <?php if (!empty($backupDetails)): ?><?= e($backupDetails) ?><br><?php endif; ?>
+                    Резервная копия не создана. Локальная БД и файлы будут удалены без возможности восстановления.
                 </div>
                 <label style="display:block;margin-top:12px">
                     <input type="checkbox" name="skip_backup" value="1">

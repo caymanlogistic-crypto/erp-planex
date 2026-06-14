@@ -111,6 +111,19 @@ function userStatusBadge(string $status): string
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/owner/reset-password" style="display:inline" onsubmit="return confirm('Сбросить пароль Руководителя?')">
                                     <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Сбросить пароль</button>
                                 </form>
+                                <?php if ($u['status'] !== 'active'): ?>
+                                <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $u['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать руководителя?')">
+                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Активировать</button>
+                                </form>
+                                <?php endif; ?>
+                                <?php if ($u['status'] === 'active'): ?>
+                                <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $u['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать руководителя?')">
+                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Заблокировать</button>
+                                </form>
+                                <?php endif; ?>
+                                <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $u['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать руководителя?')">
+                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Архивировать</button>
+                                </form>
                                 <?php else: ?>
                                 <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Карточка</a>
                                 <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/edit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Редактировать</a>
