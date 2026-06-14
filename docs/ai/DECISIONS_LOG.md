@@ -1,5 +1,45 @@
 # ERP PLANEX — DECISIONS_LOG
 
+## DECISION-0049 — SUPERADMIN Functional Closure
+
+### Решение
+
+После ручной проверки владельца выполнен функциональный реворк SUPERADMIN-блока:
+
+1. **Login: проверка статуса компании для Руководителя.** Owner login JOINs companies и проверяет `company_status`. Если компания inactive/blocked/archived/provisioning/error — вход запрещён с сообщением «Доступ к компании временно ограничен».
+
+2. **Login UX.** Подсказка под полем логина: «SUPERADMIN — email, Руководитель/Логист — логин». Ошибки только пользовательские (не технические).
+
+3. **Текстовые действия во всём SUPERADMIN.** Все V/E/O/U/A/✓/⊗ заменены на текстовые кнопки: «Карточка», «Редактировать», «Руководитель», «Пользователи», «Активировать», «Отключить», «Заблокировать», «Архивировать».
+
+4. **Фильтры в реестре компаний.** Поиск по названию/ИНН, фильтр по статусу, фильтр по provisioning — все работают server-side через GET-параметры.
+
+5. **Deactivate-маршрут.** Добавлен `POST /superadmin/companies/{id}/deactivate`.
+
+6. **SUPERADMIN создание логиста.** Маршруты `GET/POST /superadmin/companies/{id}/users/logists/create`. Пароль генерируется, bcrypt, показывается один раз.
+
+7. **Revoke access grant.** Маршрут `POST /superadmin/companies/{id}/access-grants/{grant_id}/revoke`.
+
+8. **SUPERADMIN document download.** Отдельный безопасный маршрут `/superadmin/companies/{company_id}/documents/{document_id}/download` с realpath, nosniff, no-store.
+
+9. **Read-only справочники.** 5 новых страниц: clients, contractors, drivers, vehicles, crews. SUPERADMIN мониторит без редактирования.
+
+10. **Убраны все disabled-кнопки** для нереализованного функционала.
+
+11. **Обратная связь.** Flash-сообщения через GET-параметр `?status_changed=1` после статусных действий.
+
+Маршруты: всего ~37 SUPERADMIN маршрутов. QA: проверяется отдельно.
+
+### Причина
+
+Владелец при ручной проверке выявил: нечитабельные single-letter действия, декоративные фильтры, отсутствие company-status-check в login, отсутствие deactivate/create-logist/revoke/superadmin-download/read-only-справочников.
+
+### Статус
+
+active
+
+---
+
 ## DECISION-0048 — Полный SUPERADMIN Management Center
 
 ### Решение

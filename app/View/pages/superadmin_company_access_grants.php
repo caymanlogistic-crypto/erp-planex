@@ -81,7 +81,9 @@
                         <td><?= e($g['access_level']) ?></td>
                         <td class="col-muted"><?= e($g['created_at']) ?></td>
                         <td class="col-actions">
-                            <button class="btn btn-secondary disabled" style="font-size:11px;height:22px;padding:0 6px">Отозвать</button>
+                            <form method="post" action="/superadmin/companies/<?= $id ?>/access-grants/<?= $g['id'] ?>/revoke" style="display:inline" onsubmit="return confirm('Отозвать доступ?')">
+                                <button type="submit" class="btn btn-danger" style="font-size:11px;padding:2px 8px">Отозвать</button>
+                            </form>
                         </td>
                     </tr>
                     <?php endforeach; ?>

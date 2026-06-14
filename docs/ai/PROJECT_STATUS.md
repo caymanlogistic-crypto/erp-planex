@@ -1,23 +1,24 @@
-# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_MANAGEMENT_COMPLETE
+# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_REWORK_COMPLETE
 
-Current focus: **SUPERADMIN-АДМИНКА ЗАКРЫТА КАК ПОЛНОЦЕННЫЙ ЦЕНТР УПРАВЛЕНИЯ. ГОТОВО К РУЧНОЙ ВИЗУАЛЬНОЙ ПРОВЕРКЕ ВЛАДЕЛЬЦЕМ.**
+Current focus: **SUPERADMIN-БЛОК ПРОШЁЛ ФУНКЦИОНАЛЬНЫЙ РЕВОРК ПО ЗАМЕЧАНИЯМ ВЛАДЕЛЬЦА. ГОТОВО К ПОВТОРНОЙ РУЧНОЙ ПРОВЕРКЕ.**
 
-QA: **SUPERADMIN_MANAGEMENT_ACCEPTED** (65/65 PASS, 0 BLOCKER).
+Status: **IMPLEMENTED**. 10 новых маршрутов, 6 новых views, 10 изменённых views.
 
-## Что реализовано
+## Что сделано в реворке
+- Owner login: проверка company_status через JOIN (критический баг исправлен)
+- Все буквенные row-actions (V/E/O/U/A/✓/⊗) заменены на текстовые кнопки
+- Серверные фильтры в реестре компаний (search, status, provisioning)
+- Новый deactivate маршрут для компаний
+- Создание логиста из SUPERADMIN (GET+POST + view)
+- Revoke доступов (entity_access_grants) — реализован
+- SUPERADMIN download документов — новый маршрут
+- 5 read-only страниц справочников (clients/contractors/drivers/vehicles/crews)
+- Убраны все disabled кнопки
+- Success/danger notices через GET-параметры на статусных действиях
+- UX улучшения login form
 
-### SUPERADMIN Management Center (27 маршрутов)
-- Расширенный реестр компаний (10 колонок: ID, Название, ИНН, Статус, Provisioning, Локальная БД, Руководитель, Пользователей, Создан, Действия + row actions + фильтры)
-- Расширенная карточка компании (секции: Пользователи, Справочники, Документы, Доступы, Действия + расширенное Техинфо)
-- Управление статусами: activate/block/archive (POST, confirm, без destructive операций)
-- Пользователи компании: объединённая таблица Руководитель + Логисты
-- Управление логистами из SUPERADMIN: карточка, редактирование, сброс пароля, активация/блокировка/архивирование
-- Мониторинг справочников (counts: clients/contractors/drivers/vehicles/crews)
-- Мониторинг документов (таблица + download)
-- Мониторинг доступов (entity_access_grants, REVOKE DEFERRED)
-
-### Статистика
-- **95 маршрутов** (было 81)
+## Статистика
+- **105 маршрутов** (было 95)
 - **22 view-файла** (было 16)
 - **index.php**: ~8008 строк
 - **php -l**: все чисты

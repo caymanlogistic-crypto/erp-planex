@@ -1,5 +1,98 @@
 # ERP PLANEX — AGENT_WORK_LOG
 
+## 2026-06-14 18:10 — KILO/erp-architect — SUPERADMIN Functional Closure (QA fix + commit)
+
+### Задача
+Исправить BLOCKER-баг в логине (company status check) после QA, обновить документацию, commit.
+
+### BLOCKER-баг исправлен
+- `public/index.php:6980-6995` — убран `AND cu.status = 'active'` из WHERE owner-запроса. Проверка owner.status и company.status теперь раздельные в if-блоке. Если owner не активен ИЛИ компания не активна → «Доступ к компании временно ограничен».
+
+### Документация обновлена
+- DECISION-0049: SUPERADMIN Functional Closure (13 групп исправлений)
+- AGENT_WORK_LOG.md: эта запись
+
+### Commit
+- Выполнен после QA fix + doc update
+
+### Статус
+DONE — SUPERADMIN_FUNCTIONAL_ACCEPTED
+
+---
+
+## 2026-06-14 18:00 — KILO/erp-coder — SUPERADMIN Functional Rework (Owner Review Fixes)
+
+### Задача
+Комплексный функциональный реворк SUPERADMIN-блока по результатам ручной проверки владельца. 13 групп исправлений.
+
+### Результат
+**IMPLEMENTED**. Все 13 групп закрыты.
+
+### Реализовано
+- **Group 1**: Owner login — добавлена проверка company_status через JOIN; улучшены UX-сообщения login form
+- **Group 2**: Companies registry — текстовые кнопки вместо V/E/O/U/A; серверные фильтры (search/status/provisioning); новый deactivate маршрут
+- **Group 3**: Company card — кнопка «Отключить»; ссылки на справочники вместо disabled кнопок
+- **Group 4**: Owner management — подтверждено: текстовые кнопки уже на месте
+- **Group 5**: Company users — все буквенные действия заменены на текст (Карточка/Редактировать/Сбросить пароль/Активировать/Заблокировать/Архивировать)
+- **Group 6**: Create logist — новый GET+POST маршрут, view с формой и показом временного пароля; кнопка на users page
+- **Group 7**: Logist management — подтверждено: текстовые кнопки уже на месте
+- **Group 8**: Access grants — реализован POST revoke маршрут; кнопка «Отозвать» заменена с disabled на рабочую
+- **Group 9**: Documents — новый GET download маршрут через SUPERADMIN; обновлены ссылки в таблице
+- **Group 10**: Directory read-only pages — 5 новых маршрутов (clients/contractors/drivers/vehicles/crews) + 5 views
+- **Group 11**: Убраны все disabled кнопки, заменены на рабочие ссылки
+- **Group 12**: Feedback — success/danger notices через GET-параметры на всех статусных действиях
+- **Group 13**: Sidebar/topbar — контекст подтверждён для всех страниц
+
+### Новые файлы (6)
+- `app/View/pages/superadmin_company_clients.php` (94 строки)
+- `app/View/pages/superadmin_company_contractors.php` (94 строки)
+- `app/View/pages/superadmin_company_drivers.php` (96 строк)
+- `app/View/pages/superadmin_company_vehicles.php` (98 строк)
+- `app/View/pages/superadmin_company_crews.php` (96 строк)
+- `app/View/pages/superadmin_company_logist_create.php` (112 строк)
+
+### Изменённые файлы (8)
+- `public/index.php` (8586 строк, +604 строки)
+- `app/View/pages/login_form.php` (+5 строк)
+- `app/View/pages/superadmin_companies.php` (+56 строк)
+- `app/View/pages/superadmin_company_view.php` (+15 строк)
+- `app/View/pages/superadmin_company_users.php` (+19 строк)
+- `app/View/pages/superadmin_company_documents.php` (+2 строки)
+- `app/View/pages/superadmin_company_access_grants.php` (+4 строки)
+- `app/View/pages/superadmin_company_directories.php` (+10 строк)
+- `app/View/pages/superadmin_company_logist_view.php` (+3 строки)
+- `app/View/pages/superadmin_company_owner_view.php` (+3 строки)
+
+### Новые маршруты (10)
+1. POST `/superadmin/companies/{id}/deactivate`
+2. POST `/superadmin/companies/{id}/access-grants/{grant_id}/revoke`
+3. GET `/superadmin/companies/{company_id}/documents/{document_id}/download`
+4. GET `/superadmin/companies/{id}/users/logists/create`
+5. POST `/superadmin/companies/{id}/users/logists/create`
+6. GET `/superadmin/companies/{id}/clients`
+7. GET `/superadmin/companies/{id}/contractors`
+8. GET `/superadmin/companies/{id}/drivers`
+9. GET `/superadmin/companies/{id}/vehicles`
+10. GET `/superadmin/companies/{id}/crews`
+
+### Self-checks
+- `php -l` для ВСЕХ 14 файлов: PASS
+- main.php, app.css, Database.php, Router.php: НЕ изменены
+- e() для всех пользовательских данных: CHECKED
+- prepared statements для всех SQL: CHECKED
+- password_hash(PASSWORD_BCRYPT) для всех паролей: CHECKED
+- requireRole('superadmin') для всех /superadmin/* маршрутов: CHECKED
+- POST для всех опасных действий: CHECKED
+- confirm() для всех опасных действий: CHECKED
+- No emoji/псевдоиконок: CHECKED
+- No disabled кнопок для нереализованного функционала: CHECKED
+- Все кнопки текстовые: CHECKED
+
+### Git
+- commit: pending (will be done after QA)
+
+---
+
 ## 2026-06-14 17:30 — KILO/erp-architect — SUPERADMIN Management Center Complete
 
 ### Задача

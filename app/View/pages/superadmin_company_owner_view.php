@@ -90,6 +90,10 @@ function statusBadge(string $status): string
 
 <?php else: ?>
 
+<?php if (($_GET['success'] ?? '') === '1'): ?>
+    <div class="notice success">Данные сохранены.</div>
+<?php endif; ?>
+
 <div class="page-head">
     <div>
         <h1>Руководитель: <?= e($owner['full_name']) ?></h1>

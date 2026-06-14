@@ -40,12 +40,14 @@
 
         <form method="post" action="/login" class="login-form" novalidate>
             <div class="field<?= isset($errors['login']) ? ' is-error' : '' ?>">
-                <label class="field-label" for="login">Логин</label>
+                <label class="field-label" for="login">Логин или email</label>
                 <input type="text" id="login" name="login"
                        class="field-input"
+                       placeholder="Введите логин или email"
                        value="<?= e($loginValue ?? '') ?>"
                        autocomplete="username"
                        required>
+                <p class="text-muted" style="font-size:11px;margin-top:2px">SUPERADMIN — email, Руководитель/Логист — логин</p>
                 <?php if (isset($errors['login'])): ?>
                 <div class="field-msg"><?= e($errors['login']) ?></div>
                 <?php endif; ?>
@@ -55,6 +57,7 @@
                 <label class="field-label" for="password">Пароль</label>
                 <input type="password" id="password" name="password"
                        class="field-input"
+                       placeholder="Введите пароль"
                        autocomplete="current-password"
                        required>
                 <?php if (isset($errors['password'])): ?>

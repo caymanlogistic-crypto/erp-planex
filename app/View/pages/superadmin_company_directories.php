@@ -59,35 +59,35 @@
                         <td class="col-num"><?= (int)($dirs['clients']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['clients']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['clients']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Подрядчики</td>
                         <td class="col-num"><?= (int)($dirs['contractors']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['contractors']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['contractors']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Водители</td>
                         <td class="col-num"><?= (int)($dirs['drivers']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['drivers']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['drivers']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспорт</td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Экипажи</td>
                         <td class="col-num"><?= (int)($dirs['crews']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['crews']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['crews']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                 </tbody>
             </table>

@@ -118,9 +118,34 @@ $router->get('/superadmin/companies', function () use ($config, $db) {
     $pageTitle = 'Реестр компаний';
     $pageContext = 'Реестр компаний';
 
+    $search = trim($_GET['search'] ?? '');
+    $filterStatus = trim($_GET['status'] ?? '');
+    $filterProvisioning = trim($_GET['provisioning'] ?? '');
+
     try {
         $pdo = $db->connection();
-        $stmt = $pdo->query('SELECT * FROM companies ORDER BY created_at DESC');
+
+        $sql = 'SELECT * FROM companies WHERE 1=1';
+        $params = [];
+
+        if ($search !== '') {
+            $sql .= ' AND (name LIKE ? OR inn LIKE ?)';
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+        }
+        if ($filterStatus !== '') {
+            $sql .= ' AND status = ?';
+            $params[] = $filterStatus;
+        }
+        if ($filterProvisioning !== '') {
+            $sql .= ' AND status = ?';
+            $params[] = $filterProvisioning;
+        }
+
+        $sql .= ' ORDER BY created_at DESC';
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $ownerMap = [];
@@ -1013,7 +1038,7 @@ $router->post('/superadmin/companies/{id}/owner/edit', function ($id) use ($conf
             ':id'        => (int) $owner['id'],
         ]);
 
-        header('Location: /superadmin/companies/' . $id . '/owner');
+        header('Location: /superadmin/companies/' . $id . '/owner?success=1');
         exit;
     } catch (\Exception $e) {
         $company = $company ?? null;
@@ -6918,7 +6943,7 @@ $router->post('/login', function () use ($config, $db) {
     $devSeedPassword = null;
 
     if ($loginValue === '') {
-        $errors['login'] = 'Введите логин';
+        $errors['login'] = 'Введите логин или email';
     }
 
     if ($password === '') {
@@ -6953,19 +6978,28 @@ $router->post('/login', function () use ($config, $db) {
         }
 
         $ownerStmt = $pdo->prepare(
-            "SELECT * FROM company_users WHERE login = :login AND status = 'active'"
+            "SELECT cu.*, c.status as company_status 
+             FROM company_users cu 
+             JOIN companies c ON cu.company_id = c.id 
+             WHERE cu.login = :login"
         );
         $ownerStmt->execute([':login' => $loginValue]);
         $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC);
 
         if ($owner && password_verify($password, $owner['password_hash'])) {
-            session_regenerate_id(true);
-            $_SESSION['user_id'] = (int)$owner['id'];
-            $_SESSION['role_code'] = 'company_owner';
-            $_SESSION['company_id'] = (int)$owner['company_id'];
-            $_SESSION['user_name'] = $owner['full_name'];
-            header('Location: /company/dashboard');
-            exit;
+            if ($owner['status'] !== 'active') {
+                $authError = 'Доступ к компании временно ограничен. Обратитесь к администратору.';
+            } elseif (!in_array($owner['company_status'], ['active'], true)) {
+                $authError = 'Доступ к компании временно ограничен. Обратитесь к администратору.';
+            } else {
+                session_regenerate_id(true);
+                $_SESSION['user_id'] = (int)$owner['id'];
+                $_SESSION['role_code'] = 'company_owner';
+                $_SESSION['company_id'] = (int)$owner['company_id'];
+                $_SESSION['user_name'] = $owner['full_name'];
+                header('Location: /company/dashboard');
+                exit;
+            }
         }
 
         $companiesStmt = $pdo->query("SELECT id, db_identifier FROM companies WHERE status = 'active'");
@@ -7152,7 +7186,7 @@ $router->post('/superadmin/companies/{id}/activate', function ($id) use ($config
         $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')
             ->execute(['active', (int)$id]);
     }
-    header('Location: /superadmin/companies');
+    header('Location: /superadmin/companies?status_changed=1');
     exit;
 });
 
@@ -7171,7 +7205,7 @@ $router->post('/superadmin/companies/{id}/block', function ($id) use ($config, $
         $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')
             ->execute(['blocked', (int)$id]);
     }
-    header('Location: /superadmin/companies');
+    header('Location: /superadmin/companies?status_changed=1');
     exit;
 });
 
@@ -7188,7 +7222,25 @@ $router->post('/superadmin/companies/{id}/archive', function ($id) use ($config,
     }
     $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')
         ->execute(['archived', (int)$id]);
-    header('Location: /superadmin/companies');
+    header('Location: /superadmin/companies?status_changed=1');
+    exit;
+});
+
+$router->post('/superadmin/companies/{id}/deactivate', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+    $pdo = $db->connection();
+    $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+    $stmt->execute([(int)$id]);
+    $company = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$company) {
+        header('Location: /superadmin/companies');
+        exit;
+    }
+    if ($company['status'] === 'active') {
+        $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')
+            ->execute(['inactive', (int)$id]);
+    }
+    header('Location: /superadmin/companies?status_changed=1');
     exit;
 });
 
@@ -7359,6 +7411,301 @@ $router->get('/superadmin/companies/{id}/directories', function ($id) use ($conf
     require base_path('app/View/layouts/main.php');
 });
 
+$router->get('/superadmin/companies/{id}/clients', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int)$id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $items = [];
+            $totalCount = 0;
+            $dbError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_clients.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageTitle = 'Клиенты: ' . $company['name'];
+        $pageContext = 'Реестр компаний';
+
+        $items = [];
+        $totalCount = 0;
+        $dbError = null;
+
+        if (!empty($company['db_identifier'])) {
+            try {
+                $localDbConfig = $config['database'];
+                $localDbConfig['database'] = $company['db_identifier'];
+                $localDb = new \App\Core\Database($localDbConfig);
+                $localPdo = $localDb->connection();
+
+                $stmt = $localPdo->prepare("SELECT * FROM clients ORDER BY created_at DESC LIMIT 200");
+                $stmt->execute();
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $totalCount = count($items);
+            } catch (\Exception $e) {
+                $dbError = 'Локальная БД компании недоступна.';
+            }
+        } else {
+            $dbError = 'Локальная БД компании недоступна.';
+        }
+    } catch (\Exception $e) {
+        $company = null;
+        $items = [];
+        $totalCount = 0;
+        $dbError = 'Ошибка подключения к базе данных.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/superadmin_company_clients.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/superadmin/companies/{id}/contractors', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int)$id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $items = [];
+            $totalCount = 0;
+            $dbError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_contractors.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageTitle = 'Подрядчики: ' . $company['name'];
+        $pageContext = 'Реестр компаний';
+
+        $items = [];
+        $totalCount = 0;
+        $dbError = null;
+
+        if (!empty($company['db_identifier'])) {
+            try {
+                $localDbConfig = $config['database'];
+                $localDbConfig['database'] = $company['db_identifier'];
+                $localDb = new \App\Core\Database($localDbConfig);
+                $localPdo = $localDb->connection();
+
+                $stmt = $localPdo->prepare("SELECT * FROM contractors ORDER BY created_at DESC LIMIT 200");
+                $stmt->execute();
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $totalCount = count($items);
+            } catch (\Exception $e) {
+                $dbError = 'Локальная БД компании недоступна.';
+            }
+        } else {
+            $dbError = 'Локальная БД компании недоступна.';
+        }
+    } catch (\Exception $e) {
+        $company = null;
+        $items = [];
+        $totalCount = 0;
+        $dbError = 'Ошибка подключения к базе данных.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/superadmin_company_contractors.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/superadmin/companies/{id}/drivers', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int)$id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $items = [];
+            $totalCount = 0;
+            $dbError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_drivers.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageTitle = 'Водители: ' . $company['name'];
+        $pageContext = 'Реестр компаний';
+
+        $items = [];
+        $totalCount = 0;
+        $dbError = null;
+
+        if (!empty($company['db_identifier'])) {
+            try {
+                $localDbConfig = $config['database'];
+                $localDbConfig['database'] = $company['db_identifier'];
+                $localDb = new \App\Core\Database($localDbConfig);
+                $localPdo = $localDb->connection();
+
+                $stmt = $localPdo->prepare("SELECT * FROM drivers ORDER BY created_at DESC LIMIT 200");
+                $stmt->execute();
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $totalCount = count($items);
+            } catch (\Exception $e) {
+                $dbError = 'Локальная БД компании недоступна.';
+            }
+        } else {
+            $dbError = 'Локальная БД компании недоступна.';
+        }
+    } catch (\Exception $e) {
+        $company = null;
+        $items = [];
+        $totalCount = 0;
+        $dbError = 'Ошибка подключения к базе данных.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/superadmin_company_drivers.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/superadmin/companies/{id}/vehicles', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int)$id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $items = [];
+            $totalCount = 0;
+            $dbError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_vehicles.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageTitle = 'Транспорт: ' . $company['name'];
+        $pageContext = 'Реестр компаний';
+
+        $items = [];
+        $totalCount = 0;
+        $dbError = null;
+
+        if (!empty($company['db_identifier'])) {
+            try {
+                $localDbConfig = $config['database'];
+                $localDbConfig['database'] = $company['db_identifier'];
+                $localDb = new \App\Core\Database($localDbConfig);
+                $localPdo = $localDb->connection();
+
+                $stmt = $localPdo->prepare("SELECT * FROM vehicles ORDER BY created_at DESC LIMIT 200");
+                $stmt->execute();
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $totalCount = count($items);
+            } catch (\Exception $e) {
+                $dbError = 'Локальная БД компании недоступна.';
+            }
+        } else {
+            $dbError = 'Локальная БД компании недоступна.';
+        }
+    } catch (\Exception $e) {
+        $company = null;
+        $items = [];
+        $totalCount = 0;
+        $dbError = 'Ошибка подключения к базе данных.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/superadmin_company_vehicles.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/superadmin/companies/{id}/crews', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int)$id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $items = [];
+            $totalCount = 0;
+            $dbError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_crews.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageTitle = 'Экипажи: ' . $company['name'];
+        $pageContext = 'Реестр компаний';
+
+        $items = [];
+        $totalCount = 0;
+        $dbError = null;
+
+        if (!empty($company['db_identifier'])) {
+            try {
+                $localDbConfig = $config['database'];
+                $localDbConfig['database'] = $company['db_identifier'];
+                $localDb = new \App\Core\Database($localDbConfig);
+                $localPdo = $localDb->connection();
+
+                $stmt = $localPdo->prepare("SELECT * FROM crews ORDER BY created_at DESC LIMIT 200");
+                $stmt->execute();
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $totalCount = count($items);
+            } catch (\Exception $e) {
+                $dbError = 'Локальная БД компании недоступна.';
+            }
+        } else {
+            $dbError = 'Локальная БД компании недоступна.';
+        }
+    } catch (\Exception $e) {
+        $company = null;
+        $items = [];
+        $totalCount = 0;
+        $dbError = 'Ошибка подключения к базе данных.';
+    }
+
+    ob_start();
+    require base_path('app/View/pages/superadmin_company_crews.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->get('/superadmin/companies/{id}/documents', function ($id) use ($config, $db) {
     requireRole('superadmin');
     $pageTitle = 'Документы компании';
@@ -7424,6 +7771,64 @@ $router->get('/superadmin/companies/{id}/documents', function ($id) use ($config
     require base_path('app/View/pages/superadmin_company_documents.php');
     $content = ob_get_clean();
     require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/superadmin/companies/{company_id}/documents/{document_id}/download', function ($company_id, $document_id) use ($config, $db) {
+    requireRole('superadmin');
+
+    $pdo = $db->connection();
+    $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+    $stmt->execute([(int)$company_id]);
+    $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$company || empty($company['db_identifier'])) {
+        http_response_code(404);
+        echo 'Document not found';
+        return;
+    }
+
+    try {
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $company['db_identifier'];
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        $docStmt = $localPdo->prepare("SELECT * FROM documents WHERE id = ? AND status != 'archived'");
+        $docStmt->execute([(int)$document_id]);
+        $document = $docStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$document) {
+            http_response_code(404);
+            echo 'Document not found';
+            return;
+        }
+
+        $storageBase = storage_path('companies/' . $company_id . '/documents/');
+        $filePath = realpath($storageBase . $document['stored_name']);
+
+        if ($filePath === false || !str_starts_with($filePath, realpath($storageBase))) {
+            http_response_code(403);
+            echo 'Access denied';
+            return;
+        }
+
+        if (!file_exists($filePath)) {
+            http_response_code(404);
+            echo 'File not found';
+            return;
+        }
+
+        header('Content-Type: ' . ($document['mime_type'] ?? 'application/octet-stream'));
+        header('Content-Disposition: attachment; filename="' . $document['original_name'] . '"');
+        header('Content-Length: ' . filesize($filePath));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store');
+        readfile($filePath);
+        exit;
+    } catch (\Exception $e) {
+        http_response_code(500);
+        echo 'Download error';
+    }
 });
 
 $router->get('/superadmin/companies/{id}/access-grants', function ($id) use ($config, $db) {
@@ -7494,6 +7899,33 @@ $router->get('/superadmin/companies/{id}/access-grants', function ($id) use ($co
     require base_path('app/View/pages/superadmin_company_access_grants.php');
     $content = ob_get_clean();
     require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/superadmin/companies/{id}/access-grants/{grant_id}/revoke', function ($id, $grant_id) use ($config, $db) {
+    requireRole('superadmin');
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([(int)$id]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || empty($company['db_identifier'])) {
+            header('Location: /superadmin/companies');
+            exit;
+        }
+
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $company['db_identifier'];
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        $localPdo->prepare("DELETE FROM entity_access_grants WHERE id = ?")->execute([(int)$grant_id]);
+    } catch (\Exception $e) {
+    }
+
+    header('Location: /superadmin/companies/' . $id . '/access-grants');
+    exit;
 });
 
 // ============================================================
@@ -7945,7 +8377,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/activa
     } catch (\Exception $e) {
     }
 
-    header('Location: /superadmin/companies/' . $company_id . '/users/logists/' . $user_id);
+    header('Location: /superadmin/companies/' . $company_id . '/users/logists/' . $user_id . '?status_changed=1');
     exit;
 });
 
@@ -7973,7 +8405,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/block'
     } catch (\Exception $e) {
     }
 
-    header('Location: /superadmin/companies/' . $company_id . '/users/logists/' . $user_id);
+    header('Location: /superadmin/companies/' . $company_id . '/users/logists/' . $user_id . '?status_changed=1');
     exit;
 });
 
@@ -8001,8 +8433,156 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/archiv
     } catch (\Exception $e) {
     }
 
-    header('Location: /superadmin/companies/' . $company_id . '/users/logists/' . $user_id);
+    header('Location: /superadmin/companies/' . $company_id . '/users/logists/' . $user_id . '?status_changed=1');
     exit;
+});
+
+// ============================================================
+// SUPERADMIN: Create logist (NEW)
+// ============================================================
+
+$router->get('/superadmin/companies/{id}/users/logists/create', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+    $pageTitle = 'Создать логиста';
+    $pageContext = 'Реестр компаний';
+
+    $pdo = $db->connection();
+    $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+    $stmt->execute([(int)$id]);
+    $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$company) {
+        $company = null;
+        $errors = [];
+        $old = [];
+        $formError = 'Компания не найдена';
+        $success = false;
+        $newPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_logist_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    $errors = [];
+    $old = [];
+    $formError = null;
+    $success = false;
+    $newPassword = null;
+
+    ob_start();
+    require base_path('app/View/pages/superadmin_company_logist_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/superadmin/companies/{id}/users/logists/create', function ($id) use ($config, $db) {
+    requireRole('superadmin');
+    $pageTitle = 'Создать логиста';
+    $pageContext = 'Реестр компаний';
+
+    $pdo = $db->connection();
+    $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+    $stmt->execute([(int)$id]);
+    $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$company) {
+        $company = null;
+        $errors = [];
+        $old = $_POST;
+        $formError = 'Компания не найдена';
+        $success = false;
+        $newPassword = null;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_logist_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $newPassword = null;
+
+    $fullName = trim($_POST['full_name'] ?? '');
+    $login = trim($_POST['login'] ?? '');
+
+    if ($fullName === '') {
+        $errors['full_name'] = 'Обязательное поле';
+    }
+    if ($login === '') {
+        $errors['login'] = 'Обязательное поле';
+    } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
+        $errors['login'] = 'Только латиница, цифры и _';
+    }
+
+    if (!empty($errors)) {
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_logist_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    if (empty($company['db_identifier'])) {
+        $formError = 'Локальная БД компании недоступна.';
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_logist_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $company['db_identifier'];
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+
+        $dupStmt = $localPdo->prepare("SELECT COUNT(*) FROM users WHERE login = ?");
+        $dupStmt->execute([$login]);
+        if ($dupStmt->fetchColumn() > 0) {
+            $errors['login'] = 'Логин уже используется в этой компании';
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_logist_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $newPassword = generatePassword(10);
+        $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
+
+        $insert = $localPdo->prepare(
+            "INSERT INTO users (full_name, login, email, phone, password_hash, role_code, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, 'logist', 'active', NOW(), NOW())"
+        );
+        $insert->execute([
+            $fullName,
+            $login,
+            $_POST['email'] ?? null,
+            $_POST['phone'] ?? null,
+            $passwordHash,
+        ]);
+
+        $success = true;
+
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_logist_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    } catch (\Exception $e) {
+        $formError = 'Ошибка создания логиста.';
+        ob_start();
+        require base_path('app/View/pages/superadmin_company_logist_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+    }
 });
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

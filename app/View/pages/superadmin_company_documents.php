@@ -97,7 +97,7 @@ function docStatusBadge(string $status): string
                         <td><?= e($d['uploaded_by_role'] ?? '—') ?> #<?= (int)($d['uploaded_by_user_id'] ?? 0) ?></td>
                         <td class="col-actions">
                             <div class="row-actions">
-                                <a href="/company/documents/download?id=<?= $d['id'] ?>&company_id=<?= $id ?>" class="ra" title="Скачать">↓</a>
+                                <a href="/superadmin/companies/<?= $id ?>/documents/<?= $d['id'] ?>/download" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Скачать</a>
                             </div>
                         </td>
                     </tr>

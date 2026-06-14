@@ -82,6 +82,10 @@ function userStatusBadge(string $status): string
 
 <?php else: ?>
 
+<?php if (($_GET['status_changed'] ?? '') === '1'): ?>
+    <div class="notice success">Статус изменён.</div>
+<?php endif; ?>
+
 <div class="page-head">
     <div>
         <h1>Логист: <?= e($logist['full_name']) ?></h1>

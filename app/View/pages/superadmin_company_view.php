@@ -197,35 +197,35 @@ function statusBadge(string $status): string
                         <td class="col-num"><?= $dirs['clients_total'] ?></td>
                         <td class="col-num"><?= $dirs['clients_active'] ?></td>
                         <td class="col-num"><?= $dirs['clients_archived'] ?></td>
-                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Подрядчики</td>
                         <td class="col-num"><?= $dirs['contractors_total'] ?></td>
                         <td class="col-num"><?= $dirs['contractors_active'] ?></td>
                         <td class="col-num"><?= $dirs['contractors_archived'] ?></td>
-                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Водители</td>
                         <td class="col-num"><?= $dirs['drivers_total'] ?></td>
                         <td class="col-num"><?= $dirs['drivers_active'] ?></td>
                         <td class="col-num"><?= $dirs['drivers_archived'] ?></td>
-                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспорт</td>
                         <td class="col-num"><?= $dirs['vehicles_total'] ?></td>
                         <td class="col-num"><?= $dirs['vehicles_active'] ?></td>
                         <td class="col-num"><?= $dirs['vehicles_archived'] ?></td>
-                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Экипажи</td>
                         <td class="col-num"><?= $dirs['crews_total'] ?></td>
                         <td class="col-num"><?= $dirs['crews_active'] ?></td>
                         <td class="col-num"><?= $dirs['crews_archived'] ?></td>
-                        <td><button class="btn btn-secondary disabled">Открыть</button></td>
+                        <td><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
                     </tr>
                 </tbody>
             </table>
@@ -290,6 +290,11 @@ function statusBadge(string $status): string
             <form method="post" action="/superadmin/companies/<?= $id ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
                 <button type="submit" class="btn btn-danger">Архивировать</button>
             </form>
+            <?php if ($company['status'] === 'active'): ?>
+            <form method="post" action="/superadmin/companies/<?= $id ?>/deactivate" style="display:inline" onsubmit="return confirm('Отключить компанию?')">
+                <button type="submit" class="btn btn-danger">Отключить</button>
+            </form>
+            <?php endif; ?>
         </div>
     </div>
 </div>

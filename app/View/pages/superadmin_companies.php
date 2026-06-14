@@ -51,28 +51,33 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
     </div>
 <?php endif; ?>
 
-<div class="filters-bar">
-    <input type="text" class="field-input" placeholder="Поиск по названию или ИНН" name="search" style="max-width:240px">
+<?php if (($_GET['status_changed'] ?? '') === '1'): ?>
+    <div class="notice success">Статус изменён.</div>
+<?php endif; ?>
+
+<form method="get" action="/superadmin/companies" class="filters-bar">
+    <input type="text" class="field-input" placeholder="Поиск по названию или ИНН" name="search" value="<?= e($search ?? '') ?>" style="max-width:240px">
     <select class="field-select" name="status" style="max-width:150px">
         <option value="">Все статусы</option>
-        <option value="active">Активен</option>
-        <option value="inactive">Неактивен</option>
-        <option value="blocked">Заблокирован</option>
-        <option value="archived">Архивирован</option>
-        <option value="provisioning">Настройка</option>
-        <option value="error">Ошибка</option>
+        <option value="active" <?= ($filterStatus ?? '') === 'active' ? 'selected' : '' ?>>Активен</option>
+        <option value="inactive" <?= ($filterStatus ?? '') === 'inactive' ? 'selected' : '' ?>>Неактивен</option>
+        <option value="blocked" <?= ($filterStatus ?? '') === 'blocked' ? 'selected' : '' ?>>Заблокирован</option>
+        <option value="archived" <?= ($filterStatus ?? '') === 'archived' ? 'selected' : '' ?>>Архивирован</option>
+        <option value="provisioning" <?= ($filterStatus ?? '') === 'provisioning' ? 'selected' : '' ?>>Настройка</option>
+        <option value="error" <?= ($filterStatus ?? '') === 'error' ? 'selected' : '' ?>>Ошибка</option>
     </select>
     <select class="field-select" name="provisioning" style="max-width:160px">
         <option value="">Все provisioning</option>
-        <option value="active">active</option>
-        <option value="inactive">inactive</option>
-        <option value="blocked">blocked</option>
-        <option value="archived">archived</option>
-        <option value="error">error</option>
-        <option value="provisioning">provisioning</option>
+        <option value="active" <?= ($filterProvisioning ?? '') === 'active' ? 'selected' : '' ?>>active</option>
+        <option value="inactive" <?= ($filterProvisioning ?? '') === 'inactive' ? 'selected' : '' ?>>inactive</option>
+        <option value="blocked" <?= ($filterProvisioning ?? '') === 'blocked' ? 'selected' : '' ?>>blocked</option>
+        <option value="archived" <?= ($filterProvisioning ?? '') === 'archived' ? 'selected' : '' ?>>archived</option>
+        <option value="error" <?= ($filterProvisioning ?? '') === 'error' ? 'selected' : '' ?>>error</option>
+        <option value="provisioning" <?= ($filterProvisioning ?? '') === 'provisioning' ? 'selected' : '' ?>>provisioning</option>
     </select>
-    <button class="btn btn-toolbar">Сбросить</button>
-</div>
+    <button type="submit" class="btn btn-toolbar">Применить</button>
+    <a href="/superadmin/companies" class="btn btn-ghost">Сбросить</a>
+</form>
 
 <?php if (empty($companies)): ?>
     <div class="panel">
@@ -131,23 +136,28 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
                         <td class="col-muted"><?= e($c['created_at'] ?? '') ?></td>
                         <td class="col-actions">
                             <div class="row-actions">
-                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="ra" title="Карточка">V</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="ra" title="Редактировать">E</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="ra" title="Руководитель">O</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="ra" title="Пользователи">U</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Карточка</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Редактировать</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Руководитель</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Пользователи</a>
                                 <?php if ($c['status'] !== 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать компанию?')">
-                                    <button class="ra" title="Активировать">✓</button>
+                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Активировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <?php if ($c['status'] === 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
-                                    <button class="ra" title="Заблокировать">⊗</button>
+                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Заблокировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
-                                    <button class="ra del" title="Архивировать">A</button>
+                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Архивировать</button>
                                 </form>
+                                <?php if ($c['status'] === 'active'): ?>
+                                <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/deactivate" style="display:inline" onsubmit="return confirm('Отключить компанию?')">
+                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Отключить</button>
+                                </form>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
