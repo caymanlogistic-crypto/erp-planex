@@ -394,6 +394,60 @@ KILO обязан:
 
 ---
 
+## Обязательные правила дизайнера и кодера
+
+### Правило 1: HANDOFF vs IMPLEMENTATION CHECK
+
+После реализации страницы кодером (и до передачи QA) дизайнер обязан сравнить реализацию с handoff и задокументировать расхождения. Использовать compliance language: `COMPLIANT` / `PARTIALLY COMPLIANT` / `NON-COMPLIANT` со ссылкой на источник нормы (STYLE ERP / Core Kit / page handoff / Layout Foundation Gate / Sidebar IA / Design Code). Если обнаружено расхождение, дизайнер возвращает задачу кодеру.
+
+### Правило 2: SHARED COMPONENT RULE
+
+`statusBadge()`, `userStatusBadge()`, `provisioningBadge()`, `docStatusBadge()` и аналогичные компоненты MUST использовать shared компонент из `app/View/components/`. Запрещено дублировать их код в каждом view-файле. Дизайнер в handoff ссылается на shared component, а не описывает его заново.
+
+### Правило 3: CSS CLASS EXISTENCE RULE
+
+Каждый CSS-класс в handoff должен существовать в `public/assets/css/app.css` или `docs/ui/ERP_UI_KIT_CORE.html`. Если класс отсутствует, дизайнер обязан либо добавить его в Core Kit как sub-element CORE-модуля, либо явно указать кодеру добавить класс в `app.css`. Запрещено передавать кодеру несуществующие классы без явной задачи на их добавление.
+
+### Правило 4: ACTION CLASSIFICATION RULE
+
+Каждое действие на странице MUST быть классифицировано:
+
+| Class | Label | Visual class | Confirm | Examples |
+|-------|-------|-------------|---------|----------|
+| NAVIGATION | Link to another page | `.btn-ghost` | NO | «Карточка», «← К реестру» |
+| EDIT | Edit entity data | `.btn-ghost` or `.btn-primary` | NO | «Редактировать» |
+| STATE_CHANGE | Change entity status | `.btn-ghost` | `confirm()` | «Активировать», «Заблокировать» |
+| DESTRUCTIVE | Irreversible data change | `.btn-danger` | `confirm()` | «Архивировать», «Отозвать» |
+| SECURITY | Credential-affecting action | `.btn-ghost` | `confirm()` | «Сбросить пароль» |
+
+Дизайнер обязан классифицировать ВСЕ действия в handoff. Кодер обязан использовать указанные классы. Handoff без action classification — `NOT DONE`.
+
+### Правило 5: DANGER PATTERN RULE
+
+DESTRUCTIVE и SECURITY действия должны иметь утверждённый визуальный паттерн:
+
+- **Row-level DESTRUCTIVE:** `.btn-danger` в `.row-actions` + `confirm()`
+- **Card-level DESTRUCTIVE (block, archive):** Danger Zone panel (`.panel` с `border-color:var(--danger)`, `.panel-head` с `background:var(--danger-bg)`, `h2` с `color:var(--danger)`) + `confirm()`
+- **Hard delete:** Danger Zone panel + dedicated confirmation page + typed confirmation
+- **SECURITY (password reset):** `.btn-ghost` + `confirm()` — достаточный барьер
+
+Запрещено использовать `.btn-ghost` для DESTRUCTIVE, `.btn-danger` для не-DESTRUCTIVE, и размещать DESTRUCTIVE в одной панели с обычными действиями.
+
+### D4: Browser confirm() scope rule
+
+| Action | Confirm method |
+|--------|---------------|
+| Row-level STATE_CHANGE / SECURITY | `confirm()` — достаточно |
+| Row-level DESTRUCTIVE (archive) | `confirm()` — данные сохраняются |
+| Card-level DESTRUCTIVE (block, archive) | `confirm()` — данные сохраняются |
+| Password reset | `confirm()` — достаточно, новый пароль можно установить |
+| Revoke grant | `confirm()` — достаточно, можно выдать заново |
+| **Hard delete (company)** | **Dedicated page + typed confirmation — ОБЯЗАТЕЛЬНО** |
+
+`confirm()` достаточен когда действие обратимо или затрагивает одну сущность. Dedicated confirmation page обязателен когда действие необратимо и уничтожает системно-критичные данные.
+
+---
+
 ## Следующий шаг по UI
 
 Следующая отдельная задача:

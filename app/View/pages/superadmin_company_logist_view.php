@@ -1,15 +1,6 @@
 <?php
 
-function userStatusBadge(string $status): string
-{
-    $map = [
-        'active'  => ['class' => 'badge-ok',    'label' => 'Активен'],
-        'blocked' => ['class' => 'badge-danger', 'label' => 'Заблокирован'],
-        'archived'=> ['class' => '',             'label' => 'Архивирован'],
-    ];
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
+require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 <?php if ($company === null): ?>
@@ -114,7 +105,7 @@ function userStatusBadge(string $status): string
             <dt>Роль</dt>
             <dd>Логист</dd>
             <dt>Статус</dt>
-            <dd><?= userStatusBadge($logist['status']) ?></dd>
+            <dd><?= renderStatusBadge($logist['status']) ?></dd>
             <dt>Комментарий</dt>
             <dd><?= e($logist['comments'] ?? '—') ?></dd>
             <dt>Создан</dt>

@@ -1,33 +1,41 @@
-# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_ACCEPTED_FOR_DESIGN
+# CURRENT STATUS OVERRIDE — 2026-06-14 — SUPERADMIN_COMPONENT_REWORK_NEEDS_VISUAL_REWORK
 
-Current focus: **5 БЛОКЕРОВ ИСПРАВЛЕНЫ + DESTRUCTIVE HARD DELETE RUNTIME ПРОВЕРЕН. ГОТОВО К HANDOFF ДИЗАЙНЕРУ.**
+Current focus: **ТЕХНИЧЕСКИЙ QA ПРОЙДЕН. ВИЗУАЛЬНО НЕ ПРИНЯТ. НУЖЕН ВИЗУАЛЬНЫЙ РЕВОРК.**
 
-Status: **SUPERADMIN_FUNCTIONAL_ACCEPTED_FOR_DESIGN**.
+Status: **SUPERADMIN_COMPONENT_REWORK_NEEDS_VISUAL_REWORK**.
 
-## Исправленные блокеры
-1. Document download: путь исправлен (relative_path из БД)
-2. Provisioning filter: удалён
-3. Company status transitions: block из inactive разрешён
-4. Owner quick status actions: 3 новых маршрута + UI
-5. Hard delete safety: ZipArchive/mysqldump проверки, escapeshellarg
+Owner visual review result (2026-06-14):
+- Технический QA: 62/62 PASS → ACCEPTED
+- Визуально: **NOT ACCEPTED**
+- Проблемы: действия слиплись, row-actions визуально не решены, опасные действия отделены слабо, таблица растянута, рабочее поле пустое, сценарий SUPERADMIN не читается
+- Следующий шаг: Главный дизайнер исправляет визуальную структуру `/superadmin/companies` и связанные страницы
 
-## Destructive Hard Delete Runtime Test
-- Создана тестовая компания ID 6 с owner, logist, 5 справочниками, документом
-- Delete page preview: все 13 полей + 6 counts подтверждены
-- Wrong/empty phrase blocked
-- DELETE COMPANY 6 выполнено
-- Central records удалены, local DB dropped, storage удалён
-- Backup создан: central_snapshot.json, local_db_dump.sql, delete_report.json, deleted_storage/
-- Deleted owner/logist login blocked
-- Старые URL: 200, без 500
-- **28/28 PASS**
+## Принятые дизайнерские решения (D1-D7)
+1. **D1 (Row-actions visual hierarchy):** Option B — `.btn-ghost` для NAVIGATION/EDIT/STATE_CHANGE/SECURITY, `.btn-danger` для DESTRUCTIVE
+2. **D2 (Action classification taxonomy):** 5 классов формализованы (NAVIGATION, EDIT, STATE_CHANGE, DESTRUCTIVE, SECURITY)
+3. **D3 (Danger-zone pattern):** Задокументирован — `.panel` с `border-color:var(--danger)`, `.panel-head` с `background:var(--danger-bg)`
+4. **D4 (confirm() scope):** `confirm()` достаточен для обратимых действий; dedicated page обязателен для hard delete
+5. **D5 (Crews display fix):** MANDATORY — SQL LEFT JOINs для разрешения ID в имена
+6. **D6 (Entity documents navigation):** DEFERRED — query params отложены
+7. **D7 (Login hint text):** APPROVED — «Введите логин, выданный администратором»
 
-## QA-отчёты
-- `docs/qa/QA_SUPERADMIN_FUNCTIONAL_CLOSURE.md` (51 PASS total)
-- `docs/qa/QA_SUPERADMIN_COMPANY_HARD_DELETE.md` (46 PASS, destructive verified)
+## Обновлённые page handoffs
+- `superadmin-companies-registry.md` — v2.1 (row actions classified)
+- `superadmin-company-management.md` — v2.1 (danger zone pattern)
+- `superadmin-company-owner-management.md` — v1.1 (owner actions classified)
+- `superadmin-company-users.md` — v1.1 (user row actions classified)
+- `superadmin-company-directories.md` — v1.1 (D5/D6)
+- `superadmin-company-documents.md` — v1.1 (D6)
+- `superadmin-company-access-grants.md` — v1.1 (D4)
+- `superadmin-company-delete.md` — v1.0 NEW (D3/D4 hard delete)
+- `login.md` — v1.1 (D7)
+
+## Новые правила
+- 5 правил в `.kilo/agent/erp-uiux-designer.md`
+- 5 правил + D4 confirm scope в `docs/ui/DESIGN_CODE_INTEGRATION.md`
 
 ## Next step
-Commit → Owner visual review → UI-полировка дизайнером.
+coder → реализовать D1-D7 изменения в PHP views согласно handoffs → qa-tester → проверить compliance
 
 ## Что сделано в реворке
 - Owner login: проверка company_status через JOIN (критический баг исправлен)

@@ -910,3 +910,65 @@ DONE / NEEDS CLARIFICATION / BLOCKED
 Если ты не можешь выдать кодеру однозначное ТЗ без поиска дополнительных примеров, задача дизайнера не выполнена.
 
 Сначала доведи handoff до состояния, при котором программист может реализовать страницу строго по тексту.
+
+---
+
+## Правило 1: HANDOFF vs IMPLEMENTATION CHECK
+
+После реализации страницы кодером (и до передачи QA) дизайнер обязан сравнить реализацию с handoff и задокументировать расхождения:
+
+```text
+COMPLIANT — реализация соответствует handoff
+PARTIALLY COMPLIANT — есть минорные отклонения (перечислить)
+NON-COMPLIANT — реализация существенно расходится с handoff (указать что)
+```
+
+Дизайнер не проверяет визуально ("глазами"), а проверяет формальное соответствие: CSS-классы, DOM-структура, тексты меток, порядок блоков, визуальные состояния, отсутствие запрещённых элементов.
+
+Если обнаружено расхождение, дизайнер возвращает задачу кодеру с конкретным списком исправлений. Без этой проверки handoff не может быть `DONE`.
+
+## Правило 2: SHARED COMPONENT RULE
+
+Компоненты вроде `statusBadge()`, `userStatusBadge()`, `provisioningBadge()`, `docStatusBadge()` и аналогичные MUST использовать shared компонент из `app/View/components/`, а НЕ локальные копии в каждом view-файле.
+
+Кодер обязан размещать shared-компоненты в `app/View/components/` и подключать их через `require_once`. Дизайнер в handoff обязан ссылаться на shared component, а не описывать его заново в каждом page handoff.
+
+## Правило 3: CSS CLASS EXISTENCE RULE
+
+Каждый CSS-класс, указанный в handoff, должен существовать в одном из источников:
+- `public/assets/css/app.css`
+- `docs/ui/ERP_UI_KIT_CORE.html` (Production CSS Reference)
+
+Если класс отсутствует в обоих источниках, дизайнер обязан:
+1. Добавить класс в Core Kit как sub-element соответствующего CORE-модуля, ИЛИ
+2. Явно указать в coder implementation checklist: «добавить класс X в app.css»
+
+Запрещено передавать кодеру классы, которых нет в CSS-источниках, без явного указания их добавить.
+
+## Правило 4: ACTION CLASSIFICATION RULE
+
+Каждое действие в интерфейсе MUST быть классифицировано:
+
+| Class | Label | Visual treatment | Examples |
+|-------|-------|-----------------|----------|
+| NAVIGATION | Link to another page | `.btn-ghost` | «Карточка», «← К реестру» |
+| EDIT | Edit entity data | `.btn-ghost` or `.btn-primary` (page-level) | «Редактировать» |
+| STATE_CHANGE | Change entity status | `.btn-ghost` + `confirm()` | «Активировать», «Заблокировать» |
+| DESTRUCTIVE | Irreversible data change | `.btn-danger` + `confirm()` or dedicated page | «Архивировать», «Отозвать», «Удалить» |
+| SECURITY | Credential-affecting action | `.btn-ghost` + `confirm()` | «Сбросить пароль» |
+
+Дизайнер обязан классифицировать ВСЕ действия на странице. Кодер обязан использовать указанные классы. Handoff без action classification — `NOT DONE`.
+
+## Правило 5: DANGER PATTERN RULE
+
+DESTRUCTIVE и SECURITY действия должны иметь утверждённый визуальный паттерн:
+
+**Row-level DESTRUCTIVE:** `.btn-danger` в `.row-actions` + `confirm()`  
+**Card-level DESTRUCTIVE (block, archive):** Danger Zone panel (`.panel` с `border-color:var(--danger)`, `.panel-head` с `background:var(--danger-bg)`, `h2` с `color:var(--danger)`) + `confirm()`  
+**Hard delete:** Danger Zone panel + dedicated confirmation page + typed confirmation  
+**SECURITY (password reset):** `.btn-ghost` + `confirm()` — достаточный барьер  
+
+Запрещено:
+- Использовать `.btn-ghost` для DESTRUCTIVE действий
+- Использовать `.btn-danger` для не-DESTRUCTIVE действий
+- Размещать DESTRUCTIVE действия в одной панели с обычными действиями

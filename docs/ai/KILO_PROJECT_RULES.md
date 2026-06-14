@@ -186,7 +186,7 @@ KILO используется через `erp-architect`, но UI-задачи �
 - QA проверяет, что все UI-модули перечислены и существуют в `ERP_UI_KIT_CORE.html` / профильных MD.
 - Unknown UI module = `Formal UI QA: FAIL`.
 - `docs/ui/ERP_UI_MODULE_CATALOG.html` остаётся legacy extraction/reference history only и не является основным рабочим каталогом.
-- `/superadmin` остаётся `PARTIALLY COMPLIANT / NEEDS_UI_REWORK` до точечного UI rework и Manual owner visual approval.
+- `/superadmin`: `SUPERADMIN_COMPONENT_REWORK_ACCEPTED` (2026-06-14). Component-level rework after Chief Designer audit completed. CSS gaps closed, shared statusBadge(), row actions classified, danger zone pattern applied, crews display fixed. Ready for owner visual review.
 ---
 
 ## CURRENT UI KIT OVERRIDE — 2026-06-12

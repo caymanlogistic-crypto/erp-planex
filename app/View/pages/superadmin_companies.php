@@ -1,20 +1,6 @@
 <?php
 
-function statusBadge(string $status): string
-{
-    $map = [
-        'active'       => ['class' => 'badge-ok',    'label' => 'Активен'],
-        'inactive'     => ['class' => '',             'label' => 'Неактивен'],
-        'blocked'      => ['class' => 'badge-danger', 'label' => 'Заблокирован'],
-        'archived'     => ['class' => '',             'label' => 'Архивирован'],
-        'provisioning' => ['class' => 'badge-warn',   'label' => 'Настройка'],
-        'error'        => ['class' => 'badge-danger', 'label' => 'Ошибка'],
-        'suspended'    => ['class' => 'badge-warn',   'label' => 'Приостановлен'],
-    ];
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
-
+require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 <div class="page-head">
@@ -94,7 +80,7 @@ function statusBadge(string $status): string
                         <td class="col-mono"><?= $c['id'] ?></td>
                         <td><?= e($c['name']) ?></td>
                         <td class="col-mono"><?= e($c['inn']) ?></td>
-                        <td><?= statusBadge($c['status']) ?></td>
+                        <td><?= renderStatusBadge($c['status']) ?></td>
                         <td class="col-mono col-muted"><?= e($c['db_identifier'] ?? '—') ?></td>
                         <td>
                             <?php if (in_array($c['status'], ['error', 'provisioning'], true)): ?>
@@ -112,26 +98,26 @@ function statusBadge(string $status): string
                         <td class="col-muted"><?= e($c['created_at'] ?? '') ?></td>
                         <td class="col-actions">
                             <div class="row-actions">
-                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Карточка</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Редактировать</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Руководитель</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Пользователи</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost">Карточка</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="btn btn-ghost">Редактировать</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="btn btn-ghost">Руководитель</a>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="btn btn-ghost">Пользователи</a>
                                 <?php if ($c['status'] !== 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать компанию?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Активировать</button>
+                                        <button type="submit" class="btn btn-ghost">Активировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <?php if (in_array($c['status'], ['active', 'inactive'], true)): ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Заблокировать</button>
+                                        <button type="submit" class="btn btn-ghost">Заблокировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Архивировать</button>
+                                        <button type="submit" class="btn btn-danger">Архивировать</button>
                                 </form>
                                 <?php if ($c['status'] === 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/deactivate" style="display:inline" onsubmit="return confirm('Отключить компанию?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Отключить</button>
+                                        <button type="submit" class="btn btn-ghost">Отключить</button>
                                 </form>
                                 <?php endif; ?>
                             </div>

@@ -1,7 +1,7 @@
 # UI PAGE HANDOFF — SUPERADMIN Company Directories
 
 ## Status
-**HANDOFF_READY** — новая страница. Production-grade handoff per `_PAGE_TEMPLATE.md`.
+**HANDOFF_READY** (v1.1 — added D5 crews display + D6 entity documents navigation). Production-grade handoff per `_PAGE_TEMPLATE.md`.
 
 ---
 
@@ -282,3 +282,49 @@ foreach ($tables as $table) {
 - **VISUAL CHECK URL:** `http://127.0.0.1:[port]/superadmin/companies/{id}/directories`
 - **Manual owner visual review required:** YES
 - **Commit allowed before owner visual approval:** NO
+
+---
+
+## 13. D5: Crews display fix (MANDATORY)
+
+**Problem:** Current crews list (`superadmin_company_crews.php`) shows raw IDs (`contractor_id`, `vehicle_id`, `driver_id`) instead of names.
+
+**Fix:** Use SQL LEFT JOINs to resolve foreign key IDs to display names.
+
+### UI pattern for linked entity display in SUPERADMIN read-only tables:
+- Use SQL LEFT JOINs to fetch display names from linked tables
+- Display format: `{name} (#{id})` when space permits, or `{name}` for tight columns
+- Show «—» if the linked record no longer exists (LEFT JOIN returns NULL)
+- If local DB is unavailable, show raw IDs with muted styling as fallback
+
+### Columns specification (crews table):
+| # | Column | SQL source | Fallback |
+|---|--------|-----------|----------|
+| 1 | ID | `crews.id` | — |
+| 2 | Подрядчик | `LEFT JOIN contractors c ON crews.contractor_id = c.id` → `c.name` | `contractor_id` as «—» |
+| 3 | Машина | `LEFT JOIN vehicles v ON crews.vehicle_id = v.id` → `CONCAT(v.brand, ' ', v.model, ' [', v.plate_number, ']')` | `vehicle_id` as «—» |
+| 4 | Водитель | `LEFT JOIN drivers d ON crews.driver_id = d.id` → `d.full_name` | `driver_id` as «—» |
+| 5 | Статус | `crews.status` | — |
+| 6 | Создан | `crews.created_at` | — |
+| 7 | Документы | — | — |
+
+### Coder MUST:
+- Use SQL LEFT JOINs to resolve crew member IDs to names
+- Show `{name}` instead of raw IDs
+- Fall back to «—» when linked record is missing
+
+### Coder MUST NOT:
+- Show raw integer IDs when names are available via JOIN
+- Use INNER JOIN (would drop crews with deleted members)
+
+---
+
+## 14. D6: Entity documents navigation (DEFERRED)
+
+**Problem:** «Документы» links in directory read-only pages (crews, drivers, clients, contractors, vehicles) go to the general company documents list (`/superadmin/companies/{id}/documents`), not entity-specific documents.
+
+**Decision:** DEFERRED. Current behavior (linking to general company documents list) is acceptable for SUPERADMIN monitoring. Entity-specific filtering with query params (`?entity_type=driver&entity_id=123`) is a future improvement.
+
+**Future handoff:** When entity-specific document filtering is implemented, add `?entity_type={type}&entity_id={entity_id}` to document links in directory detail pages. This requires the documents page to accept and apply these filters.
+
+**Current state:** COMPLIANT — general documents page is sufficient for SUPERADMIN monitoring scope.

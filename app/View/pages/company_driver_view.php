@@ -1,17 +1,6 @@
 <?php
 
-function statusBadge(string $status): string
-{
-    $map = [
-        'active'   => ['class' => 'badge-ok',   'label' => 'Активен'],
-        'inactive' => ['class' => '',            'label' => 'Неактивен'],
-        'archived' => ['class' => 'badge-warn',  'label' => 'Архив'],
-    ];
-
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-
-    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
+require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 
@@ -100,7 +89,7 @@ function statusBadge(string $status): string
                 <dt>Телефон</dt>
                 <dd><code><?= e($driver['phone']) ?></code></dd>
                 <dt>Статус</dt>
-                <dd><?= statusBadge($driver['status']) ?></dd>
+                <dd><?= renderStatusBadge($driver['status']) ?></dd>
                 <dt>Комментарий</dt>
                 <dd><?= e($driver['comments'] ?? '') ?: '—' ?></dd>
             </dl>

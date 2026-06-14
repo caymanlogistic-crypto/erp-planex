@@ -1,7 +1,7 @@
-# SUPERADMIN Company Management — Handoff v2.0
+# SUPERADMIN Company Management — Handoff v2.1
 
 ## Status
-**HANDOFF_READY** (v2.0 — expanded card + status actions). Supersedes v1.0.
+**HANDOFF_READY** (v2.1 — added D2 action classification + D3 danger zone pattern). Supersedes v2.0.
 
 ---
 
@@ -38,6 +38,59 @@
 ```
 SUPERADMIN — Компания: [company.name]
 ```
+
+---
+
+## ACTION CLASSIFICATION (D2 — MANDATORY)
+
+All card-level actions on this page MUST follow the SUPERADMIN action classification taxonomy:
+
+| Label | Class | Visual class | Confirm | Notes |
+|-------|-------|-------------|---------|-------|
+| «Редактировать» | EDIT | `.btn-primary` | NO | Primary action — navigate to edit form |
+| «← К реестру» | NAVIGATION | `.btn-ghost` | NO | Back navigation |
+| «Все пользователи» | NAVIGATION | `.btn-secondary` | NO | Navigate to users page |
+| «Все справочники» | NAVIGATION | `.btn-secondary` | NO | Navigate to directories page |
+| «Все документы» | NAVIGATION | `.btn-secondary` | NO | Navigate to documents page |
+| «Все доступы» | NAVIGATION | `.btn-secondary` | NO | Navigate to access grants page |
+| «Активировать» | STATE_CHANGE | `.btn-primary` or `.btn-ghost` | `confirm()` | Enable company |
+| «Заблокировать» | DESTRUCTIVE | `.btn-danger` | `confirm()` | Block active company |
+| «Архивировать» | DESTRUCTIVE | `.btn-danger` | `confirm()` | Archive company (keeps data) |
+| «Деактивировать» | STATE_CHANGE | `.btn-danger` or `.btn-ghost` | `confirm()` | Deactivate company |
+| «Полное удаление компании» | DESTRUCTIVE | `.btn-danger` | Dedicated page | Hard delete — goes to `/delete` page |
+
+### DANGER ZONE PATTERN (D3 — MANDATORY)
+
+Card-level destructive actions (block, archive, hard delete) MUST be grouped in a visually distinct "Danger Zone" section.
+
+```html
+<div class="panel" style="border-color:var(--danger)">
+    <div class="panel-head" style="background:var(--danger-bg)">
+        <h2 style="color:var(--danger)">Опасная зона</h2>
+    </div>
+    <div class="panel-body">
+        <div class="notice danger" style="margin-bottom:16px">
+            <!-- Warning text describing the consequences -->
+        </div>
+        <div class="form-actions">
+            <!-- Destructive action buttons -->
+        </div>
+    </div>
+</div>
+```
+
+**Rules:**
+- `.panel` border: `var(--danger)` (#992e26)
+- `.panel-head` background: `var(--danger-bg)` (#fcecea)
+- Panel head title (`h2`): `color: var(--danger)`
+- Warning text: `.notice.danger` inside `.panel-body`
+- Actions: `.btn-danger` for immediate actions, `.btn-danger` link for navigation to dedicated confirmation page
+- `confirm()` scope: `DESTRUCTIVE` card-level non-delete actions (block, archive) use JS `confirm()`; hard delete navigates to a dedicated confirmation page
+
+**Confirm phrase templates:**
+- Block: `«Заблокировать компанию [name]? Пользователи не смогут войти.»`
+- Archive: `«Архивировать компанию [name]? Все данные сохранятся.»`
+- Hard delete: Navigate to `/superadmin/companies/{id}/delete` — uses TYPED confirmation (see superadmin-company-delete.md)
 
 ---
 
@@ -286,9 +339,14 @@ $userStats['logist_count'] = logist_total;
 // SELECT COUNT(*) as total FROM entity_access_grants
 ```
 
-**10. Кнопки статусных действий на карточке (NEW)**
+**10. Кнопки статусных действий на карточке (UPDATED — DANGER ZONE PATTERN)**
+
+Status actions grouped by type:
+- STATE_CHANGE actions in a normal "Действия" panel
+- DESTRUCTIVE actions in a separate "Опасная зона" panel (D3 pattern)
 
 ```html
+<!-- Normal actions panel -->
 <div class="panel">
     <div class="panel-head">
         <h2>Действия</h2>
@@ -296,18 +354,56 @@ $userStats['logist_count'] = logist_total;
     <div class="panel-body">
         <div class="form-actions">
             <?php if ($company['status'] !== 'active'): ?>
+            <!-- STATE_CHANGE: Активировать -->
             <form method="post" action="/superadmin/companies/<?= $id ?>/activate" style="display:inline" onsubmit="return confirm('Активировать компанию?')">
                 <button type="submit" class="btn btn-primary">Активировать</button>
             </form>
             <?php endif; ?>
-            <?php if ($company['status'] === 'active'): ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
+        </div>
+    </div>
+</div>
+
+<!-- Danger Zone panel -->
+<div class="panel" style="border-color:var(--danger)">
+    <div class="panel-head" style="background:var(--danger-bg)">
+        <h2 style="color:var(--danger)">Опасная зона</h2>
+    </div>
+    <div class="panel-body">
+        <div class="notice danger" style="margin-bottom:16px">
+            Действия в этом разделе изменяют статус компании и могут ограничить доступ пользователей.
+        </div>
+        <div class="form-actions">
+            <?php if (in_array($company['status'], ['active', 'inactive'], true)): ?>
+            <!-- DESTRUCTIVE: Заблокировать -->
+            <form method="post" action="/superadmin/companies/<?= $id ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию? Пользователи не смогут войти.')">
                 <button type="submit" class="btn btn-danger">Заблокировать</button>
             </form>
             <?php endif; ?>
+            <!-- DESTRUCTIVE: Архивировать -->
             <form method="post" action="/superadmin/companies/<?= $id ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
                 <button type="submit" class="btn btn-danger">Архивировать</button>
             </form>
+            <?php if ($company['status'] === 'active'): ?>
+            <!-- STATE_CHANGE: Деактивировать -->
+            <form method="post" action="/superadmin/companies/<?= $id ?>/deactivate" style="display:inline" onsubmit="return confirm('Отключить компанию?')">
+                <button type="submit" class="btn btn-danger">Отключить</button>
+            </form>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Hard Delete Danger Zone -->
+<div class="panel" style="border-color:var(--danger)">
+    <div class="panel-head" style="background:var(--danger-bg)">
+        <h2 style="color:var(--danger)">Полное удаление</h2>
+    </div>
+    <div class="panel-body">
+        <div class="notice danger" style="margin-bottom:16px">
+            Полное удаление компании удалит локальную базу данных, storage-папку, пользователей, документы и все справочники. Восстановление возможно только из резервной копии.
+        </div>
+        <div class="form-actions">
+            <a href="/superadmin/companies/<?= $id ?>/delete" class="btn btn-danger">Полное удаление компании</a>
         </div>
     </div>
 </div>
@@ -419,16 +515,17 @@ $userStats['logist_count'] = logist_total;
 | CORE-17 | Primary button | «Редактировать», «Активировать» |
 | CORE-18 | Secondary button | «Все пользователи», «Все справочники», «Все документы», «Все доступы» |
 | CORE-19 | Ghost button | «← К реестру» |
-| CORE-22 | Danger button | «Заблокировать», «Архивировать» |
+| CORE-22 | Danger button | «Заблокировать», «Архивировать», «Полное удаление» — DESTRUCTIVE actions in Danger Zone |
 | CORE-23 | Disabled action | «Открыть» (directories) — SUPERADMIN не управляет |
 | CORE-24 | Status badge | Company + owner statuses |
 | CORE-26 | Form field | Edit form fields |
 | CORE-27 | Form section | Edit form sections |
 | CORE-28 | Validation/error | Required field errors |
-| CORE-29 | Confirm | Status change confirmations |
 | CORE-31 | Key-value list (KV) | Fact sections (dl.kv or div.kv) |
 | CORE-32 | Notice | System messages |
-| CORE-33 | Warning notice | Error messages |
+| CORE-33 | Warning notice | Error messages, danger zone warnings |
+
+**DANGER ZONE PATTERN (D3):** Applied via `.panel` with `border-color:var(--danger)` + `.panel-head` with `background:var(--danger-bg)` + `h2` with `color:var(--danger)`. See ACTION CLASSIFICATION section above for full spec.
 
 **COMPOSITE pattern:** PATTERN-05 Admin/settings screen + PATTERN-06 Entity card page
 
@@ -485,6 +582,9 @@ $userStats['logist_count'] = logist_total;
 - Не добавлять новые CSS-классы без source в Core Kit
 - Не менять существующие SUPERADMIN маршруты (кроме обновления ссылок)
 - Не ломать существующие модули
+- **Использовать Danger Zone pattern (D3) для destructive действий**
+- **Не использовать `.btn-ghost` для DESTRUCTIVE действий**
+- **Не смешивать destructive и non-destructive действия в одной панели**
 
 ---
 
@@ -497,7 +597,10 @@ $userStats['logist_count'] = logist_total;
 - [ ] Реализовать секцию «Доступы» (count из local DB)
 - [ ] Добавить кнопки статусных действий на карточке
 - [ ] Добавить поля «Локальная БД существует» и «Storage существует» в техинфо
-- [ ] Реализовать маршруты activate/block/archive
+- [ ] Реализовать маршруты activate/block/archive/deactivate
+- [ ] **Реализовать Danger Zone pattern (D3):** раздельные панели «Действия» и «Опасная зона»
+- [ ] DESTRUCTIVE кнопки используют `.btn-danger` и находятся в Danger Zone панели
+- [ ] Danger Zone панель имеет `border-color:var(--danger)`, head `background:var(--danger-bg)`
 - [ ] Локальная БД недоступна → показывать «—» / 0, не 500
 - [ ] Соответствовать handoff по структуре и классам
 - [ ] `php -l` для всех изменённых PHP — OK
@@ -514,6 +617,9 @@ $userStats['logist_count'] = logist_total;
 - [ ] Кнопка «Архивировать» видна всегда
 - [ ] Status actions работают (POST + redirect)
 - [ ] Status actions требуют confirm
+- [ ] **Danger Zone панель отделена от обычных действий**
+- [ ] **«Заблокировать», «Архивировать», «Полное удаление» используют `.btn-danger`**
+- [ ] **Danger Zone имеет красную границу и фон заголовка**
 - [ ] Никакой статус не удаляет локальную БД/storage/users
 - [ ] «Локальная БД существует» показывает YES/NO
 - [ ] «Storage существует» показывает YES/NO

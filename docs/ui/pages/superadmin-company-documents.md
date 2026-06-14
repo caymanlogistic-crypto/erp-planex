@@ -328,3 +328,16 @@ $totalCount = count($documents);
 - **VISUAL CHECK URL:** `http://127.0.0.1:[port]/superadmin/companies/{id}/documents`
 - **Manual owner visual review required:** YES
 - **Commit allowed before owner visual approval:** NO
+
+---
+
+## 15. D6: Entity documents navigation (DEFERRED)
+
+**Problem:** «Документы» links in directory read-only pages (crews, drivers, clients, etc.) go to this general company documents list (`/superadmin/companies/{id}/documents`), not entity-specific documents.
+
+**Decision:** DEFERRED. Current behavior is acceptable for SUPERADMIN monitoring. Entity-specific filtering with `?entity_type=driver&entity_id=123` will be implemented in a future task.
+
+**Current state:** COMPLIANT — general documents page is sufficient for SUPERADMIN monitoring scope.
+
+### D4: confirm() scope for document download
+- Document download (`GET /company/documents/download?id=N&company_id={id}`): `confirm()` NOT REQUIRED — this is a READ action (NAVIGATION class). Download is safe and reversible.

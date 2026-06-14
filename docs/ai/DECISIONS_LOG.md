@@ -1,5 +1,30 @@
 # ERP PLANEX — DECISIONS_LOG
 
+## DECISION-0050 — SUPERADMIN Component Rework After Design Audit
+
+### Решение
+
+После отчёта Главного дизайнера выполнен полный компонентный реворк SUPERADMIN и /login:
+
+1. **CSS GAP CLOSURE**: добавлены `.row-actions`, `.col-num`, `--accent-line` в `app.css`; `.btn-secondary` исправлен на CSS-переменную.
+2. **SHARED statusBadge()**: 19 локальных копий удалены, создан единый компонент `app/View/components/status_badge.php` с функцией `renderStatusBadge()`.
+3. **ROW ACTIONS CLASSIFICATION**: все действия классифицированы (NAVIGATION/EDIT/STATE_CHANGE/DESTRUCTIVE/SECURITY). `.btn-ghost` для NAV/EDIT/STATE_CHANGE/SECURITY, `.btn-danger` для DESTRUCTIVE.
+4. **DANGER ZONE PATTERN**: деструктивные действия на карточке вынесены в отдельную Danger Zone panel с `border-color:var(--danger)` и `background:var(--danger-bg)`.
+5. **LOGIN HINT**: текст заменён на нейтральный «Введите логин, выданный администратором».
+6. **CREWS DISPLAY**: raw ID заменены на читаемые имена через SQL LEFT JOIN.
+7. **ENTITY DOCUMENTS NAVIGATION**: ссылки «Документы» в read-only справочниках дополнены query-параметрами `?entity_type=X&entity_id=Y`.
+8. **5 DESIGNER RULES**: добавлены в `.kilo/agent/erp-uiux-designer.md` и `docs/ui/DESIGN_CODE_INTEGRATION.md`.
+
+### Причина
+
+Аудит Главного дизайнера выявил: CSS-дыры, копирование `statusBadge()` в 19 view-файлах, отсутствие визуальной иерархии действий, раскрытие ролей в login hint, raw ID в crews.
+
+### Статус
+
+active
+
+---
+
 ## DECISION-0049 — SUPERADMIN Functional Closure
 
 ### Решение

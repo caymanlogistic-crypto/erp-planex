@@ -1,15 +1,6 @@
 <?php
 
-function userStatusBadge(string $status): string
-{
-    $map = [
-        'active'  => ['class' => 'badge-ok',    'label' => 'Активен'],
-        'blocked' => ['class' => 'badge-danger', 'label' => 'Заблокирован'],
-        'archived'=> ['class' => '',             'label' => 'Архивирован'],
-    ];
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
+require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 <?php if ($company === null): ?>
@@ -101,47 +92,47 @@ function userStatusBadge(string $status): string
                         <td><?= e($u['email'] ?? '—') ?></td>
                         <td class="col-mono"><?= e($u['phone'] ?? '—') ?></td>
                         <td><?= e($u['role_label']) ?></td>
-                        <td><?= userStatusBadge($u['status']) ?></td>
+                        <td><?= renderStatusBadge($u['status']) ?></td>
                         <td class="col-muted"><?= e($u['created_at'] ?? '') ?></td>
                         <td class="col-actions">
                             <div class="row-actions">
                                 <?php if ($u['type'] === 'owner'): ?>
-                                <a href="/superadmin/companies/<?= $id ?>/owner" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Карточка</a>
-                                <a href="/superadmin/companies/<?= $id ?>/owner/edit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Редактировать</a>
+                                <a href="/superadmin/companies/<?= $id ?>/owner" class="btn btn-ghost">Карточка</a>
+                                <a href="/superadmin/companies/<?= $id ?>/owner/edit" class="btn btn-ghost">Редактировать</a>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/owner/reset-password" style="display:inline" onsubmit="return confirm('Сбросить пароль Руководителя?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Сбросить пароль</button>
+                                    <button type="submit" class="btn btn-ghost">Сбросить пароль</button>
                                 </form>
                                 <?php if ($u['status'] !== 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $u['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать руководителя?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Активировать</button>
+                                    <button type="submit" class="btn btn-ghost">Активировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <?php if ($u['status'] === 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $u['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать руководителя?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Заблокировать</button>
+                                    <button type="submit" class="btn btn-ghost">Заблокировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $u['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать руководителя?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Архивировать</button>
+                                    <button type="submit" class="btn btn-danger">Архивировать</button>
                                 </form>
                                 <?php else: ?>
-                                <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Карточка</a>
-                                <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/edit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Редактировать</a>
+                                <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>" class="btn btn-ghost">Карточка</a>
+                                <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/edit" class="btn btn-ghost">Редактировать</a>
                                 <?php if ($u['status'] !== 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать логиста?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Активировать</button>
+                                    <button type="submit" class="btn btn-ghost">Активировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <?php if ($u['status'] === 'active'): ?>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать логиста?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Заблокировать</button>
+                                    <button type="submit" class="btn btn-ghost">Заблокировать</button>
                                 </form>
                                 <?php endif; ?>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать логиста?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Архивировать</button>
+                                    <button type="submit" class="btn btn-danger">Архивировать</button>
                                 </form>
                                 <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/reset-password" style="display:inline" onsubmit="return confirm('Сбросить пароль логиста?')">
-                                    <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Сбросить пароль</button>
+                                    <button type="submit" class="btn btn-ghost">Сбросить пароль</button>
                                 </form>
                                 <?php endif; ?>
                             </div>

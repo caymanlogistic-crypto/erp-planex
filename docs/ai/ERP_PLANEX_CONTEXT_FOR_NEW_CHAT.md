@@ -1,8 +1,38 @@
-# CURRENT CONTEXT OVERRIDE — 2026-06-14 — SUPERADMIN_FUNCTIONAL_ACCEPTED_FOR_DESIGN
+# CURRENT CONTEXT OVERRIDE — 2026-06-14 — SUPERADMIN_COMPONENT_REWORK_NEEDS_VISUAL_REWORK
 
-**5 БЛОКЕРОВ ИСПРАВЛЕНЫ. DESTRUCTIVE HARD DELETE RUNTIME ПРОВЕРЕН (28/28 PASS). ГОТОВО К HANDOFF ДИЗАЙНЕРУ.**
+**ТЕХНИЧЕСКИЙ QA ПРОЙДЕН (62/62 PASS). ВИЗУАЛЬНО ОТКЛОНЁН ВЛАДЕЛЬЦЕМ. НУЖЕН ВИЗУАЛЬНЫЙ РЕВОРК.**
 
 ## Состояние
+- Статус: **SUPERADMIN_COMPONENT_REWORK_NEEDS_VISUAL_REWORK**
+- Технический QA: 62/62 PASS
+- Owner visual review: NOT ACCEPTED (2026-06-14 20:15)
+- Причины: row-actions слиплись, опасные действия отделены слабо, таблица растянута, рабочее поле пустое, сценарий SUPERADMIN не читается
+- 36 files changed: 751 insertions, 396 deletions
+- All `php -l` PASS (all PHP files clean)
+- Start commit: 0e65881
+- End commit: pending
+- Push: NO
+
+## Что сделано (6 stages)
+### Stage 1 — CSS GAP CLOSURE
+- `.row-actions`, `.col-num`, `--accent-line` добавлены в `app.css`
+- `.btn-secondary` исправлен: `background: #fff` → `var(--surface-strong)`
+
+### Stage 2 — SHARED statusBadge()
+- Создан единый компонент `app/View/components/status_badge.php` (`renderStatusBadge()`)
+- 19 локальных копий удалены из всех view-файлов
+- Login hint: «Введите логин, выданный администратором»
+
+### Stage 3 — DESIGNER HANDOFF
+- 7 решений принято (D1-D7): row-actions pattern, action classification, danger zone, confirm() scope, crews display, entity docs, login hint
+- 9 page handoff обновлены, `superadmin-company-delete.md` создан
+- 5 новых правил добавлено в агента дизайнера и DESIGN_CODE_INTEGRATION.md
+
+### Stage 4 — CODER IMPLEMENTATION
+- Row actions classified: `.btn-ghost` (NAV/EDIT/STATE_CHANGE/SECURITY), `.btn-danger` (DESTRUCTIVE)
+- Danger Zone pattern на company_view: «Заблокировать»/«Архивировать»/«Полное удаление»
+- Crews: SQL LEFT JOIN → имена вместо raw ID
+- Documents links: +entity_type/entity_id query params
 - 108 маршрутов (105 + 3 owner status)
 - 22 view-файла
 - index.php: ~9034 строк

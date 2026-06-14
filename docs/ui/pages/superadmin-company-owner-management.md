@@ -1,4 +1,28 @@
-# SUPERADMIN Company Owner Management — Handoff
+# SUPERADMIN Company Owner Management — Handoff v1.1
+
+## Status
+**HANDOFF_READY** (v1.1 — added D1/D2 action classification + D4 confirm scope).
+
+---
+
+## ACTION CLASSIFICATION (D2 — MANDATORY)
+
+Owner management actions follow the SUPERADMIN action classification taxonomy:
+
+| Label | Class | Visual class | Confirm | Notes |
+|-------|-------|-------------|---------|-------|
+| «Редактировать» | EDIT | `.btn-primary` | NO | Navigate to edit form |
+| «← К карточке компании» | NAVIGATION | `.btn-ghost` | NO | Back to company card |
+| «← К карточке Руководителя» | NAVIGATION | `.btn-ghost` | NO | Back to owner card |
+| «Сбросить пароль» | SECURITY | `.btn-danger` | `confirm()` | Irreversible password change |
+| «Сохранить» | EDIT | `.btn-primary` | NO | Save edited form |
+| «Отмена» | NAVIGATION | `.btn-ghost` | NO | Cancel and go back |
+
+### D4: confirm() scope for SECURITY actions
+- Password reset: `confirm()` is ENOUGH — operates on a single user, reversible by setting a new password
+- Confirm text: `«Сбросить пароль для [owner_name]? Текущий пароль будет заменён. Новый пароль будет показан только один раз.»`
+
+---
 
 ## Назначение
 Управление Руководителем компании из панели SUPERADMIN: просмотр карточки, редактирование, смена статуса, сброс пароля.
@@ -37,10 +61,10 @@
 | Обновлён | updated_at |
 
 **2. Действия**
-- Кнопка «Сбросить пароль» (btn-primary → форма ниже или отдельная кнопка)
+- Кнопка «Сбросить пароль» (btn-danger — SECURITY класс, DESTRUCTIVE визуал)
 - Форма сброса пароля: `POST /superadmin/companies/{id}/owner/reset-password`
-  - Кнопка подтверждения: «Сбросить пароль» (btn-danger — опасное действие)
-  - Подтверждение: «Вы уверены? Текущий пароль будет заменён. Новый пароль будет показан только один раз.»
+  - Кнопка подтверждения: «Сбросить пароль» (`.btn-danger` — опасное действие)
+  - Подтверждение: `«Сбросить пароль для [owner_name]? Текущий пароль будет заменён. Новый пароль будет показан только один раз.»`
 
 ### Состояния
 - **company not found**: .notice.warn «Компания не найдена. ← К реестру»

@@ -1,20 +1,6 @@
 <?php
 
-function statusBadge(string $status): string
-{
-    $map = [
-        'active'       => ['class' => 'badge-ok',    'label' => 'Активен'],
-        'provisioning' => ['class' => 'badge-warn',  'label' => 'Настройка'],
-        'error'        => ['class' => 'badge-danger','label' => 'Ошибка'],
-        'inactive'     => ['class' => '',             'label' => 'Неактивен'],
-        'blocked'      => ['class' => '',             'label' => 'Заблокирован'],
-        'suspended'    => ['class' => 'badge-warn',  'label' => 'Приостановлен'],
-    ];
-
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-
-    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
+require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 
@@ -122,7 +108,7 @@ function statusBadge(string $status): string
                 <dt>Роль</dt>
                 <dd>Руководитель</dd>
                 <dt>Статус</dt>
-                <dd><?= statusBadge($owner['status']) ?></dd>
+                <dd><?= renderStatusBadge($owner['status']) ?></dd>
                 <dt>Комментарий</dt>
                 <dd><?= e($owner['comments'] ?? '') ?: '—' ?></dd>
                 <dt>Создан</dt>

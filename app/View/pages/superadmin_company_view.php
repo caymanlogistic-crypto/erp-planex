@@ -1,21 +1,6 @@
 <?php
 
-function statusBadge(string $status): string
-{
-    $map = [
-        'active'       => ['class' => 'badge-ok',    'label' => 'Активен'],
-        'provisioning' => ['class' => 'badge-warn',  'label' => 'Настройка'],
-        'error'        => ['class' => 'badge-danger','label' => 'Ошибка'],
-        'inactive'     => ['class' => '',             'label' => 'Неактивен'],
-        'suspended'    => ['class' => 'badge-warn',  'label' => 'Приостановлен'],
-        'blocked'      => ['class' => 'badge-danger', 'label' => 'Заблокирован'],
-        'archived'     => ['class' => '',             'label' => 'Архивирован'],
-    ];
-
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-
-    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
+require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 <?php if ($company === null): ?>
@@ -46,7 +31,7 @@ function statusBadge(string $status): string
 <div class="page-head">
     <div>
         <h1>Компания: <?= e($company['name']) ?></h1>
-        <p class="text-muted">ID: <?= $company['id'] ?> · Статус: <?= statusBadge($company['status']) ?></p>
+        <p class="text-muted">ID: <?= $company['id'] ?> · Статус: <?= renderStatusBadge($company['status']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -69,7 +54,7 @@ function statusBadge(string $status): string
                 <dt>ОГРН</dt>
                 <dd><?= e($company['ogrn'] ?? '') ?: '—' ?></dd>
                 <dt>Статус</dt>
-                <dd><?= statusBadge($company['status']) ?></dd>
+                <dd><?= renderStatusBadge($company['status']) ?></dd>
                 <dt>Комментарий</dt>
                 <dd><?= e($company['comments'] ?? '') ?: '—' ?></dd>
             </dl>
@@ -137,7 +122,7 @@ function statusBadge(string $status): string
                 <dt>Телефон</dt>
                 <dd><?= e($owner['phone'] ?? '') ?: '—' ?></dd>
                 <dt>Статус</dt>
-                <dd><?= statusBadge($owner['status']) ?></dd>
+                <dd><?= renderStatusBadge($owner['status']) ?></dd>
             </dl>
             <div class="form-actions">
                 <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">Управлять Руководителем</a>
@@ -282,17 +267,9 @@ function statusBadge(string $status): string
                 <button type="submit" class="btn btn-primary">Активировать</button>
             </form>
             <?php endif; ?>
-            <?php if (in_array($company['status'], ['active', 'inactive'], true)): ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
-                <button type="submit" class="btn btn-danger">Заблокировать</button>
-            </form>
-            <?php endif; ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
-                <button type="submit" class="btn btn-danger">Архивировать</button>
-            </form>
             <?php if ($company['status'] === 'active'): ?>
             <form method="post" action="/superadmin/companies/<?= $id ?>/deactivate" style="display:inline" onsubmit="return confirm('Отключить компанию?')">
-                <button type="submit" class="btn btn-danger">Отключить</button>
+                <button type="submit" class="btn btn-ghost">Отключить</button>
             </form>
             <?php endif; ?>
         </div>
@@ -302,7 +279,29 @@ function statusBadge(string $status): string
 <!-- Section: Danger Zone -->
 <div class="panel" style="border-color:var(--danger)">
     <div class="panel-head" style="background:var(--danger-bg)">
-        <h2>Опасная зона</h2>
+        <h2 style="color:var(--danger)">Опасная зона</h2>
+    </div>
+    <div class="panel-body">
+        <div class="notice danger" style="margin-bottom:16px">
+            Действия в этом разделе изменяют статус компании и могут ограничить доступ пользователей.
+        </div>
+        <div class="form-actions">
+            <?php if (in_array($company['status'], ['active', 'inactive'], true)): ?>
+            <form method="post" action="/superadmin/companies/<?= $id ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию? Пользователи не смогут войти.')">
+                <button type="submit" class="btn btn-danger">Заблокировать</button>
+            </form>
+            <?php endif; ?>
+            <form method="post" action="/superadmin/companies/<?= $id ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
+                <button type="submit" class="btn btn-danger">Архивировать</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Section: Hard Delete -->
+<div class="panel" style="border-color:var(--danger)">
+    <div class="panel-head" style="background:var(--danger-bg)">
+        <h2 style="color:var(--danger)">Полное удаление</h2>
     </div>
     <div class="panel-body">
         <div class="notice danger" style="margin-bottom:16px">

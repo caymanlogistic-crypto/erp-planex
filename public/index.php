@@ -7678,7 +7678,17 @@ $router->get('/superadmin/companies/{id}/crews', function ($id) use ($config, $d
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
 
-                $stmt = $localPdo->prepare("SELECT * FROM crews ORDER BY created_at DESC LIMIT 200");
+                $stmt = $localPdo->prepare(
+                    "SELECT c.*,
+                            ct.name AS contractor_name,
+                            v.plate_number,
+                            d.full_name AS driver_name
+                     FROM crews c
+                     LEFT JOIN contractors ct ON c.contractor_id = ct.id
+                     LEFT JOIN vehicles v ON c.vehicle_id = v.id
+                     LEFT JOIN drivers d ON c.driver_id = d.id
+                     ORDER BY c.created_at DESC LIMIT 200"
+                );
                 $stmt->execute();
                 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 $totalCount = count($items);

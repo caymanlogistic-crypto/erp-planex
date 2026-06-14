@@ -122,7 +122,59 @@ SUPERADMIN — Реестр компаний
 
 ---
 
-## 5. Main table (расширенная)
+## 5. ROW ACTIONS CLASSIFICATION (D1, D2 — MANDATORY)
+
+Every table row action MUST be classified according to the ACTION CLASSIFICATION TAXONOMY (Decision D2).
+The coder MUST use the exact classes specified below. The coder MUST NOT use `.btn-ghost` for DESTRUCTIVE actions.
+
+### Action classification taxonomy for SUPERADMIN
+
+| Class | Label | Visual class | Confirm | Examples |
+|-------|-------|-------------|---------|----------|
+| NAVIGATION | Link to another entity page | `.btn-ghost` (compact) | NO | "Карточка", "Руководитель", "Пользователи" |
+| EDIT | Edit entity data | `.btn-ghost` (compact) | NO | "Редактировать" |
+| STATE_CHANGE | Change entity status | `.btn-ghost` (compact) | `confirm()` | "Активировать", "Заблокировать", "Деактивировать" |
+| DESTRUCTIVE | Irreversible data change | `.btn-danger` (compact) | `confirm()` | "Архивировать", "Отозвать" |
+| SECURITY | Credential-affecting action | `.btn-ghost` (compact) | `confirm()` | "Сбросить пароль" |
+
+### Visual differentiation
+
+| Action class | Button class | Background | Border | Text color | Hover |
+|-------------|-------------|------------|--------|------------|-------|
+| NAVIGATION | `.btn-ghost` | transparent | transparent | `--text-muted` | subtle surface |
+| EDIT | `.btn-ghost` | transparent | transparent | `--text-muted` | subtle surface |
+| STATE_CHANGE | `.btn-ghost` | transparent | transparent | `--text-muted` | subtle surface |
+| DESTRUCTIVE | `.btn-danger` | `--danger-bg` (#fcecea) | #ca8880 | `--danger` (#992e26) | darker danger bg |
+| SECURITY | `.btn-ghost` | transparent | transparent | `--text-muted` | subtle surface |
+
+### Coder MUST
+- Use `.btn-danger` for ALL destructive row actions (archive, revoke, hard delete)
+- Use `.btn-ghost` for ALL navigation, edit, state-change, and security actions
+- Wrap destructive/state-change/security actions in `<form onsubmit="return confirm('...')">`
+- Compact styling: `font-size:11px;padding:2px 6px;min-height:22px` (already in app.css `.row-actions .btn-ghost, .row-actions .btn-danger`)
+
+### Coder MUST NOT
+- Use `.btn-ghost` for destructive actions (archive, revoke, delete)
+- Use `.btn-danger` for non-destructive actions (edit, navigate, activate, block)
+- Use pseudo-icons `[V]`, `[E]`, `[O]`, `[U]`, `[✓]`, `[⊗]`, `[A]`, `[P]` — use text labels
+- Use emoji as action icons
+
+### Row actions reference for companies registry
+
+| Label | Class | Action class | Route | Confirm |
+|-------|-------|-------------|-------|---------|
+| Карточка | NAVIGATION | `.btn-ghost` | GET `/superadmin/companies/{id}` | NO |
+| Редактировать | EDIT | `.btn-ghost` | GET `/superadmin/companies/{id}/edit` | NO |
+| Руководитель | NAVIGATION | `.btn-ghost` | GET `/superadmin/companies/{id}/owner` | NO |
+| Пользователи | NAVIGATION | `.btn-ghost` | GET `/superadmin/companies/{id}/users` | NO |
+| Активировать | STATE_CHANGE | `.btn-ghost` | POST `/superadmin/companies/{id}/activate` | YES |
+| Заблокировать | STATE_CHANGE | `.btn-ghost` | POST `/superadmin/companies/{id}/block` | YES |
+| Деактивировать | STATE_CHANGE | `.btn-ghost` | POST `/superadmin/companies/{id}/deactivate` | YES |
+| Архивировать | DESTRUCTIVE | `.btn-danger` | POST `/superadmin/companies/{id}/archive` | YES |
+
+---
+
+## 6. Main table (расширенная — UPDATED row actions)
 
 ```html
 <div class="panel">
@@ -170,23 +222,36 @@ SUPERADMIN — Реестр компаний
                     <td class="col-muted"><?= e($c['created_at'] ?? '') ?></td>
                     <td class="col-actions">
                         <div class="row-actions">
-                            <a href="/superadmin/companies/<?= $c['id'] ?>" class="ra" title="Карточка">V</a>
-                            <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="ra" title="Редактировать">E</a>
-                            <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="ra" title="Руководитель">O</a>
-                            <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="ra" title="Пользователи">U</a>
+                            <!-- NAVIGATION: Карточка -->
+                            <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost">Карточка</a>
+                            <!-- EDIT: Редактировать -->
+                            <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="btn btn-ghost">Редактировать</a>
+                            <!-- NAVIGATION: Руководитель -->
+                            <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="btn btn-ghost">Руководитель</a>
+                            <!-- NAVIGATION: Пользователи -->
+                            <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="btn btn-ghost">Пользователи</a>
                             <?php if ($c['status'] !== 'active'): ?>
+                            <!-- STATE_CHANGE: Активировать -->
                             <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать компанию?')">
-                                <button class="ra" title="Активировать">✓</button>
+                                <button type="submit" class="btn btn-ghost">Активировать</button>
                             </form>
                             <?php endif; ?>
-                            <?php if ($c['status'] === 'active'): ?>
+                            <?php if (in_array($c['status'], ['active', 'inactive'], true)): ?>
+                            <!-- STATE_CHANGE: Заблокировать -->
                             <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
-                                <button class="ra" title="Заблокировать">⊗</button>
+                                <button type="submit" class="btn btn-ghost">Заблокировать</button>
                             </form>
                             <?php endif; ?>
+                            <!-- DESTRUCTIVE: Архивировать -->
                             <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
-                                <button class="ra del" title="Архивировать">A</button>
+                                <button type="submit" class="btn btn-danger">Архивировать</button>
                             </form>
+                            <?php if ($c['status'] === 'active'): ?>
+                            <!-- STATE_CHANGE: Деактивировать -->
+                            <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/deactivate" style="display:inline" onsubmit="return confirm('Отключить компанию?')">
+                                <button type="submit" class="btn btn-ghost">Отключить</button>
+                            </form>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>
@@ -224,7 +289,7 @@ SUPERADMIN — Реестр компаний
 
 ---
 
-## 6. Status badges (расширенные)
+## 7. Status badges (расширенные)
 
 | Status | Badge class | Dot | Text |
 |--------|------------|-----|------|
@@ -278,7 +343,7 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
 
 ---
 
-## 7. Status action routes (NEW)
+## 8. Status action routes (NEW)
 
 ### POST /superadmin/companies/{id}/activate
 
@@ -313,7 +378,7 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
 
 ---
 
-## 8. Creation form (существующая)
+## 9. Creation form (существующая)
 
 **Route:** `/superadmin/companies/create`
 **View file:** `app/View/pages/superadmin_companies_create.php`
@@ -323,7 +388,7 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
 
 ---
 
-## 9. Empty state (CORE-34)
+## 10. Empty state (CORE-34)
 
 ```html
 <div class="panel">
@@ -339,7 +404,7 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
 
 ---
 
-## 10. Error states
+## 11. Error states
 
 ### Page load error
 ```html
@@ -364,7 +429,7 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
 
 ---
 
-## 11. Loading state (CORE-35)
+## 12. Loading state (CORE-35)
 
 Skeleton rows for table while data loads:
 ```html
@@ -381,7 +446,7 @@ Skeleton rows for table while data loads:
 
 ---
 
-## 12. CORE modules used
+## 13. CORE modules used
 
 | ID | Module | Usage |
 |----|--------|-------|
@@ -391,47 +456,51 @@ Skeleton rows for table while data loads:
 | CORE-05 | Page header (page-head) | Title + «Создать экспедитора» |
 | CORE-06 | Page actions | «Создать экспедитора» btn-primary |
 | CORE-08 | Panel | Table container |
-| CORE-11 | Filter toolbar (filters-bar) | Search + status select + provisioning select |
+| CORE-11 | Filter toolbar (filters-bar) | Search + status select |
 | CORE-12 | Search field | Search input |
 | CORE-13 | Data table / ERP grid | Companies table |
 | CORE-14 | Table row states | Row hover |
-| CORE-15 | Table row actions | Quick action buttons per row |
+| CORE-15 | Table row actions | Classified row actions per D1/D2 |
 | CORE-16 | Pagination | When needed |
 | CORE-17 | Primary button | «Создать экспедитора» |
-| CORE-19 | Ghost button | Navigation links |
-| CORE-20 | Toolbar button | «Сбросить» filter |
-| CORE-22 | Danger button | Status change confirmations |
+| CORE-18 | Secondary button | Navigation links |
+| CORE-19 | Ghost button | NAVIGATION / EDIT / STATE_CHANGE / SECURITY row actions |
+| CORE-20 | Toolbar button | «Применить» / «Сбросить» filters |
+| CORE-22 | Danger button | DESTRUCTIVE row actions («Архивировать») |
 | CORE-24 | Status badge | Company + provisioning statuses |
 | CORE-26 | Form field | Creation form fields |
 | CORE-27 | Form section | Creation form sections |
 | CORE-28 | Validation/error | Required field errors |
-| CORE-29 | Confirm (CORE-37) | Status change confirmations |
 | CORE-32 | Notice | System messages, success |
 | CORE-33 | Warning notice | DB errors |
 | CORE-34 | Empty state | No companies |
 | CORE-35 | Loading skeleton | Table loading |
 
-**COMPOSITE pattern:** PATTERN-01 Table-only registry (extended with expanded columns and row actions)
+**COMPOSITE pattern:** PATTERN-01 Table-only registry (extended with action-classified row actions)
 
 ---
 
-## 13. MODULE USAGE DECISIONS
+## 14. MODULE USAGE DECISIONS
 
 - **Main page purpose:** Central registry of all local ERP systems with monitoring and quick status actions.
 - **Primary work object:** Companies table with 10 columns.
 - **Main layout selected:** table-only (PATTERN-01).
 - **Primary action:** «Создать экспедитора» (CORE-17 btn-primary).
-- **Secondary actions:** Row-level status changes + navigation links.
+- **Secondary actions:** Row-level classified actions per D2 taxonomy:
+  - NAVIGATION: «Карточка», «Руководитель», «Пользователи» (`.btn-ghost`)
+  - EDIT: «Редактировать» (`.btn-ghost`)
+  - STATE_CHANGE: «Активировать», «Заблокировать», «Деактивировать» (`.btn-ghost` + `confirm()`)
+  - DESTRUCTIVE: «Архивировать» (`.btn-danger` + `confirm()`)
 - **Table required:** YES — central monitoring view.
 - **Form required:** NO on this page (creation is separate page, unchanged).
 - **Inspector required:** NO — detail is via navigation to company card.
-- **Filters required:** YES — search by name/INN + two selects (status, provisioning).
-- **Modal required:** NO — confirm via JS confirm() for status actions.
+- **Filters required:** YES — search by name/INN + status select.
+- **Modal required:** NO — confirm via JS confirm() for status/security/destructive actions.
 - **Modules explicitly not used:** CORE-30 Inspector (detail via card page, not inline), CORE-36 Modal (simple confirm for now).
 
 ---
 
-## 14. SOURCE MAPPING
+## 15. SOURCE MAPPING
 
 | # | UI element | CORE module ID | Exact source in ERP_UI_KIT_CORE.html | Required classes | Forbidden alternatives |
 |---|------------|----------------|--------------------------------------|-----------------|------------------------|
@@ -444,8 +513,9 @@ Skeleton rows for table while data loads:
 | 7 | Search field | CORE-12 | CORE-12 module card | `.field-input` | Decorative topbar search |
 | 8 | Table | CORE-13 | Production CSS > .tbl, .tbl-wrap | `.panel`, `.tbl-wrap`, `.tbl` | Bootstrap table, cards |
 | 9 | Table row | CORE-14 | CORE-14 module card | `tr` hover | Bright hover colors |
-| 10 | Row actions | CORE-15 | CORE-15 module card > .row-actions, .ra | `.row-actions`, `.ra`, `.ra.del` | Always-visible clutter |
-| 11 | Status badge (active) | CORE-24 | Production CSS > .badge-ok | `.badge-ok`, `.dot` | Bootstrap alert-success |
+| 10 | Row actions (NAVIGATION/EDIT/STATE_CHANGE/SECURITY) | CORE-19 | Button Decision Matrix > Ghost | `.btn-ghost` (in `.row-actions`) | Using `.btn-danger` for non-destructive |
+| 11 | Row actions (DESTRUCTIVE: Архивировать) | CORE-22 | Button Decision Matrix > Danger | `.btn-danger` (in `.row-actions`) | Using `.btn-ghost` for destructive |
+| 12 | Status badge (active) | CORE-24 | Production CSS > .badge-ok | `.badge-ok`, `.dot` | Bootstrap alert-success |
 | 12 | Status badge (provisioning) | CORE-24 | Production CSS > .badge-warn | `.badge-warn`, `.dot` | Bootstrap alert-warning |
 | 13 | Status badge (error/blocked) | CORE-24 | Production CSS > .badge-danger | `.badge-danger`, `.dot` | Bootstrap alert-danger |
 | 14 | Status badge (archived) | CORE-24 | Production CSS > .badge (neutral) | `.badge`, `.dot` | Random color |
@@ -454,11 +524,11 @@ Skeleton rows for table while data loads:
 | 17 | Notice warn | CORE-33 | Production CSS > .notice.warn | `.notice.warn` | Bootstrap alert-warning |
 | 18 | Notice danger | CORE-33 | Production CSS > .notice | `.notice.danger` | Bootstrap alert-danger |
 | 19 | Toolbar button | CORE-20 | Button Decision Matrix > Toolbar | `.btn-toolbar` | Normal .btn in toolbar |
-| 20 | Ghost button | CORE-19 | Button Decision Matrix > Ghost | `.btn-ghost` | Ghost danger action |
+| 20 | Ghost button (page-level) | CORE-19 | Button Decision Matrix > Ghost | `.btn-ghost` | Ghost danger action |
 
 ---
 
-## 15. CSS COMPATIBILITY CHECK
+## 16. CSS COMPATIBILITY CHECK
 
 | Parent | Child | Parent padding | Flush requirement | Padding belongs to | Border token | Required states |
 |--------|-------|---------------|-------------------|--------------------|-------------|-----------------|
@@ -467,12 +537,13 @@ Skeleton rows for table while data loads:
 | `.filters-bar` | `.field-input` | — | — | Internal bar padding | — | focus, placeholder |
 | `.filters-bar` | `.field-select` | — | — | Internal bar padding | — | focus |
 | `.tbl-wrap` | `.tbl` | — | — | — | `--line-hair` | sticky thead, row hover |
-| `.row-actions` | `.ra` | — | — | — | `--line-soft` | hover, `.ra.del` danger |
+| `.row-actions` | `.btn-ghost` | — | — | — | `--line-hair` | hover: subtle surface; compact: font-size 11px, padding 2px 6px, min-height 22px |
+| `.row-actions` | `.btn-danger` | — | — | — | `--danger` (#ca8880) | hover: darker danger bg; compact: same as .btn-ghost |
 | `.nav-item` | `.nav-icon` | — | — | — | `--nav-gold` on active | hover: opacity .7, active: .85 |
 
 ---
 
-## 16. Strict prohibitions for coder
+## 17. Strict prohibitions for coder
 
 - Не менять `main.php` shell/sidebar/topbar
 - Не придумывать новые CSS-классы без source в Core Kit
@@ -482,6 +553,9 @@ Skeleton rows for table while data loads:
 - Не удалять локальную БД при archive/block
 - Не удалять storage при archive/block
 - Не удалять company_users при смене статуса
+- **НЕ ИСПОЛЬЗОВАТЬ `.btn-ghost` для DESTRUCTIVE действий (archive)** — только `.btn-danger`
+- **НЕ ИСПОЛЬЗОВАТЬ `.btn-danger` для НЕ-DESTRUCTIVE действий** — только `.btn-ghost`
+- **НЕ ИСПОЛЬЗОВАТЬ псевдоиконки** `[V]`, `[E]`, `[O]`, `[U]`, `[✓]`, `[⊗]`, `[A]`, `[P]` — использовать текстовые метки
 - Demo-placeholder UI запрещён (псевдоиконки, SaaS-dashboard, debug badges)
 - Не использовать emoji как иконки
 - `border-radius` ≤ 4px для новых элементов
@@ -489,29 +563,34 @@ Skeleton rows for table while data loads:
 
 ---
 
-## 17. Coder implementation checklist
+## 18. Coder implementation checklist
 
 - [ ] Обновить view `superadmin_companies.php`: расширенные колонки (10 вместо 7)
+- [ ] **Заменить все row actions на classified buttons per D2:**
+  - [ ] «Карточка», «Редактировать», «Руководитель», «Пользователи» → `.btn-ghost` (NAVIGATION/EDIT)
+  - [ ] «Активировать», «Заблокировать», «Деактивировать» → `.btn-ghost` + `confirm()` (STATE_CHANGE)
+  - [ ] «Архивировать» → `.btn-danger` + `confirm()` (DESTRUCTIVE)
+- [ ] **Заменить псевдоиконки [V][E][O][U][✓][⊗][A] на текстовые метки**
 - [ ] Добавить колонку «Локальная БД» (db_identifier)
 - [ ] Добавить колонку «Provisioning» (provisioningBadge)
 - [ ] Добавить колонку «Пользователей» (owner_count + logist_count)
-- [ ] Расширить колонку «Действия»: V/E/O/U + статусные кнопки
 - [ ] Добавить фильтр «provisioning status» в filters-bar
 - [ ] Реализовать loading skeleton для таблицы
 - [ ] Реализовать маршруты `POST /superadmin/companies/{id}/activate`
 - [ ] Реализовать маршруты `POST /superadmin/companies/{id}/block`
 - [ ] Реализовать маршруты `POST /superadmin/companies/{id}/archive`
+- [ ] Реализовать маршруты `POST /superadmin/companies/{id}/deactivate`
 - [ ] Добавить `confirm()` на статусные действия
 - [ ] Обновить `statusBadge()` — добавить inactive/blocked/archived
 - [ ] Создать `provisioningBadge()` функцию
-- [ ] Соответствовать этому handoff по структуре и классам
+- [ ] Соответствовать этому handoff по структуре, классам и action classification
 - [ ] Не менять main.php
 - [ ] Не добавлять новых CSS-классов без source в Core Kit
 - [ ] `php -l` для всех изменённых PHP — OK
 
 ---
 
-## 18. QA formal checklist
+## 19. QA formal checklist
 
 - [ ] Страница `/superadmin/companies` открывается с расширенными колонками
 - [ ] Колонка «ID» видна и корректна
@@ -524,10 +603,16 @@ Skeleton rows for table while data loads:
 - [ ] Колонка «Пользователей» показывает число (owner + logists)
 - [ ] Колонка «Создан» показывает дату
 - [ ] Колонка «Действия» содержит V/E/O/U кнопки
-- [ ] Кнопка «Активировать» (✓) видна для не-active компаний
-- [ ] Кнопка «Заблокировать» (⊗) видна для active компаний
-- [ ] Кнопка «Архивировать» (A) видна всегда
-- [ ] Статусные действия требуют confirm
+- [ ] Кнопка «Карточка» использует `.btn-ghost` (NAVIGATION)
+- [ ] Кнопка «Редактировать» использует `.btn-ghost` (EDIT)
+- [ ] Кнопка «Руководитель» использует `.btn-ghost` (NAVIGATION)
+- [ ] Кнопка «Пользователи» использует `.btn-ghost` (NAVIGATION)
+- [ ] Кнопка «Активировать» использует `.btn-ghost` (STATE_CHANGE) + confirm
+- [ ] Кнопка «Заблокировать» использует `.btn-ghost` (STATE_CHANGE) + confirm
+- [ ] Кнопка «Архивировать» использует `.btn-danger` (DESTRUCTIVE) + confirm
+- [ ] Нет псевдоиконок [V][E][O][U][✓][⊗][A] — только текст
+- [ ] Нет `.btn-danger` на не-destructive действиях
+- [ ] Нет `.btn-ghost` на destructive действиях
 - [ ] Фильтр «Все статусы» работает
 - [ ] Фильтр «Все provisioning» работает
 - [ ] Фильтр поиска работает (client-side или server-side)
@@ -542,7 +627,7 @@ Skeleton rows for table while data loads:
 
 ---
 
-## 19. Owner visual check
+## 20. Owner visual check
 
 - **VISUAL CHECK URL:** `http://127.0.0.1:[port]/superadmin/companies`
 - **Что владелец должен проверить глазами:**

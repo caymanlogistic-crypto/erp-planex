@@ -47,7 +47,7 @@
                        value="<?= e($loginValue ?? '') ?>"
                        autocomplete="username"
                        required>
-                <p class="text-muted" style="font-size:11px;margin-top:2px">SUPERADMIN — email, Руководитель/Логист — логин</p>
+                <p class="text-muted" style="font-size:11px;margin-top:2px">Введите логин, выданный администратором</p>
                 <?php if (isset($errors['login'])): ?>
                 <div class="field-msg"><?= e($errors['login']) ?></div>
                 <?php endif; ?>

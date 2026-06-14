@@ -10,7 +10,7 @@ KILO должен работать строго по MD-документации
 
 STYLE ERP изучается Codex GPT / архитектором / дизайнером и формализуется в MD. Кодер работает только по MD/handoff, не по исходной папке STYLE ERP.
 
-Текущий статус `/superadmin`: `PARTIALLY COMPLIANT / NEEDS_UI_REWORK`. Следующий шаг — compliance-аудит текущего экрана дизайнером. QA и commit запрещены до Manual owner visual approval.
+Текущий статус `/superadmin`: `SUPERADMIN_COMPONENT_REWORK_ACCEPTED` (2026-06-14). Component rework after Chief Designer audit: CSS gaps closed, shared statusBadge(), row actions classified, danger zone pattern applied, crews display fixed. Next step — Owner visual review.
 
 Первичный рабочий UI-kit — `docs/ui/ERP_UI_KIT_CORE.html` (PRIMARY compact working UI-kit). Дизайнер работает только с CORE modules и COMPOSITE patterns из Core Kit. Если нужного CORE-модуля нет, сначала расширяется Core Kit, затем продолжается page handoff.
 

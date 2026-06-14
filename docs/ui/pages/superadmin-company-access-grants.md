@@ -1,7 +1,7 @@
 # UI PAGE HANDOFF — SUPERADMIN Company Access Grants
 
 ## Status
-**HANDOFF_READY** — новая страница. Production-grade handoff per `_PAGE_TEMPLATE.md`.
+**HANDOFF_READY** (v1.1 — added D4 revoke confirm scope). Production-grade handoff per `_PAGE_TEMPLATE.md`.
 
 ---
 
@@ -118,6 +118,12 @@ SUPERADMIN — Доступы компании: [company.name]
 ### Кнопка «Отозвать» — disabled / deferred
 
 **REVOKE DEFERRED** — не реализуется в текущем scope. Кнопка disabled. В handoff записывается: «REVOKE DEFERRED — не реализуется в текущем scope, кнопка disabled». Будет активирована в отдельной задаче.
+
+### D4: confirm() scope for revoke (when implemented)
+- **Revoke grant:** `confirm()` is ENOUGH — single entity action, undoable by re-granting
+- **Confirm text:** `«Отозвать доступ к [entity_type] #[entity_id] для пользователя [user_name]?»`
+- **Visual class:** DESTRUCTIVE — use `.btn-danger` (NOT `.btn-ghost`, NOT disabled)
+- **Contrary case (when dedicated page):** Hard delete of company requires dedicated confirmation page (see superadmin-company-delete.md)
 
 ---
 

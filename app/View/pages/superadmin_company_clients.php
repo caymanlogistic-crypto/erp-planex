@@ -1,15 +1,6 @@
 <?php
 
-function statusBadge(string $status): string
-{
-    $map = [
-        'active'   => ['class' => 'badge-ok',   'label' => 'Активен'],
-        'archived' => ['class' => '',            'label' => 'Архивирован'],
-        'blocked'  => ['class' => 'badge-danger','label' => 'Заблокирован'],
-    ];
-    $item = $map[$status] ?? ['class' => '', 'label' => $status];
-    return '<span class="badge ' . $item['class'] . '"><span class="dot"></span>' . e($item['label']) . '</span>';
-}
+require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 <?php if ($company === null): ?>
@@ -80,9 +71,9 @@ function statusBadge(string $status): string
                         <td class="col-mono"><?= $item['id'] ?></td>
                         <td><?= e($item['name'] ?? '') ?></td>
                         <td class="col-mono"><?= e($item['inn'] ?? '—') ?></td>
-                        <td><?= statusBadge($item['status'] ?? '') ?></td>
+                        <td><?= renderStatusBadge($item['status'] ?? '') ?></td>
                         <td class="col-muted"><?= e($item['created_at'] ?? '') ?></td>
-                        <td><a href="/superadmin/companies/<?= $id ?>/documents" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Документы</a></td>
+                        <td class="col-actions"><div class="row-actions"><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=client&entity_id=<?= $item['id'] ?>" class="btn btn-ghost">Документы</a></div></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

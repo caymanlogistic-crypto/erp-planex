@@ -1,7 +1,7 @@
 # UI PAGE HANDOFF — SUPERADMIN Company Users
 
 ## Status
-**HANDOFF_READY** — новая страница. Production-grade handoff per `_PAGE_TEMPLATE.md`.
+**HANDOFF_READY** (v1.1 — added D1/D2 row action classification). Production-grade handoff per `_PAGE_TEMPLATE.md`.
 
 ---
 
@@ -127,29 +127,38 @@ SUPERADMIN — Пользователи компании: [company.name]
                     <td class="col-actions">
                         <div class="row-actions">
                             <?php if ($u['type'] === 'owner'): ?>
-                            <a href="/superadmin/companies/<?= $id ?>/owner" class="ra" title="Просмотр">V</a>
-                            <a href="/superadmin/companies/<?= $id ?>/owner/edit" class="ra" title="Редактировать">E</a>
+                            <!-- NAVIGATION: Просмотр -->
+                            <a href="/superadmin/companies/<?= $id ?>/owner" class="btn btn-ghost">Просмотр</a>
+                            <!-- EDIT: Редактировать -->
+                            <a href="/superadmin/companies/<?= $id ?>/owner/edit" class="btn btn-ghost">Редактировать</a>
+                            <!-- SECURITY: Сбросить пароль -->
                             <form method="post" action="/superadmin/companies/<?= $id ?>/owner/reset-password" style="display:inline" onsubmit="return confirm('Сбросить пароль Руководителя?')">
-                                <button class="ra" title="Сбросить пароль">P</button>
+                                <button type="submit" class="btn btn-ghost">Сбросить пароль</button>
                             </form>
                             <?php else: ?>
-                            <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>" class="ra" title="Просмотр">V</a>
-                            <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/edit" class="ra" title="Редактировать">E</a>
+                            <!-- NAVIGATION: Просмотр -->
+                            <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>" class="btn btn-ghost">Просмотр</a>
+                            <!-- EDIT: Редактировать -->
+                            <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/edit" class="btn btn-ghost">Редактировать</a>
                             <?php if ($u['status'] !== 'active'): ?>
+                            <!-- STATE_CHANGE: Активировать -->
                             <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать логиста?')">
-                                <button class="ra" title="Активировать">✓</button>
+                                <button type="submit" class="btn btn-ghost">Активировать</button>
                             </form>
                             <?php endif; ?>
                             <?php if ($u['status'] === 'active'): ?>
+                            <!-- STATE_CHANGE: Заблокировать -->
                             <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать логиста?')">
-                                <button class="ra" title="Заблокировать">⊗</button>
+                                <button type="submit" class="btn btn-ghost">Заблокировать</button>
                             </form>
                             <?php endif; ?>
+                            <!-- DESTRUCTIVE: Архивировать -->
                             <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать логиста?')">
-                                <button class="ra del" title="Архивировать">A</button>
+                                <button type="submit" class="btn btn-danger">Архивировать</button>
                             </form>
+                            <!-- SECURITY: Сбросить пароль -->
                             <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/reset-password" style="display:inline" onsubmit="return confirm('Сбросить пароль логиста?')">
-                                <button class="ra" title="Сбросить пароль">P</button>
+                                <button type="submit" class="btn btn-ghost">Сбросить пароль</button>
                             </form>
                             <?php endif; ?>
                         </div>
@@ -274,16 +283,23 @@ $totalCount = count($users);
 
 ---
 
-## 7. Row actions reference
+## 7. Row actions reference (UPDATED — action-classified)
 
-| Icon | Action | Route | Confirm |
-|------|--------|-------|---------|
-| V | Просмотр | owner → `/superadmin/companies/{id}/owner`; logist → `/superadmin/companies/{id}/users/logists/{user_id}` | — |
-| E | Редактировать | owner → `/superadmin/companies/{id}/owner/edit`; logist → `/superadmin/companies/{id}/users/logists/{user_id}/edit` | — |
-| ✓ | Активировать | `POST /superadmin/companies/{id}/users/logists/{user_id}/activate` | YES |
-| ⊗ | Заблокировать | `POST /superadmin/companies/{id}/users/logists/{user_id}/block` | YES |
-| A | Архивировать | `POST /superadmin/companies/{id}/users/logists/{user_id}/archive` | YES |
-| P | Сбросить пароль | owner → `POST /superadmin/companies/{id}/owner/reset-password`; logist → `POST /superadmin/companies/{id}/users/logists/{user_id}/reset-password` | YES |
+| Label | Class | Visual class | Route | Confirm |
+|-------|-------|-------------|-------|---------|
+| Просмотр (V) | NAVIGATION | `.btn-ghost` | owner → `/superadmin/companies/{id}/owner`; logist → `/superadmin/companies/{id}/users/logists/{user_id}` | NO |
+| Редактировать (E) | EDIT | `.btn-ghost` | owner → `/superadmin/companies/{id}/owner/edit`; logist → `/superadmin/companies/{id}/users/logists/{user_id}/edit` | NO |
+| Активировать (✓) | STATE_CHANGE | `.btn-ghost` | `POST /superadmin/companies/{id}/users/logists/{user_id}/activate` | `confirm()` |
+| Заблокировать (⊗) | STATE_CHANGE | `.btn-ghost` | `POST /superadmin/companies/{id}/users/logists/{user_id}/block` | `confirm()` |
+| Архивировать (A) | DESTRUCTIVE | `.btn-danger` | `POST /superadmin/companies/{id}/users/logists/{user_id}/archive` | `confirm()` |
+| Сбросить пароль (P) | SECURITY | `.btn-ghost` | owner → `POST /superadmin/companies/{id}/owner/reset-password`; logist → `POST /superadmin/companies/{id}/users/logists/{user_id}/reset-password` | `confirm()` |
+
+### Coder implementation notes:
+- **DESTRUCTIVE (Архивировать):** Use `.btn-danger` — NOT `.btn-ghost`
+- **SECURITY (Сбросить пароль):** Use `.btn-ghost` + `confirm()` 
+- **NAVIGATION/EDIT/STATE_CHANGE:** Use `.btn-ghost`
+- **Buttons must use TEXT labels** («Просмотр», «Редактировать», etc.) — NOT pseudo-icons [V][E][P][✓][⊗][A]
+- Compact styling is handled by `.row-actions .btn-ghost, .row-actions .btn-danger` in `app.css`
 
 ---
 
@@ -377,8 +393,9 @@ $totalCount = count($users);
 | 5 | Ghost action | CORE-19 | Button Matrix > Ghost | `.btn-ghost` | Ghost danger |
 | 6 | Panel | CORE-08 | Production CSS > .panel | `.panel`, `.panel-head`, `.panel-body` | Decorative cards |
 | 7 | Table | CORE-13 | Production CSS > .tbl, .tbl-wrap | `.tbl`, `.tbl-wrap`, `.col-mono`, `.col-muted`, `.col-actions` | Bootstrap table |
-| 8 | Row actions | CORE-15 | CORE-15 module card > .row-actions, .ra | `.row-actions`, `.ra`, `.ra.del` | Always-visible |
-| 9 | Status badge (ok) | CORE-24 | Production CSS > .badge-ok | `.badge-ok`, `.dot` | Bootstrap alert |
+| 8 | Row actions (NAVIGATION/EDIT/STATE_CHANGE/SECURITY) | CORE-19 | Button Matrix > Ghost + app.css `.row-actions .btn-ghost` | `.btn-ghost`, `.row-actions` | Using `.btn-danger` for non-destructive |
+| 9 | Row actions (DESTRUCTIVE: Архивировать) | CORE-22 | Button Matrix > Danger + app.css `.row-actions .btn-danger` | `.btn-danger`, `.row-actions` | Using `.btn-ghost` for destructive |
+| 10 | Status badge (ok) | CORE-24 | Production CSS > .badge-ok | `.badge-ok`, `.dot` | Bootstrap alert |
 | 10 | Status badge (danger) | CORE-24 | Production CSS > .badge-danger | `.badge-danger`, `.dot` | Bootstrap alert-danger |
 | 11 | Status badge (neutral) | CORE-24 | Production CSS > .badge | `.badge`, `.dot` | Random color |
 | 12 | Empty state | CORE-34 | CORE-34 module card > .empty-state | `.empty-state` | Blank workspace |
@@ -394,7 +411,8 @@ $totalCount = count($users);
 | `.panel` | `.panel-head` | 0 | Yes — head flush | `.panel-body` (10px) | `h3.panel-head-title` |
 | `.panel` | `.panel-body` | 0 | — | `.panel-body` (10px) | text-muted |
 | `.tbl-wrap` | `.tbl` | — | — | — | sticky thead, row hover |
-| `.row-actions` | `.ra` | — | — | — | hover, `.ra.del` danger |
+| `.row-actions` | `.btn-ghost` | — | — | — | hover: subtle surface; compact: font-size 11px, padding 2px 6px, min-height 22px |
+| `.row-actions` | `.btn-danger` | — | — | — | hover: darker danger bg; compact: same as .btn-ghost |
 | `.nav-item` | `.nav-icon` | — | — | — | hover opacity .7, active .85 |
 
 ---
@@ -409,6 +427,8 @@ $totalCount = count($users);
 - Не хранить пароли в открытом виде
 - Не писать SQL внутри view
 - Не использовать emoji/pseudo-icons
+- **НЕ ИСПОЛЬЗОВАТЬ pseudo-icons [V][E][P][✓][⊗][A] — только текстовые метки**
+- **НЕ ИСПОЛЬЗОВАТЬ `.btn-ghost` для DESTRUCTIVE (архивировать) — только `.btn-danger`**
 - `border-radius` ≤ 4px для новых элементов
 - `box-shadow` blur ≤ 8px для новых элементов
 

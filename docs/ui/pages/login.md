@@ -204,6 +204,7 @@ app/View/layouts/auth-layout.php
                value="<?= e($loginValue ?? '') ?>"
                autocomplete="username"
                required>
+        <div class="field-msg">Введите логин, выданный администратором</div>
     </div>
 
     <div class="field">
@@ -240,7 +241,7 @@ app/View/layouts/auth-layout.php
 
 | Поле | Component class | Required | Validation | Help/error text |
 |------|----------------|----------|------------|-----------------|
-| Логин | `.field-input` | Да | Не может быть пустым | «Введите логин» |
+| Логин | `.field-input` | Да | Не может быть пустым | Hint: «Введите логин, выданный администратором» (`.field-msg`). Error: «Введите логин» |
 | Пароль | `.field-input` (type=password) | Да | Не может быть пустым | «Введите пароль» |
 
 ---
@@ -426,6 +427,26 @@ POST `/login` — `password_verify()` OK:
 | `.is-error` | `.field-input` | — | — | — | `#ca8880` | `background: #fff8f7` |
 | `.is-error` | `.field-msg` | — | — | — | — | `color: var(--danger)` |
 | `.login-actions` | `.btn-primary` | — | — | — | `--accent-deep` | `:hover` accent-hover |
+
+---
+
+## D7: Login hint text (APPROVED)
+
+**Decision:** The login hint text «Введите логин, выданный администратором» is APPROVED as the canonical hint for the login field.
+
+**Implementation:** Use `.field-msg` below the login input field as a PERMANENT hint (not an error), displayed at all times below the label.
+
+**CSS:** `.field-msg` (already in Core Kit — 11px, `color: var(--text-faint)`)
+
+**Coder MUST:**
+- Add `<div class="field-msg">Введите логин, выданный администратором</div>` below the login input
+- Hint is permanent — visible even when the field is empty
+- When validation error occurs, hint is replaced by error message
+
+**Coder MUST NOT:**
+- Use any other hint text for the login field
+- Show hint as a placeholder attribute
+- Remove hint after user starts typing
 
 ---
 
