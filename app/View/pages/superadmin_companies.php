@@ -55,6 +55,10 @@ function provisioningBadge(string $status, ?string $dbIdentifier): string
     <div class="notice success">Статус изменён.</div>
 <?php endif; ?>
 
+<?php if (($_GET['deleted'] ?? '') !== ''): ?>
+<div class="notice success">Компания ID <?= (int)$_GET['deleted'] ?> полностью удалена.</div>
+<?php endif; ?>
+
 <form method="get" action="/superadmin/companies" class="filters-bar">
     <input type="text" class="field-input" placeholder="Поиск по названию или ИНН" name="search" value="<?= e($search ?? '') ?>" style="max-width:240px">
     <select class="field-select" name="status" style="max-width:150px">

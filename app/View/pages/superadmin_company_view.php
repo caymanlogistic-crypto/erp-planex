@@ -299,4 +299,19 @@ function statusBadge(string $status): string
     </div>
 </div>
 
+<!-- Section: Danger Zone -->
+<div class="panel" style="border-color:var(--danger)">
+    <div class="panel-head" style="background:var(--danger-bg)">
+        <h2>Опасная зона</h2>
+    </div>
+    <div class="panel-body">
+        <div class="notice danger" style="margin-bottom:16px">
+            Полное удаление компании удалит локальную базу данных, storage-папку, пользователей, документы и все справочники. Восстановление возможно только из резервной копии.
+        </div>
+        <div class="form-actions">
+            <a href="/superadmin/companies/<?= $id ?>/delete" class="btn btn-danger">Полное удаление компании</a>
+        </div>
+    </div>
+</div>
+
 <?php endif; ?>
