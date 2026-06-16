@@ -20,7 +20,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
         </div>
     </div>
@@ -75,7 +75,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                         <td><?= e($item['driver_name'] ?? '—') ?></td>
                         <td><?= renderStatusBadge($item['status'] ?? '') ?></td>
                         <td class="col-muted"><?= e($item['created_at'] ?? '') ?></td>
-                        <td><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=crew&entity_id=<?= $item['id'] ?>" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Документы</a></td>
+                        <td><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=crew&entity_id=<?= $item['id'] ?>" class="btn btn-ghost btn-sm">Документы</a></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

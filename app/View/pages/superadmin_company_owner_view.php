@@ -31,7 +31,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies/<?= $company['id'] ?>" class="btn btn-ghost">← К карточке компании</a>
         </div>
     </div>
@@ -40,50 +40,48 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($passwordReset): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Руководитель: <?= e($owner['full_name']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title"><?= e($owner['full_name']) ?></span>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">← К карточке Руководителя</a>
+        <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
 
+<div class="page-content">
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
             Пароль успешно сброшен.
         </div>
 
-        <dl class="kv" style="margin-top:16px">
+        <dl class="kv">
             <dt>ФИО</dt>
             <dd><?= e($owner['full_name']) ?></dd>
             <dt>Логин</dt>
             <dd><code><?= e($owner['login']) ?></code></dd>
             <dt>Новый временный пароль</dt>
-            <dd><code style="background:var(--warning-bg);padding:2px 6px;border-radius:3px"><?= e($newPassword) ?></code></dd>
+            <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
         </dl>
 
-        <div class="notice warn" style="margin-top:16px">
+        <div class="notice warn">
             Временный пароль показан только один раз. Сохраните его сейчас. Пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions">
             <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">← К карточке Руководителя</a>
         </div>
     </div>
 </div>
+</div>
 
 <?php else: ?>
 
-<?php if (($_GET['success'] ?? '') === '1'): ?>
-    <div class="notice success">Данные сохранены.</div>
-<?php endif; ?>
-
 <div class="page-head">
-    <div>
-        <h1>Руководитель: <?= e($owner['full_name']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title"><?= e($owner['full_name']) ?></span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/owner/edit" class="btn btn-primary">Редактировать</a>
@@ -91,42 +89,58 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 </div>
 
+<div class="page-content">
+
+<?php if (($_GET['success'] ?? '') === '1'): ?>
+    <div class="notice success">Данные сохранены.</div>
+<?php endif; ?>
+
 <div class="panel">
+    <div class="panel-head">
+        <span class="panel-head-title">Основные данные</span>
+    </div>
     <div class="panel-body">
-
-        <div class="form-section">
-            <h3 class="panel-head-title">Основные данные</h3>
-            <dl class="kv">
-                <dt>ФИО</dt>
-                <dd><?= e($owner['full_name']) ?></dd>
-                <dt>Логин</dt>
-                <dd><code><?= e($owner['login']) ?></code></dd>
-                <dt>Email</dt>
-                <dd><?= e($owner['email'] ?? '') ?: '—' ?></dd>
-                <dt>Телефон</dt>
-                <dd><?= e($owner['phone'] ?? '') ?: '—' ?></dd>
-                <dt>Роль</dt>
-                <dd>Руководитель</dd>
-                <dt>Статус</dt>
-                <dd><?= renderStatusBadge($owner['status']) ?></dd>
-                <dt>Комментарий</dt>
-                <dd><?= e($owner['comments'] ?? '') ?: '—' ?></dd>
-                <dt>Создан</dt>
-                <dd><?= e($owner['created_at'] ?? '') ?></dd>
-                <dt>Обновлён</dt>
-                <dd><?= e($owner['updated_at'] ?? '') ?></dd>
-            </dl>
-        </div>
-
-        <div class="form-section">
-            <h3 class="panel-head-title">Действия</h3>
-            <form method="post" action="/superadmin/companies/<?= $company['id'] ?>/owner/reset-password">
-                <p class="text-muted" style="margin-bottom:12px">Вы уверены? Текущий пароль будет заменён. Новый пароль будет показан только один раз.</p>
-                <button type="submit" class="btn btn-danger">Сбросить пароль</button>
-            </form>
-        </div>
-
+        <dl class="kv">
+            <dt>ФИО</dt>
+            <dd><?= e($owner['full_name']) ?></dd>
+            <dt>Логин</dt>
+            <dd><code><?= e($owner['login']) ?></code></dd>
+            <dt>Должность</dt>
+            <dd><?= e($owner['position'] ?? '') ?: '—' ?></dd>
+            <dt>Email</dt>
+            <dd><?= e($owner['email'] ?? '') ?: '—' ?></dd>
+            <dt>Телефон</dt>
+            <dd><?= e($owner['phone'] ?? '') ?: '—' ?></dd>
+            <dt>Роль</dt>
+            <dd>Руководитель</dd>
+            <dt>Статус</dt>
+            <dd><?= renderStatusBadge($owner['status']) ?></dd>
+            <dt>Комментарий</dt>
+            <dd><?= e($owner['comments'] ?? '') ?: '—' ?></dd>
+            <dt>Создан</dt>
+            <dd><?= e($owner['created_at'] ?? '') ?></dd>
+            <dt>Обновлён</dt>
+            <dd><?= e($owner['updated_at'] ?? '') ?></dd>
+        </dl>
     </div>
 </div>
+
+<div class="panel">
+    <div class="panel-head">
+        <span class="panel-head-title">Управление доступом</span>
+    </div>
+    <div class="panel-body">
+        <div class="notice info">
+            Сброс пароля заменит текущий пароль Руководителя. Новый временный пароль будет показан только один раз.
+        </div>
+        <form method="post" action="/superadmin/companies/<?= $company['id'] ?>/owner/reset-password" onsubmit="return confirm('Сбросить пароль Руководителя? Текущий пароль будет заменён.')">
+            <div class="form-actions">
+                <button type="submit" class="btn btn-secondary">Сбросить пароль</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

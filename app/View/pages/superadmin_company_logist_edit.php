@@ -20,7 +20,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice warn">
             <?= e($formError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies/<?= $companyId ?>/users" class="btn btn-ghost">← К пользователям</a>
         </div>
     </div>
@@ -29,20 +29,22 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Редактировать логиста</h1>
-        <p class="text-muted"><?= e($logist['full_name'] ?? '') ?> · Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Редактировать пользователя</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
 
+<div class="page-content">
+
 <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/edit" class="panel">
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Основные данные</h3>
+            <p class="section-title">Основные данные</p>
 
             <div class="field">
                 <label class="field-label">ФИО <span class="req">*</span></label>
@@ -63,24 +65,40 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <?php endif; ?>
             </div>
 
-            <div class="field">
-                <label class="field-label">Email</label>
-                <input type="email" name="email" class="field-input"
-                       value="<?= e($old['email'] ?? $logist['email'] ?? '') ?>">
-                <?php if (!empty($errors['email'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['email']) ?></div>
-                <?php endif; ?>
+            <div class="form-grid-2">
+                <div class="field<?= !empty($errors['email']) ? ' is-error' : '' ?>">
+                    <label class="field-label">Email</label>
+                    <input type="email" name="email" class="field-input"
+                           value="<?= e($old['email'] ?? $logist['email'] ?? '') ?>">
+                    <?php if (!empty($errors['email'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['email']) ?></div>
+                    <?php endif; ?>
+                </div>
+                <div class="field">
+                    <label class="field-label">Телефон</label>
+                    <input type="text" name="phone" class="field-input"
+                           value="<?= e($old['phone'] ?? $logist['phone'] ?? '') ?>">
+                </div>
             </div>
 
             <div class="field">
-                <label class="field-label">Телефон</label>
-                <input type="text" name="phone" class="field-input"
-                       value="<?= e($old['phone'] ?? $logist['phone'] ?? '') ?>">
+                <label class="field-label">Роль <span class="req">*</span></label>
+                <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
+                    <?php
+                    $currentRole = $old['role_code'] ?? $logist['role_code'] ?? 'logist';
+                    ?>
+                    <option value="logist" <?= $currentRole === 'logist' ? 'selected' : '' ?>>Логист</option>
+                    <!-- DESIGN_TODO: company_owner/Руководитель — ждёт решения по multi-owner -->
+                    <option value="company_owner" disabled>Руководитель (недоступно)</option>
+                </select>
+                <?php if (!empty($errors['role_code'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>
+                <?php endif; ?>
             </div>
         </div>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Статус и комментарий</h3>
+            <p class="section-title">Статус и комментарий</p>
 
             <div class="field">
                 <label class="field-label">Статус <span class="req">*</span></label>
@@ -104,5 +122,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
     </div>
 </form>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

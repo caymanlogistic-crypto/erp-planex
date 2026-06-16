@@ -15,7 +15,7 @@
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
         </div>
     </div>
@@ -24,14 +24,16 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Справочники компании: <?= e($company['name']) ?></h1>
-        <p class="text-muted">ID: <?= $id ?> · Режим SUPERADMIN: просмотр</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Справочники компании</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
+
+<div class="page-content">
 
 <?php if (!empty($dbError)): ?>
     <div class="notice warn">
@@ -59,40 +61,42 @@
                         <td class="col-num"><?= (int)($dirs['clients']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['clients']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['clients']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Подрядчики</td>
                         <td class="col-num"><?= (int)($dirs['contractors']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['contractors']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['contractors']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Водители</td>
                         <td class="col-num"><?= (int)($dirs['drivers']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['drivers']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['drivers']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспорт</td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Экипажи</td>
                         <td class="col-num"><?= (int)($dirs['crews']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['crews']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['crews']['archived'] ?? 0) ?></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost" style="font-size:11px;padding:2px 8px">Открыть</a></td>
+                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
-<?php endif; ?>
 
+</div><!-- /.page-content -->
+
+<?php endif; ?>
 <?php endif; ?>

@@ -20,7 +20,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
         </div>
     </div>
@@ -39,54 +39,58 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($passwordReset): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Пароль сброшен</h1>
-        <p class="text-muted">Логист: <?= e($logist['full_name']) ?> · Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Пароль сброшен</span>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>" class="btn btn-ghost">← К карточке логиста</a>
+        <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>" class="btn btn-ghost">← К карточке пользователя</a>
     </div>
 </div>
 
+<div class="page-content">
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
             Пароль успешно сброшен.
         </div>
 
-        <dl class="kv" style="margin-top:16px">
+        <dl class="kv">
             <dt>ФИО</dt>
             <dd><?= e($logist['full_name']) ?></dd>
             <dt>Логин</dt>
             <dd><code><?= e($logist['login']) ?></code></dd>
             <dt>Новый временный пароль</dt>
-            <dd><code style="background:var(--warning-bg);padding:2px 6px;border-radius:2px"><?= e($newPassword) ?></code></dd>
+            <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
             <dt>Роль</dt>
-            <dd>Логист</dd>
+            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($logist['role_code'] ?? '') ?></dd>
         </dl>
 
-        <div class="notice warn" style="margin-top:16px">
+        <div class="notice warn">
             Временный пароль показан только один раз. Сохраните его сейчас. Пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
     </div>
 </div>
+</div>
 
 <?php else: ?>
+
+<div class="page-head">
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title"><?= e($logist['full_name']) ?></span>
+    </div>
+    <div class="page-head-actions">
+        <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/edit" class="btn btn-primary">Редактировать</a>
+        <a href="/superadmin/companies/<?= $companyId ?>/users" class="btn btn-ghost">← К пользователям</a>
+    </div>
+</div>
+
+<div class="page-content">
 
 <?php if (($_GET['status_changed'] ?? '') === '1'): ?>
     <div class="notice success">Статус изменён.</div>
 <?php endif; ?>
-
-<div class="page-head">
-    <div>
-        <h1>Логист: <?= e($logist['full_name']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $companyId ?>)</p>
-    </div>
-    <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $companyId ?>/users" class="btn btn-ghost">← К пользователям</a>
-        <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/edit" class="btn btn-primary">Редактировать</a>
-    </div>
-</div>
 
 <div class="panel">
     <div class="panel-head">
@@ -103,7 +107,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dt>Телефон</dt>
             <dd><?= e($logist['phone'] ?? '—') ?></dd>
             <dt>Роль</dt>
-            <dd>Логист</dd>
+            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($logist['role_code'] ?? '') ?></dd>
             <dt>Статус</dt>
             <dd><?= renderStatusBadge($logist['status']) ?></dd>
             <dt>Комментарий</dt>
@@ -118,7 +122,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="panel">
     <div class="panel-head">
-        <h2>Созданные записи</h2>
+        <span class="panel-head-title">Созданные записи</span>
     </div>
     <div class="panel-body">
         <dl class="kv">
@@ -140,7 +144,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="panel">
     <div class="panel-head">
-        <h2>Доступы</h2>
+        <span class="panel-head-title">Доступы</span>
     </div>
     <div class="panel-body">
         <dl class="kv">
@@ -152,28 +156,44 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="panel">
     <div class="panel-head">
-        <h2>Действия</h2>
+        <span class="panel-head-title">Управление доступом</span>
     </div>
     <div class="panel-body">
+        <div class="notice info">
+            Сброс пароля заменит текущий пароль пользователя. Новый временный пароль будет показан только один раз.
+        </div>
         <div class="form-actions">
             <?php if ($logist['status'] !== 'active'): ?>
-            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/activate" style="display:inline" onsubmit="return confirm('Активировать логиста?')">
+            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/activate" onsubmit="return confirm('Активировать пользователя?')">
                 <button type="submit" class="btn btn-primary">Активировать</button>
             </form>
             <?php endif; ?>
-            <?php if ($logist['status'] === 'active'): ?>
-            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать логиста?')">
-                <button type="submit" class="btn btn-danger">Заблокировать</button>
-            </form>
-            <?php endif; ?>
-            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать логиста?')">
-                <button type="submit" class="btn btn-danger">Архивировать</button>
-            </form>
-            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/reset-password" style="display:inline" onsubmit="return confirm('Сбросить пароль логиста? Текущий пароль будет заменён. Новый пароль будет показан только один раз.')">
-                <button type="submit" class="btn btn-danger">Сбросить пароль</button>
+            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/reset-password" onsubmit="return confirm('Сбросить пароль пользователя? Текущий пароль будет заменён. Новый пароль будет показан только один раз.')">
+                <button type="submit" class="btn btn-secondary">Сбросить пароль</button>
             </form>
         </div>
     </div>
 </div>
+
+<div class="panel panel-danger">
+    <div class="panel-head">
+        <span class="panel-head-title">Опасная зона</span>
+    </div>
+    <div class="panel-body">
+        <div class="notice danger">
+            Действия в этом разделе изменяют статус пользователя и не могут быть отменены автоматически.
+        </div>
+        <div class="form-actions">
+            <?php if ($logist['status'] === 'active'): ?>
+            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/block" onsubmit="return confirm('Заблокировать пользователя?')">
+                <button type="submit" class="btn btn-danger">Заблокировать</button>
+
+            </form>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

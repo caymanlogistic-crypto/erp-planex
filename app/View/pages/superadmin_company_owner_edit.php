@@ -31,7 +31,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">← К карточке Руководителя</a>
         </div>
     </div>
@@ -40,14 +40,16 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Редактировать Руководителя</h1>
-        <p class="text-muted"><?= e($owner['full_name']) ?> — Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Редактировать Руководителя</span>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">← К карточке Руководителя</a>
+        <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
+
+<div class="page-content">
 
 <?php if (!empty($formError)): ?>
     <div class="notice warn"><?= e($formError) ?></div>
@@ -57,7 +59,7 @@ require_once __DIR__ . '/../components/status_badge.php';
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Основные данные</h3>
+            <p class="section-title">Основные данные</p>
 
             <div class="field">
                 <label class="field-label">ФИО <span class="req">*</span></label>
@@ -78,19 +80,27 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <?php endif; ?>
             </div>
 
-            <div class="field">
-                <label class="field-label">Email</label>
-                <input type="email" name="email" class="field-input<?= !empty($errors['email']) ? ' is-error' : '' ?>"
-                       value="<?= e($old['email'] ?? $owner['email'] ?? '') ?>">
-                <?php if (!empty($errors['email'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['email']) ?></div>
-                <?php endif; ?>
+            <div class="form-grid-2">
+                <div class="field<?= !empty($errors['email']) ? ' is-error' : '' ?>">
+                    <label class="field-label">Email</label>
+                    <input type="email" name="email" class="field-input"
+                           value="<?= e($old['email'] ?? $owner['email'] ?? '') ?>">
+                    <?php if (!empty($errors['email'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['email']) ?></div>
+                    <?php endif; ?>
+                </div>
+                <div class="field">
+                    <label class="field-label">Телефон</label>
+                    <input type="text" name="phone" class="field-input"
+                           value="<?= e($old['phone'] ?? $owner['phone'] ?? '') ?>">
+                </div>
             </div>
 
             <div class="field">
-                <label class="field-label">Телефон</label>
-                <input type="text" name="phone" class="field-input"
-                       value="<?= e($old['phone'] ?? $owner['phone'] ?? '') ?>">
+                <label class="field-label">Должность</label>
+                <input type="text" name="position" class="field-input"
+                       value="<?= e($old['position'] ?? $owner['position'] ?? '') ?>"
+                       placeholder="Например: Генеральный директор">
             </div>
 
             <div class="field">
@@ -122,5 +132,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
     </div>
 </form>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

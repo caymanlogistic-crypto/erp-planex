@@ -14,7 +14,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Логисты</h1>
+        <h1>Пользователи</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -30,7 +30,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Логист</h1>
+        <h1>Пользователь</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -39,14 +39,14 @@ require_once __DIR__ . '/../components/status_badge.php';
 </div>
 
 <div class="notice warn">
-    Логист не найден.
+    Пользователь не найден.
 </div>
 
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Логист</h1>
+        <h1>Пользователь</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -62,11 +62,11 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Логист: <?= e($logist['full_name']) ?></h1>
+        <h1>Пользователь: <?= e($logist['full_name']) ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/<?= $logist['id'] ?>" class="btn btn-ghost">← К карточке логиста</a>
+        <a href="/company/logists/<?= $logist['id'] ?>" class="btn btn-ghost">← К карточке пользователя</a>
     </div>
 </div>
 
@@ -90,7 +90,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
 
         <div class="form-actions" style="margin-top:16px">
-            <a href="/company/logists/<?= $logist['id'] ?>" class="btn btn-ghost">← К карточке логиста</a>
+            <a href="/company/logists/<?= $logist['id'] ?>" class="btn btn-ghost">← К карточке пользователя</a>
         </div>
     </div>
 </div>
@@ -99,7 +99,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Логист: <?= e($logist['full_name']) ?></h1>
+        <h1>Пользователь: <?= e($logist['full_name']) ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -123,7 +123,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dt>Телефон</dt>
                 <dd><?= e($logist['phone'] ?? '') ?: '—' ?></dd>
                 <dt>Роль</dt>
-                <dd>Логист</dd>
+                <dd><?= ($logist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($logist['role_code'] ?? '') ?></dd>
                 <dt>Статус</dt>
                 <dd><?= renderStatusBadge($logist['status']) ?></dd>
             </dl>
@@ -146,7 +146,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <button type="submit" class="btn btn-warn">Сбросить пароль</button>
             </form>
             <?php if ($logist['status'] !== 'archived'): ?>
-            <form method="post" action="/company/logists/<?= $logist['id'] ?>/archive" onsubmit="return confirm('Вы уверены, что хотите архивировать логиста?')">
+            <form method="post" action="/company/logists/<?= $logist['id'] ?>/archive" onsubmit="return confirm('Вы уверены, что хотите архивировать пользователя?')">
                 <button type="submit" class="btn btn-warn">Архивировать</button>
             </form>
             <?php endif; ?>

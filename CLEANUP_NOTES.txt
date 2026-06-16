@@ -1,0 +1,15 @@
+ERP PLANEX — cleaned archive
+
+Done:
+- Restored normal project folder structure from a flattened ZIP.
+- Removed old working MD from active folders.
+- Active KILO agents: only erp-architect and erp-coder.
+- Chief Designer is documented as an external ChatGPT chat, not a KILO agent.
+- Added design system files: public/assets/css/erp-ui.css, docs/ui/DESIGN_STANDARD.md, docs/ui/DESIGN_SYSTEM_PREP_REPORT.md.
+- Legacy MD files were packed into docs/archive/legacy_md_before_rework_md.zip.
+- node_modules is not included.
+
+Recommended use:
+1. Backup current ERP folder.
+2. Replace current ERP folder with this archive contents.
+3. Add/install node_modules separately if needed.

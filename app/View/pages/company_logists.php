@@ -8,20 +8,20 @@
 
 <div class="page-head">
     <div>
-        <h1>Логисты</h1>
+        <h1>Пользователи</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Создание логистов недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». Создание пользователей недоступно.
 </div>
 
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Логисты</h1>
+        <h1>Пользователи</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
 </div>
@@ -34,19 +34,19 @@
 
 <div class="page-head">
     <div>
-        <h1>Логисты</h1>
+        <h1>Пользователи</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/create" class="btn btn-primary">Создать логиста</a>
+        <a href="/company/logists/create" class="btn btn-primary">Создать пользователя</a>
     </div>
 </div>
 
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
-            <p>Логисты ещё не созданы.</p>
-            <a href="/company/logists/create" class="btn btn-primary">Создать первого логиста</a>
+            <p>Пользователи ещё не созданы.</p>
+            <a href="/company/logists/create" class="btn btn-primary">Создать первого пользователя</a>
         </div>
     </div>
 </div>
@@ -55,11 +55,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Логисты</h1>
+        <h1>Пользователи</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/create" class="btn btn-primary">Создать логиста</a>
+        <a href="/company/logists/create" class="btn btn-primary">Создать пользователя</a>
     </div>
 </div>
 
@@ -84,7 +84,7 @@
                         <td class="col-mono"><?= $l['id'] ?></td>
                         <td><?= e($l['full_name']) ?></td>
                         <td class="col-mono"><?= e($l['login']) ?></td>
-                        <td>Логист</td>
+                        <td><?= ($l['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($l['role_code'] ?? '') ?></td>
                         <td>
                             <?php if ($l['status'] === 'active'): ?>
                             <span class="badge badge-ok"><span class="dot"></span>Активен</span>

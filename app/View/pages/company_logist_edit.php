@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать логиста</h1>
+        <h1>Редактировать пользователя</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -24,7 +24,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать логиста</h1>
+        <h1>Редактировать пользователя</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -33,18 +33,18 @@
 </div>
 
 <div class="notice warn">
-    Логист не найден.
+    Пользователь не найден.
 </div>
 
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Редактировать логиста</h1>
+        <h1>Редактировать пользователя</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/<?= $logist['id'] ?? '' ?>" class="btn btn-ghost">← К карточке логиста</a>
+        <a href="/company/logists/<?= $logist['id'] ?? '' ?>" class="btn btn-ghost">← К карточке пользователя</a>
     </div>
 </div>
 
@@ -56,11 +56,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать логиста</h1>
+        <h1>Редактировать пользователя</h1>
         <p class="text-muted"><?= e($logist['full_name']) ?> — Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/<?= $logist['id'] ?>" class="btn btn-ghost">← К карточке логиста</a>
+        <a href="/company/logists/<?= $logist['id'] ?>" class="btn btn-ghost">← К карточке пользователя</a>
     </div>
 </div>
 
@@ -106,6 +106,19 @@
                 <label class="field-label">Телефон</label>
                 <input type="text" name="phone" class="field-input"
                        value="<?= e($old['phone'] ?? $logist['phone'] ?? '') ?>">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Роль <span class="req">*</span></label>
+                <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
+                    <?php
+                    $currentRole = $old['role_code'] ?? $logist['role_code'] ?? 'logist';
+                    ?>
+                    <option value="logist" <?= $currentRole === 'logist' ? 'selected' : '' ?>>Логист</option>
+                </select>
+                <?php if (!empty($errors['role_code'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>
+                <?php endif; ?>
             </div>
 
             <div class="field">

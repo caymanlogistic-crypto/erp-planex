@@ -65,6 +65,20 @@ function generatePassword(int $length = 10): string
     return $password;
 }
 
+function applyCentralMigrations(\App\Core\Database $db): void
+{
+    try {
+        $pdo = $db->connection();
+        // Migration 007: Add position column to company_users
+        $migrationSql = file_get_contents(base_path('database/migrations/007_add_position_to_company_users.sql'));
+        if ($migrationSql !== false) {
+            $pdo->exec($migrationSql);
+        }
+    } catch (\Exception $e) {
+        // Silently ignore migration errors in production
+    }
+}
+
 function formatFileSize(int $bytes): string
 {
     if ($bytes >= 1048576) {
@@ -101,8 +115,9 @@ $router->get('/test-db', function () use ($db) {
     }
 });
 
-$router->get('/superadmin', function () use ($config) {
+$router->get('/superadmin', function () use ($config, $db) {
     requireRole('superadmin');
+    applyCentralMigrations($db);
     $pageTitle = 'SUPERADMIN';
     $pageContext = 'Центральная панель управления';
 
@@ -116,7 +131,7 @@ $router->get('/superadmin', function () use ($config) {
 $router->get('/superadmin/companies', function () use ($config, $db) {
     requireRole('superadmin');
     $pageTitle = 'Реестр компаний';
-    $pageContext = 'Реестр компаний';
+    $pageContext = '';
 
     $search = trim($_GET['search'] ?? '');
     $filterStatus = trim($_GET['status'] ?? '');
@@ -210,250 +225,17 @@ $router->post('/superadmin/companies/create', function () use ($config, $db) {
     requireRole('superadmin');
     $pageTitle = 'Создать экспедитора';
     $pageContext = 'Реестр компаний';
-    $errors = [];
-    $old = $_POST;
-    $formError = null;
-
-    $name = trim($_POST['name'] ?? '');
-    $inn  = trim($_POST['inn'] ?? '');
-
-    if ($name === '') {
-        $errors['name'] = 'Обязательное поле';
-    }
-
-    if ($inn === '') {
-        $errors['inn'] = 'Обязательное поле';
-    }
-
-    if (!empty($errors)) {
-        ob_start();
-        require base_path('app/View/pages/superadmin_companies_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
-        return;
-    }
-
     try {
-        $pdo = $db->connection();
-
-        $key = 'company_' . uniqid();
-
-        $insert = $pdo->prepare(
-            'INSERT INTO companies (`key`, name, inn, kpp, ogrn, legal_address, physical_address,
-                contact_person, contact_phone, contact_email, comments, status)
-             VALUES (:key, :name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
-                :contact_person, :contact_phone, :contact_email, :comments, :status)'
-        );
-
-        $insert->execute([
-            ':key'              => $key,
-            ':name'             => $name,
-            ':inn'              => $inn,
-            ':kpp'              => $_POST['kpp'] ?? null,
-            ':ogrn'             => $_POST['ogrn'] ?? null,
-            ':legal_address'   => $_POST['legal_address'] ?? null,
-            ':physical_address' => $_POST['physical_address'] ?? null,
-            ':contact_person'  => $_POST['contact_person'] ?? null,
-            ':contact_phone'   => $_POST['contact_phone'] ?? null,
-            ':contact_email'   => $_POST['contact_email'] ?? null,
-            ':comments'         => $_POST['comments'] ?? null,
-            ':status'           => 'provisioning',
-        ]);
-
-        $companyId = (int) $pdo->lastInsertId();
-        $dbName = 'erp_company_' . $companyId;
-        $storageDir = storage_path('companies/' . $companyId);
-
-        $newKey = 'company_' . $companyId;
-
-        try {
-            $dbConfig = $config['database'];
-            $dbConfig['database'] = '';
-            $sysDb = new \App\Core\Database($dbConfig);
-            $sysPdo = $sysDb->connection();
-            $sysPdo->exec('CREATE DATABASE IF NOT EXISTS `' . $dbName . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
-        } catch (\Exception $e) {
-            $pdo->prepare('UPDATE companies SET status = :status, error_message = :msg WHERE id = :id')
-                ->execute([
-                    ':status' => 'error',
-                    ':msg'    => 'Не удалось создать базу данных: ' . $e->getMessage(),
-                    ':id'     => $companyId,
-                ]);
-
-            $formError = 'Ошибка создания инфраструктуры. База данных не создана. Запись сохранена со статусом "Ошибка".';
-
-            ob_start();
-            require base_path('app/View/pages/superadmin_companies_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        try {
-            if (!is_dir($storageDir)) {
-                mkdir($storageDir, 0755, true);
-            }
-        } catch (\Exception $e) {
-            $pdo->prepare('UPDATE companies SET status = :status, error_message = :msg, db_identifier = :db WHERE id = :id')
-                ->execute([
-                    ':status' => 'error',
-                    ':msg'    => 'БД создана, но не удалось создать storage-папку: ' . $e->getMessage(),
-                    ':db'     => $dbName,
-                    ':id'     => $companyId,
-                ]);
-
-            $formError = 'База данных создана, но не удалось создать storage-папку. Запись сохранена со статусом "Ошибка".';
-
-            ob_start();
-            require base_path('app/View/pages/superadmin_companies_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $pdo->prepare('UPDATE companies SET status = :status, db_identifier = :db, storage_path = :storage, `key` = :new_key WHERE id = :id')
-            ->execute([
-                ':status'  => 'active',
-                ':db'      => $dbName,
-                ':storage' => 'storage/companies/' . $companyId . '/',
-                ':new_key' => $newKey,
-                ':id'      => $companyId,
-            ]);
-
-        header('Location: /superadmin/companies');
-        exit;
-    } catch (\Exception $e) {
-        $formError = 'Не удалось создать экспедитора: ' . $e->getMessage();
-
-        ob_start();
-        require base_path('app/View/pages/superadmin_companies_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
-    }
-});
-
-$router->get('/superadmin/companies/{id}/create-owner', function ($id) use ($config, $db) {
-    requireRole('superadmin');
-    $pageTitle = 'Создать Руководителя';
-    $pageContext = 'Реестр компаний';
-
-    try {
-        $pdo = $db->connection();
-
-        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
-        $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$company) {
-            $company = null;
-            $ownerExists = false;
-            $existingOwner = null;
-            $success = false;
-            $errors = [];
-            $old = [];
-            $formError = null;
-            $generatedPassword = null;
-
-            ob_start();
-            require base_path('app/View/pages/superadmin_company_owner_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $ownerStmt = $pdo->prepare(
-            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' AND status = 'active'"
-        );
-        $ownerStmt->execute([(int) $id]);
-        $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC);
-
-        $ownerExists = $existingOwner !== false;
-        $success = false;
-        $errors = [];
-        $old = [];
-        $formError = null;
-        $generatedPassword = generatePassword();
-
-        ob_start();
-        require base_path('app/View/pages/superadmin_company_owner_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
-    } catch (\Exception $e) {
-        $company = null;
-        $ownerExists = false;
-        $existingOwner = null;
-        $success = false;
-        $errors = [];
-        $old = [];
-        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
-        $generatedPassword = null;
-
-        ob_start();
-        require base_path('app/View/pages/superadmin_company_owner_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
-    }
-});
-
-$router->post('/superadmin/companies/{id}/create-owner', function ($id) use ($config, $db) {
-    requireRole('superadmin');
-    $pageTitle = 'Создать Руководителя';
-    $pageContext = 'Реестр компаний';
-
-    try {
-        $pdo = $db->connection();
-
-        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
-        $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$company) {
-            $company = null;
-            $ownerExists = false;
-            $existingOwner = null;
-            $success = false;
-            $errors = [];
-            $old = $_POST;
-            $formError = 'Компания не найдена';
-            $generatedPassword = null;
-
-            ob_start();
-            require base_path('app/View/pages/superadmin_company_owner_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $ownerStmt = $pdo->prepare(
-            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' AND status = 'active'"
-        );
-        $ownerStmt->execute([(int) $id]);
-        $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($existingOwner) {
-            $ownerExists = true;
-            $success = false;
-            $errors = [];
-            $old = $_POST;
-            $formError = null;
-            $generatedPassword = null;
-
-            ob_start();
-            require base_path('app/View/pages/superadmin_company_owner_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $ownerExists = false;
         $errors = [];
         $old = $_POST;
+        $formError = null;
 
         $fullName = trim($_POST['full_name'] ?? '');
         $login = trim($_POST['login'] ?? '');
         $password = trim($_POST['password'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $phone = trim($_POST['phone'] ?? '');
+        $position = trim($_POST['position'] ?? '');
         $comments = trim($_POST['comments'] ?? '');
 
         if ($fullName === '') {
@@ -489,8 +271,8 @@ $router->post('/superadmin/companies/{id}/create-owner', function ($id) use ($co
         $passwordHash = password_hash($password, PASSWORD_BCRYPT);
 
         $insert = $pdo->prepare(
-            'INSERT INTO company_users (company_id, full_name, login, email, phone, password_hash, role, status, comments)
-             VALUES (:company_id, :full_name, :login, :email, :phone, :password_hash, :role, :status, :comments)'
+            'INSERT INTO company_users (company_id, full_name, login, email, phone, position, password_hash, role, status, comments)
+             VALUES (:company_id, :full_name, :login, :email, :phone, :position, :password_hash, :role, :status, :comments)'
         );
         $insert->execute([
             ':company_id'    => (int) $id,
@@ -498,6 +280,7 @@ $router->post('/superadmin/companies/{id}/create-owner', function ($id) use ($co
             ':login'         => $login,
             ':email'         => $email !== '' ? $email : null,
             ':phone'         => $phone !== '' ? $phone : null,
+            ':position'      => $position !== '' ? $position : null,
             ':password_hash' => $passwordHash,
             ':role'          => 'company_owner',
             ':status'        => 'active',
@@ -682,6 +465,7 @@ $router->get('/superadmin/companies/{id}/edit', function ($id) use ($config, $db
             $errors = [];
             $old = [];
             $formError = 'Компания не найдена';
+            $owner = null;
 
             ob_start();
             require base_path('app/View/pages/superadmin_company_edit.php');
@@ -693,6 +477,13 @@ $router->get('/superadmin/companies/{id}/edit', function ($id) use ($config, $db
         $errors = [];
         $old = $company;
         $formError = null;
+
+        // FR6: Load owner data for director fields
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
+        );
+        $ownerStmt->execute([(int)$id]);
+        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         ob_start();
         require base_path('app/View/pages/superadmin_company_edit.php');
@@ -728,6 +519,7 @@ $router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $d
             $errors = [];
             $old = $_POST;
             $formError = 'Компания не найдена';
+            $owner = null;
 
             ob_start();
             require base_path('app/View/pages/superadmin_company_edit.php');
@@ -739,6 +531,13 @@ $router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $d
         $errors = [];
         $old = $_POST;
         $formError = null;
+
+        // Load owner for director fields
+        $ownerStmt = $pdo->prepare(
+            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
+        );
+        $ownerStmt->execute([(int)$id]);
+        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         $name = trim($_POST['name'] ?? '');
         $inn  = trim($_POST['inn'] ?? '');
@@ -796,10 +595,84 @@ $router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $d
             ':id'               => (int) $id,
         ]);
 
+        // FR7: Save director fields to company_users
+        $directorFullName = trim($_POST['director_full_name'] ?? '');
+        $directorLogin    = trim($_POST['director_login'] ?? '');
+        $directorPosition = trim($_POST['director_position'] ?? '');
+        $directorPhone    = trim($_POST['director_phone'] ?? '');
+        $directorEmail    = trim($_POST['director_email'] ?? '');
+
+        // Validate director phone and email
+        $directorErrors = [];
+        if ($directorPhone !== '' && !preg_match('/^[+\d()\-\s]{1,30}$/', $directorPhone)) {
+            $errors['director_phone'] = 'Некорректный телефон';
+        }
+        if ($directorEmail !== '' && !filter_var($directorEmail, FILTER_VALIDATE_EMAIL)) {
+            $errors['director_email'] = 'Некорректный email';
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/superadmin_company_edit.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        if ($owner) {
+            // UPDATE existing owner's position, phone, email
+            $updateOwner = $pdo->prepare(
+                'UPDATE company_users SET position = :position, phone = :phone, email = :email WHERE id = :id'
+            );
+            $updateOwner->execute([
+                ':position' => $directorPosition !== '' ? $directorPosition : null,
+                ':phone'    => $directorPhone !== '' ? $directorPhone : null,
+                ':email'    => $directorEmail !== '' ? $directorEmail : null,
+                ':id'       => (int)$owner['id'],
+            ]);
+        } elseif ($directorFullName !== '' && $directorLogin !== '') {
+            // INSERT new owner if fields are filled and no owner exists
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $directorLogin)) {
+                $errors['director_login'] = 'Логин: только латинские буквы, цифры и подчёркивание';
+                ob_start();
+                require base_path('app/View/pages/superadmin_company_edit.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
+                return;
+            }
+
+            $directorPassword = generatePassword();
+            $directorPasswordHash = password_hash($directorPassword, PASSWORD_BCRYPT);
+
+            $insertOwner = $pdo->prepare(
+                'INSERT INTO company_users (company_id, full_name, login, email, phone, position, password_hash, role, status)
+                 VALUES (:company_id, :full_name, :login, :email, :phone, :position, :password_hash, :role, :status)'
+            );
+            $insertOwner->execute([
+                ':company_id'    => (int)$id,
+                ':full_name'     => $directorFullName,
+                ':login'         => $directorLogin,
+                ':email'         => $directorEmail !== '' ? $directorEmail : null,
+                ':phone'         => $directorPhone !== '' ? $directorPhone : null,
+                ':position'      => $directorPosition !== '' ? $directorPosition : null,
+                ':password_hash' => $directorPasswordHash,
+                ':role'          => 'company_owner',
+                ':status'        => 'active',
+            ]);
+
+            // Show success with generated password
+            $success    = false; // not success state for the edit view
+            $pageTitle  = 'Редактировать компанию';
+            $pageContext = 'Реестр компаний';
+            $_SESSION['flash_owner_created'] = true;
+            $_SESSION['flash_owner_password'] = $directorPassword;
+        }
+
         header('Location: /superadmin/companies/' . $id);
         exit;
     } catch (\Exception $e) {
         $company = $company ?? null;
+        $owner = $owner ?? null;
         $errors = [];
         $old = $_POST;
         $formError = 'Ошибка сохранения: ' . $e->getMessage();
@@ -980,6 +853,26 @@ $router->post('/superadmin/companies/{id}/owner/edit', function ($id) use ($conf
         $old = $_POST;
         $formError = null;
 
+        // Prevent self-deactivation
+        if ((int)$owner['id'] === (int)$_SESSION['user_id']) {
+            $newStatus = $_POST['status'] ?? $owner['status'];
+            if ($newStatus !== 'active') {
+                $errors['status'] = 'Нельзя деактивировать самого себя';
+            }
+        }
+
+        // Prevent deactivating last active owner
+        $newStatus = $_POST['status'] ?? $owner['status'];
+        if ($newStatus !== 'active' && $owner['status'] === 'active') {
+            $activeOwnerCount = $pdo->prepare(
+                "SELECT COUNT(*) FROM company_users WHERE company_id = ? AND role = 'company_owner' AND status = 'active' AND id != ?"
+            );
+            $activeOwnerCount->execute([(int)$id, (int)$owner['id']]);
+            if ((int)$activeOwnerCount->fetchColumn() === 0) {
+                $errors['status'] = 'Нельзя деактивировать последнего активного Руководителя';
+            }
+        }
+
         $fullName = trim($_POST['full_name'] ?? '');
         $login = trim($_POST['login'] ?? '');
 
@@ -1018,6 +911,7 @@ $router->post('/superadmin/companies/{id}/owner/edit', function ($id) use ($conf
                 login = :login,
                 email = :email,
                 phone = :phone,
+                position = :position,
                 status = :status,
                 comments = :comments
              WHERE id = :id'
@@ -1028,6 +922,7 @@ $router->post('/superadmin/companies/{id}/owner/edit', function ($id) use ($conf
             ':login'     => $login,
             ':email'     => $email !== '' ? $email : null,
             ':phone'     => trim($_POST['phone'] ?? '') ?: null,
+            ':position'  => trim($_POST['position'] ?? '') ?: null,
             ':status'    => $_POST['status'] ?? $owner['status'],
             ':comments'  => trim($_POST['comments'] ?? '') ?: null,
             ':id'        => (int) $owner['id'],
@@ -1122,8 +1017,8 @@ $router->post('/superadmin/companies/{id}/owner/reset-password', function ($id) 
 
 $router->get('/company/logists', function () use ($config, $db) {
     requireRole('company_owner');
-    $pageTitle = 'Логисты';
-    $pageContext = 'Логисты — Компания';
+    $pageTitle = 'Пользователи';
+    $pageContext = 'Пользователи — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -1157,7 +1052,7 @@ $router->get('/company/logists', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Логисты — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $logists = [];
@@ -1196,16 +1091,25 @@ $router->get('/company/logists', function () use ($config, $db) {
             $localPdo->exec($migrationSql);
         }
 
+        try {
+            $localPdo->query("SELECT position FROM users LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/010_add_position_to_users.sql'));
+            if ($migrationSql !== false) {
+                $localPdo->exec($migrationSql);
+            }
+        }
+
         $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $logistStmt = $localPdo->prepare(
-                "SELECT * FROM users WHERE role_code = 'logist' AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'logist' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT * FROM users WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'logist' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
             );
             $logistStmt->execute([$userId, $userId]);
             $logists = $logistStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $logistStmt = $localPdo->query("SELECT * FROM users WHERE role_code = 'logist' ORDER BY created_at DESC");
+            $logistStmt = $localPdo->query("SELECT * FROM users ORDER BY created_at DESC");
             $logists = $logistStmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
@@ -1223,8 +1127,8 @@ $router->get('/company/logists', function () use ($config, $db) {
 
 $router->get('/company/logists/create', function () use ($config, $db) {
     requireRole('company_owner');
-    $pageTitle = 'Создать логиста';
-    $pageContext = 'Логисты — Компания';
+    $pageTitle = 'Создать пользователя';
+    $pageContext = 'Пользователи — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -1296,8 +1200,8 @@ $router->get('/company/logists/create', function () use ($config, $db) {
 
 $router->post('/company/logists/create', function () use ($config, $db) {
     requireRole('company_owner');
-    $pageTitle = 'Создать логиста';
-    $pageContext = 'Логисты — Компания';
+    $pageTitle = 'Создать пользователя';
+    $pageContext = 'Пользователи — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -1336,10 +1240,10 @@ $router->post('/company/logists/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Логисты — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
-            $formError = 'Создание логистов недоступно';
+            $formError = 'Создание пользователей недоступно';
 
             ob_start();
             require base_path('app/View/pages/company_logists_create.php');
@@ -1366,6 +1270,7 @@ $router->post('/company/logists/create', function () use ($config, $db) {
         $password = trim($_POST['password'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $phone = trim($_POST['phone'] ?? '');
+        $roleCode = trim($_POST['role_code'] ?? 'logist');
 
         if ($fullName === '') {
             $errors['full_name'] = 'Обязательное поле';
@@ -1393,6 +1298,12 @@ $router->post('/company/logists/create', function () use ($config, $db) {
             $errors['email'] = 'Некорректный email';
         }
 
+        // FR19: Validate role against whitelist
+        $allowedRoles = ['logist'];
+        if (!in_array($roleCode, $allowedRoles, true)) {
+            $errors['role_code'] = 'Недопустимая роль';
+        }
+
         if (!empty($errors)) {
             $generatedPassword = generatePassword();
 
@@ -1415,7 +1326,7 @@ $router->post('/company/logists/create', function () use ($config, $db) {
             ':email'              => $email !== '' ? $email : null,
             ':phone'              => $phone !== '' ? $phone : null,
             ':password_hash'      => $passwordHash,
-            ':role_code'          => 'logist',
+            ':role_code'          => $roleCode,
             ':status'             => 'active',
             ':created_by_user_id' => (int)$_SESSION['user_id'],
             ':created_by_role'    => $_SESSION['role_code'],
@@ -1424,12 +1335,13 @@ $router->post('/company/logists/create', function () use ($config, $db) {
         $createdLogist = [
             'full_name' => $fullName,
             'login'     => $login,
+            'role_code' => $roleCode,
         ];
         $tempPassword = $password;
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
-        $formError = 'Ошибка создания логиста: ' . $e->getMessage();
+        $formError = 'Ошибка создания пользователя: ' . $e->getMessage();
     }
 
     ob_start();
@@ -1506,11 +1418,11 @@ $router->get('/company/logists/{id}', function ($id) use ($config, $db) {
             $localPdo->exec($migrationSql);
         }
 
-        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
+        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
         $logistStmt->execute([(int) $id]);
         $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-        $pageTitle = $logist ? 'Логист: ' . $logist['full_name'] : 'Логист';
+        $pageTitle = $logist ? 'Пользователь: ' . $logist['full_name'] : 'Пользователь';
         $dbError = null;
         $passwordReset = false;
         $newPassword = null;
@@ -1601,7 +1513,7 @@ $router->get('/company/logists/{id}/edit', function ($id) use ($config, $db) {
             $localPdo->exec($migrationSql);
         }
 
-        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
+        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
         $logistStmt->execute([(int) $id]);
         $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
@@ -1666,14 +1578,14 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
             return;
         }
 
-        $pageTitle = 'Редактировать логиста';
-        $pageContext = 'Логисты — Компания: ' . $company['name'];
+        $pageTitle = 'Редактировать пользователя';
+        $pageContext = 'Пользователи — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $logist = null;
             $errors = [];
             $old = $_POST;
-            $formError = 'Редактирование логистов недоступно';
+            $formError = 'Редактирование пользователей недоступно';
 
             ob_start();
             require base_path('app/View/pages/company_logist_edit.php');
@@ -1695,14 +1607,14 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
             $localPdo->exec($migrationSql);
         }
 
-        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
+        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
         $logistStmt->execute([(int) $id]);
         $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         if (!$logist) {
             $errors = [];
             $old = $_POST;
-            $formError = null;
+            $formError = 'Пользователь не найден';
 
             ob_start();
             require base_path('app/View/pages/company_logist_edit.php');
@@ -1717,6 +1629,7 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
 
         $fullName = trim($_POST['full_name'] ?? '');
         $login = trim($_POST['login'] ?? '');
+        $roleCode = trim($_POST['role_code'] ?? $logist['role_code']);
 
         if ($fullName === '') {
             $errors['full_name'] = 'Обязательное поле';
@@ -1727,11 +1640,17 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
             $errors['login'] = 'Только латинские буквы, цифры и подчёркивание';
         } else {
-            $dupStmt = $localPdo->prepare("SELECT COUNT(*) FROM users WHERE login = ? AND id != ? AND role_code = 'logist'");
+            $dupStmt = $localPdo->prepare("SELECT COUNT(*) FROM users WHERE login = ? AND id != ?");
             $dupStmt->execute([$login, (int) $id]);
             if ($dupStmt->fetchColumn() > 0) {
                 $errors['login'] = 'Логин уже используется в этой компании';
             }
+        }
+
+        // FR21: Validate role
+        $allowedRoles = ['logist'];
+        if (!in_array($roleCode, $allowedRoles, true)) {
+            $errors['role_code'] = 'Недопустимая роль';
         }
 
         $email = trim($_POST['email'] ?? '');
@@ -1753,8 +1672,9 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
                 login = :login,
                 email = :email,
                 phone = :phone,
+                role_code = :role_code,
                 status = :status
-             WHERE id = :id AND role_code = 'logist'"
+             WHERE id = :id"
         );
 
         $update->execute([
@@ -1762,6 +1682,7 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
             ':login'     => $login,
             ':email'     => $email !== '' ? $email : null,
             ':phone'     => trim($_POST['phone'] ?? '') ?: null,
+            ':role_code' => $roleCode,
             ':status'    => $_POST['status'] ?? $logist['status'],
             ':id'        => (int) $id,
         ]);
@@ -1850,7 +1771,7 @@ $router->post('/company/logists/{id}/reset-password', function ($id) use ($confi
             $localPdo->exec($migrationSql);
         }
 
-        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
+        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
         $logistStmt->execute([(int) $id]);
         $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
@@ -1872,7 +1793,7 @@ $router->post('/company/logists/{id}/reset-password', function ($id) use ($confi
         $newPassword = generatePassword(10);
         $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
 
-        $update = $localPdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND role_code = 'logist'");
+        $update = $localPdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
         $update->execute([$passwordHash, (int) $logist['id']]);
 
         $passwordReset = true;
@@ -1930,7 +1851,7 @@ $router->post('/company/logists/{id}/archive', function ($id) use ($config, $db)
             $localPdo->exec($migrationSql);
         }
 
-        $update = $localPdo->prepare("UPDATE users SET status = 'archived' WHERE id = ? AND role_code = 'logist'");
+        $update = $localPdo->prepare("UPDATE users SET status = 'archived' WHERE id = ?");
         $update->execute([(int) $id]);
 
         header('Location: /company/logists');
@@ -7010,7 +6931,7 @@ $router->post('/login', function () use ($config, $db) {
                 $localPdo = $localDb->connection();
 
                 $logistStmt = $localPdo->prepare(
-                    "SELECT * FROM users WHERE login = :login AND role_code = 'logist' AND status = 'active'"
+                    "SELECT * FROM users WHERE login = :login AND status = 'active'"
                 );
                 $logistStmt->execute([':login' => $loginValue]);
                 $logistUser = $logistStmt->fetch(PDO::FETCH_ASSOC);
@@ -7289,7 +7210,7 @@ $router->get('/superadmin/companies/{id}/users', function ($id) use ($config, $d
                 $localPdo = $localDb->connection();
                 $logistStmt = $localPdo->prepare(
                     "SELECT id, full_name, login, email, phone, role_code, status, created_at
-                     FROM users WHERE role_code = 'logist' ORDER BY created_at DESC"
+                     FROM users ORDER BY created_at DESC"
                 );
                 $logistStmt->execute();
                 $logists = $logistStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -7988,12 +7909,12 @@ $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}', funct
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
 
-                $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
+                $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
                 $logistStmt->execute([(int)$user_id]);
                 $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
                 if ($logist) {
-                    $pageTitle = 'Логист: ' . $logist['full_name'];
+                    $pageTitle = 'Пользователь: ' . $logist['full_name'];
 
                     $countTables = ['clients', 'contractors', 'drivers', 'vehicles', 'crews'];
                     foreach ($countTables as $table) {
@@ -8036,7 +7957,7 @@ $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}', funct
 
 $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}/edit', function ($company_id, $user_id) use ($config, $db) {
     requireRole('superadmin');
-    $pageTitle = 'Редактировать логиста';
+    $pageTitle = 'Редактировать пользователя';
     $pageContext = 'Реестр компаний';
 
     try {
@@ -8076,7 +7997,7 @@ $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}/edit', 
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
 
-                $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
+                $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
                 $logistStmt->execute([(int)$user_id]);
                 $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
@@ -8108,7 +8029,7 @@ $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}/edit', 
 
 $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit', function ($company_id, $user_id) use ($config, $db) {
     requireRole('superadmin');
-    $pageTitle = 'Редактировать логиста';
+    $pageTitle = 'Редактировать пользователя';
     $pageContext = 'Реестр компаний';
 
     try {
@@ -8154,14 +8075,14 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit',
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
 
-        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
+        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
         $logistStmt->execute([(int)$user_id]);
         $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         if (!$logist) {
             $errors = [];
             $old = $_POST;
-            $formError = 'Логист не найден.';
+            $formError = 'Пользователь не найден.';
 
             ob_start();
             require base_path('app/View/pages/superadmin_company_logist_edit.php');
@@ -8177,6 +8098,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit',
 
         $fullName = trim($_POST['full_name'] ?? '');
         $login = trim($_POST['login'] ?? '');
+        $roleCode = trim($_POST['role_code'] ?? $logist['role_code']);
 
         if ($fullName === '') {
             $errors['full_name'] = 'Обязательное поле';
@@ -8187,11 +8109,17 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit',
         } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
             $errors['login'] = 'Только латинские буквы, цифры и подчёркивание';
         } else {
-            $dupStmt = $localPdo->prepare("SELECT COUNT(*) FROM users WHERE login = ? AND id != ? AND role_code = 'logist'");
+            $dupStmt = $localPdo->prepare("SELECT COUNT(*) FROM users WHERE login = ? AND id != ?");
             $dupStmt->execute([$login, (int)$user_id]);
             if ($dupStmt->fetchColumn() > 0) {
                 $errors['login'] = 'Логин уже используется в этой компании';
             }
+        }
+
+        // FR12: Validate role
+        $allowedRoles = ['logist'];
+        if (!in_array($roleCode, $allowedRoles, true)) {
+            $errors['role_code'] = 'Недопустимая роль';
         }
 
         $email = trim($_POST['email'] ?? '');
@@ -8213,10 +8141,11 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit',
                 login = :login,
                 email = :email,
                 phone = :phone,
+                role_code = :role_code,
                 status = :status,
                 comments = :comments,
                 updated_at = NOW()
-             WHERE id = :id AND role_code = 'logist'"
+             WHERE id = :id"
         );
 
         $update->execute([
@@ -8224,6 +8153,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit',
             ':login'     => $login,
             ':email'     => $email !== '' ? $email : null,
             ':phone'     => trim($_POST['phone'] ?? '') ?: null,
+            ':role_code' => $roleCode,
             ':status'    => $_POST['status'] ?? $logist['status'],
             ':comments'  => trim($_POST['comments'] ?? '') ?: null,
             ':id'        => (int)$user_id,
@@ -8299,9 +8229,9 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/reset-
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
 
-        $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ? AND role_code = 'logist'");
-        $logistStmt->execute([(int)$user_id]);
-        $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
+                $logistStmt->execute([(int)$user_id]);
+                $logist = $logistStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         if (!$logist) {
             $counts = [];
@@ -8322,7 +8252,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/reset-
         $newPassword = generatePassword(10);
         $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
 
-        $update = $localPdo->prepare("UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ? AND role_code = 'logist'");
+        $update = $localPdo->prepare("UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?");
         $update->execute([$passwordHash, (int)$logist['id']]);
 
         $passwordReset = true;
@@ -8383,7 +8313,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/activa
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
 
-        $localPdo->prepare("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ? AND role_code = 'logist'")
+        $localPdo->prepare("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?")
             ->execute([(int)$user_id]);
     } catch (\Exception $e) {
     }
@@ -8411,7 +8341,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/block'
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
 
-        $localPdo->prepare("UPDATE users SET status = 'blocked', updated_at = NOW() WHERE id = ? AND role_code = 'logist'")
+        $localPdo->prepare("UPDATE users SET status = 'blocked', updated_at = NOW() WHERE id = ?")
             ->execute([(int)$user_id]);
     } catch (\Exception $e) {
     }
@@ -8439,7 +8369,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/archiv
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
 
-        $localPdo->prepare("UPDATE users SET status = 'archived', updated_at = NOW() WHERE id = ? AND role_code = 'logist'")
+        $localPdo->prepare("UPDATE users SET status = 'archived', updated_at = NOW() WHERE id = ?")
             ->execute([(int)$user_id]);
     } catch (\Exception $e) {
     }
@@ -8454,7 +8384,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/archiv
 
 $router->get('/superadmin/companies/{id}/users/logists/create', function ($id) use ($config, $db) {
     requireRole('superadmin');
-    $pageTitle = 'Создать логиста';
+    $pageTitle = 'Создать пользователя';
     $pageContext = 'Реестр компаний';
 
     $pdo = $db->connection();
@@ -8491,7 +8421,7 @@ $router->get('/superadmin/companies/{id}/users/logists/create', function ($id) u
 
 $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) use ($config, $db) {
     requireRole('superadmin');
-    $pageTitle = 'Создать логиста';
+    $pageTitle = 'Создать пользователя';
     $pageContext = 'Реестр компаний';
 
     $pdo = $db->connection();
@@ -8522,6 +8452,7 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
 
     $fullName = trim($_POST['full_name'] ?? '');
     $login = trim($_POST['login'] ?? '');
+    $roleCode = trim($_POST['role_code'] ?? 'logist');
 
     if ($fullName === '') {
         $errors['full_name'] = 'Обязательное поле';
@@ -8530,6 +8461,12 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
         $errors['login'] = 'Обязательное поле';
     } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
         $errors['login'] = 'Только латиница, цифры и _';
+    }
+
+    // FR10: Validate role against whitelist
+    $allowedRoles = ['logist'];
+    if (!in_array($roleCode, $allowedRoles, true)) {
+        $errors['role_code'] = 'Недопустимая роль';
     }
 
     if (!empty($errors)) {
@@ -8571,7 +8508,7 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
 
         $insert = $localPdo->prepare(
             "INSERT INTO users (full_name, login, email, phone, password_hash, role_code, status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, 'logist', 'active', NOW(), NOW())"
+             VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())"
         );
         $insert->execute([
             $fullName,
@@ -8579,8 +8516,10 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
             $_POST['email'] ?? null,
             $_POST['phone'] ?? null,
             $passwordHash,
+            $roleCode,
         ]);
 
+        $old['role_label'] = $roleCode === 'logist' ? 'Логист' : $roleCode;
         $success = true;
 
         ob_start();
@@ -8684,7 +8623,7 @@ $router->get('/superadmin/companies/{id}/delete', function ($id) use ($config, $
                 'documents' => 'documents_count'
             ];
             foreach ($tables as $table => $key) {
-                $where = ($table === 'users') ? " WHERE role_code = 'logist'" : '';
+                $where = '';
                 $preview[$key] = (int)$localPdo->query("SELECT COUNT(*) FROM `{$table}`{$where}")->fetchColumn();
             }
 
@@ -8774,7 +8713,7 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
                     'documents' => 'documents_count'
                 ];
                 foreach ($tables as $table => $key) {
-                    $where = ($table === 'users') ? " WHERE role_code = 'logist'" : '';
+                    $where = '';
                     $preview[$key] = (int)$localPdo->query("SELECT COUNT(*) FROM `{$table}`{$where}")->fetchColumn();
                 }
 
@@ -8986,7 +8925,7 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
                     'documents' => 'documents_count'
                 ];
                 foreach ($tables as $table => $key) {
-                    $where = ($table === 'users') ? " WHERE role_code = 'logist'" : '';
+                    $where = '';
                     $preview[$key] = (int)$localPdo->query("SELECT COUNT(*) FROM `{$table}`{$where}")->fetchColumn();
                 }
 

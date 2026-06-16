@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать логиста</h1>
+        <h1>Создать пользователя</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -17,14 +17,14 @@
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Создание логистов недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». Создание пользователей недоступно.
 </div>
 
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div>
-        <h1>Логист создан</h1>
+        <h1>Пользователь создан</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -35,7 +35,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Логист успешно создан. Ниже — данные для передачи.
+            Пользователь успешно создан. Ниже — данные для передачи.
         </div>
 
         <div class="kv" style="margin-top:16px">
@@ -59,17 +59,17 @@
             </div>
             <div class="kv-row">
                 <span class="kv-key">Роль</span>
-                <span class="kv-value">Логист</span>
+                <span class="kv-value"><?= e($createdLogist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($createdLogist['role_code'] ?? '') ?></span>
             </div>
         </div>
 
         <div class="notice warn" style="margin-top:16px">
-            Временный пароль показан только один раз. Сохраните его или передайте логисту сейчас.
+            Временный пароль показан только один раз. Сохраните его или передайте пользователю сейчас.
             Пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
 
         <div class="form-actions" style="margin-top:16px">
-            <a href="/company/logists" class="btn btn-primary">← К списку логистов</a>
+            <a href="/company/logists" class="btn btn-primary">← К списку пользователей</a>
             <a href="/company/logists/create" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
@@ -81,7 +81,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать логиста</h1>
+        <h1>Создать пользователя</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -158,8 +158,22 @@
             </div>
         </div>
 
+        <div class="form-section">
+            <h3 class="panel-head-title">Роль</h3>
+
+            <div class="field">
+                <label class="field-label">Роль пользователя <span class="req">*</span></label>
+                <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
+                    <option value="logist" <?= ($old['role_code'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Логист</option>
+                </select>
+                <?php if (!empty($errors['role_code'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Создать логиста</button>
+            <button type="submit" class="btn btn-primary">Создать пользователя</button>
             <a href="/company/logists" class="btn btn-ghost">Отмена</a>
         </div>
 

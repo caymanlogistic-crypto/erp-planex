@@ -11,53 +11,57 @@
 <?php elseif ($success): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Создать логиста</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Пользователь создан</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-ghost">← К пользователям</a>
     </div>
 </div>
 
+<div class="page-content">
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Логист успешно создан.
+            Пользователь успешно создан.
         </div>
 
-        <dl class="kv" style="margin-top:16px">
+        <dl class="kv">
             <dt>ФИО</dt>
             <dd><?= e($old['full_name'] ?? '') ?></dd>
             <dt>Логин</dt>
             <dd><code><?= e($old['login'] ?? '') ?></code></dd>
             <dt>Временный пароль</dt>
-            <dd><code style="background:var(--warning-bg);padding:2px 6px;border-radius:2px"><?= e($newPassword) ?></code></dd>
+            <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
             <dt>Роль</dt>
-            <dd>Логист</dd>
+            <dd><?= e($old['role_label'] ?? 'Логист') ?></dd>
         </dl>
 
-        <div class="notice warn" style="margin-top:16px">
+        <div class="notice warn">
             Временный пароль показан только один раз. Сохраните его сейчас. Пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions">
             <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-secondary">← К пользователям</a>
         </div>
     </div>
+</div>
 </div>
 
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Создать логиста</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Создать пользователя</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-ghost">← К пользователям</a>
     </div>
 </div>
+
+<div class="page-content">
 
 <?php if (!empty($formError)): ?>
     <div class="notice warn"><?= e($formError) ?></div>
@@ -67,7 +71,7 @@
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Основные данные</h3>
+            <p class="section-title">Основные данные</p>
 
             <div class="field">
                 <label class="field-label">ФИО <span class="req">*</span></label>
@@ -99,14 +103,28 @@
                 <input type="text" name="phone" class="field-input"
                        value="<?= e($old['phone'] ?? '') ?>">
             </div>
+
+            <div class="field">
+                <label class="field-label">Роль <span class="req">*</span></label>
+                <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
+                    <option value="logist" <?= ($old['role_code'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Логист</option>
+                    <!-- DESIGN_TODO: company_owner/Руководитель — ждёт решения по multi-owner -->
+                    <option value="company_owner" disabled>Руководитель (недоступно)</option>
+                </select>
+                <?php if (!empty($errors['role_code'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать</button>
-            <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-ghost">Отмена</a>
+            <a href="/superadmin/companies/<?= $companyId ?>/users" class="btn btn-ghost">Отмена</a>
         </div>
 
     </div>
 </form>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

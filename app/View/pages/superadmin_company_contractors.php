@@ -20,7 +20,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
         </div>
     </div>

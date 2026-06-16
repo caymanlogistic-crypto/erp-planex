@@ -30,7 +30,7 @@ function docStatusBadge(string $status): string
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
         </div>
     </div>
@@ -39,14 +39,16 @@ function docStatusBadge(string $status): string
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Документы компании: <?= e($company['name']) ?></h1>
-        <p class="text-muted">ID: <?= $id ?> · Режим SUPERADMIN: просмотр</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Документы компании</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
+
+<div class="page-content">
 
 <?php if (!empty($dbError)): ?>
     <div class="notice warn">
@@ -56,8 +58,8 @@ function docStatusBadge(string $status): string
     <div class="panel">
         <div class="panel-body">
             <div class="empty-state">
-                <p class="text-muted">Нет документов</p>
-                <p class="text-muted">В компании ещё не загружены документы.</p>
+                <p class="empty-title">Нет документов</p>
+                <p class="empty-desc">В компании ещё не загружены документы.</p>
             </div>
         </div>
     </div>
@@ -71,33 +73,34 @@ function docStatusBadge(string $status): string
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Тип сущности</th>
-                        <th>ID сущности</th>
-                        <th>Имя файла</th>
-                        <th class="col-num">Размер</th>
-                        <th>Тип</th>
-                        <th>Статус</th>
-                        <th>Загружен</th>
-                        <th>Кем</th>
-                        <th></th>
+                        <th>Файл</th>
+                        <th>Объект</th>
+                        <th class="col-tight col-num">Размер</th>
+                        <th class="col-tight">Статус</th>
+                        <th class="col-tight">Загружен</th>
+                        <th class="col-tight"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($documents as $d): ?>
                     <tr>
-                        <td class="col-mono"><?= $d['id'] ?></td>
-                        <td><?= e($d['entity_type']) ?></td>
-                        <td class="col-mono"><?= (int)$d['entity_id'] ?></td>
-                        <td><?= e($d['original_name']) ?></td>
-                        <td class="col-num col-mono"><?= formatFileSize((int)$d['file_size']) ?></td>
-                        <td><?= e($d['mime_type']) ?></td>
-                        <td><?= docStatusBadge($d['status']) ?></td>
-                        <td class="col-muted"><?= e($d['created_at']) ?></td>
-                        <td><?= e($d['uploaded_by_role'] ?? '—') ?> #<?= (int)($d['uploaded_by_user_id'] ?? 0) ?></td>
-                        <td class="col-actions">
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($d['original_name']) ?></span>
+                            <span class="cell-sub"><?= e($d['mime_type']) ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($d['entity_type']) ?></span>
+                            <span class="cell-sub">ID <?= (int)$d['entity_id'] ?></span>
+                        </td>
+                        <td class="col-tight col-num col-mono"><?= formatFileSize((int)$d['file_size']) ?></td>
+                        <td class="col-tight"><?= docStatusBadge($d['status']) ?></td>
+                        <td class="col-tight cell-double">
+                            <span class="cell-main col-muted"><?= e(substr($d['created_at'] ?? '', 0, 10)) ?></span>
+                            <span class="cell-sub"><?= e($d['uploaded_by_role'] ?? '—') ?></span>
+                        </td>
+                        <td class="col-tight col-actions">
                             <div class="row-actions">
-                                <a href="/superadmin/companies/<?= $id ?>/documents/<?= $d['id'] ?>/download" class="btn btn-ghost" style="font-size:11px;padding:2px 6px">Скачать</a>
+                                <a href="/superadmin/companies/<?= $id ?>/documents/<?= $d['id'] ?>/download" class="btn btn-ghost btn-sm">Скачать</a>
                             </div>
                         </td>
                     </tr>
@@ -107,5 +110,7 @@ function docStatusBadge(string $status): string
         </div>
     </div>
 <?php endif; ?>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

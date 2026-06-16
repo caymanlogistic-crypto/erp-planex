@@ -15,7 +15,7 @@
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
         </div>
     </div>
@@ -24,14 +24,16 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Доступы компании: <?= e($company['name']) ?></h1>
-        <p class="text-muted">ID: <?= $id ?> · Режим SUPERADMIN: просмотр</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Доступы компании</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
+
+<div class="page-content">
 
 <?php if (!empty($dbError)): ?>
     <div class="notice warn">
@@ -41,8 +43,8 @@
     <div class="panel">
         <div class="panel-body">
             <div class="empty-state">
-                <p class="text-muted">Нет выданных доступов</p>
-                <p class="text-muted">В компании ещё не выданы доступы к записям.</p>
+                <p class="empty-title">Нет выданных доступов</p>
+                <p class="empty-desc">В компании ещё не выданы доступы к записям.</p>
             </div>
         </div>
     </div>
@@ -56,34 +58,29 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Тип сущности</th>
-                        <th>ID сущности</th>
-                        <th>Кому (ID)</th>
-                        <th>Кому (имя)</th>
-                        <th>Кем выдан (ID)</th>
-                        <th>Кем выдан (имя)</th>
-                        <th>Уровень</th>
-                        <th>Создан</th>
-                        <th></th>
+                        <th>Объект</th>
+                        <th>Кому</th>
+                        <th>Кем выдан</th>
+                        <th class="col-tight">Уровень</th>
+                        <th class="col-tight">Создан</th>
+                        <th class="col-tight"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($grants as $g): ?>
                     <tr>
-                        <td class="col-mono"><?= $g['id'] ?></td>
-                        <td><?= e($g['entity_type']) ?></td>
-                        <td class="col-mono"><?= (int)$g['entity_id'] ?></td>
-                        <td class="col-mono"><?= (int)$g['granted_to_user_id'] ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($g['entity_type']) ?></span>
+                            <span class="cell-sub">ID <?= (int)$g['entity_id'] ?> · #<?= $g['id'] ?></span>
+                        </td>
                         <td><?= e($g['granted_to_name'] ?? '—') ?></td>
-                        <td class="col-mono"><?= (int)$g['granted_by_user_id'] ?></td>
                         <td><?= e($g['granted_by_name'] ?? '—') ?></td>
-                        <td><?= e($g['access_level']) ?></td>
-                        <td class="col-muted"><?= e($g['created_at']) ?></td>
-                        <td class="col-actions">
+                        <td class="col-tight col-mono"><?= e($g['access_level']) ?></td>
+                        <td class="col-tight col-muted"><?= e(substr($g['created_at'] ?? '', 0, 10)) ?></td>
+                        <td class="col-tight col-actions">
                             <div class="row-actions">
-                                <form method="post" action="/superadmin/companies/<?= $id ?>/access-grants/<?= $g['id'] ?>/revoke" style="display:inline" onsubmit="return confirm('Отозвать доступ?')">
-                                    <button type="submit" class="btn btn-danger">Отозвать</button>
+                                <form method="post" action="/superadmin/companies/<?= $id ?>/access-grants/<?= $g['id'] ?>/revoke" onsubmit="return confirm('Отозвать доступ?')">
+                                    <button type="submit" class="btn btn-danger btn-sm">Отозвать</button>
                                 </form>
                             </div>
                         </td>
@@ -94,5 +91,7 @@
         </div>
     </div>
 <?php endif; ?>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

@@ -4,14 +4,16 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 ?>
 <div class="page-head">
-    <div>
-        <h1>Реестр компаний</h1>
-        <p class="text-muted">Центральный реестр локальных ERP-систем</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN</span>
+        <span class="page-title">Реестр компаний</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/create" class="btn btn-primary">Создать экспедитора</a>
     </div>
 </div>
+
+<div class="page-content">
 
 <?php if (isset($dbError)): ?>
     <div class="notice warn">
@@ -28,8 +30,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php endif; ?>
 
 <form method="get" action="/superadmin/companies" class="filters-bar">
-    <input type="text" class="field-input" placeholder="Поиск по названию или ИНН" name="search" value="<?= e($search ?? '') ?>" style="max-width:240px">
-    <select class="field-select" name="status" style="max-width:150px">
+    <input type="text" class="field-input filter-input-search" placeholder="Поиск по названию или ИНН" name="search" value="<?= e($search ?? '') ?>">
+    <select class="field-select filter-input-narrow" name="status">
         <option value="">Все статусы</option>
         <option value="active" <?= ($filterStatus ?? '') === 'active' ? 'selected' : '' ?>>Активен</option>
         <option value="inactive" <?= ($filterStatus ?? '') === 'inactive' ? 'selected' : '' ?>>Неактивен</option>
@@ -47,8 +49,8 @@ require_once __DIR__ . '/../components/status_badge.php';
     <div class="panel">
         <div class="panel-body">
             <div class="empty-state">
-                <p class="text-muted">Нет созданных компаний</p>
-                <p class="text-muted">Создайте первого экспедитора для начала работы системы.</p>
+                <p class="empty-title">Нет компаний</p>
+                <p class="empty-desc">Создайте первого экспедитора для начала работы системы.</p>
                 <a href="/superadmin/companies/create" class="btn btn-primary">Создать экспедитора</a>
             </div>
         </div>
@@ -63,63 +65,34 @@ require_once __DIR__ . '/../components/status_badge.php';
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Название</th>
-                        <th>ИНН</th>
-                        <th>Статус</th>
-                        <th>Локальная БД</th>
+                        <th>Компания</th>
+                        <th class="col-tight">Статус</th>
                         <th>Руководитель</th>
-                        <th>Пользователей</th>
-                        <th>Создан</th>
-                        <th></th>
+                        <th class="col-tight col-num">Польз.</th>
+                        <th class="col-tight">Создан</th>
+                        <th class="col-tight"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($companies as $c): ?>
                     <tr>
-                        <td class="col-mono"><?= $c['id'] ?></td>
-                        <td><?= e($c['name']) ?></td>
-                        <td class="col-mono"><?= e($c['inn']) ?></td>
-                        <td><?= renderStatusBadge($c['status']) ?></td>
-                        <td class="col-mono col-muted"><?= e($c['db_identifier'] ?? '—') ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($c['name']) ?></span>
+                            <span class="cell-sub">ИНН <?= e($c['inn']) ?> · ID <?= $c['id'] ?></span>
+                        </td>
+                        <td class="col-tight"><?= renderStatusBadge($c['status']) ?></td>
                         <td>
-                            <?php if (in_array($c['status'], ['error', 'provisioning'], true)): ?>
-                                <span class="col-muted">—</span>
-                            <?php elseif (!empty($c['owner_name'])): ?>
-                                <span class="dot" style="background:var(--success)"></span>
+                            <?php if (!empty($c['owner_name'])): ?>
                                 <?= e($c['owner_name']) ?>
                             <?php else: ?>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/create-owner" class="btn btn-primary" style="font-size:11px;padding:2px 10px">
-                                    Создать
-                                </a>
+                                <span class="col-muted">—</span>
                             <?php endif; ?>
                         </td>
-                        <td class="col-mono"><?= (int)($c['user_count'] ?? 0) ?></td>
-                        <td class="col-muted"><?= e($c['created_at'] ?? '') ?></td>
-                        <td class="col-actions">
+                        <td class="col-tight col-num"><?= (int)($c['user_count'] ?? 0) ?></td>
+                        <td class="col-tight col-muted"><?= e(substr($c['created_at'] ?? '', 0, 10)) ?></td>
+                        <td class="col-tight">
                             <div class="row-actions">
-                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost">Карточка</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/edit" class="btn btn-ghost">Редактировать</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/owner" class="btn btn-ghost">Руководитель</a>
-                                <a href="/superadmin/companies/<?= $c['id'] ?>/users" class="btn btn-ghost">Пользователи</a>
-                                <?php if ($c['status'] !== 'active'): ?>
-                                <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/activate" style="display:inline" onsubmit="return confirm('Активировать компанию?')">
-                                        <button type="submit" class="btn btn-ghost">Активировать</button>
-                                </form>
-                                <?php endif; ?>
-                                <?php if (in_array($c['status'], ['active', 'inactive'], true)): ?>
-                                <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/block" style="display:inline" onsubmit="return confirm('Заблокировать компанию?')">
-                                        <button type="submit" class="btn btn-ghost">Заблокировать</button>
-                                </form>
-                                <?php endif; ?>
-                                <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
-                                        <button type="submit" class="btn btn-danger">Архивировать</button>
-                                </form>
-                                <?php if ($c['status'] === 'active'): ?>
-                                <form method="post" action="/superadmin/companies/<?= $c['id'] ?>/deactivate" style="display:inline" onsubmit="return confirm('Отключить компанию?')">
-                                        <button type="submit" class="btn btn-ghost">Отключить</button>
-                                </form>
-                                <?php endif; ?>
+                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost btn-sm">Открыть</a>
                             </div>
                         </td>
                     </tr>
@@ -129,3 +102,5 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 <?php endif; ?>
+
+</div>
