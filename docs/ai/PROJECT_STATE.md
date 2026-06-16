@@ -66,29 +66,35 @@ SUPERADMIN — ЗАКРЫТ на текущем этапе.
 
 ```text
 Водители / Машины / Экипажи — ЭТАП 2: CRUD + функциональный UX ЗАВЕРШЁН
-Следующий шаг: runtime owner review → при необходимости исправления → дизайн-полировка
+STATUS: COMPANY_USERS_AND_RUNTIME_ACCEPTED
+Следующий шаг: owner review → дизайн-полировка
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (CRUD_UX_ACCEPTED):
+Принято erp-architect (COMPANY_USERS_AND_RUNTIME_ACCEPTED):
 
-Частичный подэтап (commit 65eaf8e):
-- vehicle_sets CRUD, driver_vehicle_blocks CRUD
-- crews по новой схеме contractor + driver_vehicle_block
-- vehicles → vehicle_units, pts_number скрыт
-- grants/documents расширены, sidebar обновлён
-
-Финальный подэтап (текущий commit):
-- Contractor contacts inline CRUD (6 маршрутов: create/edit/delete/set-primary/set-document-email)
-- Driver phones inline CRUD (4 маршрута: create/edit/delete/set-main)
-- Contractor tax history append-only
-- Role-based access: logist видит свои + grants, company_owner видит все
-- Card-level access checks (view/edit/archive)
-- Каскадная видимость в crew_view, driver_view, vehicle_view
-- Documents access after grants (logist удаляет только свои, company_owner видит удалённые)
-- Расширены views: contractors (тип, КПП, контакты, банк, налоги), drivers (паспорт, СНИЛС, телефоны, блоки)
+Исправление пользователей компании и полный runtime-сценарий:
+- SUPERADMIN создание пользователя компании исправлено (CREATE DATABASE + поле пароля + детальная ошибка)
+- /company/logists исправлен (автосоздание локальной БД во всех 7 обработчиках)
+- PDO unbuffered query fix (MYSQL_ATTR_USE_BUFFERED_QUERY)
+- applyLocalMigrations расширен до 001-030
+- Проверки прав для archive/edit экипажей
+- Grant update (view → edit без ошибки "уже выдан")
+- HTML required убран с бизнес-полей (ИНН, телефон, тип документа)
+- Полный runtime-сценарий на новом экспедиторе пройден:
+  - Подрядчик + контакт + налоговая запись + документ
+  - Водитель + телефон + документ
+  - Тягач + полуприцеп + документы
+  - Сцепка + документ
+  - Блок Водитель+ТС + документ
+  - Экипаж + документ
+  - Role-based visibility: logist_runtime_2 не видит записи logist_runtime_1
+  - view-grant + edit-grant проверены
+  - Удаление чужих/своих документов проверено
+  - /company/vehicles работает, pts_number скрыт
+  - Бизнес-поля не обязательны (серверно + HTML)
 ```
 
 ## Правило обновления

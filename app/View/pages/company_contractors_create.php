@@ -93,7 +93,7 @@
 
             <div class="field">
                 <label class="field-label">ИНН <span class="req">*</span></label>
-                <input type="text" name="inn" class="field-input" required
+                <input type="text" name="inn" class="field-input"
                        value="<?= e($old['inn'] ?? '') ?>">
                 <?php if (!empty($errors['inn'])): ?>
                     <div class="field-msg is-error"><?= e($errors['inn']) ?></div>

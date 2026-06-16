@@ -94,31 +94,22 @@ function applyCentralMigrations(\App\Core\Database $db): void
 
 function applyLocalMigrations(\PDO $localPdo): void
 {
-    $migrations = [
-        '011_add_contractor_fields.sql',
-        '012_create_contractor_contacts.sql',
-        '013_create_contractor_tax_history.sql',
-        '014_add_driver_fields.sql',
-        '015_create_driver_phones.sql',
-        '016_rename_vehicles_to_vehicle_units.sql',
-        '017_create_vehicle_sets.sql',
-        '018_create_driver_vehicle_blocks.sql',
-        '019_update_crews.sql',
-        '020_update_documents.sql',
-        '021_update_entity_access_grants.sql',
-        '022_data_migrate_driver_phones.sql',
-        '023_add_superadmin_vehicle_stats.sql',
-    ];
-
-    foreach ($migrations as $file) {
+    for ($i = 1; $i <= 30; $i++) {
+        $pattern = base_path('database/migrations-local/' . sprintf('%03d', $i) . '_*.sql');
+        $files = glob($pattern);
+        if (!$files) {
+            continue;
+        }
+        $file = $files[0];
+        $fileName = basename($file);
         try {
-            $sql = file_get_contents(base_path('database/migrations-local/' . $file));
+            $sql = file_get_contents($file);
             if ($sql !== false && trim($sql) !== '') {
                 $localPdo->exec($sql);
             }
         } catch (\Exception $e) {
             // Log warning but don't fail
-            error_log('Local migration ' . $file . ': ' . $e->getMessage());
+            error_log('Local migration ' . $fileName . ': ' . $e->getMessage());
         }
     }
 }
@@ -224,8 +215,8 @@ $router->get('/superadmin/companies', function () use ($config, $db) {
 
         foreach ($companies as &$c) {
             if (!empty($c['db_identifier']) && $c['status'] === 'active') {
-                try {
-                    $localDbConfig = $config['database'];
+    try {
+        $localDbConfig = $config['database'];
                     $localDbConfig['database'] = $c['db_identifier'];
                     $localDb = new \App\Core\Database($localDbConfig);
                     $localPdo = $localDb->connection();
@@ -1223,11 +1214,26 @@ $router->get('/company/logists', function () use ($config, $db) {
         }
 
         $dbIdentifier = $company['db_identifier'];
+
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbIdentifier}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
-                applyLocalMigrations($localPdo);
+        applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1411,11 +1417,26 @@ $router->post('/company/logists/create', function () use ($config, $db) {
         }
 
         $dbIdentifier = $company['db_identifier'];
+
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbIdentifier}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
-                applyLocalMigrations($localPdo);
+        applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1565,6 +1586,21 @@ $router->get('/company/logists/{id}', function ($id) use ($config, $db) {
         }
 
         $dbIdentifier = $company['db_identifier'];
+
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbIdentifier}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
@@ -1661,6 +1697,21 @@ $router->get('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         }
 
         $dbIdentifier = $company['db_identifier'];
+
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbIdentifier}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
@@ -1756,6 +1807,21 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         }
 
         $dbIdentifier = $company['db_identifier'];
+
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbIdentifier}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
@@ -1921,6 +1987,21 @@ $router->post('/company/logists/{id}/reset-password', function ($id) use ($confi
         }
 
         $dbIdentifier = $company['db_identifier'];
+
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbIdentifier}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
@@ -2002,6 +2083,21 @@ $router->post('/company/logists/{id}/archive', function ($id) use ($config, $db)
         }
 
         $dbIdentifier = $company['db_identifier'];
+
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbIdentifier}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
@@ -3026,11 +3122,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             $errors['name'] = 'Обязательное поле';
         }
 
-        if ($inn === '') {
-            $errors['inn'] = 'Обязательное поле';
-        }
-
-        if (empty($errors['inn'])) {
+        if ($inn !== '') {
             $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM contractors WHERE inn = ?');
             $checkStmt->execute([$inn]);
             if ($checkStmt->fetchColumn() > 0) {
@@ -4269,11 +4361,8 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             $errors['full_name'] = 'Обязательное поле';
         }
 
-        if ($phone === '') {
-            $errors['phone'] = 'Обязательное поле';
-        }
-
-        if (empty($errors['phone'])) {
+        // phone is optional (driver_phones is the canonical storage)
+        if ($phone !== '') {
             $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM drivers WHERE phone = ?');
             $checkStmt->execute([$phone]);
             if ($checkStmt->fetchColumn() > 0) {
@@ -6587,6 +6676,30 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
             $drivers = [];
             $blockingNotices = [];
         } else {
+            // --- PERMISSION CHECK (view or edit for GET) ---
+            $currentUserId = (int)($_SESSION['user_id'] ?? 0);
+            $currentRole = $_SESSION['role_code'] ?? '';
+
+            if ($currentRole !== 'company_owner') {
+                $isCreator = ($crew['created_by_user_id'] ?? 0) === $currentUserId;
+
+                $grantStmt = $localPdo->prepare(
+                    "SELECT 1 FROM entity_access_grants
+                     WHERE entity_type = 'crew' AND entity_id = ?
+                     AND granted_to_user_id = ? AND access_level = 'edit'
+                     AND (revoked_at IS NULL)"
+                );
+                $grantStmt->execute([$crewId, $currentUserId]);
+                $hasGrant = (bool)$grantStmt->fetchColumn();
+
+                if (!$isCreator && !$hasGrant) {
+                    http_response_code(403);
+                    header('Content-Type: text/plain');
+                    echo '403 Forbidden';
+                    exit;
+                }
+            }
+
             $old = $crew;
 
             $contractors = $localPdo->query(
@@ -6790,6 +6903,30 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
             return;
         }
 
+        // --- PERMISSION CHECK (edit required for POST) ---
+        $currentUserId = (int)($_SESSION['user_id'] ?? 0);
+        $currentRole = $_SESSION['role_code'] ?? '';
+
+        if ($currentRole !== 'company_owner') {
+            $isCreator = ($crew['created_by_user_id'] ?? 0) === $currentUserId;
+
+            $grantStmt = $localPdo->prepare(
+                "SELECT 1 FROM entity_access_grants
+                 WHERE entity_type = 'crew' AND entity_id = ?
+                 AND granted_to_user_id = ? AND access_level = 'edit'
+                 AND (revoked_at IS NULL)"
+            );
+            $grantStmt->execute([$crewId, $currentUserId]);
+            $hasEditGrant = (bool)$grantStmt->fetchColumn();
+
+            if (!$isCreator && !$hasEditGrant) {
+                http_response_code(403);
+                header('Content-Type: text/plain');
+                echo '403 Forbidden';
+                exit;
+            }
+        }
+
         $contractorId = trim($_POST['contractor_id'] ?? '');
         $vehicleId = trim($_POST['vehicle_id'] ?? '');
         $driverId = trim($_POST['driver_id'] ?? '');
@@ -6926,6 +7063,39 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
         } catch (\Exception $e) {
             $migrationSql = file_get_contents(base_path('database/migrations-local/006_create_company_crews.sql'));
             $localPdo->exec($migrationSql);
+        }
+
+        // --- PERMISSION CHECK ---
+        $currentUserId = (int)($_SESSION['user_id'] ?? 0);
+        $currentRole = $_SESSION['role_code'] ?? '';
+
+        $crewStmt = $localPdo->prepare('SELECT * FROM crews WHERE id = ?');
+        $crewStmt->execute([$crewId]);
+        $crew = $crewStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$crew) {
+            header('Location: /company/crews');
+            exit;
+        }
+
+        if ($currentRole !== 'company_owner') {
+            $isCreator = ($crew['created_by_user_id'] ?? 0) === $currentUserId;
+
+            $grantStmt = $localPdo->prepare(
+                "SELECT 1 FROM entity_access_grants
+                 WHERE entity_type = 'crew' AND entity_id = ?
+                 AND granted_to_user_id = ? AND access_level = 'edit'
+                 AND (revoked_at IS NULL)"
+            );
+            $grantStmt->execute([$crewId, $currentUserId]);
+            $hasEditGrant = (bool)$grantStmt->fetchColumn();
+
+            if (!$isCreator && !$hasEditGrant) {
+                http_response_code(403);
+                header('Content-Type: text/plain');
+                echo '403 Forbidden';
+                exit;
+            }
         }
 
         $update = $localPdo->prepare("UPDATE crews SET status = 'archived' WHERE id = ?");
@@ -8919,27 +9089,35 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
 
         $accessLevel = trim($_POST['access_level'] ?? 'view');
         if (!in_array($accessLevel, ['view', 'edit'], true)) { $accessLevel = 'view'; }
+        $comment = trim($_POST['comment'] ?? '');
 
-        // Check for duplicate active grant
-        $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM entity_access_grants WHERE entity_type = ? AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL');
-        $dupStmt->execute([$entityType, $entityId, $grantedToUserId]);
-        if ($dupStmt->fetchColumn() > 0) {
-            $_SESSION['flash'] = 'Доступ уже выдан.';
-            header('Location: ' . $redirect);
-            exit;
-        }
-
-        $insert = $localPdo->prepare(
-            'INSERT INTO entity_access_grants (entity_type, entity_id, granted_to_user_id, granted_by_user_id, access_level)
-             VALUES (:entity_type, :entity_id, :granted_to_user_id, :granted_by_user_id, :access_level)'
+        // Check for existing grant (update if exists, insert if not)
+        $existingStmt = $localPdo->prepare(
+            'SELECT id, access_level FROM entity_access_grants
+             WHERE entity_type = ? AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL'
         );
-        $insert->execute([
-            ':entity_type'        => $entityType,
-            ':entity_id'          => $entityId,
-            ':granted_to_user_id' => $grantedToUserId,
-            ':granted_by_user_id' => (int)$_SESSION['user_id'],
-            ':access_level'       => $accessLevel,
-        ]);
+        $existingStmt->execute([$entityType, $entityId, $grantedToUserId]);
+        $existing = $existingStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $update = $localPdo->prepare(
+                'UPDATE entity_access_grants SET access_level = ?, comment = ?, updated_at = NOW() WHERE id = ?'
+            );
+            $update->execute([$accessLevel, $comment, $existing['id']]);
+        } else {
+            $insert = $localPdo->prepare(
+                'INSERT INTO entity_access_grants (entity_type, entity_id, granted_to_user_id, granted_by_user_id, access_level, comment)
+                 VALUES (:entity_type, :entity_id, :granted_to_user_id, :granted_by_user_id, :access_level, :comment)'
+            );
+            $insert->execute([
+                ':entity_type'        => $entityType,
+                ':entity_id'          => $entityId,
+                ':granted_to_user_id' => $grantedToUserId,
+                ':granted_by_user_id' => (int)$_SESSION['user_id'],
+                ':access_level'       => $accessLevel,
+                ':comment'            => $comment !== '' ? $comment : null,
+            ]);
+        }
     } catch (\Exception $e) {
         if ($e->getCode() != 23000) {
             error_log('Access grant error: ' . $e->getMessage());
@@ -10456,6 +10634,20 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
     }
 
     try {
+        // Создать локальную БД, если не существует
+        try {
+            $tempPdo = new PDO(
+                sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $config['database']['host'] ?? '127.0.0.1', $config['database']['port'] ?? '3306'),
+                $config['database']['username'] ?? 'root',
+                $config['database']['password'] ?? ''
+            );
+            $tempPdo->exec("CREATE DATABASE IF NOT EXISTS `{$company['db_identifier']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (\Exception $e) {
+            // Игнорируем ошибку создания БД — основное подключение поймает проблему
+        }
+        // Release tempPdo to avoid any connection state interference
+        $tempPdo = null;
+
         $localDbConfig = $config['database'];
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
@@ -10473,7 +10665,11 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
             return;
         }
 
-        $newPassword = generatePassword(10);
+        if (!empty($_POST['password'])) {
+            $newPassword = $_POST['password'];
+        } else {
+            $newPassword = generatePassword(10);
+        }
         $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
 
         $insert = $localPdo->prepare(
@@ -10497,7 +10693,7 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
         $content = ob_get_clean();
         require base_path('app/View/layouts/main.php');
     } catch (\Exception $e) {
-        $formError = 'Ошибка создания пользователя.';
+        $formError = 'Ошибка создания пользователя: ' . $e->getMessage();
         ob_start();
         require base_path('app/View/pages/superadmin_company_logist_create.php');
         $content = ob_get_clean();

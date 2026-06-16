@@ -42,8 +42,16 @@ CODEX-дизайнер не меняет функциональную логик
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 
 Водители / Машины / Экипажи — ЭТАП 2 (CRUD + UX) ЗАВЕРШЁН.
-Статус: CRUD_UX_ACCEPTED
-Следующий шаг: runtime owner review → исправления → дизайн-полировка.
+Статус: COMPANY_USERS_AND_RUNTIME_ACCEPTED
+Следующий шаг: owner review → дизайн-полировка.
+
+Исправление пользователей компании:
+- SUPERADMIN создание пользователя исправлено
+- /company/logists исправлен (автосоздание локальной БД)
+- PDO unbuffered query fix
+- applyLocalMigrations расширен до 001-030
+- Проверки прав archive/edit
+- Полный runtime-сценарий пройден
 ```
 
 ### Стабильный commit

@@ -33,3 +33,6 @@
 24. Документы: soft delete через `deleted_at`. Активный документ: `deleted_at IS NULL`. `documents.status` оставлен как legacy.
 25. `entity_access_grants` расширены: comment, revoked_at, idx_granted_user. Допустимые entity types: client, contractor, driver, vehicle_unit, vehicle_set, driver_vehicle_block, crew.
 26. Миграции локальной БД (011-023) идемпотентны: проверяют INFORMATION_SCHEMA перед каждым изменением. Функция `applyLocalMigrations()` применяет их автоматически при доступе к локальной БД.
+27. `applyLocalMigrations()` расширен до диапазона 001-030. Миграции 001-010 (CREATE TABLE) используют `IF NOT EXISTS` или PREPARE/EXECUTE с проверкой INFORMATION_SCHEMA. Миграция 008 (ALTER TABLE) переписана на идемпотентный PREPARE/EXECUTE-паттерн.
+28. PDO-подключения используют `PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true` для предотвращения ошибки "Cannot execute queries while other unbuffered queries are active" при последовательных запросах после миграций с SELECT.
+29. Создание локальной БД (`CREATE DATABASE IF NOT EXISTS`) выполняется автоматически перед первым подключением к `erp_company_{id}` во всех обработчиках `/company/logists/*` и SUPERADMIN-создании пользователя.

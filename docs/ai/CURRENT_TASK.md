@@ -55,3 +55,37 @@ STATUS: CRUD_UX_ACCEPTED
 
 СЛЕДУЮЩИЙ ШАГ:
 - Runtime owner review / исправления / дизайн-полировка
+
+## IN PROGRESS: Исправление пользователей компании и runtime-проверка
+
+STATUS: COMPANY_USERS_AND_RUNTIME_ACCEPTED
+
+КОРНЕВАЯ ПРИЧИНА БЛОКЕРА:
+- Локальная БД `erp_company_{id}` не создавалась при создании компании
+- `applyLocalMigrations()` не включала миграции 001-010
+- PDO unbuffered query в миграциях ломал все последующие запросы
+
+ИСПРАВЛЕНО:
+- CREATE DATABASE IF NOT EXISTS в 8 обработчиках (SUPERADMIN + /company/logists)
+- applyLocalMigrations расширен до 001-030
+- PDO::MYSQL_ATTR_USE_BUFFERED_QUERY в Database.php
+- Поле пароля в SUPERADMIN-форме создания пользователя
+- Детальная ошибка создания пользователя ($e->getMessage())
+- Проверки прав для archive/edit экипажей
+- Grant update (view → edit)
+- HTML required убран с бизнес-полей
+- Миграция 008 сделана идемпотентной
+- Миграция 023 (SELECT 1) исправлена
+
+RUNTIME-ПРОВЕРКА:
+- Создан экспедитор: ООО "Тест Этап 2 Runtime" (ID=9, БД erp_company_9)
+- Руководитель: owner_test_runtime / pass1234
+- Логист через SUPERADMIN: logist_sa_test / pass5678
+- Логист через руководителя: logist_runtime_1 / pass1111, logist_runtime_2 / pass2222
+- Заполнены: подрядчик, водитель, тягач, полуприцеп, сцепка, блок Водитель+ТС, экипаж
+- Загружены документы ко всем сущностям
+- Права проверены: role-based visibility, view-grant, edit-grant, удаление документов
+- /company/vehicles работает, pts_number скрыт
+- Бизнес-поля не обязательны
+
+FILES CHANGED (9): public/index.php, app/Core/Database.php, 4 view-файла, 2 миграции

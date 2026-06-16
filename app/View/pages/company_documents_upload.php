@@ -151,7 +151,7 @@
 
             <div class="field">
                 <label class="field-label">Тип документа <span class="req">*</span></label>
-                <input type="text" name="document_type" class="field-input" required
+                <input type="text" name="document_type" class="field-input"
                        value="<?= e($old['document_type'] ?? $replacedDoc['document_type'] ?? '') ?>"
                        placeholder="Например: Договор, Паспорт, СТС, Свидетельство">
                 <div class="field-msg">Укажите тип документа (договор, паспорт, доверенность и т.д.)</div>

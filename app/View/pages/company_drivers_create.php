@@ -101,7 +101,7 @@
 
             <div class="field">
                 <label class="field-label">Телефон <span class="req">*</span></label>
-                <input type="text" name="phone" class="field-input" required
+                <input type="text" name="phone" class="field-input"
                        value="<?= e($old['phone'] ?? '') ?>">
                 <?php if (!empty($errors['phone'])): ?>
                     <div class="field-msg is-error"><?= e($errors['phone']) ?></div>

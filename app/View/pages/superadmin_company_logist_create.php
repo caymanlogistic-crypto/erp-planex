@@ -117,11 +117,21 @@
                     <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>
                 <?php endif; ?>
             </div>
+
+            <!-- Пароль -->
+            <div class="field">
+                <label class="field-label">Пароль</label>
+                <div class="input-group">
+                    <input type="text" name="password" id="password_field" class="field-input" placeholder="Оставьте пустым для автогенерации" value="<?= e($old['password'] ?? '') ?>">
+                    <button type="button" class="btn btn-secondary" onclick="generatePasswordField()">Сгенерировать</button>
+                </div>
+                <div class="field-msg">Оставьте пустым — пароль будет сгенерирован автоматически.</div>
+            </div>
         </div>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать</button>
-            <a href="/superadmin/companies/<?= $companyId ?>/users" class="btn btn-ghost">Отмена</a>
+            <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-ghost">Отмена</a>
         </div>
 
     </div>
@@ -130,3 +140,12 @@
 </div><!-- /.page-content -->
 
 <?php endif; ?>
+
+<script>
+function generatePasswordField() {
+    var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    var pwd = '';
+    for (var i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    document.getElementById('password_field').value = pwd;
+}
+</script>
