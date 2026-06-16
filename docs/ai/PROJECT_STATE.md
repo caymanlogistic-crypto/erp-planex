@@ -58,27 +58,28 @@ docs/ui/DESIGN_STANDARD.md
 ## Активная задача
 
 ```text
-SUPERADMIN — пост-дизайн функциональная приёмка: ARCHITECT_ACCEPTED.
-Все 20 view-файлов + CSS + index.php проверены. Багов нет.
+SUPERADMIN — пост-дизайн функциональная приёмка: ARCHITECT_ACCEPTED с исправлением регрессии.
+Исправлен сломанный POST-обработчик создания экспедитора, заменённый в коммите 3d4ee24.
 Файл: docs/ai/CURRENT_TASK.md
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (пост-дизайн):
-- PHP-синтаксис: все 21 файл — OK
-- Формы: 5 критичных форм — action/method/names/submit/CSRF целы
-- Runtime-маршруты: 0 ошибок 500, все protected → 302, /login → 200
-- Дизайн-безопасность: erp-ui.css подключён, layout цел, inline-style убраны
-- Дизайнер попутно исправил баг роутинга (create до dynamic {user_id})
-- Дизайнер добавил null-safe счётчики в logist_view
+Принято erp-architect:
+- Восстановлен оригинальный POST-обработчик /superadmin/companies/create
+  (был ошибочно заменён на код создания руководителя в коммите 3d4ee24)
+- Устранён warning Undefined variable $company
+- POST handler теперь: читает поля компании, INSERT INTO companies,
+  создаёт БД + storage, редиректит на /superadmin/companies
+- Рендерит superadmin_companies_create.php (не owner_create)
+- Оставшиеся 5 ссылок на owner_create — в легитимных маршрутах create-owner
 ```
 
 ## Следующий шаг
 
 ```text
-1. Commit (message: "style(superadmin): apply chief designer polish and verify post-design functionality")
+1. Commit (message: "fix(superadmin): restore company create handler")
 2. Переход к блоку водители / машины / экипажи
 ```
 

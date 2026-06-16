@@ -233,91 +233,123 @@ $router->post('/superadmin/companies/create', function () use ($config, $db) {
     requireRole('superadmin');
     $pageTitle = 'Создать экспедитора';
     $pageContext = 'Реестр компаний';
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+
+    $name = trim($_POST['name'] ?? '');
+    $inn  = trim($_POST['inn'] ?? '');
+
+    if ($name === '') {
+        $errors['name'] = 'Обязательное поле';
+    }
+
+    if ($inn === '') {
+        $errors['inn'] = 'Обязательное поле';
+    }
+
+    if (!empty($errors)) {
+        ob_start();
+        require base_path('app/View/pages/superadmin_companies_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
     try {
-        $errors = [];
-        $old = $_POST;
-        $formError = null;
+        $pdo = $db->connection();
 
-        $fullName = trim($_POST['full_name'] ?? '');
-        $login = trim($_POST['login'] ?? '');
-        $password = trim($_POST['password'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $phone = trim($_POST['phone'] ?? '');
-        $position = trim($_POST['position'] ?? '');
-        $comments = trim($_POST['comments'] ?? '');
+        $key = 'company_' . uniqid();
 
-        if ($fullName === '') {
-            $errors['full_name'] = 'Обязательное поле';
-        }
+        $insert = $pdo->prepare(
+            'INSERT INTO companies (`key`, name, inn, kpp, ogrn, legal_address, physical_address,
+                contact_person, contact_phone, contact_email, comments, status)
+             VALUES (:key, :name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
+                :contact_person, :contact_phone, :contact_email, :comments, :status)'
+        );
 
-        if ($login === '') {
-            $errors['login'] = 'Обязательное поле';
-        } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
-            $errors['login'] = 'Только латинские буквы, цифры и подчёркивание';
-        }
+        $insert->execute([
+            ':key'              => $key,
+            ':name'             => $name,
+            ':inn'              => $inn,
+            ':kpp'              => $_POST['kpp'] ?? null,
+            ':ogrn'             => $_POST['ogrn'] ?? null,
+            ':legal_address'   => $_POST['legal_address'] ?? null,
+            ':physical_address' => $_POST['physical_address'] ?? null,
+            ':contact_person'  => $_POST['contact_person'] ?? null,
+            ':contact_phone'   => $_POST['contact_phone'] ?? null,
+            ':contact_email'   => $_POST['contact_email'] ?? null,
+            ':comments'         => $_POST['comments'] ?? null,
+            ':status'           => 'provisioning',
+        ]);
 
-        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Некорректный email';
-        }
+        $companyId = (int) $pdo->lastInsertId();
+        $dbName = 'erp_company_' . $companyId;
+        $storageDir = storage_path('companies/' . $companyId);
 
-        if ($password === '') {
-            $password = generatePassword();
-        }
+        $newKey = 'company_' . $companyId;
 
-        if (!empty($errors)) {
-            $formError = null;
-            $success = false;
-            $generatedPassword = generatePassword();
+        try {
+            $dbConfig = $config['database'];
+            $dbConfig['database'] = '';
+            $sysDb = new \App\Core\Database($dbConfig);
+            $sysPdo = $sysDb->connection();
+            $sysPdo->exec('CREATE DATABASE IF NOT EXISTS `' . $dbName . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+        } catch (\Exception $e) {
+            $pdo->prepare('UPDATE companies SET status = :status, error_message = :msg WHERE id = :id')
+                ->execute([
+                    ':status' => 'error',
+                    ':msg'    => 'Не удалось создать базу данных: ' . $e->getMessage(),
+                    ':id'     => $companyId,
+                ]);
+
+            $formError = 'Ошибка создания инфраструктуры. База данных не создана. Запись сохранена со статусом "Ошибка".';
 
             ob_start();
-            require base_path('app/View/pages/superadmin_company_owner_create.php');
+            require base_path('app/View/pages/superadmin_companies_create.php');
             $content = ob_get_clean();
             require base_path('app/View/layouts/main.php');
             return;
         }
 
-        $passwordHash = password_hash($password, PASSWORD_BCRYPT);
+        try {
+            if (!is_dir($storageDir)) {
+                mkdir($storageDir, 0755, true);
+            }
+        } catch (\Exception $e) {
+            $pdo->prepare('UPDATE companies SET status = :status, error_message = :msg, db_identifier = :db WHERE id = :id')
+                ->execute([
+                    ':status' => 'error',
+                    ':msg'    => 'БД создана, но не удалось создать storage-папку: ' . $e->getMessage(),
+                    ':db'     => $dbName,
+                    ':id'     => $companyId,
+                ]);
 
-        $insert = $pdo->prepare(
-            'INSERT INTO company_users (company_id, full_name, login, email, phone, position, password_hash, role, status, comments)
-             VALUES (:company_id, :full_name, :login, :email, :phone, :position, :password_hash, :role, :status, :comments)'
-        );
-        $insert->execute([
-            ':company_id'    => (int) $id,
-            ':full_name'     => $fullName,
-            ':login'         => $login,
-            ':email'         => $email !== '' ? $email : null,
-            ':phone'         => $phone !== '' ? $phone : null,
-            ':position'      => $position !== '' ? $position : null,
-            ':password_hash' => $passwordHash,
-            ':role'          => 'company_owner',
-            ':status'        => 'active',
-            ':comments'      => $comments !== '' ? $comments : null,
-        ]);
+            $formError = 'База данных создана, но не удалось создать storage-папку. Запись сохранена со статусом "Ошибка".';
 
-        $createdOwner = [
-            'full_name' => $fullName,
-            'login'     => $login,
-        ];
-        $tempPassword = $password;
-        $success = true;
+            ob_start();
+            require base_path('app/View/pages/superadmin_companies_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
 
-        ob_start();
-        require base_path('app/View/pages/superadmin_company_owner_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $pdo->prepare('UPDATE companies SET status = :status, db_identifier = :db, storage_path = :storage, `key` = :new_key WHERE id = :id')
+            ->execute([
+                ':status'  => 'active',
+                ':db'      => $dbName,
+                ':storage' => 'storage/companies/' . $companyId . '/',
+                ':new_key' => $newKey,
+                ':id'      => $companyId,
+            ]);
+
+        header('Location: /superadmin/companies');
+        exit;
     } catch (\Exception $e) {
-        $company = $company ?? null;
-        $ownerExists = false;
-        $existingOwner = null;
-        $success = false;
-        $errors = [];
-        $old = $_POST;
-        $formError = 'Ошибка создания Руководителя: ' . $e->getMessage();
-        $generatedPassword = null;
+        $formError = 'Не удалось создать экспедитора: ' . $e->getMessage();
 
         ob_start();
-        require base_path('app/View/pages/superadmin_company_owner_create.php');
+        require base_path('app/View/pages/superadmin_companies_create.php');
         $content = ob_get_clean();
         require base_path('app/View/layouts/main.php');
     }

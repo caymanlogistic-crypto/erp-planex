@@ -2,7 +2,7 @@
 
 TASK: SUPERADMIN — пост-дизайн функциональная приёмка
 
-STATUS: ARCHITECT_ACCEPTED (post-design verification passed)
+STATUS: ARCHITECT_ACCEPTED (regression found and fixed)
 
 DESIGNER CHANGES (2026-06-16):
 - Главный дизайнер завершил дизайн-полировку блока SUPERADMIN
@@ -18,9 +18,21 @@ POST-DESIGN VERIFICATION (2026-06-16):
 - Git diff --check: OK (только LF→CRLF warnings)
 - Form Integrity: 5 критичных форм — action/method/names/submit/CSRF целы
 - Runtime Routes: 0 ошибок 500; все protected → 302; /login → 200
-- Bugs Found: NONE
-- Bugs Fixed: NONE (ничего не сломано)
 - Design Safety: erp-ui.css подключён, layout цел, inline-style чисты
+
+REGRESSION FOUND (2026-06-16):
+- POST /superadmin/companies/create был сломан: обработчик читал поля руководителя,
+  INSERT INTO company_users с неопределённым $id, рендерил owner_create template.
+- Причина: в коммите 3d4ee24 обработчик был ошибочно заменён на код create-owner.
+- Warning: Undefined variable $company в superadmin_company_owner_create.php:1.
+
+REGRESSION FIXED (2026-06-16):
+- Восстановлен оригинальный POST-обработчик создания экспедитора из коммита 627c100.
+- Обработчик: читает поля компании, INSERT INTO companies, создаёт БД+storage,
+  редиректит на /superadmin/companies.
+- Рендерит superadmin_companies_create.php (не owner_create).
+- PHP Syntax: public/index.php — OK.
+- Git diff --check: OK.
 
 NEXT:
 1. Commit
