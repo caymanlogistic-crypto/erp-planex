@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Добавить транспорт</h1>
+        <h1>Добавить транспортную единицу</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -24,7 +24,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспорт добавлен</h1>
+        <h1>Транспортная единица добавлена</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -38,7 +38,7 @@
             Транспорт успешно добавлен.
         </div>
 
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Госномер</span>
                 <span class="kv-value"><code><?= e($createdVehicle['plate_number']) ?></code></span>
@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/vehicles" class="btn btn-primary">← К списку</a>
             <a href="/company/vehicles/create" class="btn btn-ghost">Добавить ещё</a>
         </div>
@@ -88,7 +88,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Добавить транспорт</h1>
+        <h1>Добавить транспортную единицу</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -182,7 +182,7 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Добавить транспорт</button>
+            <button type="submit" class="btn btn-primary">Добавить транспортную единицу</button>
             <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
         </div>
 

@@ -72,7 +72,7 @@
             Документ успешно загружен.
         </div>
 
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Тип документа</span>
                 <span class="kv-value"><?= e($createdDoc['document_type']) ?></span>
@@ -107,7 +107,7 @@
             <?php endif; ?>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-primary">&larr; К списку документов</a>
             <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-ghost">Загрузить ещё</a>
         </div>
@@ -118,21 +118,21 @@
 
 <div class="page-head">
     <div>
-        <a href="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-ghost" style="margin-bottom:4px">&larr; Назад к документам</a>
+        <a href="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-ghost back-action">&larr; Назад к документам</a>
         <h1><?= $replaceDocId > 0 ? 'Заменить документ' : 'Загрузить документ' ?></h1>
         <p class="text-muted"><?= e($entityLabel) ?> &laquo;<?= e($entityName) ?>&raquo; &bull; Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
 <?php if ($replacedDoc): ?>
-    <div class="notice" style="margin-bottom:8px;background:var(--surface-strong);border:1px solid var(--border)">
+    <div class="notice notice-compact">
         Замена файла <strong><?= e($replacedDoc['original_name']) ?></strong> (<?= e($replacedDoc['mime_type']) ?>, <?= e(formatFileSize($replacedDoc['file_size'])) ?>).
         Текущий файл будет заменён новым.
     </div>
 <?php endif; ?>
 
 <?php if ($formError): ?>
-    <div class="notice warn" style="margin-bottom:8px"><?= e($formError) ?></div>
+    <div class="notice warn notice-compact"><?= e($formError) ?></div>
 <?php endif; ?>
 
 <form method="post"

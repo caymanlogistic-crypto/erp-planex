@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Подрядчики</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
+        <span class="page-title">Подрядчики</span>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Подрядчики</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
+        <span class="page-title">Подрядчики</span>
     </div>
 </div>
 
@@ -33,9 +33,9 @@
 <?php elseif (empty($contractors)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Подрядчики</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
+        <span class="page-title">Подрядчики</span>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/create" class="btn btn-primary">Создать подрядчика</a>
@@ -45,7 +45,8 @@
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
-            <p>Подрядчики ещё не созданы.</p>
+            <p class="empty-title">Подрядчики ещё не созданы.</p>
+            <p class="empty-desc">Добавьте первого подрядчика, чтобы вести контакты, документы, налоговую историю и экипажи.</p>
             <a href="/company/contractors/create" class="btn btn-primary">Создать первого подрядчика</a>
         </div>
     </div>
@@ -54,9 +55,9 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Подрядчики</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
+        <span class="page-title">Подрядчики</span>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/create" class="btn btn-primary">Создать подрядчика</a>
@@ -69,31 +70,31 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Название</th>
-                        <th>ИНН</th>
-                        <th>Тип</th>
-                        <th>КПП</th>
-                        <th>Главный контакт</th>
-                        <th>Email для док.</th>
+                        <th>Подрядчик</th>
+                        <th>Реквизиты</th>
+                        <th>Контакт</th>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                        <th>Владелец</th>
+                        <th>Создал</th>
                         <?php endif; ?>
                         <th>Статус</th>
-                        <th>Создан</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($contractors as $c): ?>
                     <tr>
-                        <td class="col-mono"><?= $c['id'] ?></td>
-                        <td><?= e($c['name']) ?></td>
-                        <td class="col-mono"><?= e($c['inn']) ?></td>
-                        <td><?= !empty($c['contractor_type']) ? e($c['contractor_type']) : '—' ?></td>
-                        <td class="col-mono"><?= e($c['kpp'] ?? '') ?: '—' ?></td>
-                        <td><?= e($c['primary_contact_person'] ?? '') ?: '—' ?><?php if (!empty($c['primary_contact_phone'])): ?><br><small class="text-muted"><?= e($c['primary_contact_phone']) ?></small><?php endif; ?></td>
-                        <td><?= e($c['doc_email'] ?? '') ?: '—' ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($c['name']) ?></span>
+                            <span class="cell-sub">ID <?= $c['id'] ?><?= !empty($c['contractor_type']) ? ' / ' . e($c['contractor_type']) : '' ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main col-mono"><?= e($c['inn']) ?></span>
+                            <span class="cell-sub">КПП <?= e($c['kpp'] ?? '') ?: '—' ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($c['primary_contact_person'] ?? '') ?: '—' ?></span>
+                            <span class="cell-sub"><?= e($c['primary_contact_phone'] ?? '') ?: e($c['doc_email'] ?? '') ?: 'Контакт не указан' ?></span>
+                        </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
                         <td class="col-muted"><?= e($c['created_by_role'] ?? '—') ?> #<?= e($c['created_by_user_id'] ?? '—') ?></td>
                         <?php endif; ?>
@@ -103,11 +104,12 @@
                                 <?= $c['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
                             </span>
                         </td>
-                        <td class="col-muted"><?= e($c['created_at']) ?></td>
                         <td class="col-actions">
-                            <a href="/company/contractors/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
-                            <a href="/company/contractors/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
-                            <a href="/company/documents?entity_type=contractor&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
+                            <div class="row-actions">
+                                <a href="/company/contractors/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                                <a href="/company/contractors/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                                <a href="/company/documents?entity_type=contractor&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>

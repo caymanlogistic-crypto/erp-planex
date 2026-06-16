@@ -507,3 +507,38 @@ VERIFICATION:
   `.notice.info` background is `rgb(254, 253, 248)`, border `rgb(201, 195, 184)`;
   `.panel-danger .panel-head` background is neutral `rgb(232, 228, 219)`;
   `.danger-step.is-terminal` background is neutral `rgb(254, 253, 248)`.
+
+## 2026-06-17 — Company reference CRUD production polish
+
+STATUS: DONE
+
+FILES TOUCHED:
+- app/View/layouts/main.php
+- app/View/pages/company_*.php reference CRUD views
+- public/assets/css/app.css
+- public/index.php
+- agent-main-design/screenshots/company-reference-production/*.png
+- agent-main-design/DESIGN_WORK_LOG.md
+- agent-main-design/CHIEF_DESIGNER_CONTEXT_FOR_NEW_CHAT.md
+
+WHAT CHANGED:
+- Polished company reference CRUD screens for owner/logist roles: logists, contractors, drivers, transport units, vehicle sets, driver+transport blocks, crews and documents.
+- Compressed wide registry tables to 4-6 columns using `cell-main` / `cell-sub`, `row-actions`, `col-truncate`, and compact status/action cells.
+- Removed ad hoc inline styles from company views; only allowed hidden edit forms keep `style="display:none"`.
+- Renamed visible `/company/vehicles` UI from "Транспорт" to "Транспортные единицы"; `pts_number` remains server-side only and is not visible in views.
+- Added small reusable utilities in `app.css` for inline forms, hidden subforms, compact notices, muted rows, back actions and nav spacing.
+- Kept grants/access blocks owner-only; logist screens do not expose grant controls.
+
+VERIFICATION:
+- `php -l` passed for all changed PHP views and `public/index.php`.
+- `git diff --check` passed; only Git LF/CRLF warnings were reported.
+- Static check: no `pts_number` in `app/View/pages`, `app/View/layouts` or CSS.
+- Static check: inline `style=` in company views is limited to `display:none` on hidden edit forms.
+- Authenticated screenshots captured in `agent-main-design/screenshots/company-reference-production`.
+- Owner session checked with `owner_test_runtime / pass1234`.
+- Logist session checked with `logist_runtime_1 / pass1111`.
+- Second logist grant check performed with `logist_runtime_2 / pass2222`.
+- Browser checks confirmed CSS assets load, key pages do not show 404/SQL/Fatal/Warning, and logist screens do not show grants blocks.
+
+ISSUES / TODO:
+- No functional logic changes were made. If functional defects are found later, route them through architect/coder, not designer-side edits.

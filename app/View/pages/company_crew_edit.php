@@ -67,7 +67,7 @@
 <?php foreach ($blockingNotices as $notice): ?>
 <div class="notice warn">
     <?= $notice['message'] ?>
-    <a href="<?= $notice['link'] ?>" class="btn btn-ghost" style="margin-left:12px"><?= $notice['action'] ?></a>
+    <a href="<?= $notice['link'] ?>" class="btn btn-ghost notice-action"><?= $notice['action'] ?></a>
 </div>
 <?php endforeach; ?>
 
@@ -89,7 +89,7 @@
             Экипаж успешно обновлён.
         </div>
 
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Подрядчик</span>
                 <span class="kv-value"><?= e($crew['contractor_name'] ?? '') ?></span>
@@ -116,7 +116,7 @@
             </div>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/crews/<?= $crewId ?>" class="btn btn-primary">← К просмотру</a>
             <a href="/company/crews" class="btn btn-ghost">← К списку</a>
         </div>

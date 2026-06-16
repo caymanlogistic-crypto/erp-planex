@@ -38,7 +38,7 @@
             Клиент успешно создан.
         </div>
 
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Наименование</span>
                 <span class="kv-value"><?= e($createdClient['name']) ?></span>
@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/clients" class="btn btn-primary">← К списку клиентов</a>
             <a href="/company/clients/create" class="btn btn-ghost">Создать ещё</a>
         </div>

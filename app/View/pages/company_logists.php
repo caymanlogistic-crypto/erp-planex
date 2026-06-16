@@ -69,21 +69,19 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>ФИО</th>
-                        <th>Логин</th>
+                        <th>Пользователь</th>
                         <th>Роль</th>
                         <th>Статус</th>
-                        <th>Создан</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($logists as $l): ?>
                     <tr>
-                        <td class="col-mono"><?= $l['id'] ?></td>
-                        <td><?= e($l['full_name']) ?></td>
-                        <td class="col-mono"><?= e($l['login']) ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($l['full_name']) ?></span>
+                            <span class="cell-sub">ID <?= $l['id'] ?> / <?= e($l['login']) ?> / создан <?= e($l['created_at']) ?></span>
+                        </td>
                         <td><?= ($l['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($l['role_code'] ?? '') ?></td>
                         <td>
                             <?php if ($l['status'] === 'active'): ?>
@@ -96,10 +94,11 @@
                             <span class="badge"><span class="dot"></span><?= e($l['status']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td class="col-muted"><?= e($l['created_at']) ?></td>
                         <td class="col-actions">
-                            <a href="/company/logists/<?= $l['id'] ?>" class="btn btn-toolbar">Просмотр</a>
-                            <a href="/company/logists/<?= $l['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                            <div class="row-actions">
+                                <a href="/company/logists/<?= $l['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                                <a href="/company/logists/<?= $l['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>

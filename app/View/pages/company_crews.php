@@ -69,37 +69,42 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>Экипаж</th>
                         <th>Подрядчик</th>
                         <th>Водитель</th>
-                        <th>Телефон</th>
-                        <th>Комплект</th>
-                        <th>Транспорт</th>
+                        <th>Транспортный комплект</th>
                         <th>Статус</th>
-                        <th>Создан</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($crews as $c): ?>
                     <tr>
-                        <td class="col-mono"><?= $c['id'] ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main">Экипаж #<?= $c['id'] ?></span>
+                            <span class="cell-sub">Создан <?= e($c['created_at']) ?></span>
+                        </td>
                         <td><?= e($c['contractor_name'] ?? '—') ?></td>
-                        <td><?= e($c['driver_name'] ?? '—') ?></td>
-                        <td class="col-mono"><?= e($c['driver_phone'] ?? '—') ?></td>
-                        <td><?= e($c['set_type'] ?? '—') ?></td>
-                        <td class="col-mono"><?= e($c['plates'] ?? '—') ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($c['driver_name'] ?? '—') ?></span>
+                            <span class="cell-sub col-mono"><?= e($c['driver_phone'] ?? '—') ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main col-mono"><?= e($c['plates'] ?? '—') ?></span>
+                            <span class="cell-sub"><?= e($c['set_type'] ?? '—') ?></span>
+                        </td>
                         <td>
                             <span class="badge<?= $c['status'] === 'active' ? ' badge-ok' : '' ?>">
                                 <span class="dot"></span>
                                 <?= $c['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
                             </span>
                         </td>
-                        <td class="col-muted"><?= e($c['created_at']) ?></td>
                         <td class="col-actions">
-                            <a href="/company/crews/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
-                            <a href="/company/crews/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
-                            <a href="/company/documents?entity_type=crew&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
+                            <div class="row-actions">
+                                <a href="/company/crews/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                                <a href="/company/crews/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                                <a href="/company/documents?entity_type=crew&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>

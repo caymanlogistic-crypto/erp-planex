@@ -69,7 +69,7 @@
         <div class="notice success">
             Транспортный комплект успешно обновлён.
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/vehicle-sets/<?= $vehicleSet['id'] ?>" class="btn btn-primary">← К просмотру</a>
             <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
         </div>

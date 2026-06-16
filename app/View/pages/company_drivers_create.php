@@ -38,7 +38,7 @@
             Водитель успешно создан.
         </div>
 
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">ФИО</span>
                 <span class="kv-value"><?= e($createdDriver['full_name']) ?></span>
@@ -61,7 +61,7 @@
             </div>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/drivers" class="btn btn-primary">← К списку водителей</a>
             <a href="/company/drivers/create" class="btn btn-ghost">Создать ещё</a>
         </div>

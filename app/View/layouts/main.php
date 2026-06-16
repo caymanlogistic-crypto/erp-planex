@@ -86,7 +86,7 @@ if ($userName !== '') {
 
             <?php elseif ($roleCode === 'company_owner'): ?>
 
-            <div class="nav-group" style="padding-top:8px">
+            <div class="nav-group nav-group-spaced">
                 <div class="nav-section-label">ОПЕРАЦИИ</div>
                 <span class="nav-item is-disabled">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="8.5" width="9.5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 11H13C13.8 11 14.5 10.4 14.5 9.5C14.5 8.6 13.8 8.5 13 8.5H10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="3.5" cy="13.5" r="1.3" fill="currentColor"/><circle cx="8.5" cy="13.5" r="1.3" fill="currentColor"/><path d="M1 8.5V6.5C1 6 1.4 5.5 2 5.5H6.5L9 2.5H10.5C11 2.5 11.5 3 11.5 3.5V8.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
@@ -98,7 +98,7 @@ if ($userName !== '') {
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicles') ? ' is-active' : '' ?>" href="/company/vehicles">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="6.5" width="14" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M1 9H15" stroke="currentColor" stroke-width="1.4"/><path d="M5 6.5V5C5 4.4 5.4 4 6 4H10C10.6 4 11 4.4 11 5V6.5" stroke="currentColor" stroke-width="1.4"/><circle cx="4.5" cy="12.5" r="1.3" fill="currentColor"/><circle cx="11.5" cy="12.5" r="1.3" fill="currentColor"/></svg>
-                    <span class="nav-label">Транспорт</span>
+                    <span class="nav-label">Транспортные единицы</span>
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><path d="M4 7V9.5H12V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M4 11.5V13C4 13.5 4.5 14 5 14H11C11.5 14 12 13.5 12 13V11.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="6" cy="13" r=".8" fill="currentColor"/><circle cx="10" cy="13" r=".8" fill="currentColor"/></svg>
@@ -153,7 +153,7 @@ if ($userName !== '') {
 
             <?php elseif ($roleCode === 'logist'): ?>
 
-            <div class="nav-group" style="padding-top:8px">
+            <div class="nav-group nav-group-spaced">
                 <div class="nav-section-label">ОПЕРАЦИИ</div>
                 <span class="nav-item is-disabled">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="8.5" width="9.5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 11H13C13.8 11 14.5 10.4 14.5 9.5C14.5 8.6 13.8 8.5 13 8.5H10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="3.5" cy="13.5" r="1.3" fill="currentColor"/><circle cx="8.5" cy="13.5" r="1.3" fill="currentColor"/><path d="M1 8.5V6.5C1 6 1.4 5.5 2 5.5H6.5L9 2.5H10.5C11 2.5 11.5 3 11.5 3.5V8.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
@@ -165,7 +165,7 @@ if ($userName !== '') {
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicles') ? ' is-active' : '' ?>" href="/company/vehicles">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="6.5" width="14" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M1 9H15" stroke="currentColor" stroke-width="1.4"/><path d="M5 6.5V5C5 4.4 5.4 4 6 4H10C10.6 4 11 4.4 11 5V6.5" stroke="currentColor" stroke-width="1.4"/><circle cx="4.5" cy="12.5" r="1.3" fill="currentColor"/><circle cx="11.5" cy="12.5" r="1.3" fill="currentColor"/></svg>
-                    <span class="nav-label">Транспорт</span>
+                    <span class="nav-label">Транспортные единицы</span>
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><path d="M4 7V9.5H12V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M4 11.5V13C4 13.5 4.5 14 5 14H11C11.5 14 12 13.5 12 13V11.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="6" cy="13" r=".8" fill="currentColor"/><circle cx="10" cy="13" r=".8" fill="currentColor"/></svg>

@@ -147,11 +147,11 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
-            <form method="post" action="/company/access-grants/grant" style="margin-top:12px">
+            <form method="post" action="/company/access-grants/grant" class="grant-form">
                 <input type="hidden" name="entity_type" value="client">
                 <input type="hidden" name="entity_id" value="<?= $client['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/clients/<?= $client['id'] ?>">
-                <div class="field" style="display:inline-block;margin-right:8px">
+                <div class="field inline-field">
                     <select name="granted_to_user_id" class="field-select">
                         <option value="">— Выберите логиста —</option>
                         <?php foreach($logists as $l): ?>
@@ -168,12 +168,12 @@ require_once __DIR__ . '/../components/status_badge.php';
             <h3 class="panel-head-title">Действия</h3>
             <?php if ($client['status'] !== 'archived'): ?>
             <form method="post" action="/company/clients/<?= $client['id'] ?>/archive" onsubmit="return confirm('Вы уверены, что хотите архивировать клиента?')">
-                <button type="submit" class="btn btn-warn">Архивировать</button>
+                <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>
             <?php endif; ?>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/clients/<?= $client['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/documents?entity_type=client&entity_id=<?= $client['id'] ?>" class="btn btn-ghost">Документы</a>
             <a href="/company/clients" class="btn btn-ghost">← К списку</a>

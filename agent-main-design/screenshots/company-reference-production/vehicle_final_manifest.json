@@ -1,0 +1,10 @@
+{
+  "badText": false,
+  "inlineBad": [
+    "position: fixed; inset: 0px; pointer-events: none; z-index: 2147483647;"
+  ],
+  "pts": false,
+  "thMax": 6,
+  "title": "Транспортные единицы",
+  "url": "/company/vehicles"
+}

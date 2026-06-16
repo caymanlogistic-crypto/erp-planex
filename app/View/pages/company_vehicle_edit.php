@@ -40,7 +40,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспорт не найден</h1>
+        <h1>Транспортная единица не найдена</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
@@ -56,7 +56,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспорт обновлён</h1>
+        <h1>Транспортная единица обновлена</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -70,7 +70,7 @@
             Транспорт успешно обновлён.
         </div>
 
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Госномер</span>
                 <span class="kv-value"><code><?= e($vehicle['plate_number']) ?></code></span>
@@ -97,7 +97,7 @@
             </div>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/vehicles/<?= $vehicleId ?>" class="btn btn-primary">← К просмотру</a>
             <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
         </div>

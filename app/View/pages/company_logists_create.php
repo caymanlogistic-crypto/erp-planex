@@ -38,7 +38,7 @@
             Пользователь успешно создан. Ниже — данные для передачи.
         </div>
 
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Компания</span>
                 <span class="kv-value"><?= e($company['name']) ?></span>
@@ -54,7 +54,7 @@
             <div class="kv-row">
                 <span class="kv-key">Временный пароль</span>
                 <span class="kv-value">
-                    <code style="background:var(--warn-bg);padding:2px 6px;border-radius:3px"><?= e($tempPassword) ?></code>
+                    <code class="code-hi"><?= e($tempPassword) ?></code>
                 </span>
             </div>
             <div class="kv-row">
@@ -63,12 +63,12 @@
             </div>
         </div>
 
-        <div class="notice warn" style="margin-top:16px">
+        <div class="notice warn mt-4">
             Временный пароль показан только один раз. Сохраните его или передайте пользователю сейчас.
             Пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/logists" class="btn btn-primary">← К списку пользователей</a>
             <a href="/company/logists/create" class="btn btn-ghost">Создать ещё</a>
         </div>
@@ -120,17 +120,15 @@
 
             <div class="field">
                 <label class="field-label">Пароль</label>
-                <div style="display:flex;gap:8px;align-items:flex-start">
-                    <input type="text" name="password" class="field-input"
+                <div class="field-inline-group">
+                    <input type="text" name="password" class="field-input field-inline-grow"
                            value="<?= e($old['password'] ?? $generatedPassword ?? '') ?>"
-                           placeholder="Оставьте пустым для автогенерации"
-                           style="flex:1">
-                    <button type="button" class="btn btn-toolbar" onclick="generatePassword()"
-                            style="white-space:nowrap;margin-top:0">
+                           placeholder="Оставьте пустым для автогенерации">
+                    <button type="button" class="btn btn-toolbar btn-nowrap btn-align-top" onclick="generatePassword()">
                         Сгенерировать
                     </button>
                 </div>
-                <div class="field-msg" style="margin-top:4px">
+                <div class="field-msg field-msg-tight">
                     Если не заполнено — пароль будет сгенерирован автоматически.
                 </div>
                 <?php if (!empty($errors['password'])): ?>

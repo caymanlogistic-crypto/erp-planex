@@ -29,7 +29,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice danger"><?= e($dbError) ?></div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
@@ -138,11 +138,11 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
-            <form method="post" action="/company/access-grants/grant" style="margin-top:12px">
+            <form method="post" action="/company/access-grants/grant" class="grant-form">
                 <input type="hidden" name="entity_type" value="vehicle_set">
                 <input type="hidden" name="entity_id" value="<?= $vehicleSet['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/vehicle-sets/<?= $vehicleSet['id'] ?>">
-                <div class="field" style="display:inline-block;margin-right:8px">
+                <div class="field inline-field">
                     <select name="granted_to_user_id" class="field-select">
                         <option value="">— Выберите логиста —</option>
                         <?php foreach($logists as $l): ?>
@@ -150,7 +150,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="field" style="display:inline-block;margin-right:8px">
+                <div class="field inline-field">
                     <select name="access_level" class="field-select">
                         <option value="view">Просмотр</option>
                         <option value="edit">Редактирование</option>
@@ -164,8 +164,8 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="form-actions">
             <a href="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/documents?entity_type=vehicle_set&entity_id=<?= $vehicleSet['id'] ?>" class="btn btn-toolbar">Документы</a>
-            <form method="post" action="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать транспортный комплект?')">
-                <button type="submit" class="btn btn-warn">Архивировать</button>
+            <form method="post" action="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать транспортный комплект?')">
+                <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>
         </div>
 

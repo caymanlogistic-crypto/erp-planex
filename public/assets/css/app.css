@@ -126,6 +126,9 @@ body {
     margin-left: auto;
     color: var(--danger-text);
 }
+.nav-group-spaced {
+    padding-top: 8px;
+}
 .command-center {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -254,6 +257,62 @@ body {
     display: flex;
     gap: 4px;
     flex-shrink: 0;
+}
+.inline-form {
+    display: inline;
+}
+.inline-field {
+    display: inline-block;
+    margin-right: 8px;
+}
+.grant-form {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.grant-form .field {
+    margin-bottom: 0;
+}
+.text-danger {
+    color: var(--danger);
+}
+.col-truncate {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.is-muted-row {
+    opacity: .62;
+}
+.entity-subform {
+    margin-top: 16px;
+}
+.hidden-subform {
+    margin-top: 12px;
+}
+.hidden-subform[style="display:none"] {
+    display: none;
+}
+.notice-action {
+    margin-left: 12px;
+}
+.field-msg-tight {
+    margin-top: 4px;
+}
+.btn-align-top {
+    margin-top: 0;
+}
+.notice-compact {
+    margin-bottom: 8px;
+}
+.back-action {
+    margin-bottom: 4px;
+}
+.muted-copy {
+    margin-bottom: 8px;
 }
 .risk-actions {
     display: flex;

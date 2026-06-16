@@ -37,7 +37,7 @@
         <div class="notice success">
             Блок "Водитель + ТС" успешно создан.
         </div>
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Водитель</span>
                 <span class="kv-value"><?= e($createdBlock['driver_name'] ?? '—') ?></span>
@@ -51,7 +51,7 @@
                 <span class="kv-value">Активен</span>
             </div>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/driver-vehicle-blocks" class="btn btn-primary">← К списку</a>
             <a href="/company/driver-vehicle-blocks/create" class="btn btn-ghost">Создать ещё</a>
         </div>

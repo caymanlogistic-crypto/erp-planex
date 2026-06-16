@@ -165,6 +165,42 @@ Layout `app/View/layouts/main.php` подключает сначала `/assets/
   `.next-action.is-critical`, `.danger-step.is-terminal` используют нейтральные поверхности.
 ```
 
+## COMPANY reference CRUD production state (2026-06-17)
+
+```text
+✓ Выполнен дизайн-проход по справочникам компании:
+  логисты, подрядчики, водители, транспортные единицы, комплекты,
+  водитель+ТС, экипажи, документы.
+✓ Таблицы реестров сжаты до 4-6 колонок через cell-main/cell-sub и row-actions.
+✓ В карточке подрядчика контактная таблица сжата до 5 колонок.
+✓ Видимый `/company/vehicles` термин теперь "Транспортные единицы".
+✓ `pts_number` не выводится в view/CSS; серверная обработка в public/index.php сохранена.
+✓ Inline-style в company views оставлен только для скрытых edit-form блоков:
+  `style="display:none"`.
+✓ Логистические экраны проверены: grant/access blocks не видны логистам.
+✓ Проверены аккаунты:
+  owner_test_runtime / pass1234,
+  logist_runtime_1 / pass1111,
+  logist_runtime_2 / pass2222.
+✓ Screenshot set:
+  `agent-main-design/screenshots/company-reference-production/*.png`
+✓ Проверено:
+  php -l по изменённым PHP и public/index.php,
+  git diff --check,
+  CSS assets 200,
+  отсутствие 404/SQL/Fatal/Warning на ключевых screens.
+```
+
+## COMPANY reference CRUD anti-regression notes
+
+```text
+1. Не возвращать "Транспорт" как название раздела `/company/vehicles`; использовать "Транспортные единицы".
+2. Не показывать `pts_number` в UI без отдельного решения владельца + ChatGPT.
+3. Grant/access UI должен быть виден владельцу, но не логисту.
+4. Списки справочников держать в 4-6 колонках; вторичные данные переносить в cell-sub.
+5. Для inline edit blocks разрешён только `style="display:none"`; остальные отступы/inline-form через CSS-классы.
+```
+
 ## СТОП-ОШИБКИ — обязательно к исполнению
 
 ```text

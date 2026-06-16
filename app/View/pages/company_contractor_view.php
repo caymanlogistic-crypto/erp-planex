@@ -34,7 +34,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
@@ -156,10 +156,8 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <thead>
                         <tr>
                             <th>Контактное лицо</th>
-                            <th>Телефон</th>
-                            <th>Email</th>
-                            <th>Главный</th>
-                            <th>Email для док.</th>
+                            <th>Связь</th>
+                            <th>Назначение</th>
                             <th>Комментарий</th>
                             <th></th>
                         </tr>
@@ -168,23 +166,27 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <?php foreach ($contacts as $ct): ?>
                     <tr>
                         <td><?= e($ct['contact_person'] ?? '—') ?></td>
-                        <td class="col-mono"><?= e($ct['phone'] ?? '—') ?></td>
-                        <td><?= e($ct['email'] ?? '—') ?></td>
-                        <td><?= $ct['is_primary'] ? '✓' : '—' ?></td>
-                        <td><?= $ct['is_document_email'] ? '✓' : '—' ?></td>
-                        <td class="col-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><?= e($ct['comment'] ?? '') ?></td>
+                        <td>
+                            <div class="cell-main col-mono"><?= e($ct['phone'] ?? '—') ?></div>
+                            <div class="cell-sub"><?= e($ct['email'] ?? '—') ?></div>
+                        </td>
+                        <td>
+                            <div class="cell-main"><?= $ct['is_primary'] ? 'Главный контакт' : '—' ?></div>
+                            <div class="cell-sub"><?= $ct['is_document_email'] ? 'Email для документов' : '—' ?></div>
+                        </td>
+                        <td class="col-muted col-truncate"><?= e($ct['comment'] ?? '') ?></td>
                         <td class="col-actions">
                             <button type="button" class="btn btn-toolbar" onclick="editContact(<?= $ct['id'] ?>)">Редактировать</button>
-                            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/delete" style="display:inline" onsubmit="return confirm('Удалить контакт?')">
-                                <button type="submit" class="btn btn-toolbar" style="color:var(--danger)">Удалить</button>
+                            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/delete" class="inline-form" onsubmit="return confirm('Удалить контакт?')">
+                                <button type="submit" class="btn btn-toolbar text-danger">Удалить</button>
                             </form>
                             <?php if (!$ct['is_primary']): ?>
-                            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/set-primary" style="display:inline">
+                            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/set-primary" class="inline-form">
                                 <button type="submit" class="btn btn-toolbar">Сделать главным</button>
                             </form>
                             <?php endif; ?>
                             <?php if (!$ct['is_document_email'] && !empty($ct['email'])): ?>
-                            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/set-document-email" style="display:inline">
+                            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/set-document-email" class="inline-form">
                                 <button type="submit" class="btn btn-toolbar">Email для док.</button>
                             </form>
                             <?php endif; ?>
@@ -197,8 +199,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <?php endif; ?>
 
             <!-- Inline contact edit form (hidden by default, shown via JS) -->
-            <div id="contact-edit-form" style="display:none;margin-top:12px">
-                <h4 class="panel-head-title" style="font-size:1rem">Редактировать контакт</h4>
+            <div id="contact-edit-form" class="hidden-subform" style="display:none">
+                <h4 class="section-title">Редактировать контакт</h4>
                 <form method="post" id="contact-edit-frm">
                     <input type="hidden" name="contact_edit_id" id="contact-edit-id" value="">
                     <div class="frm-row">
@@ -229,8 +231,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             </div>
 
             <!-- Add contact form -->
-            <div style="margin-top:16px">
-                <h4 class="panel-head-title" style="font-size:1rem">Добавить контакт</h4>
+            <div class="entity-subform">
+                <h4 class="section-title">Добавить контакт</h4>
                 <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/create">
                     <div class="frm-row">
                         <div class="field">
@@ -274,7 +276,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                     }
                 }
                 ?>
-                <p style="margin-bottom:8px">
+                <p class="muted-copy">
                     <strong>Актуальная система:</strong>
                     <?= $activeTax ? e($activeTax) : '<span class="text-muted">Актуальная система не определена</span>' ?>
                 </p>
@@ -303,8 +305,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <?php endif; ?>
 
             <!-- Add tax history form -->
-            <div style="margin-top:16px">
-                <h4 class="panel-head-title" style="font-size:1rem">Добавить запись</h4>
+            <div class="entity-subform">
+                <h4 class="section-title">Добавить запись</h4>
                 <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/tax-history/create">
                     <div class="frm-row">
                         <div class="field">
@@ -355,11 +357,11 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
-            <form method="post" action="/company/access-grants/grant" style="margin-top:12px">
+            <form method="post" action="/company/access-grants/grant" class="grant-form">
                 <input type="hidden" name="entity_type" value="contractor">
                 <input type="hidden" name="entity_id" value="<?= $contractor['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/contractors/<?= $contractor['id'] ?>">
-                <div class="field" style="display:inline-block;margin-right:8px">
+                <div class="field inline-field">
                     <select name="granted_to_user_id" class="field-select">
                         <option value="">— Выберите логиста —</option>
                         <?php foreach($logists as $l): ?>
@@ -389,8 +391,8 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="form-actions">
             <a href="/company/contractors/<?= $contractor['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/documents?entity_type=contractor&entity_id=<?= $contractor['id'] ?>" class="btn btn-ghost">Документы</a>
-            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать подрядчика?')">
-                <button type="submit" class="btn btn-warn">Архивировать</button>
+            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать подрядчика?')">
+                <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>
         </div>
 

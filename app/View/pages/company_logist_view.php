@@ -76,20 +76,20 @@ require_once __DIR__ . '/../components/status_badge.php';
             Пароль успешно сброшен.
         </div>
 
-        <dl class="kv" style="margin-top:16px">
+        <dl class="kv mt-4">
             <dt>ФИО</dt>
             <dd><?= e($logist['full_name']) ?></dd>
             <dt>Логин</dt>
             <dd><code><?= e($logist['login']) ?></code></dd>
             <dt>Новый временный пароль</dt>
-            <dd><code style="background:var(--warning-bg);padding:2px 6px;border-radius:3px"><?= e($newPassword) ?></code></dd>
+            <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
         </dl>
 
-        <div class="notice warn" style="margin-top:16px">
+        <div class="notice warn mt-4">
             Временный пароль показан только один раз. Сохраните его сейчас. Пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/logists/<?= $logist['id'] ?>" class="btn btn-ghost">← К карточке пользователя</a>
         </div>
     </div>
@@ -141,18 +141,18 @@ require_once __DIR__ . '/../components/status_badge.php';
 
         <div class="form-section">
             <h3 class="panel-head-title">Действия</h3>
-            <form method="post" action="/company/logists/<?= $logist['id'] ?>/reset-password" style="margin-bottom:12px">
-                <p class="text-muted" style="margin-bottom:8px">Вы уверены? Текущий пароль будет заменён. Новый пароль будет показан только один раз.</p>
-                <button type="submit" class="btn btn-warn">Сбросить пароль</button>
+            <form method="post" action="/company/logists/<?= $logist['id'] ?>/reset-password" class="mb-3">
+                <p class="text-muted muted-copy">Вы уверены? Текущий пароль будет заменён. Новый пароль будет показан только один раз.</p>
+                <button type="submit" class="btn btn-secondary">Сбросить пароль</button>
             </form>
             <?php if ($logist['status'] !== 'archived'): ?>
             <form method="post" action="/company/logists/<?= $logist['id'] ?>/archive" onsubmit="return confirm('Вы уверены, что хотите архивировать пользователя?')">
-                <button type="submit" class="btn btn-warn">Архивировать</button>
+                <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>
             <?php endif; ?>
         </div>
 
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/logists/<?= $logist['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/logists" class="btn btn-ghost">← К списку</a>
         </div>

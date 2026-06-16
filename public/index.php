@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 /**
  * ERP PLANEX — Entry Point
@@ -5241,8 +5241,8 @@ $router->post('/company/drivers/{driver_id}/phones/{phone_id}/set-main', functio
 
 $router->get('/company/vehicles', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageTitle = 'Транспортные единицы';
+    $pageContext = 'Транспортные единицы — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -5276,7 +5276,7 @@ $router->get('/company/vehicles', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicles = [];
@@ -5350,8 +5350,8 @@ $router->get('/company/vehicles', function () use ($config, $db) {
 
 $router->get('/company/vehicles/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Добавить транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageTitle = 'Добавить транспортную единицу';
+    $pageContext = 'Транспортные единицы — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -5391,7 +5391,7 @@ $router->get('/company/vehicles/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -5415,8 +5415,8 @@ $router->get('/company/vehicles/create', function () use ($config, $db) {
 
 $router->post('/company/vehicles/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Добавить транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageTitle = 'Добавить транспортную единицу';
+    $pageContext = 'Транспортные единицы — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -5453,7 +5453,7 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Добавление транспорта недоступно';
@@ -5560,8 +5560,8 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
 $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
-    $pageTitle = 'Транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageTitle = 'Транспортные единицы';
+    $pageContext = 'Транспортные единицы — Компания';
     $entityNotFound = false;
     $grants = [];
     $logists = [];
@@ -5598,7 +5598,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             return;
         }
 
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicle = null;
@@ -5723,7 +5723,7 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Редактировать транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспортные единицы — Компания';
     $entityNotFound = false;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -5763,7 +5763,7 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
             return;
         }
 
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicle = null;
@@ -5828,7 +5828,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Редактировать транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспортные единицы — Компания';
     $entityNotFound = false;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -5869,7 +5869,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
             return;
         }
 
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicle = null;
@@ -6047,7 +6047,7 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
         $crewCheck->execute([$vehicleId, 'active']);
         if ($crewCheck->fetchColumn() > 0) {
             $pageTitle = 'Невозможно архивировать';
-            $pageContext = 'Транспорт — Компания';
+            $pageContext = 'Транспортные единицы — Компания';
             $companyError = false;
             $company = $company;
             $message = 'Транспорт используется в активных экипажах. Сначала удалите транспорт из всех экипажей.';
@@ -7977,7 +7977,7 @@ $router->get('/company/documents', function () use ($config, $db) {
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
-                   'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
+                   'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
                    'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
@@ -8144,7 +8144,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
-                   'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
+                   'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
                    'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
@@ -8299,7 +8299,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
-                   'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
+                   'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
                    'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
@@ -9606,7 +9606,7 @@ $router->get('/superadmin/companies/{id}/vehicles', function ($id) use ($config,
             return;
         }
 
-        $pageTitle = 'Транспорт: ' . $company['name'];
+        $pageTitle = 'Транспортные единицы: ' . $company['name'];
         $pageContext = 'Реестр компаний';
 
         $items = [];

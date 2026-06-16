@@ -37,7 +37,7 @@
         <div class="notice success">
             Транспортный комплект успешно создан.
         </div>
-        <div class="kv" style="margin-top:16px">
+        <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Тип комплекта</span>
                 <span class="kv-value"><?= e($createdVehicleSet['set_type']) ?></span>
@@ -57,7 +57,7 @@
                 <span class="kv-value">Активен</span>
             </div>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/vehicle-sets" class="btn btn-primary">← К списку</a>
             <a href="/company/vehicle-sets/create" class="btn btn-ghost">Создать ещё</a>
         </div>

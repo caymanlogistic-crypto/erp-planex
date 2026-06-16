@@ -34,7 +34,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
         </div>
     </div>

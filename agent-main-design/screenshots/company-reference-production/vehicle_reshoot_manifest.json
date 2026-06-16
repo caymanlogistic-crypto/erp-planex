@@ -1,0 +1,35 @@
+[
+  {
+    "name": "logist_03_vehicles_reshoot",
+    "url": "/company/vehicles",
+    "badText": false,
+    "inlineBad": [
+      "position: fixed; inset: 0px; pointer-events: none; z-index: 2147483647;"
+    ],
+    "pts": false,
+    "thMax": 6,
+    "title": "Транспортные единицы"
+  },
+  {
+    "name": "logist_vehicles_create_reshoot",
+    "url": "/company/vehicles/create",
+    "badText": false,
+    "inlineBad": [
+      "position: fixed; inset: 0px; pointer-events: none; z-index: 2147483647;"
+    ],
+    "pts": false,
+    "thMax": 0,
+    "title": "Добавить транспортную единицу"
+  },
+  {
+    "name": "logist_09_vehicle_view_reshoot",
+    "url": "/company/vehicles/3",
+    "badText": false,
+    "inlineBad": [
+      "position: fixed; inset: 0px; pointer-events: none; z-index: 2147483647;"
+    ],
+    "pts": false,
+    "thMax": 0,
+    "title": "Транспортная единица: Т999ТТ77"
+  }
+]

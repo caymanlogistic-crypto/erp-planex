@@ -69,7 +69,7 @@
         <div class="notice success">
             Блок "Водитель + ТС" успешно обновлён.
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/driver-vehicle-blocks/<?= $block['id'] ?>" class="btn btn-primary">← К просмотру</a>
             <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
         </div>

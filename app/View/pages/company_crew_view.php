@@ -166,11 +166,11 @@
             <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
-            <form method="post" action="/company/access-grants/grant" style="margin-top:12px">
+            <form method="post" action="/company/access-grants/grant" class="grant-form">
                 <input type="hidden" name="entity_type" value="crew">
                 <input type="hidden" name="entity_id" value="<?= $crew['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/crews/<?= $crew['id'] ?>">
-                <div class="field" style="display:inline-block;margin-right:8px">
+                <div class="field inline-field">
                     <select name="granted_to_user_id" class="field-select">
                         <option value="">— Выберите логиста —</option>
                         <?php foreach($logists as $l): ?>
@@ -186,8 +186,8 @@
         <div class="form-actions">
             <a href="/company/crews/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/documents?entity_type=crew&entity_id=<?= $crew['id'] ?>" class="btn btn-toolbar">Документы</a>
-            <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать экипаж?')">
-                <button type="submit" class="btn btn-warn">Архивировать</button>
+            <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать экипаж?')">
+                <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>
         </div>
 

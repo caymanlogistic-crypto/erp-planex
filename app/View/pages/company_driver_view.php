@@ -34,7 +34,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice danger">
             <?= e($dbError) ?>
         </div>
-        <div class="form-actions" style="margin-top:16px">
+        <div class="form-actions mt-4">
             <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
@@ -166,14 +166,14 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <tr>
                         <td class="col-mono"><?= e($ph['phone'] ?? '—') ?></td>
                         <td><?= $ph['is_main'] ? '✓' : '—' ?></td>
-                        <td class="col-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><?= e($ph['comment'] ?? '') ?></td>
+                        <td class="col-muted col-truncate"><?= e($ph['comment'] ?? '') ?></td>
                         <td class="col-actions">
                             <button type="button" class="btn btn-toolbar" onclick="editPhone(<?= $ph['id'] ?>)">Редактировать</button>
-                            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/<?= $ph['id'] ?>/delete" style="display:inline" onsubmit="return confirm('Удалить телефон?')">
-                                <button type="submit" class="btn btn-toolbar" style="color:var(--danger)">Удалить</button>
+                            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/<?= $ph['id'] ?>/delete" class="inline-form" onsubmit="return confirm('Удалить телефон?')">
+                                <button type="submit" class="btn btn-toolbar text-danger">Удалить</button>
                             </form>
                             <?php if (!$ph['is_main']): ?>
-                            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/<?= $ph['id'] ?>/set-main" style="display:inline">
+                            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/<?= $ph['id'] ?>/set-main" class="inline-form">
                                 <button type="submit" class="btn btn-toolbar">Сделать основным</button>
                             </form>
                             <?php endif; ?>
@@ -186,8 +186,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <?php endif; ?>
 
             <!-- Inline phone edit form -->
-            <div id="phone-edit-form" style="display:none;margin-top:12px">
-                <h4 class="panel-head-title" style="font-size:1rem">Редактировать телефон</h4>
+            <div id="phone-edit-form" class="hidden-subform" style="display:none">
+                <h4 class="section-title">Редактировать телефон</h4>
                 <form method="post" id="phone-edit-frm">
                     <input type="hidden" name="phone_edit_id" id="phone-edit-id" value="">
                     <div class="frm-row">
@@ -208,8 +208,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             </div>
 
             <!-- Add phone form -->
-            <div style="margin-top:16px">
-                <h4 class="panel-head-title" style="font-size:1rem">Добавить телефон</h4>
+            <div class="entity-subform">
+                <h4 class="section-title">Добавить телефон</h4>
                 <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/create">
                     <div class="frm-row">
                         <div class="field">
@@ -286,11 +286,11 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
-            <form method="post" action="/company/access-grants/grant" style="margin-top:12px">
+            <form method="post" action="/company/access-grants/grant" class="grant-form">
                 <input type="hidden" name="entity_type" value="driver">
                 <input type="hidden" name="entity_id" value="<?= $driver['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/drivers/<?= $driver['id'] ?>">
-                <div class="field" style="display:inline-block;margin-right:8px">
+                <div class="field inline-field">
                     <select name="granted_to_user_id" class="field-select">
                         <option value="">— Выберите логиста —</option>
                         <?php foreach($logists as $l): ?>
@@ -320,8 +320,8 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="form-actions">
             <a href="/company/drivers/<?= $driver['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/documents?entity_type=driver&entity_id=<?= $driver['id'] ?>" class="btn btn-ghost">Документы</a>
-            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать водителя?')">
-                <button type="submit" class="btn btn-warn">Архивировать</button>
+            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать водителя?')">
+                <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>
         </div>
 

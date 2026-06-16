@@ -53,7 +53,7 @@
 
 <div class="page-head">
     <div>
-        <a href="<?= e($backRoute) ?>" class="btn btn-ghost" style="margin-bottom:4px">&larr; Назад к <?= e($entityLabelDative) ?></a>
+        <a href="<?= e($backRoute) ?>" class="btn btn-ghost back-action">&larr; Назад к <?= e($entityLabelDative) ?></a>
         <h1>Документы: <?= e($entityName) ?></h1>
         <p class="text-muted"><?= e($entityLabel) ?> &bull; Компания: <?= e($company['name']) ?></p>
     </div>
@@ -75,7 +75,7 @@
 
 <div class="page-head">
     <div>
-        <a href="<?= e($backRoute) ?>" class="btn btn-ghost" style="margin-bottom:4px">&larr; Назад к <?= e($entityLabelDative) ?></a>
+        <a href="<?= e($backRoute) ?>" class="btn btn-ghost back-action">&larr; Назад к <?= e($entityLabelDative) ?></a>
         <h1>Документы: <?= e($entityName) ?></h1>
         <p class="text-muted"><?= e($entityLabel) ?> &bull; Компания: <?= e($company['name']) ?></p>
     </div>
@@ -90,24 +90,27 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>Тип документа</th>
-                        <th>Имя файла</th>
-                        <th>Размер</th>
-                        <th>MIME</th>
+                        <th>Документ</th>
+                        <th>Файл</th>
+                        <th>Параметры</th>
                         <th>Статус</th>
                         <th>Дата загрузки</th>
-                        <th>Комментарий</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($documents as $doc): ?>
                     <?php $isDeleted = !empty($doc['deleted_at']); ?>
-                    <tr<?= $isDeleted ? ' style="opacity:0.6"' : '' ?>>
-                        <td><?= e($doc['document_type']) ?><?php if ($isDeleted): ?> <span class="badge badge-warn">Удалён</span><?php endif; ?></td>
-                        <td><?= e($doc['original_name']) ?></td>
+                    <tr class="<?= $isDeleted ? 'is-muted-row' : '' ?>">
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($doc['document_type']) ?><?php if ($isDeleted): ?> <span class="badge badge-warn">Удалён</span><?php endif; ?></span>
+                            <span class="cell-sub"><?= e($doc['comments'] ?? '') ?: 'Комментарий не указан' ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($doc['original_name']) ?></span>
+                            <span class="cell-sub col-mono"><?= e($doc['mime_type']) ?></span>
+                        </td>
                         <td class="col-num"><?= e($doc['file_size_formatted']) ?></td>
-                        <td class="col-mono"><?= e($doc['mime_type']) ?></td>
                         <td>
                             <?php if ($isDeleted): ?>
                                 <span class="badge badge-warn"><span class="dot"></span>Удалён</span>
@@ -118,13 +121,12 @@
                             <?php endif; ?>
                         </td>
                         <td class="col-muted"><?= e($doc['created_at']) ?></td>
-                        <td class="col-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><?= e($doc['comments'] ?? '') ?></td>
                         <td class="col-actions">
                             <?php if (!$isDeleted): ?>
                             <a href="/company/documents/download?id=<?= $doc['id'] ?>" class="btn btn-toolbar">Скачать</a>
                             <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>&replace=<?= $doc['id'] ?>" class="btn btn-toolbar">Заменить</a>
-                            <form method="post" action="/company/documents/delete?id=<?= $doc['id'] ?>&redirect=<?= urlencode('/company/documents?entity_type=' . $entityType . '&entity_id=' . $entityId) ?>" style="display:inline" onsubmit="return confirm('Архивировать документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
-                                <button type="submit" class="btn btn-toolbar" style="color:var(--danger)">Архивировать</button>
+                            <form method="post" action="/company/documents/delete?id=<?= $doc['id'] ?>&redirect=<?= urlencode('/company/documents?entity_type=' . $entityType . '&entity_id=' . $entityId) ?>" class="inline-form" onsubmit="return confirm('Архивировать документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
+                                <button type="submit" class="btn btn-toolbar text-danger">Архивировать</button>
                             </form>
                             <?php else: ?>
                             <span class="text-muted">Документ удалён</span>

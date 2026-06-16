@@ -26,7 +26,7 @@ if ($companyError): ?>
     </div>
 </div>
 
-<div class="notice" style="margin-bottom:10px">
+<div class="notice notice-compact">
     Система в разработке. Доступные разделы:
 </div>
 
@@ -59,7 +59,7 @@ if ($companyError): ?>
         </a>
 
         <a href="/company/vehicles" class="dash-link">
-            <span class="dash-link-label">Транспорт</span>
+            <span class="dash-link-label">Транспортные единицы</span>
             <span class="dash-link-desc">Реестр транспортных средств</span>
         </a>
 

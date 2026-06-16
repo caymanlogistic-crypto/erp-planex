@@ -8,20 +8,20 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспорт</h1>
+        <h1>Транспортные единицы</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Работа с транспортом недоступна.
+    Компания находится в статусе «<?= e($company['status']) ?>». Работа с транспортными единицами недоступна.
 </div>
 
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Транспорт</h1>
+        <h1>Транспортные единицы</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
 </div>
@@ -34,19 +34,20 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспорт</h1>
+        <h1>Транспортные единицы</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспорт</a>
+        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспортную единицу</a>
     </div>
 </div>
 
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
-            <p>Транспорт ещё не добавлен.</p>
-            <a href="/company/vehicles/create" class="btn btn-primary">Добавить первый транспорт</a>
+            <p class="empty-title">Транспортные единицы ещё не добавлены.</p>
+            <p class="empty-desc">Добавьте тягач или полуприцеп, чтобы собрать транспортный комплект и экипаж.</p>
+            <a href="/company/vehicles/create" class="btn btn-primary">Добавить первую единицу</a>
         </div>
     </div>
 </div>
@@ -55,11 +56,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспорт</h1>
+        <h1>Транспортные единицы</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспорт</a>
+        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспортную единицу</a>
     </div>
 </div>
 
@@ -69,12 +70,9 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Госномер</th>
-                        <th>Марка</th>
+                        <th>Единица</th>
                         <th>Модель</th>
-                        <th>Тип единицы</th>
-                        <th>Грузоподъёмность (т)</th>
+                        <th>Параметры</th>
                         <th>Статус</th>
                         <th>Создан</th>
                         <th></th>
@@ -83,12 +81,18 @@
                 <tbody>
                     <?php foreach ($vehicles as $v): ?>
                     <tr>
-                        <td class="col-mono"><?= $v['id'] ?></td>
-                        <td class="col-mono"><?= e($v['plate_number']) ?></td>
-                        <td><?= e($v['brand'] ?? '—') ?></td>
-                        <td><?= e($v['model'] ?? '—') ?></td>
-                        <td><?= e($v['unit_type'] ?? '—') ?></td>
-                        <td class="col-mono"><?= $v['capacity_tons'] !== null ? e($v['capacity_tons']) : '—' ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main col-mono"><?= e($v['plate_number']) ?></span>
+                            <span class="cell-sub">ID <?= $v['id'] ?> / <?= e($v['unit_type'] ?? '—') ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($v['brand'] ?? '—') ?></span>
+                            <span class="cell-sub"><?= e($v['model'] ?? '—') ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= $v['capacity_tons'] !== null ? e($v['capacity_tons']) . ' т' : '—' ?></span>
+                            <span class="cell-sub">Грузоподъёмность</span>
+                        </td>
                         <td>
                             <span class="badge<?= $v['status'] === 'active' ? ' badge-ok' : '' ?>">
                                 <span class="dot"></span>
@@ -97,9 +101,11 @@
                         </td>
                         <td class="col-muted"><?= e($v['created_at']) ?></td>
                         <td class="col-actions">
-                            <a href="/company/vehicles/<?= $v['id'] ?>" class="btn btn-toolbar">Просмотр</a>
-                            <a href="/company/vehicles/<?= $v['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
-                            <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $v['id'] ?>" class="btn btn-toolbar">Документы</a>
+                            <div class="row-actions">
+                                <a href="/company/vehicles/<?= $v['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                                <a href="/company/vehicles/<?= $v['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
+                                <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $v['id'] ?>" class="btn btn-toolbar">Документы</a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
