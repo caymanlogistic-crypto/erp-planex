@@ -44,6 +44,11 @@
         <div class="panel-head">
             <h3 class="panel-head-title">Справочники</h3>
         </div>
+        <div class="panel-body">
+            <div class="notice info">
+                Это аудит наполненности компании. Нулевые значения допустимы для новой компании, но для рабочей компании они означают, что владелец ещё не заполнил операционные данные.
+            </div>
+        </div>
         <div class="tbl-wrap">
             <table class="tbl">
                 <thead>
@@ -52,6 +57,7 @@
                         <th class="col-num">Всего</th>
                         <th class="col-num">Активных</th>
                         <th class="col-num">Архивированных</th>
+                        <th class="col-tight">Состояние</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -61,6 +67,7 @@
                         <td class="col-num"><?= (int)($dirs['clients']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['clients']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['clients']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['clients']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['clients']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
                         <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
@@ -68,6 +75,7 @@
                         <td class="col-num"><?= (int)($dirs['contractors']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['contractors']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['contractors']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['contractors']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['contractors']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
                         <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
@@ -75,6 +83,7 @@
                         <td class="col-num"><?= (int)($dirs['drivers']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['drivers']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['drivers']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['drivers']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['drivers']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
                         <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
@@ -82,6 +91,7 @@
                         <td class="col-num"><?= (int)($dirs['vehicles']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['vehicles']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['vehicles']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['vehicles']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
                         <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
@@ -89,6 +99,7 @@
                         <td class="col-num"><?= (int)($dirs['crews']['total'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['crews']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['crews']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['crews']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['crews']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
                         <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                 </tbody>

@@ -57,9 +57,10 @@ function docStatusBadge(string $status): string
 <?php elseif (empty($documents)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state">
+            <div class="empty-state empty-state-left">
                 <p class="empty-title">Нет документов</p>
-                <p class="empty-desc">В компании ещё не загружены документы.</p>
+                <p class="empty-desc">Документы загружаются пользователями компании к клиентам, подрядчикам, водителям, транспорту или экипажам. Для новой компании это нормально; для рабочей — проверьте, есть ли заполненные справочники и доступные пользователи.</p>
+                <a href="/superadmin/companies/<?= $id ?>" class="btn btn-secondary">← К готовности компании</a>
             </div>
         </div>
     </div>

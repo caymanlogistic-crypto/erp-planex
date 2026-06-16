@@ -1,0 +1,163 @@
+[
+  {
+    "name": "00_superadmin",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\00_superadmin.png",
+    "title": "SUPERADMIN — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/"
+  },
+  {
+    "name": "01_companies",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\01_companies.png",
+    "title": "Реестр компаний — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies"
+  },
+  {
+    "name": "02_companies_create",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\02_companies_create.png",
+    "title": "Создать экспедитора — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/create"
+  },
+  {
+    "name": "03_company2_view",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\03_company2_view.png",
+    "title": "Компания: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2"
+  },
+  {
+    "name": "04_company2_edit",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\04_company2_edit.png",
+    "title": "Редактировать компанию — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/edit"
+  },
+  {
+    "name": "05_company2_owner",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\05_company2_owner.png",
+    "title": "Руководитель: Спугов Владимир Владимироваич — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/owner"
+  },
+  {
+    "name": "06_company2_owner_edit",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\06_company2_owner_edit.png",
+    "title": "Редактировать Руководителя — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/owner/edit"
+  },
+  {
+    "name": "07_company2_users",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\07_company2_users.png",
+    "title": "Пользователи: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/users"
+  },
+  {
+    "name": "08_company2_user_create",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\08_company2_user_create.png",
+    "title": "Логист — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/users/logists/create"
+  },
+  {
+    "name": "09_company2_user1_view",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\09_company2_user1_view.png",
+    "title": "Пользователь: Гладких — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/users/logists/1"
+  },
+  {
+    "name": "10_company2_user1_edit",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\10_company2_user1_edit.png",
+    "title": "Редактировать: Гладких — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/users/logists/1/edit"
+  },
+  {
+    "name": "11_company2_directories",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\11_company2_directories.png",
+    "title": "Справочники: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/directories"
+  },
+  {
+    "name": "12_company2_clients",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\12_company2_clients.png",
+    "title": "Клиенты: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/clients"
+  },
+  {
+    "name": "13_company2_contractors",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\13_company2_contractors.png",
+    "title": "Подрядчики: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/contractors"
+  },
+  {
+    "name": "14_company2_drivers",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\14_company2_drivers.png",
+    "title": "Водители: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/drivers"
+  },
+  {
+    "name": "15_company2_vehicles",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\15_company2_vehicles.png",
+    "title": "Транспорт: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/vehicles"
+  },
+  {
+    "name": "16_company2_crews",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\16_company2_crews.png",
+    "title": "Экипажи: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/crews"
+  },
+  {
+    "name": "17_company2_documents",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\17_company2_documents.png",
+    "title": "Документы: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/documents"
+  },
+  {
+    "name": "18_company2_access_grants",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\18_company2_access_grants.png",
+    "title": "Доступы: COMPANY_EDITED_VIA_RUNTIME — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/access-grants"
+  },
+  {
+    "name": "19_company2_delete",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\19_company2_delete.png",
+    "title": "Удаление компании — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/2/delete"
+  },
+  {
+    "name": "20_company4_view_no_owner",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\20_company4_view_no_owner.png",
+    "title": "Компания: Dup Company — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/4"
+  },
+  {
+    "name": "21_company4_create_owner",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\21_company4_create_owner.png",
+    "title": "Создать Руководителя — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/4/create-owner"
+  },
+  {
+    "name": "22_company4_owner_missing",
+    "status": 200,
+    "file": "C:\\Users\\Vladimir\\Desktop\\PLANEX\\SITE\\erp\\agent-main-design\\screenshots\\superadmin-full\\22_company4_owner_missing.png",
+    "title": "Руководитель — ERP PLANEX",
+    "finalUrl": "http://127.0.0.1:8016/superadmin/companies/4/owner"
+  }
+]

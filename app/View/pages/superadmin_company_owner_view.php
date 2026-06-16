@@ -16,10 +16,30 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <?php elseif ($owner === null): ?>
 
-<div class="panel">
-    <div class="panel-body">
-        <div class="notice warn">
-            Руководитель не создан. <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner">Создать Руководителя</a>
+<div class="page-head">
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Руководитель не создан</span>
+        <span class="page-summary"><b>Критический шаг</b><span class="sep">·</span>Компания не готова к работе</span>
+    </div>
+    <div class="page-head-actions">
+        <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary">Создать руководителя</a>
+        <a href="/superadmin/companies/<?= $company['id'] ?>" class="btn btn-ghost">← К карточке компании</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="panel">
+        <div class="panel-head">
+            <span class="panel-head-title">Первичный доступ компании</span>
+            <span class="badge badge-danger">Блокер</span>
+        </div>
+        <div class="panel-body">
+            <div class="empty-state empty-state-left">
+                <p class="empty-title">У компании нет руководителя</p>
+                <p class="empty-desc">Это не техническая заглушка: без руководителя у компании нет главного ответственного пользователя, которому можно передать первичный доступ и временный пароль.</p>
+                <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary">Создать руководителя</a>
+            </div>
         </div>
     </div>
 </div>

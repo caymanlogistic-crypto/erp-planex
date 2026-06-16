@@ -35,11 +35,11 @@
             <dt>Временный пароль</dt>
             <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
             <dt>Роль</dt>
-            <dd><?= e($old['role_label'] ?? 'Логист') ?></dd>
+            <dd><?= e($old['role_label'] ?? 'Пользователь') ?></dd>
         </dl>
 
         <div class="notice warn">
-            Временный пароль показан только один раз. Сохраните его сейчас. Пароль не хранится в открытом виде и не может быть восстановлен.
+            Временный пароль показан только один раз. Передайте его пользователю по безопасному каналу сейчас: пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
 
         <div class="form-actions">
@@ -69,6 +69,9 @@
 
 <form method="post" class="panel">
     <div class="panel-body">
+        <div class="notice info">
+            Создаётся обычный пользователь компании. Он получает рабочий доступ, но не заменяет руководителя и не является главным ответственным контактом компании.
+        </div>
 
         <div class="form-section">
             <p class="section-title">Основные данные</p>
@@ -107,8 +110,7 @@
             <div class="field">
                 <label class="field-label">Роль <span class="req">*</span></label>
                 <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
-                    <option value="logist" <?= ($old['role_code'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Логист</option>
-                    <!-- DESIGN_TODO: company_owner/Руководитель — ждёт решения по multi-owner -->
+                    <option value="logist" <?= ($old['role_code'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Пользователь</option>
                     <option value="company_owner" disabled>Руководитель (недоступно)</option>
                 </select>
                 <?php if (!empty($errors['role_code'])): ?>

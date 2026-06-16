@@ -23,11 +23,12 @@ agent-main-design/FINAL3.html  ← МАСТЕР. Новый стиль не пр
 ## Актуальный CSS
 
 ```text
-public/assets/css/app.css   ← РЕАЛЬНЫЙ CSS, загружается layout
-public/assets/css/erp-ui.css ← эталон (НЕ подключён к layout, не редактировать)
+public/assets/css/erp-ui.css ← базовый эталонный CSS, подключён layout
+public/assets/css/app.css    ← compatibility/product layer, подключён после erp-ui.css
 ```
 
-Layout `app/View/layouts/main.php` подключает `/assets/css/app.css`. Все CSS-правки — только в `app.css`.
+Layout `app/View/layouts/main.php` подключает сначала `/assets/css/erp-ui.css`, затем `/assets/css/app.css`.
+Новые системные паттерны держать в `erp-ui.css`; точечную совместимость текущего PHP-layout — в `app.css`.
 
 ## Паттерн страницы SUPERADMIN (утверждённый)
 
@@ -89,6 +90,11 @@ Layout `app/View/layouts/main.php` подключает `/assets/css/app.css`. �
 ✓ Формы: form-grid-2/3, section-title, правильный spacing
 ✓ panel-head: только btn-ghost btn-sm (не btn-primary)
 ✓ superadmin_company_view: view-grid (2 колонки), btn-sm везде
+✓ Справочники clients/contractors/drivers/vehicles/crews: page-head/page-content, 5-6 колонок, empty-state
+✓ Видимый термин "Логист" убран из SUPERADMIN UI; role_code=logist и URL /logists не менять без архитектурного решения
+✓ erp-ui.css подключён перед app.css; добавлены layout aliases для текущего app-shell
+✓ `/superadmin/companies/{id}/create-owner` GET/POST добавлен в public/index.php для страницы создания Руководителя
+✓ Scroll: `.content` является вертикальным scroll-container внутри `.app-shell`
 ✓ 10 усечённых файлов восстановлены, 4 null-byte файла очищены
 ✓ MASTER_PROMPT: добавлен раздел 9A — СТОП-ОШИБКИ (7 правил)
 ```
@@ -96,8 +102,67 @@ Layout `app/View/layouts/main.php` подключает `/assets/css/app.css`. �
 ## Что ещё НЕ сделано
 
 ```text
-- Проверить рендер всех SUPERADMIN-страниц в браузере (только код, не рендер)
-- erp-ui.css: синхронизировать с app.css (не подключён к layout — низкий приоритет)
+- После новых UI-правок обязательно переснимать SUPERADMIN-скрины и смотреть глазами.
+- Dev-сервер PHP для pretty URL запускать с router script:
+  `php -S 127.0.0.1:8016 -t public public/index.php`
+```
+
+## Старт нового чата — обязательный порядок
+
+```text
+1. Прочитать MASTER_PROMPT_CHIEF_DESIGNER.md полностью.
+2. Прочитать этот файл полностью.
+3. Не использовать ошибочно присланные вложения, если владелец сказал "забудь".
+4. Перед любым статусом DESIGN_PRODUCTION_READY открыть SUPERADMIN в браузере под superadmin session.
+5. Проверить реальные URL из кнопок, а не только вручную угаданные URL.
+6. Проверить CSS assets 200.
+7. Проверить php -l для изменённых PHP.
+8. Проверить отсутствие 404 / "не найдено" / "Ошибка подключения" на ключевых пользовательских flow.
+9. После каждого найденного визуального дефекта исправить и переснять конкретный экран.
+10. Обновить DESIGN_WORK_LOG.md и этот файл перед финальным ответом.
+```
+
+## Ошибки этого чата, которые нельзя повторять
+
+```text
+1. Нельзя заявлять production-ready без просмотра скринов.
+2. Нельзя считать route рабочим только по наличию handler: точный route может быть ниже динамического.
+3. `/superadmin/companies/{id}/users/logists/create` должен открывать форму создания,
+   а не карточку пользователя `create`.
+4. `/superadmin/companies/{id}/users/logists/{user_id}` должен открывать карточку пользователя.
+   Если audit-счётчики недоступны из-за схемы локальной БД, показывать `—` + notice,
+   а не ошибку подключения всей страницы.
+5. Нельзя проверять только первый viewport: длинные страницы должны реально скроллиться.
+6. Нельзя оставлять видимый термин "Логист" в SUPERADMIN UI; технические URL/role_code не менять.
+7. Нельзя добавлять CSS-классы только в PHP: класс должен быть в erp-ui.css/app.css и проверен.
+8. Нельзя полагаться на old screenshots после правок; переснимать affected screens.
+9. Нельзя использовать синие info-плашки и большие красные danger-заливки в SUPERADMIN.
+   Пояснения должны быть нейтральными ERP surfaces; danger отделять рамкой/текстом/кнопкой, не залитым полотном.
+```
+
+## SUPERADMIN production UX state (2026-06-16)
+
+```text
+✓ Карточка компании пересобрана как command center:
+  readiness checklist, next action, локальная навигация, owner/users/directories/documents/danger hierarchy.
+✓ Пользователи пересобраны:
+  руководитель вынесен в отдельный верхний блок, обычные пользователи отдельно,
+  reset/block/archive отделены от обычных действий.
+✓ Empty states больше не сухие "нет данных":
+  объясняют нормальность/риск, источник заполнения и следующий переход.
+✓ Физическое удаление оформлено как step-like danger flow.
+✓ `/superadmin/companies/{id}/users/logists/create` GET исправлен:
+  точный route стоит перед динамическим `{user_id}`.
+✓ Карточка пользователя исправлена:
+  отсутствие `created_by_user_id`/`entity_access_grants` в локальной БД не должно превращать карточку в ошибку.
+  Недоступные счётчики показывать как `—` + notice, карточку пользователя всё равно открывать.
+✓ Новый screenshot set:
+  `agent-main-design/screenshots/superadmin-production/*.png`
+✓ Проверено:
+  php -l, CSS 200, create-owner 200, create-user screen, scroll on long pages.
+✓ После замечания владельца убраны invented blue/red slabs:
+  `.notice.info`, `.notice.danger`, `.panel-danger .panel-head`,
+  `.next-action.is-critical`, `.danger-step.is-terminal` используют нейтральные поверхности.
 ```
 
 ## СТОП-ОШИБКИ — обязательно к исполнению
@@ -111,6 +176,12 @@ Layout `app/View/layouts/main.php` подключает `/assets/css/app.css`. �
 5. form-section .field: margin-bottom:0 (иначе двойной gap)
 6. page-content: padding 8px 0 14px (horizontal=0, иначе двойное смещение)
 7. После каждого PHP-редактирования — проверить div_bal и последнюю строку
+8. Не заявлять DESIGN_PRODUCTION_READY без authenticated screenshots.
+9. Если route содержит статический хвост (`create`, `edit`) и рядом есть `{id}`/`{user_id}`,
+   проверить порядок routes в `public/index.php` и открыть фактический URL в браузере.
+10. После screenshot audit исправлять найденные дефекты и переснимать проблемный экран.
+11. После правки route-order проверить реальные ссылки из UI (`href`) и открыть их.
+12. Если локальная БД не содержит ожидаемую колонку, делать controlled UX state, не аварийный экран.
 ```
 
 ## Как оценивать

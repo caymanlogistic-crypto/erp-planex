@@ -133,7 +133,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <label class="field-label">ФИО</label>
                 <input type="text" name="director_full_name" class="field-input"
                        value="<?= e($old['director_full_name'] ?? $owner['full_name'] ?? '') ?>" readonly
-                       style="background:var(--bg-muted);color:var(--text-muted)">
+                       >
                 <div class="field-msg">ФИО руководителя редактируется в карточке Руководителя</div>
             </div>
 
@@ -141,7 +141,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <label class="field-label">Логин</label>
                 <input type="text" name="director_login" class="field-input"
                        value="<?= e($old['director_login'] ?? $owner['login'] ?? '') ?>" readonly
-                       style="background:var(--bg-muted);color:var(--text-muted)">
+                       >
                 <div class="field-msg">Логин руководителя редактируется в карточке Руководителя</div>
             </div>
 
@@ -165,7 +165,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             </div>
 
             <?php if (empty($owner)): ?>
-            <div class="notice info" style="margin-top:8px">Руководитель ещё не создан. Заполните поля, чтобы создать Руководителя при сохранении.</div>
+            <div class="notice info mt-2">Руководитель ещё не создан. Заполните поля, чтобы создать Руководителя при сохранении.</div>
             <?php endif; ?>
         </div>
 

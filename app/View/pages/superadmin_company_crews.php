@@ -29,21 +29,24 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипажи компании: <?= e($company['name']) ?></h1>
-        <p class="text-muted">ID: <?= $id ?> · Режим SUPERADMIN: просмотр</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Экипажи компании</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
 
+<div class="page-content">
+
 <?php if (empty($items)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state">
-                <p class="text-muted">Нет экипажей</p>
-                <p class="text-muted">В компании ещё не созданы экипажи.</p>
+            <div class="empty-state empty-state-left">
+                <p class="empty-title">Нет экипажей</p>
+                <p class="empty-desc">Экипаж собирается из подрядчика, транспорта и водителя. Если базовые справочники пусты, это ожидаемый результат, а не отдельная ошибка.</p>
+                <a href="/superadmin/companies/<?= $id ?>/directories" class="btn btn-secondary">← К аудиту справочников</a>
             </div>
         </div>
     </div>
@@ -57,10 +60,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Подрядчик</th>
-                        <th>Машина</th>
-                        <th>Водитель</th>
+                        <th>Экипаж</th>
+                        <th>Транспорт / водитель</th>
                         <th>Статус</th>
                         <th>Создан</th>
                         <th>Документы</th>
@@ -69,13 +70,17 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <tbody>
                     <?php foreach ($items as $item): ?>
                     <tr>
-                        <td class="col-mono"><?= $item['id'] ?></td>
-                        <td><?= e($item['contractor_name'] ?? '—') ?></td>
-                        <td><?= e($item['plate_number'] ?? '—') ?></td>
-                        <td><?= e($item['driver_name'] ?? '—') ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($item['contractor_name'] ?? '—') ?></span>
+                            <span class="cell-sub">ID <?= $item['id'] ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main col-mono"><?= e($item['plate_number'] ?? '—') ?></span>
+                            <span class="cell-sub"><?= e($item['driver_name'] ?? '—') ?></span>
+                        </td>
                         <td><?= renderStatusBadge($item['status'] ?? '') ?></td>
                         <td class="col-muted"><?= e($item['created_at'] ?? '') ?></td>
-                        <td><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=crew&entity_id=<?= $item['id'] ?>" class="btn btn-ghost btn-sm">Документы</a></td>
+                        <td class="col-actions"><div class="row-actions"><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=crew&entity_id=<?= $item['id'] ?>" class="btn btn-ghost btn-sm">Документы</a></div></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -83,5 +88,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 <?php endif; ?>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

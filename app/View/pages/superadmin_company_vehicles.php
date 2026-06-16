@@ -29,21 +29,24 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспорт компании: <?= e($company['name']) ?></h1>
-        <p class="text-muted">ID: <?= $id ?> · Режим SUPERADMIN: просмотр</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Транспорт компании</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
 
+<div class="page-content">
+
 <?php if (empty($items)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state">
-                <p class="text-muted">Нет транспорта</p>
-                <p class="text-muted">В компании ещё не создан транспорт.</p>
+            <div class="empty-state empty-state-left">
+                <p class="empty-title">Нет транспорта</p>
+                <p class="empty-desc">Без транспорта невозможно сформировать рабочие экипажи. Проверьте, должен ли владелец компании уже заполнить этот справочник.</p>
+                <a href="/superadmin/companies/<?= $id ?>/directories" class="btn btn-secondary">← К аудиту справочников</a>
             </div>
         </div>
     </div>
@@ -57,11 +60,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Госномер</th>
-                        <th>Марка</th>
-                        <th>Модель</th>
-                        <th>Тип</th>
+                        <th>Транспорт</th>
+                        <th>Марка / тип</th>
                         <th>Статус</th>
                         <th>Создан</th>
                         <th>Документы</th>
@@ -70,14 +70,17 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <tbody>
                     <?php foreach ($items as $item): ?>
                     <tr>
-                        <td class="col-mono"><?= $item['id'] ?></td>
-                        <td class="col-mono"><?= e($item['plate_number'] ?? '') ?></td>
-                        <td><?= e($item['brand'] ?? '—') ?></td>
-                        <td><?= e($item['model'] ?? '—') ?></td>
-                        <td><?= e($item['vehicle_type'] ?? '—') ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main col-mono"><?= e($item['plate_number'] ?? '') ?></span>
+                            <span class="cell-sub">ID <?= $item['id'] ?></span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($item['brand'] ?? '—') ?> <?= e($item['model'] ?? '') ?></span>
+                            <span class="cell-sub"><?= e($item['vehicle_type'] ?? '—') ?></span>
+                        </td>
                         <td><?= renderStatusBadge($item['status'] ?? '') ?></td>
                         <td class="col-muted"><?= e($item['created_at'] ?? '') ?></td>
-                        <td class="col-actions"><div class="row-actions"><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=vehicle&entity_id=<?= $item['id'] ?>" class="btn btn-ghost">Документы</a></div></td>
+                        <td class="col-actions"><div class="row-actions"><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=vehicle&entity_id=<?= $item['id'] ?>" class="btn btn-ghost btn-sm">Документы</a></div></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -85,5 +88,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 <?php endif; ?>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>

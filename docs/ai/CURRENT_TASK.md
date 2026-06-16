@@ -1,60 +1,27 @@
 # ERP PLANEX — текущая задача
 
-TASK: SUPERADMIN + управление пользователями экспедитора — полное закрытие блока
+TASK: SUPERADMIN — пост-дизайн функциональная приёмка
 
-STATUS: ARCHITECT_ACCEPTED (принято после REWORK, ожидает commit)
+STATUS: ARCHITECT_ACCEPTED (post-design verification passed)
 
-REWORK FIXES (2026-06-16):
-- FIX 1 [CRITICAL]: Убран захардкоженный AND role_code = 'logist' из reset-password запроса
-- FIX 2 [IMPORTANT]: Убран захардкоженный AND role_code = 'logist' из superadmin edit user запроса
-- FIX 3 [MINOR]: Убран фильтр role_code = 'logist' из подсчёта пользователей (3 места в delete preview)
-- FIX 4 [MISSING]: Добавлена проверка self-deactivation в POST /superadmin/companies/{id}/owner/edit
-- FIX 5 [MISSING]: Добавлена проверка последнего активного Руководителя в том же обработчике
-- FIX 6 [MINOR]: Добавлено авто-применение миграции 010_add_position_to_users.sql в /company/logists GET
-- BONUS: Восстановлен пропавший try { в обработчике POST /superadmin/companies/create
+DESIGNER CHANGES (2026-06-16):
+- Главный дизайнер завершил дизайн-полировку блока SUPERADMIN
+- Изменено: 20 view-файлов superadmin_*.php + main.php + erp-ui.css + app.css + index.php
+- Убраны все inline-style, заменены на utility-классы erp-ui.css
+- Добавлен <link> erp-ui.css в layout (был пропущен)
+- Исправлен баг роутинга: create-route перенесён ПЕРЕД динамическим {user_id}
+- Добавлен полноценный маршрут /superadmin/companies/{id}/create-owner
+- Добавлены null-safe счётчики ($countsIncomplete, $hasColumn) в logist_view
 
-IMPLEMENTED:
-- DB: миграция 007 (position в company_users), обновлена local 001, добавлена 010
-- SUPERADMIN: форма создания компании + поля руководителя, автосоздание company_owner (FR3-FR5)
-- SUPERADMIN: форма редактирования компании + поля руководителя (FR6-FR7)
-- SUPERADMIN: замена "логист" → "пользователь" в labels/заголовках, role dropdown (FR8-FR15)
-- SUPERADMIN: создание/редактирование пользователя с выбором роли (FR9-FR12)
-- COMPANY OWNER: замена "Логисты" → "Пользователи" в sidebar/views (FR16-FR17)
-- COMPANY OWNER: создание/редактирование пользователя с выбором роли (FR18-FR21)
-- COMPANY OWNER: отображение фактической роли вместо хардкода (FR22-FR23)
-- Маршруты НЕ переименованы (FR24)
-- Пароль показывается только один раз (FR25)
-- Добавлена функция applyCentralMigrations() для авто-применения миграций
-- Убраны ограничения role_code='logist' из CRUD-запросов для поддержки будущих ролей
-- Добавлено поле position в create-owner, edit-owner, company edit
-
-PENDING:
-- Runtime-проверка всех маршрутов (см. список в CHECKLIST ниже)
-- Применение миграции 007 к центральной БД (через SUPERADMIN dashboard или вручную)
-- Применение миграции 010 к локальным БД существующих компаний
-
-CHECKLIST:
-[ ] /login
-[ ] /superadmin/dashboard
-[ ] /superadmin/companies
-[ ] /superadmin/companies/create (GET + POST с руководителем и без)
-[ ] /superadmin/companies/{id}
-[ ] /superadmin/companies/{id}/edit (GET + POST с полями руководителя)
-[ ] /superadmin/companies/{id}/users
-[ ] /superadmin/companies/{id}/users/logists/create (GET + POST с role dropdown)
-[ ] /superadmin/companies/{id}/create-owner (GET + POST с position)
-[ ] /superadmin/companies/{id}/owner
-[ ] /superadmin/companies/{id}/owner/edit (GET + POST с position)
-[ ] /company/dashboard
-[ ] /company/logists
-[ ] /company/logists/create (GET + POST с role dropdown)
-[ ] /company/logists/{id}/edit (GET + POST с role dropdown)
-[ ] Сброс пароля (SUPERADMIN + company_owner)
-[ ] Вход под SUPERADMIN, company_owner, logist
-[ ] Проверка запрета доступа к чужой компании
+POST-DESIGN VERIFICATION (2026-06-16):
+- PHP Syntax: все 21 файл — OK (0 ошибок)
+- Git diff --check: OK (только LF→CRLF warnings)
+- Form Integrity: 5 критичных форм — action/method/names/submit/CSRF целы
+- Runtime Routes: 0 ошибок 500; все protected → 302; /login → 200
+- Bugs Found: NONE
+- Bugs Fixed: NONE (ничего не сломано)
+- Design Safety: erp-ui.css подключён, layout цел, inline-style чисты
 
 NEXT:
-1. Запустить локальный сервер
-2. Пройти checklist
-3. Применить миграции вручную если авто-применение не сработало
-4. Commit после успешной проверки
+1. Commit
+2. Переход к блоку водители / машины / экипажи

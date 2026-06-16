@@ -42,9 +42,10 @@
 <?php elseif (empty($grants)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state">
+            <div class="empty-state empty-state-left">
                 <p class="empty-title">Нет выданных доступов</p>
-                <p class="empty-desc">В компании ещё не выданы доступы к записям.</p>
+                <p class="empty-desc">Доступы появляются, когда пользователям выдают права на конкретные записи. Если пользователей или справочников нет, это нормальное производное состояние.</p>
+                <a href="/superadmin/companies/<?= $id ?>/users" class="btn btn-secondary">Проверить пользователей</a>
             </div>
         </div>
     </div>

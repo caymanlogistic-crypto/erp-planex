@@ -290,3 +290,220 @@ UI RESULT:
 ISSUES / TODO:
 - Проверить рендер /superadmin/companies/4 в браузере
 - Проверить рендер /superadmin/companies/4/create-owner в браузере
+
+## 2026-06-16 — SUPERADMIN production UX/UI pass
+
+STATUS: DONE
+
+FILES TOUCHED:
+- app/View/layouts/main.php
+- app/View/pages/superadmin_companies_create.php
+- app/View/pages/superadmin_company_clients.php
+- app/View/pages/superadmin_company_contractors.php
+- app/View/pages/superadmin_company_crews.php
+- app/View/pages/superadmin_company_delete.php
+- app/View/pages/superadmin_company_drivers.php
+- app/View/pages/superadmin_company_edit.php
+- app/View/pages/superadmin_company_logist_create.php
+- app/View/pages/superadmin_company_logist_edit.php
+- app/View/pages/superadmin_company_logist_view.php
+- app/View/pages/superadmin_company_owner_create.php
+- app/View/pages/superadmin_company_vehicles.php
+- public/assets/css/erp-ui.css
+- public/assets/css/app.css
+
+WHAT CHANGED:
+- layout теперь подключает erp-ui.css перед app.css; app.css остаётся compatibility/product layer.
+- Справочники clients/contractors/drivers/vehicles/crews приведены к единому page-head + page-content + table pattern.
+- Таблицы справочников сжаты до 5-6 колонок через cell-main/cell-sub.
+- Видимый термин "Логист" заменён на "Пользователь"; role_code/logist URL не менялись.
+- Убраны нетехнические inline-style; readonly/error/spacing перенесены в CSS.
+- Добавлены CSS-нормализации readonly, field error, table action buttons, erp-ui layout aliases.
+
+UX RESULT:
+- SUPERADMIN читается как единый продукт: реестр → карточка компании → руководитель/пользователи/документы/справочники/danger.
+- Руководитель и обычный пользователь различаются бейджами/ролями без старой терминологии.
+- Опасные действия отделены panel-danger и btn-danger; обычные действия остаются primary/secondary/ghost.
+
+UI RESULT:
+- COMPLIANT: page-head, panels, tables, empty states, readonly-fields, notices, buttons use system classes.
+- COMPLIANT: no visible invented inline styles; only technical display:none remains for hidden field errors.
+
+ISSUES / TODO:
+- Browser render still needs manual check in authenticated SUPERADMIN session.
+
+## 2026-06-16 — Fix create-owner route and page scroll
+
+STATUS: DONE
+
+FILES TOUCHED:
+- public/index.php
+- public/assets/css/app.css
+- agent-main-design/DESIGN_WORK_LOG.md
+- agent-main-design/CHIEF_DESIGNER_CONTEXT_FOR_NEW_CHAT.md
+
+WHAT CHANGED:
+- Added GET/POST `/superadmin/companies/{id}/create-owner` route for the existing owner-create page and form.
+- Fixed app scrolling after erp-ui.css activation: `.app-shell` is viewport-height, `.app-main` is clipped, `.content` scrolls vertically.
+- Restarted local PHP dev server on 8016 with `public/index.php` as router script.
+
+UX RESULT:
+- "Создать Руководителя" path now resolves through the app instead of 404.
+- SUPERADMIN pages regain main-content vertical scrolling.
+
+UI RESULT:
+- COMPLIANT: scroll behavior stays inside the application shell; no visual style invention.
+
+ISSUES / TODO:
+- Recheck in authenticated browser session; unauthenticated GET correctly redirects to `/login`.
+
+## 2026-06-16 — Fix static assets on PHP dev server
+
+STATUS: DONE
+
+FILES TOUCHED:
+- public/index.php
+- agent-main-design/screenshots/superadmin-8016-fixed.png
+
+WHAT CHANGED:
+- Added cli-server static-file passthrough in `public/index.php`.
+- CSS/JS assets under `/assets/...` are now served directly by PHP built-in server.
+
+UX RESULT:
+- `/superadmin/` no longer renders as unstyled HTML after redirect to login.
+
+UI RESULT:
+- COMPLIANT: styles load again; screenshot verified.
+
+ISSUES / TODO:
+- Authenticated SUPERADMIN page still requires browser session for full visual audit screenshot.
+
+## 2026-06-16 — Authenticated SUPERADMIN screenshots
+
+STATUS: DONE
+
+FILES TOUCHED:
+- agent-main-design/screenshots/superadmin-full/*.png
+- agent-main-design/screenshots/superadmin-full/manifest.json
+- agent-main-design/DESIGN_WORK_LOG.md
+
+WHAT CHANGED:
+- Created temporary local PHP session `codexshot` for superadmin screenshot capture.
+- Captured 23 authenticated SUPERADMIN GET screens with Playwright/Edge.
+- No POST actions were clicked; DB/passwords were not changed.
+
+UX RESULT:
+- Screenshot set covers registry, company view/edit, owner, users, directories, documents, access grants, delete, and missing-owner flow.
+
+UI RESULT:
+- All captured pages returned HTTP 200 and loaded CSS assets.
+
+ISSUES / TODO:
+- Review screenshots visually and create targeted UI fix list if defects are found.
+
+## 2026-06-16 — SUPERADMIN screenshots UX audit
+
+STATUS: DONE
+
+FILES TOUCHED:
+- agent-main-design/DESIGN_WORK_LOG.md
+
+WHAT CHANGED:
+- Reviewed authenticated screenshot set with fresh UX/UI perspective.
+
+UX RESULT:
+- Verdict: NON_COMPLIANT. The block is a set of technical pages, not an administrative workflow.
+
+UI RESULT:
+- Visual language mostly loads, but UX hierarchy and task structure fail.
+
+ISSUES / TODO:
+- Rebuild SUPERADMIN information architecture and screen hierarchy before further visual polishing.
+
+## 2026-06-16 — SUPERADMIN production UX rebuild after NEEDS_REWORK
+
+STATUS: DONE
+
+FILES TOUCHED:
+- app/View/pages/superadmin_company_view.php
+- app/View/pages/superadmin_company_users.php
+- app/View/pages/superadmin_company_owner_view.php
+- app/View/pages/superadmin_company_delete.php
+- app/View/pages/superadmin_company_directories.php
+- app/View/pages/superadmin_company_clients.php
+- app/View/pages/superadmin_company_contractors.php
+- app/View/pages/superadmin_company_drivers.php
+- app/View/pages/superadmin_company_vehicles.php
+- app/View/pages/superadmin_company_crews.php
+- app/View/pages/superadmin_company_documents.php
+- app/View/pages/superadmin_company_access_grants.php
+- app/View/pages/superadmin_company_logist_create.php
+- app/View/pages/superadmin_company_owner_create.php
+- public/assets/css/erp-ui.css
+- public/assets/css/app.css
+- public/index.php
+- agent-main-design/screenshots/superadmin-production/*.png
+- agent-main-design/screenshots/superadmin-production/manifest.json
+
+WHAT CHANGED:
+- Rebuilt company card as SUPERADMIN command center: readiness checklist, next action, local section navigation, owner/users/directories/documents/danger hierarchy.
+- Rebuilt users screen: owner is a separate primary access block; ordinary users are separate; risk actions are visually separated.
+- Expanded empty states for directories, documents, access grants and individual dictionaries with decision-oriented explanations.
+- Converted physical delete page into step-like danger flow.
+- Added product UX classes for readiness, next-action, subject-card, risk-actions, section-nav and danger-flow.
+- Fixed `/superadmin/companies/{id}/users/logists/create` GET route conflict: exact create route now comes before dynamic `{user_id}` route.
+- Fixed user card audit failure: missing local audit columns no longer break `/superadmin/companies/{id}/users/logists/{user_id}`; unavailable counters show `—` with an explanatory notice.
+
+VERIFICATION:
+- `php -l` passed for changed PHP templates and `public/index.php`.
+- Static assets `/assets/css/erp-ui.css` and `/assets/css/app.css` return 200.
+- `/superadmin/companies/4/create-owner` returns 200.
+- Authenticated screenshot set captured: 23 SUPERADMIN screens in `agent-main-design/screenshots/superadmin-production`.
+- Re-shot `08_company2_user_create.png` after fixing route conflict; screen now shows create form, not "Пользователь не найден".
+- Re-shot `09_company2_user1_view.png` after fixing local audit counters; screen now opens user card instead of DB error.
+- Browser scroll check passed on company view, company delete and company edit.
+
+ISSUES / TODO:
+- No functional expansion required for production UX. Programmer should only run technical regression on existing POST actions and route ordering.
+
+## 2026-06-16 — New-chat anti-regression rules updated
+
+STATUS: DONE
+
+FILES TOUCHED:
+- agent-main-design/MASTER_PROMPT_CHIEF_DESIGNER.md
+- agent-main-design/CHIEF_DESIGNER_CONTEXT_FOR_NEW_CHAT.md
+- agent-main-design/DESIGN_WORK_LOG.md
+
+WHAT CHANGED:
+- Added explicit new-chat start checklist.
+- Added anti-regression rules from this chat:
+  screenshots are mandatory, route-order must be verified, real UI hrefs must be opened,
+  affected screens must be re-shot after fixes, local DB schema differences must become controlled UX states.
+
+WHY:
+- Previous mistakes came from trusting code/route presence before checking actual browser screens.
+- The next Chief Designer chat must start from verified flow, not assumptions.
+
+## 2026-06-16 — Remove invented blue/red notice slabs
+
+STATUS: DONE
+
+FILES TOUCHED:
+- public/assets/css/app.css
+- public/assets/css/erp-ui.css
+
+WHAT CHANGED:
+- Removed blue fill from `.notice.info`; it now uses neutral ERP surface and system border.
+- Removed red fill from `.notice.danger`, `.panel-danger .panel-head`, `.next-action.is-critical`, and `.danger-step.is-terminal`.
+- Danger remains distinguishable by text/border/action color, not by large red background slabs.
+
+WHY:
+- The blue/red slabs visible on SUPERADMIN company card were not part of the agreed FINAL3-like ERP design language.
+- They were a CSS-layer mistake from generic semantic styling.
+
+VERIFICATION:
+- Browser DOM check on `/superadmin/companies/2`:
+  `.notice.info` background is `rgb(254, 253, 248)`, border `rgb(201, 195, 184)`;
+  `.panel-danger .panel-head` background is neutral `rgb(232, 228, 219)`;
+  `.danger-step.is-terminal` background is neutral `rgb(254, 253, 248)`.

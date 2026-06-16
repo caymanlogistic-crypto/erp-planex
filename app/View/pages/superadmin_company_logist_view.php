@@ -31,7 +31,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Логист не найден. <a href="/superadmin/companies/<?= $companyId ?>/users">← К пользователям</a>
+            Пользователь не найден. <a href="/superadmin/companies/<?= $companyId ?>/users">← К пользователям</a>
         </div>
     </div>
 </div>
@@ -63,7 +63,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dt>Новый временный пароль</dt>
             <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
             <dt>Роль</dt>
-            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($logist['role_code'] ?? '') ?></dd>
+            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Пользователь' : e($logist['role_code'] ?? '') ?></dd>
         </dl>
 
         <div class="notice warn">
@@ -92,6 +92,12 @@ require_once __DIR__ . '/../components/status_badge.php';
     <div class="notice success">Статус изменён.</div>
 <?php endif; ?>
 
+<?php if (!empty($countsIncomplete)): ?>
+    <div class="notice info">
+        Часть счётчиков недоступна: локальная БД компании не содержит полей аудита автора для этих справочников. Карточка пользователя открыта, но аудит созданных записей ограничен.
+    </div>
+<?php endif; ?>
+
 <div class="panel">
     <div class="panel-head">
         <h2>Основные данные</h2>
@@ -107,7 +113,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dt>Телефон</dt>
             <dd><?= e($logist['phone'] ?? '—') ?></dd>
             <dt>Роль</dt>
-            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($logist['role_code'] ?? '') ?></dd>
+            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Пользователь' : e($logist['role_code'] ?? '') ?></dd>
             <dt>Статус</dt>
             <dd><?= renderStatusBadge($logist['status']) ?></dd>
             <dt>Комментарий</dt>
@@ -127,17 +133,17 @@ require_once __DIR__ . '/../components/status_badge.php';
     <div class="panel-body">
         <dl class="kv">
             <dt>Клиенты</dt>
-            <dd><?= (int)($counts['clients'] ?? 0) ?></dd>
+            <dd><?= array_key_exists('clients', $counts) && $counts['clients'] !== null ? (int)$counts['clients'] : '—' ?></dd>
             <dt>Подрядчики</dt>
-            <dd><?= (int)($counts['contractors'] ?? 0) ?></dd>
+            <dd><?= array_key_exists('contractors', $counts) && $counts['contractors'] !== null ? (int)$counts['contractors'] : '—' ?></dd>
             <dt>Водители</dt>
-            <dd><?= (int)($counts['drivers'] ?? 0) ?></dd>
+            <dd><?= array_key_exists('drivers', $counts) && $counts['drivers'] !== null ? (int)$counts['drivers'] : '—' ?></dd>
             <dt>Транспорт</dt>
-            <dd><?= (int)($counts['vehicles'] ?? 0) ?></dd>
+            <dd><?= array_key_exists('vehicles', $counts) && $counts['vehicles'] !== null ? (int)$counts['vehicles'] : '—' ?></dd>
             <dt>Экипажи</dt>
-            <dd><?= (int)($counts['crews'] ?? 0) ?></dd>
+            <dd><?= array_key_exists('crews', $counts) && $counts['crews'] !== null ? (int)$counts['crews'] : '—' ?></dd>
             <dt>Документы</dt>
-            <dd><?= (int)($counts['documents'] ?? 0) ?></dd>
+            <dd><?= array_key_exists('documents', $counts) && $counts['documents'] !== null ? (int)$counts['documents'] : '—' ?></dd>
         </dl>
     </div>
 </div>
@@ -149,7 +155,7 @@ require_once __DIR__ . '/../components/status_badge.php';
     <div class="panel-body">
         <dl class="kv">
             <dt>Выдано доступов</dt>
-            <dd><?= (int)($grantsCount ?? 0) ?></dd>
+            <dd><?= $grantsCount !== null ? (int)$grantsCount : '—' ?></dd>
         </dl>
     </div>
 </div>
@@ -165,7 +171,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="form-actions">
             <?php if ($logist['status'] !== 'active'): ?>
             <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/activate" onsubmit="return confirm('Активировать пользователя?')">
-                <button type="submit" class="btn btn-primary">Активировать</button>
+                <button type="submit" class="btn btn-secondary">Активировать</button>
             </form>
             <?php endif; ?>
             <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/reset-password" onsubmit="return confirm('Сбросить пароль пользователя? Текущий пароль будет заменён. Новый пароль будет показан только один раз.')">

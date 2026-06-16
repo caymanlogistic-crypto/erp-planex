@@ -28,7 +28,7 @@
             Дублирование невозможно.
         </div>
         <div class="form-actions">
-            <a href="/superadmin/companies" class="btn btn-primary">← К реестру компаний</a>
+            <a href="/superadmin/companies" class="btn btn-secondary">← К реестру компаний</a>
         </div>
     </div>
 </div>
@@ -67,12 +67,12 @@
         </dl>
 
         <div class="notice warn">
-            Временный пароль показан только один раз. Сохраните его или передайте Руководителю сейчас.
+            Временный пароль показан только один раз. Передайте его Руководителю по безопасному каналу сейчас.
             Пароль не хранится в открытом виде и не может быть восстановлен.
         </div>
 
         <div class="form-actions">
-            <a href="/superadmin/companies" class="btn btn-primary">← К реестру компаний</a>
+            <a href="/superadmin/companies" class="btn btn-secondary">← К реестру компаний</a>
         </div>
     </div>
 </div>
@@ -100,6 +100,9 @@
 
 <form method="post" action="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="panel">
     <div class="panel-body">
+        <div class="notice info">
+            Создаётся руководитель компании: первичный доступ и главный ответственный пользователь. После сохранения временный пароль будет показан только один раз.
+        </div>
 
         <div class="form-section">
             <p class="section-title">Основные данные</p>

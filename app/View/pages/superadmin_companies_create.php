@@ -35,7 +35,7 @@
         </div>
 
         <div class="form-actions">
-            <a href="/superadmin/companies" class="btn btn-primary">&larr; К реестру компаний</a>
+            <a href="/superadmin/companies" class="btn btn-secondary">&larr; К реестру компаний</a>
         </div>
     </div>
 </div>
@@ -153,7 +153,7 @@
                     <div class="field-msg"<?= isset($errors['director_email']) ? '' : ' style="display:none"' ?>><?= e($errors['director_email'] ?? '') ?></div>
                 </div>
             </div>
-            <div class="field-hint" style="margin-top:4px">Если ФИО и Логин заполнены — Руководитель будет создан автоматически с временным паролем.</div>
+            <div class="field-hint">Если ФИО и Логин заполнены — Руководитель будет создан автоматически с временным паролем.</div>
         </div>
 
         <div class="form-actions">

@@ -34,6 +34,7 @@ if ($userName !== '') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($pageTitle ?? $appName) ?> — <?= e($appName) ?></title>
+    <link rel="stylesheet" href="/assets/css/erp-ui.css">
     <link rel="stylesheet" href="/assets/css/app.css">
 </head>
 <body>

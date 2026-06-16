@@ -27,11 +27,74 @@ require_once __DIR__ . '/../components/status_badge.php';
 </div>
 
 <?php else: ?>
+<?php
+    $hasOwner = !empty($owner);
+    $hasLocalDb = !empty($localDbExists);
+    $hasUsers = (int)($userStats['logist_count'] ?? 0) > 0;
+    $dirsTotal = (int)($dirs['clients_total'] ?? 0)
+        + (int)($dirs['contractors_total'] ?? 0)
+        + (int)($dirs['drivers_total'] ?? 0)
+        + (int)($dirs['vehicles_total'] ?? 0)
+        + (int)($dirs['crews_total'] ?? 0);
+    $hasDocuments = (int)($docStats['active'] ?? 0) > 0;
+    $isOperational = $company['status'] === 'active' && $hasOwner && $hasLocalDb;
+    $readiness = [
+        [
+            'label' => 'Руководитель',
+            'ok' => $hasOwner,
+            'desc' => $hasOwner ? 'Есть ответственный за компанию.' : 'Критический шаг: без руководителя компания не готова к работе.',
+            'href' => $hasOwner ? "/superadmin/companies/{$id}/owner" : "/superadmin/companies/{$id}/create-owner",
+            'action' => $hasOwner ? 'Открыть' : 'Создать',
+        ],
+        [
+            'label' => 'Локальная БД',
+            'ok' => $hasLocalDb,
+            'desc' => $hasLocalDb ? 'Рабочая база компании доступна.' : 'Данные пользователей, документов и справочников недоступны.',
+            'href' => "/superadmin/companies/{$id}",
+            'action' => 'Проверить',
+        ],
+        [
+            'label' => 'Пользователи',
+            'ok' => $hasUsers,
+            'desc' => $hasUsers ? 'Есть рабочие пользователи компании.' : 'Можно создать обычных пользователей после руководителя.',
+            'href' => "/superadmin/companies/{$id}/users",
+            'action' => $hasUsers ? 'Открыть' : 'Создать',
+        ],
+        [
+            'label' => 'Справочники',
+            'ok' => $dirsTotal > 0,
+            'desc' => $dirsTotal > 0 ? 'Справочники содержат рабочие записи.' : 'Пусто: это нормально для новой компании, но важно для запуска операций.',
+            'href' => "/superadmin/companies/{$id}/directories",
+            'action' => 'Аудит',
+        ],
+        [
+            'label' => 'Документы',
+            'ok' => $hasDocuments,
+            'desc' => $hasDocuments ? 'Есть активные документы.' : 'Документы ещё не загружены или недоступны.',
+            'href' => "/superadmin/companies/{$id}/documents",
+            'action' => 'Открыть',
+        ],
+    ];
+    $nextAction = !$hasOwner
+        ? ['title' => 'Создать руководителя', 'desc' => 'Это главный блокер: руководитель получает первичный доступ к компании.', 'href' => "/superadmin/companies/{$id}/create-owner", 'class' => 'btn-primary']
+        : (!$hasLocalDb
+            ? ['title' => 'Проверить рабочую БД', 'desc' => 'Без локальной БД нельзя подтвердить пользователей, документы и справочники.', 'href' => "/superadmin/companies/{$id}", 'class' => 'btn-secondary']
+            : (!$hasUsers
+                ? ['title' => 'Создать пользователя', 'desc' => 'После руководителя можно выдать рабочий доступ сотруднику компании.', 'href' => "/superadmin/companies/{$id}/users/logists/create", 'class' => 'btn-primary']
+                : ['title' => 'Проверить операционные данные', 'desc' => 'Компания готова к администрированию: проверьте справочники и документы.', 'href' => "/superadmin/companies/{$id}/directories", 'class' => 'btn-secondary']));
+?>
 
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">SUPERADMIN / Реестр компаний</span>
         <span class="page-title"><?= e($company['name']) ?></span>
+        <span class="page-summary">
+            <b>ID <?= (int)$company['id'] ?></b>
+            <span class="sep">·</span>
+            <?= renderStatusBadge($company['status']) ?>
+            <span class="sep">·</span>
+            <span><?= $isOperational ? 'Компания готова к работе' : 'Требуется настройка' ?></span>
+        </span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -41,10 +104,50 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-content">
 
-<!-- 2-column info grid -->
+<div class="section-nav">
+    <a href="#overview" class="section-nav-item is-active">Обзор</a>
+    <a href="#owner" class="section-nav-item">Руководитель</a>
+    <a href="#users" class="section-nav-item">Пользователи</a>
+    <a href="#directories" class="section-nav-item">Справочники</a>
+    <a href="#documents" class="section-nav-item">Документы</a>
+    <a href="#danger" class="section-nav-item is-danger">Опасная зона</a>
+</div>
+
+<div class="command-center" id="overview">
+    <div class="command-main">
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-head-title">Готовность компании</span>
+                <span class="badge <?= $isOperational ? 'badge-ok' : 'badge-warning' ?>"><?= $isOperational ? 'Рабочее состояние' : 'Есть блокеры' ?></span>
+            </div>
+            <div class="panel-body">
+                <div class="readiness-list">
+                    <?php foreach ($readiness as $item): ?>
+                    <div class="readiness-item <?= $item['ok'] ? 'is-ok' : 'is-warn' ?>">
+                        <div class="readiness-mark"></div>
+                        <div class="readiness-copy">
+                            <span class="readiness-title"><?= e($item['label']) ?></span>
+                            <span class="readiness-desc"><?= e($item['desc']) ?></span>
+                        </div>
+                        <a href="<?= e($item['href']) ?>" class="btn btn-ghost btn-sm"><?= e($item['action']) ?></a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="command-aside">
+        <div class="next-action <?= !$hasOwner ? 'is-critical' : '' ?>">
+            <span class="next-action-label">Следующее действие</span>
+            <strong><?= e($nextAction['title']) ?></strong>
+            <span><?= e($nextAction['desc']) ?></span>
+            <a href="<?= e($nextAction['href']) ?>" class="btn <?= e($nextAction['class']) ?>"><?= e($nextAction['title']) ?></a>
+        </div>
+    </div>
+</div>
+
 <div class="view-grid">
 
-    <!-- Основные данные -->
     <div class="panel">
         <div class="panel-head">
             <span class="panel-head-title">Основные данные</span>
@@ -67,7 +170,6 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 
-    <!-- Адреса и контакты -->
     <div class="panel">
         <div class="panel-head">
             <span class="panel-head-title">Адреса и контакты</span>
@@ -88,14 +190,13 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 
-    <!-- Руководитель -->
-    <div class="panel">
+    <div class="panel" id="owner">
         <div class="panel-head">
             <span class="panel-head-title">Руководитель</span>
             <?php if ($owner): ?>
             <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost btn-sm">Управлять</a>
             <?php else: ?>
-            <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-ghost btn-sm">Создать</a>
+            <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary btn-sm">Создать</a>
             <?php endif; ?>
         </div>
         <div class="panel-body">
@@ -115,13 +216,16 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= renderStatusBadge($owner['status']) ?></dd>
             </dl>
             <?php else: ?>
-            <div class="notice info">Руководитель не создан. <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner">Создать</a></div>
+            <div class="empty-state empty-state-left">
+                <p class="empty-title">Руководитель не создан</p>
+                <p class="empty-desc">Это критический блокер запуска: после создания руководитель получит первичный доступ, а компания станет управляемой.</p>
+                <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary">Создать руководителя</a>
+            </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <!-- Пользователи компании -->
-    <div class="panel">
+    <div class="panel" id="users">
         <div class="panel-head">
             <span class="panel-head-title">Пользователи компании</span>
             <a href="/superadmin/companies/<?= $id ?>/users" class="btn btn-ghost btn-sm">Все →</a>
@@ -129,36 +233,35 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="panel-body">
             <dl class="kv">
                 <dt>Всего</dt>
-                <dd><?= $userStats['total'] ?></dd>
+                <dd><?= (int)$userStats['total'] ?></dd>
                 <dt>Активных</dt>
-                <dd><?= $userStats['active'] ?></dd>
+                <dd><?= (int)$userStats['active'] ?></dd>
                 <dt>Заблокированных</dt>
-                <dd><?= $userStats['blocked'] ?></dd>
+                <dd><?= (int)$userStats['blocked'] ?></dd>
                 <dt>Руководитель</dt>
-                <dd><?= $userStats['owner_count'] ?></dd>
+                <dd><?= (int)$userStats['owner_count'] ?></dd>
                 <dt>Пользователей</dt>
-                <dd><?= $userStats['logist_count'] ?></dd>
+                <dd><?= (int)$userStats['logist_count'] ?></dd>
             </dl>
         </div>
     </div>
 
-    <!-- Техническая информация -->
     <div class="panel">
         <div class="panel-head">
-            <span class="panel-head-title">Техническая информация</span>
+            <span class="panel-head-title">Техническая готовность</span>
         </div>
         <div class="panel-body">
             <dl class="kv">
                 <dt>Company ID</dt>
-                <dd><?= $company['id'] ?></dd>
+                <dd><?= (int)$company['id'] ?></dd>
                 <dt>Локальная БД</dt>
                 <dd><?= e($company['db_identifier'] ?? '') ?: '—' ?></dd>
                 <dt>БД существует</dt>
-                <dd><?= !empty($localDbExists) ? 'YES' : 'NO' ?></dd>
+                <dd><span class="badge <?= $hasLocalDb ? 'badge-ok' : 'badge-danger' ?>"><?= $hasLocalDb ? 'YES' : 'NO' ?></span></dd>
                 <dt>Storage</dt>
                 <dd><?= e($company['storage_path'] ?? '') ?: '—' ?></dd>
                 <dt>Storage существует</dt>
-                <dd><?= !empty($storageExists) ? 'YES' : 'NO' ?></dd>
+                <dd><span class="badge <?= !empty($storageExists) ? 'badge-ok' : 'badge-warning' ?>"><?= !empty($storageExists) ? 'YES' : 'NO' ?></span></dd>
                 <dt>Provisioning</dt>
                 <dd>
                     <?= e($company['status']) ?>
@@ -174,19 +277,18 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 
-    <!-- Документы и доступы -->
-    <div class="panel">
+    <div class="panel" id="documents">
         <div class="panel-head">
             <span class="panel-head-title">Документы и доступы</span>
         </div>
         <div class="panel-body">
             <dl class="kv">
                 <dt>Всего документов</dt>
-                <dd><?= $docStats['total'] ?></dd>
+                <dd><?= (int)$docStats['total'] ?></dd>
                 <dt>Активных документов</dt>
-                <dd><?= $docStats['active'] ?></dd>
+                <dd><?= (int)$docStats['active'] ?></dd>
                 <dt>Выданных доступов</dt>
-                <dd><?= $accessStats['total'] ?></dd>
+                <dd><?= (int)$accessStats['total'] ?></dd>
             </dl>
             <div class="form-actions">
                 <a href="/superadmin/companies/<?= $id ?>/documents" class="btn btn-secondary btn-sm">Документы</a>
@@ -195,16 +297,18 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 
-</div><!-- /.view-grid -->
+</div>
 
-<!-- Справочники (full width) -->
-<div class="panel">
+<div class="panel" id="directories">
     <div class="panel-head">
         <span class="panel-head-title">Справочники компании</span>
         <a href="/superadmin/companies/<?= $id ?>/directories" class="btn btn-ghost btn-sm">Все →</a>
     </div>
     <div class="panel-body">
-        <div class="tbl-wrap">
+        <div class="notice info">
+            Справочники показывают не просто количество записей, а операционную наполненность компании: клиенты, подрядчики, водители, транспорт и экипажи.
+        </div>
+        <div class="tbl-wrap mt-actions">
             <table class="tbl">
                 <thead>
                     <tr>
@@ -218,37 +322,37 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <tbody>
                     <tr>
                         <td>Клиенты</td>
-                        <td class="col-num"><?= $dirs['clients_total'] ?></td>
-                        <td class="col-num"><?= $dirs['clients_active'] ?></td>
-                        <td class="col-num"><?= $dirs['clients_archived'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['clients_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['clients_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['clients_archived'] ?></td>
                         <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Подрядчики</td>
-                        <td class="col-num"><?= $dirs['contractors_total'] ?></td>
-                        <td class="col-num"><?= $dirs['contractors_active'] ?></td>
-                        <td class="col-num"><?= $dirs['contractors_archived'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['contractors_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['contractors_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['contractors_archived'] ?></td>
                         <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Водители</td>
-                        <td class="col-num"><?= $dirs['drivers_total'] ?></td>
-                        <td class="col-num"><?= $dirs['drivers_active'] ?></td>
-                        <td class="col-num"><?= $dirs['drivers_archived'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['drivers_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['drivers_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['drivers_archived'] ?></td>
                         <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспорт</td>
-                        <td class="col-num"><?= $dirs['vehicles_total'] ?></td>
-                        <td class="col-num"><?= $dirs['vehicles_active'] ?></td>
-                        <td class="col-num"><?= $dirs['vehicles_archived'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['vehicles_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['vehicles_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['vehicles_archived'] ?></td>
                         <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Экипажи</td>
-                        <td class="col-num"><?= $dirs['crews_total'] ?></td>
-                        <td class="col-num"><?= $dirs['crews_active'] ?></td>
-                        <td class="col-num"><?= $dirs['crews_archived'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['crews_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['crews_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['crews_archived'] ?></td>
                         <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                 </tbody>
@@ -257,12 +361,14 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 </div>
 
-<!-- Управление статусом -->
-<div class="panel">
+<div class="panel" id="status-actions">
     <div class="panel-head">
         <span class="panel-head-title">Управление статусом</span>
     </div>
     <div class="panel-body">
+        <div class="notice info">
+            Обычные действия меняют доступность компании, но не удаляют данные.
+        </div>
         <div class="form-actions">
             <?php if ($company['status'] !== 'active'): ?>
             <form method="post" action="/superadmin/companies/<?= $id ?>/activate" onsubmit="return confirm('Активировать компанию?')">
@@ -278,14 +384,24 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 </div>
 
-<!-- Опасная зона -->
-<div class="panel panel-danger">
+<div class="panel panel-danger" id="danger">
     <div class="panel-head">
         <span class="panel-head-title">Опасная зона</span>
     </div>
     <div class="panel-body">
-        <div class="notice danger">
-            Действия в этом разделе изменяют статус компании и могут ограничить доступ пользователей.
+        <div class="danger-flow">
+            <div class="danger-step">
+                <strong>Ограничить доступ</strong>
+                <span>Блокировка не удаляет данные, но пользователи не смогут войти.</span>
+            </div>
+            <div class="danger-step">
+                <strong>Архивировать</strong>
+                <span>Компания сохраняется в системе как неактивная запись.</span>
+            </div>
+            <div class="danger-step is-terminal">
+                <strong>Физически удалить</strong>
+                <span>Удаляет локальную БД, storage, пользователей, документы и справочники. Это отдельный подтверждаемый процесс.</span>
+            </div>
         </div>
         <div class="form-actions">
             <?php if (in_array($company['status'], ['active', 'inactive'], true)): ?>
@@ -296,21 +412,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <form method="post" action="/superadmin/companies/<?= $id ?>/archive" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
                 <button type="submit" class="btn btn-secondary btn-sm">Архивировать</button>
             </form>
-        </div>
-    </div>
-</div>
-
-<!-- Полное удаление -->
-<div class="panel panel-danger">
-    <div class="panel-head">
-        <span class="panel-head-title">Полное удаление компании</span>
-    </div>
-    <div class="panel-body">
-        <div class="notice danger">
-            <strong>Необратимое действие.</strong> Будет удалена локальная база данных, storage-папка, все пользователи, документы и справочники компании. Восстановление возможно только из резервной копии.
-        </div>
-        <div class="form-actions">
-            <a href="/superadmin/companies/<?= $id ?>/delete" class="btn btn-danger btn-sm">Перейти к удалению →</a>
+            <a href="/superadmin/companies/<?= $id ?>/delete" class="btn btn-danger btn-sm">Физическое удаление →</a>
         </div>
     </div>
 </div>

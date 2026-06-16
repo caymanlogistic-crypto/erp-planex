@@ -19,6 +19,29 @@
 <div class="notice danger"><?= e($confirmError) ?></div>
 <?php endif; ?>
 
+<div class="panel panel-danger">
+    <div class="panel-head">
+        <span class="panel-head-title">Процесс физического удаления</span>
+        <span class="badge badge-danger">Необратимо</span>
+    </div>
+    <div class="panel-body">
+        <div class="danger-flow">
+            <div class="danger-step">
+                <strong>1. Проверить объект</strong>
+                <span>Сверьте компанию, ИНН, локальную БД, storage и количество связанных данных ниже.</span>
+            </div>
+            <div class="danger-step">
+                <strong>2. Проверить резервную копию</strong>
+                <span>Если резервная копия не создана, система потребует отдельное подтверждение риска.</span>
+            </div>
+            <div class="danger-step is-terminal">
+                <strong>3. Подтвердить фразой</strong>
+                <span>Удаление запускается только после точной фразы подтверждения. Отмена возвращает в карточку компании.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="panel">
     <div class="panel-head">
         <span class="panel-head-title">Что будет удалено</span>
@@ -32,7 +55,7 @@
             <dt>Storage</dt><dd class="col-mono"><?= e($preview['storage_path']) ?></dd>
             <dt>Статус</dt><dd><?= e($preview['status']) ?></dd>
             <dt>Руководитель</dt><dd><?= $preview['owner'] ? e($preview['owner']['full_name']) : '—' ?></dd>
-            <dt>Логистов</dt><dd><?= (int)$preview['logists_count'] ?></dd>
+            <dt>Пользователей</dt><dd><?= (int)$preview['logists_count'] ?></dd>
             <dt>Клиентов</dt><dd><?= (int)$preview['clients_count'] ?></dd>
             <dt>Подрядчиков</dt><dd><?= (int)$preview['contractors_count'] ?></dd>
             <dt>Водителей</dt><dd><?= (int)$preview['drivers_count'] ?></dd>

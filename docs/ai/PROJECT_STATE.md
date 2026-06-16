@@ -58,29 +58,28 @@ docs/ui/DESIGN_STANDARD.md
 ## Активная задача
 
 ```text
-SUPERADMIN + управление пользователями экспедитора — ARCHITECT_ACCEPTED.
-Все исправления (6 fixes + 1 bonus) проверены и приняты.
+SUPERADMIN — пост-дизайн функциональная приёмка: ARCHITECT_ACCEPTED.
+Все 20 view-файлов + CSS + index.php проверены. Багов нет.
 Файл: docs/ai/CURRENT_TASK.md
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect после REWORK:
-- Все 6 исправлений проверены и подтверждены
-- Убраны захардкоженные фильтры role_code = 'logist' из CRUD-запросов
-- Добавлены защиты self-deactivation и last-active-owner в owner edit
-- Добавлено авто-применение миграции 010 в /company/logists
-- Восстановлен try { в обработчике POST /superadmin/companies/create
-- Все маршруты отвечают корректно (login: 200, protected: 302)
-- Миграции применены (0 failed)
+Принято erp-architect (пост-дизайн):
+- PHP-синтаксис: все 21 файл — OK
+- Формы: 5 критичных форм — action/method/names/submit/CSRF целы
+- Runtime-маршруты: 0 ошибок 500, все protected → 302, /login → 200
+- Дизайн-безопасность: erp-ui.css подключён, layout цел, inline-style убраны
+- Дизайнер попутно исправил баг роутинга (create до dynamic {user_id})
+- Дизайнер добавил null-safe счётчики в logist_view
 ```
 
 ## Следующий шаг
 
 ```text
-Commit изменений.
-Готово к дизайн-полировке Главным дизайнером.
+1. Commit (message: "style(superadmin): apply chief designer polish and verify post-design functionality")
+2. Переход к блоку водители / машины / экипажи
 ```
 
 ## Правило обновления

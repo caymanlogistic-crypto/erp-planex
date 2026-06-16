@@ -29,21 +29,24 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Подрядчики компании: <?= e($company['name']) ?></h1>
-        <p class="text-muted">ID: <?= $id ?> · Режим SUPERADMIN: просмотр</p>
+    <div class="page-head-left">
+        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
+        <span class="page-title">Подрядчики компании</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
 
+<div class="page-content">
+
 <?php if (empty($items)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state">
-                <p class="text-muted">Нет подрядчиков</p>
-                <p class="text-muted">В компании ещё не созданы подрядчики.</p>
+            <div class="empty-state empty-state-left">
+                <p class="empty-title">Нет подрядчиков</p>
+                <p class="empty-desc">Если компания уже работает, отсутствие подрядчиков означает неполный операционный контур. Проверьте источник заполнения справочника у владельца компании.</p>
+                <a href="/superadmin/companies/<?= $id ?>/directories" class="btn btn-secondary">← К аудиту справочников</a>
             </div>
         </div>
     </div>
@@ -57,8 +60,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Название</th>
+                        <th>Подрядчик</th>
                         <th>ИНН</th>
                         <th>Статус</th>
                         <th>Создан</th>
@@ -68,12 +70,14 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <tbody>
                     <?php foreach ($items as $item): ?>
                     <tr>
-                        <td class="col-mono"><?= $item['id'] ?></td>
-                        <td><?= e($item['name'] ?? '') ?></td>
+                        <td class="cell-double">
+                            <span class="cell-main"><?= e($item['name'] ?? '') ?></span>
+                            <span class="cell-sub">ID <?= $item['id'] ?></span>
+                        </td>
                         <td class="col-mono"><?= e($item['inn'] ?? '—') ?></td>
                         <td><?= renderStatusBadge($item['status'] ?? '') ?></td>
                         <td class="col-muted"><?= e($item['created_at'] ?? '') ?></td>
-                        <td class="col-actions"><div class="row-actions"><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=contractor&entity_id=<?= $item['id'] ?>" class="btn btn-ghost">Документы</a></div></td>
+                        <td class="col-actions"><div class="row-actions"><a href="/superadmin/companies/<?= $id ?>/documents?entity_type=contractor&entity_id=<?= $item['id'] ?>" class="btn btn-ghost btn-sm">Документы</a></div></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -81,5 +85,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
     </div>
 <?php endif; ?>
+
+</div><!-- /.page-content -->
 
 <?php endif; ?>
