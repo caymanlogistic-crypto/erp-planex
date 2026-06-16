@@ -71,8 +71,10 @@
                     <tr>
                         <th>ID</th>
                         <th>Подрядчик</th>
-                        <th>Транспорт</th>
                         <th>Водитель</th>
+                        <th>Телефон</th>
+                        <th>Комплект</th>
+                        <th>Транспорт</th>
                         <th>Статус</th>
                         <th>Создан</th>
                         <th></th>
@@ -83,8 +85,10 @@
                     <tr>
                         <td class="col-mono"><?= $c['id'] ?></td>
                         <td><?= e($c['contractor_name'] ?? '—') ?></td>
-                        <td class="col-mono"><?= e($c['plate_number'] ?? '—') ?></td>
                         <td><?= e($c['driver_name'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($c['driver_phone'] ?? '—') ?></td>
+                        <td><?= e($c['set_type'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($c['plates'] ?? '—') ?></td>
                         <td>
                             <span class="badge<?= $c['status'] === 'active' ? ' badge-ok' : '' ?>">
                                 <span class="dot"></span>

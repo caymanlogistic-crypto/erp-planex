@@ -56,7 +56,7 @@
     <div class="page-head-actions">
         <a href="/company/vehicles/<?= $vehicle['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
         <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
-        <a href="/company/documents?entity_type=vehicle&entity_id=<?= $vehicle['id'] ?>" class="btn btn-toolbar">Документы</a>
+        <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-toolbar">Документы</a>
     </div>
 </div>
 
@@ -72,8 +72,8 @@
                 <dd><?= e($vehicle['brand'] ?? '') ?: '—' ?></dd>
                 <dt>Модель</dt>
                 <dd><?= e($vehicle['model'] ?? '') ?: '—' ?></dd>
-                <dt>Тип ТС</dt>
-                <dd><?= e($vehicle['vehicle_type'] ?? '') ?: '—' ?></dd>
+                <dt>Тип единицы</dt>
+                <dd><?= e($vehicle['unit_type'] ?? '') ?: '—' ?></dd>
                 <dt>Статус</dt>
                 <dd>
                     <?php if ($vehicle['status'] === 'active'): ?>
@@ -96,8 +96,6 @@
                 <dd><code><?= e($vehicle['vin'] ?? '') ?: '—' ?></code></dd>
                 <dt>СТС</dt>
                 <dd><?= e($vehicle['sts_number'] ?? '') ?: '—' ?></dd>
-                <dt>ПТС</dt>
-                <dd><?= e($vehicle['pts_number'] ?? '') ?: '—' ?></dd>
                 <dt>Грузоподъёмность (т)</dt>
                 <dd><?= $vehicle['capacity_tons'] !== null ? e((string)$vehicle['capacity_tons']) : '—' ?></dd>
                 <dt>Объём кузова (м³)</dt>
@@ -138,7 +136,7 @@
             <?php endif; ?>
 
             <form method="post" action="/company/access-grants/grant" style="margin-top:12px">
-                <input type="hidden" name="entity_type" value="vehicle">
+                <input type="hidden" name="entity_type" value="vehicle_unit">
                 <input type="hidden" name="entity_id" value="<?= $vehicle['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/vehicles/<?= $vehicle['id'] ?>">
                 <div class="field" style="display:inline-block;margin-right:8px">
@@ -156,7 +154,7 @@
 
         <div class="form-actions">
             <a href="/company/vehicles/<?= $vehicle['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-            <a href="/company/documents?entity_type=vehicle&entity_id=<?= $vehicle['id'] ?>" class="btn btn-toolbar">Документы</a>
+            <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-toolbar">Документы</a>
             <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать транспорт?')">
                 <button type="submit" class="btn btn-warn">Архивировать</button>
             </form>

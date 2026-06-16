@@ -70,24 +70,33 @@
                 <dd>
                     <?php if (!empty($crew['contractor_id'])): ?>
                         <a href="/company/contractors/<?= $crew['contractor_id'] ?>"><?= e($crew['contractor_name'] ?? '') ?: '—' ?></a>
+                        <?php if (!empty($crew['contractor_inn'])): ?><br><small class="text-muted">ИНН: <?= e($crew['contractor_inn']) ?></small><?php endif; ?>
                     <?php else: ?>
                         —
                     <?php endif; ?>
                 </dd>
-                <dt>Транспорт</dt>
+                <dt>Блок "Водитель + ТС"</dt>
                 <dd>
-                    <?php if (!empty($crew['vehicle_id'])): ?>
-                        <a href="/company/vehicles/<?= $crew['vehicle_id'] ?>"><code><?= e($crew['plate_number'] ?? '') ?: '—' ?></code></a>
+                    <?php if (!empty($crew['driver_vehicle_block_id'])): ?>
+                        <a href="/company/driver-vehicle-blocks/<?= $crew['driver_vehicle_block_id'] ?>">Блок #<?= $crew['driver_vehicle_block_id'] ?></a>
                     <?php else: ?>
                         —
                     <?php endif; ?>
                 </dd>
                 <dt>Водитель</dt>
                 <dd>
-                    <?php if (!empty($crew['driver_id'])): ?>
-                        <a href="/company/drivers/<?= $crew['driver_id'] ?>"><?= e($crew['driver_name'] ?? '') ?: '—' ?></a>
-                    <?php else: ?>
-                        —
+                    <?= e($crew['driver_name'] ?? '') ?: '—' ?>
+                    <?php if (!empty($crew['driver_phone'])): ?><br><small class="text-muted">Тел: <?= e($crew['driver_phone']) ?></small><?php endif; ?>
+                </dd>
+                <dt>Транспортный комплект</dt>
+                <dd>
+                    <?= e($crew['set_type'] ?? '—') ?>
+                </dd>
+                <dt>Транспортные единицы</dt>
+                <dd>
+                    <code><?= e($crew['primary_plate'] ?? '—') ?></code>
+                    <?php if (!empty($crew['secondary_plate'])): ?>
+                        + <code><?= e($crew['secondary_plate']) ?></code>
                     <?php endif; ?>
                 </dd>
                 <dt>Статус</dt>

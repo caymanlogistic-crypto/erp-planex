@@ -41,8 +41,8 @@ CODEX-дизайнер не меняет функциональную логик
 ```text
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 
-Водители / Машины / Экипажи — ЭТАП 1 (фундамент БД) ЗАВЕРШЁН.
-Следующий шаг: функциональные CRUD-страницы и UX-сценарии.
+Водители / Машины / Экипажи — ЭТАП 2 (CRUD + UX) ЗАВЕРШЁН.
+Следующий шаг: runtime owner review → исправления → дизайн-полировка.
 ```
 
 ### Стабильный commit
@@ -57,6 +57,80 @@ da1cc90 — fix(superadmin): separate company director requisites from ERP user
 488a88b — test(superadmin): verify post-design functionality
 49e7218 — fix(superadmin): restore company create handler
 da1cc90 — fix(superadmin): separate company director requisites from ERP user
+0fae71d — feat(reference): add database foundation for drivers vehicles crews
+```
+
+## Реализованные маршруты (Этап 2)
+
+### Contractors
+```text
+GET|POST /company/contractors[/create]
+GET /company/contractors/{id}
+GET|POST /company/contractors/{id}/edit
+POST /company/contractors/{id}/archive
+POST /company/contractors/{contractor_id}/contacts/create
+POST /company/contractors/{contractor_id}/tax-history/create
+```
+
+### Drivers
+```text
+GET|POST /company/drivers[/create]
+GET /company/drivers/{id}
+GET|POST /company/drivers/{id}/edit
+POST /company/drivers/{id}/archive
+POST /company/drivers/{driver_id}/phones/create
+```
+
+### Vehicle Units (Транспортные единицы, URL /company/vehicles)
+```text
+GET|POST /company/vehicles[/create]
+GET /company/vehicles/{id}
+GET|POST /company/vehicles/{id}/edit
+POST /company/vehicles/{id}/archive
+```
+
+### Vehicle Sets (Транспортные комплекты) — NEW
+```text
+GET|POST /company/vehicle-sets[/create]
+GET /company/vehicle-sets/{id}
+GET|POST /company/vehicle-sets/{id}/edit
+POST /company/vehicle-sets/{id}/archive
+```
+
+### Driver-Vehicle Blocks (Блоки «Водитель+ТС») — NEW
+```text
+GET|POST /company/driver-vehicle-blocks[/create]
+GET /company/driver-vehicle-blocks/{id}
+GET|POST /company/driver-vehicle-blocks/{id}/edit
+POST /company/driver-vehicle-blocks/{id}/archive
+```
+
+### Crews (Экипажи) — REWRITTEN
+```text
+GET|POST /company/crews[/create]
+GET /company/crews/{id}
+GET|POST /company/crews/{id}/edit
+POST /company/crews/{id}/archive
+```
+
+### Documents
+```text
+GET /company/documents
+GET|POST /company/documents/upload
+GET /company/documents/download
+POST /company/documents/delete
+POST /company/documents/replace
+```
+
+### Access Grants
+```text
+POST /company/access-grants/grant
+POST /company/access-grants/{id}/revoke
+```
+
+### Entity types supported
+```text
+client, contractor, driver, vehicle_unit, vehicle_set, driver_vehicle_block, crew
 ```
 
 ## Архитектура блока «Водители / Машины / Экипажи»
@@ -164,10 +238,10 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 ## Следующий блок в работе
 
 ```text
-Водители / Машины / Экипажи — Этап 2: функциональные CRUD-страницы и UX-сценарии
+Водители / Машины / Экипажи — Этап 3: runtime owner review + доработки + дизайн-полировка
 ```
 
-Этап 1 (фундамент БД) завершён. Следующий этап — создание страниц, форм, списков для contractors, drivers, vehicle_units, vehicle_sets, driver_vehicle_blocks, crews.
+Этап 2 (CRUD + функциональный UX) завершён. Следующий этап — проверка владельцем, исправление замечаний, дизайн-полировка. Известные ограничения: inline CRUD для contacts/phones/tax-history, расширение списков contractors/drivers, role-based доступ, каскадная видимость.
 
 ## Что нельзя нарушать
 

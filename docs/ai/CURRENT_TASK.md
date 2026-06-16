@@ -26,23 +26,31 @@ ARCHITECTURE DECISION (#16):
 КОНТАКТЫ КОМПАНИИ:
 contact_person, contact_phone, contact_email остаются в БД, но убраны из форм создания/редактирования экспедитора и сейчас не используются в UI.
 
-## IN PROGRESS: Водители / Машины / Экипажи — Этап 1: фундамент БД
+## IN PROGRESS: Водители / Машины / Экипажи — Этап 2: CRUD + функциональный UX
 
-STATUS: DATABASE_FOUNDATION_ACCEPTED
+STATUS: CRUD_UX_ACCEPTED
 
 ARCHITECTURE:
 - Подрядчик + (Водитель + ТС) = Экипаж
-- driver_vehicle_blocks = Водитель + ТС
+- driver_vehicle_blocks = Водитель + ТС (vehicle_set)
 - crews = contractor_id + driver_vehicle_block_id
 
-ВЫПОЛНЕНО (Этап 1):
-- Миграции 011-023 (database/migrations-local/)
-- applyLocalMigrations() в index.php
-- vehicles → vehicle_units (переименование таблицы + обновление всех ссылок в коде)
-- SUPERADMIN-статистика обновлена
-- documents: soft delete через deleted_at
-- entity_access_grants расширены
+ВЫПОЛНЕНО (Этап 2):
+- CRUD vehicle_sets: list, create, view, edit, archive (8 маршрутов)
+- CRUD driver_vehicle_blocks: list, create, view, edit, archive (8 маршрутов)
+- Crews переписаны: 7 маршрутов обновлены под driver_vehicle_block_id
+- Vehicles обновлены: unit_type, pts_number скрыт, entity_type=vehicle_unit
+- Добавлены grants: vehicle_set, driver_vehicle_block, access_level view/edit, revoke
+- Обновлены documents: новые entity_type, 20MB, document_type optional, soft delete deleted_at
+- Sidebar: vehicle-sets, driver-vehicle-blocks
+- Document whitelist: все 7 entity_type
+- 8 новых view-файлов, 9 изменённых
 
-СЛЕДУЮЩИЙ ШАГ (Этап 2):
-- Функциональные CRUD-страницы для contractors, drivers, vehicle_units, crews
-- Формы, дизайн, UX-сценарии
+ОГРАНИЧЕНИЯ (следующий подэтап):
+- Contractor contacts/driver phones inline CRUD не реализован
+- Contractor tax history не реализован
+- Role-based access (logist vs company_owner) требует доработки
+- Каскадная видимость не реализована
+
+СЛЕДУЮЩИЙ ШАГ:
+- Runtime owner review / исправления / дизайн-полировка

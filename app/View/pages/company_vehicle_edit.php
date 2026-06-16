@@ -152,9 +152,15 @@
             </div>
 
             <div class="field">
-                <label class="field-label">Тип ТС</label>
-                <input type="text" name="vehicle_type" class="field-input"
-                       value="<?= e($old['vehicle_type'] ?? '') ?>">
+                <label class="field-label">Тип единицы</label>
+                <select name="unit_type" class="field-input">
+                    <option value="">— Не указан —</option>
+                    <option value="single" <?= ($old['unit_type'] ?? '') === 'single' ? 'selected' : '' ?>>Одиночное ТС</option>
+                    <option value="tractor" <?= ($old['unit_type'] ?? '') === 'tractor' ? 'selected' : '' ?>>Тягач</option>
+                    <option value="semi_trailer" <?= ($old['unit_type'] ?? '') === 'semi_trailer' ? 'selected' : '' ?>>Полуприцеп</option>
+                    <option value="truck" <?= ($old['unit_type'] ?? '') === 'truck' ? 'selected' : '' ?>>Грузовик</option>
+                    <option value="trailer" <?= ($old['unit_type'] ?? '') === 'trailer' ? 'selected' : '' ?>>Прицеп</option>
+                </select>
             </div>
 
             <div class="field">
@@ -183,12 +189,6 @@
                 <label class="field-label">СТС</label>
                 <input type="text" name="sts_number" class="field-input"
                        value="<?= e($old['sts_number'] ?? '') ?>">
-            </div>
-
-            <div class="field">
-                <label class="field-label">ПТС</label>
-                <input type="text" name="pts_number" class="field-input"
-                       value="<?= e($old['pts_number'] ?? '') ?>">
             </div>
         </div>
 

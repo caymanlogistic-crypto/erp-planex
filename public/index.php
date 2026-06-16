@@ -5268,12 +5268,17 @@ $router->get('/company/crews', function () use ($config, $db) {
             $crewStmt = $localPdo->prepare(
                 "SELECT c.*,
                         ct.name AS contractor_name,
-                        v.plate_number,
-                        d.full_name AS driver_name
+                        d.full_name AS driver_name, d.phone AS driver_phone,
+                        vs.set_type,
+                        CONCAT(vu1.plate_number, IFNULL(CONCAT(' + ', vu2.plate_number), '')) AS plates,
+                        vu1.plate_number AS primary_plate
                  FROM crews c
-                 LEFT JOIN contractors ct ON c.contractor_id = ct.id
-                 LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
-                 LEFT JOIN drivers d ON c.driver_id = d.id
+                 JOIN contractors ct ON c.contractor_id = ct.id
+                 JOIN driver_vehicle_blocks dvb ON c.driver_vehicle_block_id = dvb.id
+                 JOIN drivers d ON dvb.driver_id = d.id
+                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
                  WHERE (c.created_by_user_id = ? OR c.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'crew' AND granted_to_user_id = ? AND access_level = 'view'))
                  ORDER BY c.created_at DESC"
             );
@@ -5283,12 +5288,17 @@ $router->get('/company/crews', function () use ($config, $db) {
             $crewStmt = $localPdo->query(
                 "SELECT c.*,
                         ct.name AS contractor_name,
-                        v.plate_number,
-                        d.full_name AS driver_name
+                        d.full_name AS driver_name, d.phone AS driver_phone,
+                        vs.set_type,
+                        CONCAT(vu1.plate_number, IFNULL(CONCAT(' + ', vu2.plate_number), '')) AS plates,
+                        vu1.plate_number AS primary_plate
                  FROM crews c
-                 LEFT JOIN contractors ct ON c.contractor_id = ct.id
-                 LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
-                 LEFT JOIN drivers d ON c.driver_id = d.id
+                 JOIN contractors ct ON c.contractor_id = ct.id
+                 JOIN driver_vehicle_blocks dvb ON c.driver_vehicle_block_id = dvb.id
+                 JOIN drivers d ON dvb.driver_id = d.id
+                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
                  ORDER BY c.created_at DESC"
             );
             $crews = $crewStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -5315,20 +5325,10 @@ $router->get('/company/crews/create', function () use ($config, $db) {
 
     if ($companyId <= 0) {
         $company = null;
-        $success = false;
-        $errors = [];
-        $old = [];
-        $formError = null;
-        $createdCrew = null;
-        $blockingNotices = [];
-        $contractors = [];
-        $vehicles = [];
-        $drivers = [];
-
-        ob_start();
-        require base_path('app/View/pages/company_crews_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $success = false; $errors = []; $old = []; $formError = null; $createdCrew = null;
+        $blockingNotices = []; $contractors = []; $driverVehicleBlocks = [];
+        ob_start(); require base_path('app/View/pages/company_crews_create.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
         return;
     }
 
@@ -5340,97 +5340,53 @@ $router->get('/company/crews/create', function () use ($config, $db) {
 
         if (!$company) {
             $company = null;
-            $success = false;
-            $errors = [];
-            $old = [];
-            $formError = null;
-            $createdCrew = null;
-            $blockingNotices = [];
-            $contractors = [];
-            $vehicles = [];
-            $drivers = [];
-
-            ob_start();
-            require base_path('app/View/pages/company_crews_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
+            $success = false; $errors = []; $old = []; $formError = null; $createdCrew = null;
+            $blockingNotices = []; $contractors = []; $driverVehicleBlocks = [];
+            ob_start(); require base_path('app/View/pages/company_crews_create.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
 
         $pageContext = 'Экипажи — Компания: ' . $company['name'];
 
-        $success = false;
-        $errors = [];
-        $old = [];
-        $formError = null;
-        $createdCrew = null;
+        $success = false; $errors = []; $old = []; $formError = null; $createdCrew = null;
 
         if ($company['status'] !== 'active') {
-            $blockingNotices = [];
-            $contractors = [];
-            $vehicles = [];
-            $drivers = [];
+            $blockingNotices = []; $contractors = []; $driverVehicleBlocks = [];
         } else {
             $dbIdentifier = $company['db_identifier'];
-            $localDbConfig = $config['database'];
-            $localDbConfig['database'] = $dbIdentifier;
-            $localDb = new \App\Core\Database($localDbConfig);
-            $localPdo = $localDb->connection();
-                applyLocalMigrations($localPdo);
+            $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+            $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+            applyLocalMigrations($localPdo);
 
-            try {
-                $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
-            } catch (\Exception $e) {
-                $migrationSql = file_get_contents(base_path('database/migrations-local/006_create_company_crews.sql'));
-                $localPdo->exec($migrationSql);
-            }
+            try { $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch(); }
+            catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/006_create_company_crews.sql'))); }
 
-            $contractors = $localPdo->query(
-                "SELECT id, name, inn FROM contractors WHERE status = 'active' ORDER BY name"
-            )->fetchAll(PDO::FETCH_ASSOC);
-
-            $vehicles = $localPdo->query(
-                "SELECT id, plate_number, brand, model FROM vehicle_units WHERE status = 'active' ORDER BY plate_number"
-            )->fetchAll(PDO::FETCH_ASSOC);
-
-            $drivers = $localPdo->query(
-                "SELECT id, full_name, phone FROM drivers WHERE status = 'active' ORDER BY full_name"
+            $contractors = $localPdo->query("SELECT id, name, inn FROM contractors WHERE status = 'active' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+            $driverVehicleBlocks = $localPdo->query(
+                "SELECT dvb.id, d.full_name AS driver_name, d.phone AS driver_phone, vs.set_type,
+                 vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+                 FROM driver_vehicle_blocks dvb
+                 JOIN drivers d ON dvb.driver_id = d.id
+                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 WHERE dvb.status = 'active'
+                 ORDER BY d.full_name"
             )->fetchAll(PDO::FETCH_ASSOC);
 
             $blockingNotices = [];
             if (empty($contractors)) {
-                $blockingNotices[] = [
-                    'message' => 'Сначала создайте подрядчика.',
-                    'link' => '/company/contractors/create',
-                    'action' => 'Создать подрядчика',
-                ];
+                $blockingNotices[] = ['message' => 'Сначала создайте подрядчика.', 'link' => '/company/contractors/create', 'action' => 'Создать подрядчика'];
             }
-            if (empty($vehicles)) {
-                $blockingNotices[] = [
-                    'message' => 'Сначала создайте транспорт.',
-                    'link' => '/company/vehicles/create',
-                    'action' => 'Создать транспорт',
-                ];
-            }
-            if (empty($drivers)) {
-                $blockingNotices[] = [
-                    'message' => 'Сначала создайте водителя.',
-                    'link' => '/company/drivers/create',
-                    'action' => 'Создать водителя',
-                ];
+            if (empty($driverVehicleBlocks)) {
+                $blockingNotices[] = ['message' => 'Сначала создайте блок «Водитель+ТС».', 'link' => '/company/driver-vehicle-blocks/create', 'action' => 'Создать блок'];
             }
         }
     } catch (\Exception $e) {
         $company = null;
-        $success = false;
-        $errors = [];
-        $old = [];
-        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
-        $createdCrew = null;
-        $blockingNotices = [];
-        $contractors = [];
-        $vehicles = [];
-        $drivers = [];
+        $success = false; $errors = []; $old = []; $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+        $createdCrew = null; $blockingNotices = []; $contractors = []; $driverVehicleBlocks = [];
     }
 
     ob_start();
@@ -5451,18 +5407,14 @@ $router->post('/company/crews/create', function () use ($config, $db) {
     $success = false;
     $createdCrew = null;
     $blockingNotices = [];
+    $contractors = [];
+    $driverVehicleBlocks = [];
 
     if ($companyId <= 0) {
         $company = null;
-        $contractors = [];
-        $vehicles = [];
-        $drivers = [];
         $formError = 'Компания не найдена';
-
-        ob_start();
-        require base_path('app/View/pages/company_crews_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        ob_start(); require base_path('app/View/pages/company_crews_create.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
         return;
     }
 
@@ -5474,30 +5426,18 @@ $router->post('/company/crews/create', function () use ($config, $db) {
 
         if (!$company) {
             $company = null;
-            $contractors = [];
-            $vehicles = [];
-            $drivers = [];
             $formError = 'Компания не найдена';
-
-            ob_start();
-            require base_path('app/View/pages/company_crews_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
+            ob_start(); require base_path('app/View/pages/company_crews_create.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
 
         $pageContext = 'Экипажи — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
-            $contractors = [];
-            $vehicles = [];
-            $drivers = [];
             $formError = 'Создание экипажа недоступно';
-
-            ob_start();
-            require base_path('app/View/pages/company_crews_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
+            ob_start(); require base_path('app/View/pages/company_crews_create.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
 
@@ -5506,7 +5446,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
-                applyLocalMigrations($localPdo);
+        applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -5519,133 +5459,75 @@ $router->post('/company/crews/create', function () use ($config, $db) {
             "SELECT id, name, inn FROM contractors WHERE status = 'active' ORDER BY name"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $vehicles = $localPdo->query(
-            "SELECT id, plate_number, brand, model FROM vehicle_units WHERE status = 'active' ORDER BY plate_number"
-        )->fetchAll(PDO::FETCH_ASSOC);
-
-        $drivers = $localPdo->query(
-            "SELECT id, full_name, phone FROM drivers WHERE status = 'active' ORDER BY full_name"
+        $driverVehicleBlocks = $localPdo->query(
+            "SELECT dvb.id, d.full_name AS driver_name, d.phone AS driver_phone, vs.set_type,
+             vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+             FROM driver_vehicle_blocks dvb
+             JOIN drivers d ON dvb.driver_id = d.id
+             JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+             LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+             LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+             WHERE dvb.status = 'active'
+             ORDER BY d.full_name"
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $blockingNotices = [];
         if (empty($contractors)) {
-            $blockingNotices[] = [
-                'message' => 'Сначала создайте подрядчика.',
-                'link' => '/company/contractors/create',
-                'action' => 'Создать подрядчика',
-            ];
+            $blockingNotices[] = ['message' => 'Сначала создайте подрядчика.', 'link' => '/company/contractors/create', 'action' => 'Создать подрядчика'];
         }
-        if (empty($vehicles)) {
-            $blockingNotices[] = [
-                'message' => 'Сначала создайте транспорт.',
-                'link' => '/company/vehicles/create',
-                'action' => 'Создать транспорт',
-            ];
-        }
-        if (empty($drivers)) {
-            $blockingNotices[] = [
-                'message' => 'Сначала создайте водителя.',
-                'link' => '/company/drivers/create',
-                'action' => 'Создать водителя',
-            ];
-        }
-
-        if (!empty($blockingNotices)) {
-            ob_start();
-            require base_path('app/View/pages/company_crews_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
+        if (empty($driverVehicleBlocks)) {
+            $blockingNotices[] = ['message' => 'Сначала создайте блок «Водитель+ТС».', 'link' => '/company/driver-vehicle-blocks/create', 'action' => 'Создать блок'];
         }
 
         $contractorId = trim($_POST['contractor_id'] ?? '');
-        $vehicleId = trim($_POST['vehicle_id'] ?? '');
-        $driverId = trim($_POST['driver_id'] ?? '');
+        $driverVehicleBlockId = trim($_POST['driver_vehicle_block_id'] ?? '');
+        $status = trim($_POST['status'] ?? 'active');
+        $comments = trim($_POST['comments'] ?? '');
 
         if ($contractorId === '') {
-            $errors['contractor_id'] = 'Выберите подрядчика';
-        } else {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM contractors WHERE id = ? AND status = ?');
-            $checkStmt->execute([$contractorId, 'active']);
-            if ($checkStmt->fetchColumn() == 0) {
-                $errors['contractor_id'] = 'Подрядчик не найден';
-            }
+            $errors['contractor_id'] = 'Обязательное поле';
+        }
+        if ($driverVehicleBlockId === '') {
+            $errors['driver_vehicle_block_id'] = 'Обязательное поле';
         }
 
-        if ($vehicleId === '') {
-            $errors['vehicle_id'] = 'Выберите транспорт';
-        } else {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE id = ? AND status = ?');
-            $checkStmt->execute([$vehicleId, 'active']);
-            if ($checkStmt->fetchColumn() == 0) {
-                $errors['vehicle_id'] = 'Транспорт не найден';
-            }
-        }
-
-        if ($driverId === '') {
-            $errors['driver_id'] = 'Выберите водителя';
-        } else {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM drivers WHERE id = ? AND status = ?');
-            $checkStmt->execute([$driverId, 'active']);
-            if ($checkStmt->fetchColumn() == 0) {
-                $errors['driver_id'] = 'Водитель не найден';
-            }
-        }
-
-        if (empty($errors)) {
-            $dupStmt = $localPdo->prepare(
-                'SELECT COUNT(*) FROM crews WHERE contractor_id = ? AND vehicle_id = ? AND driver_id = ?'
-            );
-            $dupStmt->execute([$contractorId, $vehicleId, $driverId]);
+        if ($contractorId !== '' && $driverVehicleBlockId !== '') {
+            $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM crews WHERE contractor_id = ? AND driver_vehicle_block_id = ?');
+            $dupStmt->execute([(int)$contractorId, (int)$driverVehicleBlockId]);
             if ($dupStmt->fetchColumn() > 0) {
-                $formError = 'Такой экипаж уже существует в этой компании';
+                $errors['driver_vehicle_block_id'] = 'Такой экипаж уже существует.';
             }
         }
 
-        if (!empty($errors) || $formError) {
-            ob_start();
-            require base_path('app/View/pages/company_crews_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
+        if (!empty($errors)) {
+            ob_start(); require base_path('app/View/pages/company_crews_create.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
 
-        $comments = trim($_POST['comments'] ?? '');
-
         $insert = $localPdo->prepare(
-            'INSERT INTO crews (contractor_id, vehicle_id, driver_id, status, comments, created_by_user_id, created_by_role)
-             VALUES (:contractor_id, :vehicle_id, :driver_id, :status, :comments, :created_by_user_id, :created_by_role)'
+            'INSERT INTO crews (contractor_id, driver_vehicle_block_id, status, comments, created_by_user_id, created_by_role)
+             VALUES (:contractor_id, :driver_vehicle_block_id, :status, :comments, :uid, :role)'
         );
         $insert->execute([
-            ':contractor_id'      => $contractorId,
-            ':vehicle_id'         => $vehicleId,
-            ':driver_id'          => $driverId,
-            ':status'             => 'active',
-            ':comments'           => $comments !== '' ? $comments : null,
-            ':created_by_user_id' => (int)$_SESSION['user_id'],
-            ':created_by_role'    => $_SESSION['role_code'],
+            ':contractor_id' => (int)$contractorId,
+            ':driver_vehicle_block_id' => (int)$driverVehicleBlockId,
+            ':status' => $status,
+            ':comments' => $comments !== '' ? $comments : null,
+            ':uid' => (int)$_SESSION['user_id'],
+            ':role' => $_SESSION['role_code'],
         ]);
 
-        $lastId = $localPdo->lastInsertId();
-        $selectStmt = $localPdo->prepare(
-            "SELECT c.*,
-                    ct.name AS contractor_name,
-                    v.plate_number,
-                    d.full_name AS driver_name
-             FROM crews c
-             LEFT JOIN contractors ct ON c.contractor_id = ct.id
-             LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
-             LEFT JOIN drivers d ON c.driver_id = d.id
-             WHERE c.id = ?"
-        );
-        $selectStmt->execute([$lastId]);
-        $createdCrew = $selectStmt->fetch(PDO::FETCH_ASSOC);
+        $newId = (int)$localPdo->lastInsertId();
+        $ctrName = $localPdo->prepare("SELECT name FROM contractors WHERE id = ?");
+        $ctrName->execute([(int)$contractorId]);
+        $createdCrew = [
+            'id' => $newId,
+            'contractor_name' => $ctrName->fetchColumn() ?: '',
+        ];
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
-        $contractors = $contractors ?? [];
-        $vehicles = $vehicles ?? [];
-        $drivers = $drivers ?? [];
         $formError = 'Ошибка создания экипажа: ' . $e->getMessage();
     }
 
@@ -5739,13 +5621,19 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
 
         $cStmt = $localPdo->prepare(
             "SELECT c.*,
-                    ct.name AS contractor_name,
-                    v.plate_number,
-                    d.full_name AS driver_name
+                    ct.name AS contractor_name, ct.inn AS contractor_inn,
+                    d.full_name AS driver_name, d.phone AS driver_phone,
+                    dvb.id AS driver_vehicle_block_id,
+                    vs.set_type, vs.id AS vehicle_set_id,
+                    vu1.plate_number AS primary_plate, vu1.brand AS primary_brand, vu1.model AS primary_model,
+                    vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand, vu2.model AS secondary_model
              FROM crews c
-             LEFT JOIN contractors ct ON c.contractor_id = ct.id
-             LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
-             LEFT JOIN drivers d ON c.driver_id = d.id
+             JOIN contractors ct ON c.contractor_id = ct.id
+             JOIN driver_vehicle_blocks dvb ON c.driver_vehicle_block_id = dvb.id
+             JOIN drivers d ON dvb.driver_id = d.id
+             JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+             LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+             LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
              WHERE c.id = ?"
         );
         $cStmt->execute([$crewId]);
@@ -6236,6 +6124,831 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
     }
 });
 
+// ---- VEHICLE SETS (Транспортные комплекты) ----
+
+$router->get('/company/vehicle-sets', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Транспортные комплекты';
+    $pageContext = 'Транспортные комплекты — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null; $vehicleSets = []; $dbError = null;
+        ob_start(); require base_path('app/View/pages/company_vehicle_sets.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) {
+            $company = null; $vehicleSets = []; $dbError = null;
+            ob_start(); require base_path('app/View/pages/company_vehicle_sets.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        if ($company['status'] !== 'active') {
+            $vehicleSets = []; $dbError = null;
+            ob_start(); require base_path('app/View/pages/company_vehicle_sets.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM vehicle_sets LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/017_create_vehicle_sets.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $stmt = $localPdo->prepare(
+                "SELECT vs.*, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand,
+                 vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand
+                 FROM vehicle_sets vs
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 WHERE (vs.created_by_user_id = ? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND granted_to_user_id = ? AND access_level = 'view'))
+                 ORDER BY vs.created_at DESC"
+            );
+            $stmt->execute([$userId, $userId]);
+            $vehicleSets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $stmt = $localPdo->query(
+                "SELECT vs.*, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand,
+                 vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand
+                 FROM vehicle_sets vs
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 ORDER BY vs.created_at DESC"
+            );
+            $vehicleSets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $vehicleSets = [];
+        $dbError = 'Не удалось подключиться к базе данных компании.';
+    }
+
+    ob_start(); require base_path('app/View/pages/company_vehicle_sets.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/vehicle-sets/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Создать транспортный комплект';
+    $pageContext = 'Транспортные комплекты — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    if ($companyId <= 0) {
+        $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdVehicleSet = null; $vehicleUnits = [];
+        ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) {
+            $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdVehicleSet = null; $vehicleUnits = [];
+            ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql')));
+        }
+
+        $vehicleUnits = $localPdo->query("SELECT * FROM vehicle_units WHERE status = 'active' ORDER BY plate_number")->fetchAll(PDO::FETCH_ASSOC);
+        $success = false; $errors = []; $old = []; $formError = null; $createdVehicleSet = null;
+    } catch (\Exception $e) {
+        $company = null; $success = false; $errors = []; $old = []; $formError = 'Ошибка: ' . $e->getMessage(); $createdVehicleSet = null; $vehicleUnits = [];
+    }
+
+    ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/vehicle-sets/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Создать транспортный комплект';
+    $pageContext = 'Транспортные комплекты — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $errors = []; $old = $_POST; $formError = null; $success = false; $createdVehicleSet = null; $vehicleUnits = [];
+
+    if ($companyId <= 0) {
+        $company = null; $formError = 'Компания не найдена';
+        ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderCreateVS; }
+        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        if ($company['status'] !== 'active') { $formError = 'Создание недоступно'; goto renderCreateVS; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $vehicleUnits = $localPdo->query("SELECT * FROM vehicle_units WHERE status = 'active' ORDER BY plate_number")->fetchAll(PDO::FETCH_ASSOC);
+
+        $setType = trim($_POST['set_type'] ?? '');
+        $primaryId = trim($_POST['primary_vehicle_unit_id'] ?? '');
+        $secondaryId = trim($_POST['secondary_vehicle_unit_id'] ?? '');
+        $status = trim($_POST['status'] ?? 'active');
+        $comments = trim($_POST['comments'] ?? '');
+
+        if ($primaryId === '') { $errors['primary_vehicle_unit_id'] = 'Обязательное поле'; }
+        if (($setType === 'coupling' || $setType === 'road_train') && $secondaryId === '') {
+            $errors['secondary_vehicle_unit_id'] = 'Обязательно для сцепки и автопоезда';
+        }
+        if ($setType === 'single') { $secondaryId = ''; }
+
+        if (!empty($primaryId)) {
+            $vuCheck = $localPdo->prepare("SELECT unit_type FROM vehicle_units WHERE id = ?");
+            $vuCheck->execute([(int)$primaryId]);
+            $vuRow = $vuCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$vuRow) { $errors['primary_vehicle_unit_id'] = 'Единица не найдена'; }
+        }
+
+        if (!empty($errors)) { goto renderCreateVS; }
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO vehicle_sets (set_type, primary_vehicle_unit_id, secondary_vehicle_unit_id, status, comments, created_by_user_id, created_by_role)
+             VALUES (:set_type, :primary_id, :secondary_id, :status, :comments, :uid, :role)'
+        );
+        $insert->execute([
+            ':set_type' => $setType !== '' ? $setType : null,
+            ':primary_id' => (int)$primaryId,
+            ':secondary_id' => $secondaryId !== '' ? (int)$secondaryId : null,
+            ':status' => $status,
+            ':comments' => $comments !== '' ? $comments : null,
+            ':uid' => (int)$_SESSION['user_id'],
+            ':role' => $_SESSION['role_code'],
+        ]);
+
+        $newId = (int)$localPdo->lastInsertId();
+        $createdVehicleSet = [
+            'id' => $newId, 'set_type' => $setType,
+            'primary_plate' => $vehicleUnits[array_search((int)$primaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '',
+            'secondary_plate' => $secondaryId ? ($vehicleUnits[array_search((int)$secondaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '') : null,
+        ];
+        $success = true;
+        ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    renderCreateVS:
+    ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Транспортный комплект';
+    $pageContext = 'Транспортные комплекты — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $grants = []; $logists = [];
+
+    if ($companyId <= 0) {
+        $company = null; $vehicleSet = null; $dbError = null;
+        ob_start(); require base_path('app/View/pages/company_vehicle_set_view.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $vehicleSet = null; $dbError = null; goto renderViewVS; }
+        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        if ($company['status'] !== 'active') { $vehicleSet = null; $dbError = null; goto renderViewVS; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM vehicle_sets LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/017_create_vehicle_sets.sql'))); }
+
+        $stmt = $localPdo->prepare(
+            "SELECT vs.*, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand, vu1.model AS primary_model, vu1.vin AS primary_vin,
+             vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand, vu2.model AS secondary_model, vu2.vin AS secondary_vin
+             FROM vehicle_sets vs
+             LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+             LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+             WHERE vs.id = ?"
+        );
+        $stmt->execute([(int)$id]); $vehicleSet = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if ($vehicleSet) { $pageTitle = 'Комплект #' . $vehicleSet['id']; }
+
+        if (($_SESSION['role_code'] ?? '') === 'company_owner') {
+            $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
+            $grantsStmt->execute(['vehicle_set', (int)$id]);
+            $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+        }
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $vehicleSet = null; $grants = []; $logists = [];
+        $dbError = 'Не удалось загрузить: ' . $e->getMessage();
+    }
+
+    renderViewVS:
+    ob_start(); require base_path('app/View/pages/company_vehicle_set_view.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Редактировать комплект';
+    $pageContext = 'Транспортные комплекты — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $entityNotFound = false; $success = false; $vehicleUnits = [];
+
+    if ($companyId <= 0) {
+        $company = null; $vehicleSet = null; $errors = []; $old = []; $formError = null;
+        ob_start(); require base_path('app/View/pages/company_vehicle_set_edit.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $vehicleSet = null; $errors = []; $old = []; $formError = null; goto renderEditVS; }
+        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        if ($company['status'] !== 'active') { $vehicleSet = null; $errors = []; $old = []; $formError = null; goto renderEditVS; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $stmt = $localPdo->prepare('SELECT * FROM vehicle_sets WHERE id = ?');
+        $stmt->execute([(int)$id]); $vehicleSet = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if (!$vehicleSet) { $entityNotFound = true; $errors = []; $old = []; $formError = null; goto renderEditVS; }
+
+        $vehicleUnits = $localPdo->query("SELECT * FROM vehicle_units WHERE status = 'active' ORDER BY plate_number")->fetchAll(PDO::FETCH_ASSOC);
+        $errors = []; $old = $vehicleSet; $formError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $vehicleSet = null; $errors = []; $old = []; $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    renderEditVS:
+    ob_start(); require base_path('app/View/pages/company_vehicle_set_edit.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Редактировать комплект';
+    $pageContext = 'Транспортные комплекты — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $entityNotFound = false; $success = false; $vehicleUnits = [];
+
+    if ($companyId <= 0) {
+        $company = null; $vehicleSet = null; $errors = []; $old = $_POST; $formError = 'Компания не найдена';
+        ob_start(); require base_path('app/View/pages/company_vehicle_set_edit.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $vehicleSet = null; $errors = []; $old = $_POST; $formError = 'Компания не найдена'; goto renderEditVSPost; }
+        if ($company['status'] !== 'active') { $vehicleSet = null; $errors = []; $old = $_POST; $formError = 'Редактирование недоступно'; goto renderEditVSPost; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $stmt = $localPdo->prepare('SELECT * FROM vehicle_sets WHERE id = ?');
+        $stmt->execute([(int)$id]); $vehicleSet = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$vehicleSet) { $entityNotFound = true; $errors = []; $old = $_POST; $formError = null; goto renderEditVSPost; }
+
+        $vehicleUnits = $localPdo->query("SELECT * FROM vehicle_units WHERE status = 'active' ORDER BY plate_number")->fetchAll(PDO::FETCH_ASSOC);
+        $errors = []; $old = $_POST; $formError = null;
+
+        $setType = trim($_POST['set_type'] ?? '');
+        $primaryId = trim($_POST['primary_vehicle_unit_id'] ?? '');
+        $secondaryId = trim($_POST['secondary_vehicle_unit_id'] ?? '');
+
+        if ($primaryId === '') { $errors['primary_vehicle_unit_id'] = 'Обязательное поле'; }
+        if (($setType === 'coupling' || $setType === 'road_train') && $secondaryId === '') {
+            $errors['secondary_vehicle_unit_id'] = 'Обязательно для сцепки и автопоезда';
+        }
+        if ($setType === 'single') { $secondaryId = ''; }
+
+        if (!empty($errors)) { goto renderEditVSPost; }
+
+        $update = $localPdo->prepare(
+            'UPDATE vehicle_sets SET set_type = :set_type, primary_vehicle_unit_id = :primary_id, secondary_vehicle_unit_id = :secondary_id, status = :status, comments = :comments, updated_by_user_id = :uid, updated_by_role = :role WHERE id = :id'
+        );
+        $update->execute([
+            ':set_type' => $setType !== '' ? $setType : null,
+            ':primary_id' => (int)$primaryId,
+            ':secondary_id' => $secondaryId !== '' ? (int)$secondaryId : null,
+            ':status' => $_POST['status'] ?? $vehicleSet['status'],
+            ':comments' => $_POST['comments'] ?? null,
+            ':uid' => (int)$_SESSION['user_id'],
+            ':role' => $_SESSION['role_code'],
+            ':id' => (int)$id,
+        ]);
+
+        $vehicleSet = $localPdo->prepare('SELECT * FROM vehicle_sets WHERE id = ?');
+        $vehicleSet->execute([(int)$id]); $vehicleSet = $vehicleSet->fetch(PDO::FETCH_ASSOC);
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $vehicleSet = $vehicleSet ?? null;
+        $errors = []; $old = $_POST; $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    renderEditVSPost:
+    ob_start(); require base_path('app/View/pages/company_vehicle_set_edit.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    if ($companyId <= 0) { header('Location: /company/vehicle-sets'); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: /company/vehicle-sets'); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM driver_vehicle_blocks LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/018_create_driver_vehicle_blocks.sql'))); }
+
+        $blockCheck = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE vehicle_set_id = ? AND status = ?');
+        $blockCheck->execute([(int)$id, 'active']);
+        if ($blockCheck->fetchColumn() > 0) {
+            $_SESSION['flash'] = 'Комплект используется в активных блоках «Водитель+ТС». Сначала архивируйте блоки.';
+            header('Location: /company/vehicle-sets/' . $id); exit;
+        }
+
+        $update = $localPdo->prepare("UPDATE vehicle_sets SET status = 'archived' WHERE id = ?");
+        $update->execute([(int)$id]);
+        header('Location: /company/vehicle-sets'); exit;
+    } catch (\Exception $e) {
+        header('Location: /company/vehicle-sets'); exit;
+    }
+});
+
+// ---- DRIVER VEHICLE BLOCKS (Блоки "Водитель+ТС") ----
+
+$router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Блоки "Водитель + ТС"';
+    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    if ($companyId <= 0) {
+        $company = null; $blocks = []; $dbError = null;
+        ob_start(); require base_path('app/View/pages/company_driver_vehicle_blocks.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $blocks = []; $dbError = null; goto renderBlocks; }
+        $pageContext = 'Блоки "Водитель + ТС" — Компания: ' . $company['name'];
+        if ($company['status'] !== 'active') { $blocks = []; $dbError = null; goto renderBlocks; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM driver_vehicle_blocks LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/018_create_driver_vehicle_blocks.sql'))); }
+
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $stmt = $localPdo->prepare(
+                "SELECT dvb.*, d.full_name AS driver_name, d.phone AS driver_phone, vs.set_type,
+                 CONCAT(vu1.plate_number, IFNULL(CONCAT(' + ', vu2.plate_number), '')) AS plates
+                 FROM driver_vehicle_blocks dvb
+                 JOIN drivers d ON dvb.driver_id = d.id
+                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 WHERE (dvb.created_by_user_id = ? OR dvb.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver_vehicle_block' AND granted_to_user_id = ? AND access_level = 'view'))
+                 ORDER BY dvb.created_at DESC"
+            );
+            $stmt->execute([$userId, $userId]);
+            $blocks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $stmt = $localPdo->query(
+                "SELECT dvb.*, d.full_name AS driver_name, d.phone AS driver_phone, vs.set_type,
+                 CONCAT(vu1.plate_number, IFNULL(CONCAT(' + ', vu2.plate_number), '')) AS plates
+                 FROM driver_vehicle_blocks dvb
+                 JOIN drivers d ON dvb.driver_id = d.id
+                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 ORDER BY dvb.created_at DESC"
+            );
+            $blocks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $blocks = [];
+        $dbError = 'Не удалось подключиться к базе данных компании.';
+    }
+
+    renderBlocks:
+    ob_start(); require base_path('app/View/pages/company_driver_vehicle_blocks.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Создать блок "Водитель + ТС"';
+    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    if ($companyId <= 0) {
+        $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdBlock = null; $drivers = []; $vehicleSets = [];
+        ob_start(); require base_path('app/View/pages/company_driver_vehicle_blocks_create.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdBlock = null; $drivers = []; $vehicleSets = []; goto renderCreateBlock; }
+        $pageContext = 'Блоки "Водитель + ТС" — Компания: ' . $company['name'];
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+        $vehicleSets = $localPdo->query(
+            "SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+             FROM vehicle_sets vs
+             LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+             LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+             WHERE vs.status = 'active' ORDER BY vs.id"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $success = false; $errors = []; $old = []; $formError = null; $createdBlock = null;
+    } catch (\Exception $e) {
+        $company = null; $success = false; $errors = []; $old = []; $formError = 'Ошибка: ' . $e->getMessage(); $createdBlock = null; $drivers = []; $vehicleSets = [];
+    }
+
+    renderCreateBlock:
+    ob_start(); require base_path('app/View/pages/company_driver_vehicle_blocks_create.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Создать блок "Водитель + ТС"';
+    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $errors = []; $old = $_POST; $formError = null; $success = false; $createdBlock = null; $drivers = []; $vehicleSets = [];
+
+    if ($companyId <= 0) { $company = null; $formError = 'Компания не найдена'; goto renderPostBlock; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderPostBlock; }
+        if ($company['status'] !== 'active') { $formError = 'Создание недоступно'; goto renderPostBlock; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+        $vehicleSets = $localPdo->query(
+            "SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+             FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+             WHERE vs.status = 'active' ORDER BY vs.id"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $driverId = trim($_POST['driver_id'] ?? '');
+        $vehicleSetId = trim($_POST['vehicle_set_id'] ?? '');
+        $status = trim($_POST['status'] ?? 'active');
+        $comments = trim($_POST['comments'] ?? '');
+
+        if ($driverId === '') { $errors['driver_id'] = 'Обязательное поле'; }
+        if ($vehicleSetId === '') { $errors['vehicle_set_id'] = 'Обязательное поле'; }
+
+        if ($driverId !== '' && $vehicleSetId !== '') {
+            $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ?');
+            $dupStmt->execute([(int)$driverId, (int)$vehicleSetId]);
+            if ($dupStmt->fetchColumn() > 0) {
+                $errors['driver_id'] = 'Такой блок «Водитель + ТС» уже существует.';
+            }
+        }
+
+        if (!empty($errors)) { goto renderPostBlock; }
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO driver_vehicle_blocks (driver_id, vehicle_set_id, status, comments, created_by_user_id, created_by_role)
+             VALUES (:driver_id, :vehicle_set_id, :status, :comments, :uid, :role)'
+        );
+        $insert->execute([
+            ':driver_id' => (int)$driverId,
+            ':vehicle_set_id' => (int)$vehicleSetId,
+            ':status' => $status,
+            ':comments' => $comments !== '' ? $comments : null,
+            ':uid' => (int)$_SESSION['user_id'],
+            ':role' => $_SESSION['role_code'],
+        ]);
+
+        $newId = (int)$localPdo->lastInsertId();
+        $dName = $localPdo->prepare("SELECT full_name FROM drivers WHERE id = ?");
+        $dName->execute([(int)$driverId]);
+        $createdBlock = [
+            'id' => $newId,
+            'driver_name' => $dName->fetchColumn() ?: '',
+            'set_type' => $vehicleSets[array_search((int)$vehicleSetId, array_column($vehicleSets, 'id'))]['set_type'] ?? '',
+        ];
+        $success = true;
+        ob_start(); require base_path('app/View/pages/company_driver_vehicle_blocks_create.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    renderPostBlock:
+    ob_start(); require base_path('app/View/pages/company_driver_vehicle_blocks_create.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Блок "Водитель + ТС"';
+    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $grants = []; $logists = [];
+
+    if ($companyId <= 0) { $company = null; $block = null; $dbError = null; goto renderViewBlock; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $block = null; $dbError = null; goto renderViewBlock; }
+        if ($company['status'] !== 'active') { $block = null; $dbError = null; goto renderViewBlock; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $stmt = $localPdo->prepare(
+            "SELECT dvb.*, d.full_name AS driver_name, d.phone AS driver_phone, vs.set_type,
+             vu1.plate_number AS primary_plate, vu1.brand AS primary_brand, vu1.model AS primary_model,
+             vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand, vu2.model AS secondary_model
+             FROM driver_vehicle_blocks dvb
+             JOIN drivers d ON dvb.driver_id = d.id
+             JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+             LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+             LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+             WHERE dvb.id = ?"
+        );
+        $stmt->execute([(int)$id]); $block = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($block) { $pageTitle = 'Блок #' . $block['id']; }
+
+        if (($_SESSION['role_code'] ?? '') === 'company_owner') {
+            $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
+            $grantsStmt->execute(['driver_vehicle_block', (int)$id]);
+            $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+        }
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $block = null; $grants = []; $logists = [];
+        $dbError = 'Не удалось загрузить: ' . $e->getMessage();
+    }
+
+    renderViewBlock:
+    ob_start(); require base_path('app/View/pages/company_driver_vehicle_block_view.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Редактировать блок';
+    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $entityNotFound = false; $success = false; $drivers = []; $vehicleSets = [];
+
+    if ($companyId <= 0) { $company = null; $block = null; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $block = null; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
+        if ($company['status'] !== 'active') { $block = null; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $stmt = $localPdo->prepare('SELECT * FROM driver_vehicle_blocks WHERE id = ?');
+        $stmt->execute([(int)$id]); $block = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$block) { $entityNotFound = true; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
+
+        $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+        $vehicleSets = $localPdo->query(
+            "SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+             FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+             WHERE vs.status = 'active' ORDER BY vs.id"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $errors = []; $old = $block; $formError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $block = null; $errors = []; $old = []; $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    renderEditBlock:
+    ob_start(); require base_path('app/View/pages/company_driver_vehicle_block_edit.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Редактировать блок';
+    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $entityNotFound = false; $success = false; $drivers = []; $vehicleSets = [];
+
+    if ($companyId <= 0) { $company = null; $block = null; $errors = []; $old = $_POST; $formError = 'Компания не найдена'; goto renderEditBlockPost; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company) { $company = null; $block = null; $errors = []; $old = $_POST; $formError = 'Компания не найдена'; goto renderEditBlockPost; }
+        if ($company['status'] !== 'active') { $block = null; $errors = []; $old = $_POST; $formError = 'Редактирование недоступно'; goto renderEditBlockPost; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $stmt = $localPdo->prepare('SELECT * FROM driver_vehicle_blocks WHERE id = ?');
+        $stmt->execute([(int)$id]); $block = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$block) { $entityNotFound = true; $errors = []; $old = $_POST; $formError = null; goto renderEditBlockPost; }
+
+        $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+        $vehicleSets = $localPdo->query(
+            "SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+             FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+             WHERE vs.status = 'active' ORDER BY vs.id"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $errors = []; $old = $_POST; $formError = null;
+        $driverId = trim($_POST['driver_id'] ?? '');
+        $vehicleSetId = trim($_POST['vehicle_set_id'] ?? '');
+
+        if ($driverId === '') { $errors['driver_id'] = 'Обязательное поле'; }
+        if ($vehicleSetId === '') { $errors['vehicle_set_id'] = 'Обязательное поле'; }
+
+        if ($driverId !== '' && $vehicleSetId !== '') {
+            $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ? AND id != ?');
+            $dupStmt->execute([(int)$driverId, (int)$vehicleSetId, (int)$id]);
+            if ($dupStmt->fetchColumn() > 0) { $errors['driver_id'] = 'Такой блок «Водитель + ТС» уже существует.'; }
+        }
+
+        if (!empty($errors)) { goto renderEditBlockPost; }
+
+        $update = $localPdo->prepare(
+            'UPDATE driver_vehicle_blocks SET driver_id = :driver_id, vehicle_set_id = :vehicle_set_id, status = :status, comments = :comments, updated_by_user_id = :uid, updated_by_role = :role WHERE id = :id'
+        );
+        $update->execute([
+            ':driver_id' => (int)$driverId,
+            ':vehicle_set_id' => (int)$vehicleSetId,
+            ':status' => $_POST['status'] ?? $block['status'],
+            ':comments' => $_POST['comments'] ?? null,
+            ':uid' => (int)$_SESSION['user_id'],
+            ':role' => $_SESSION['role_code'],
+            ':id' => (int)$id,
+        ]);
+
+        $block = $localPdo->prepare('SELECT * FROM driver_vehicle_blocks WHERE id = ?');
+        $block->execute([(int)$id]); $block = $block->fetch(PDO::FETCH_ASSOC);
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null; $block = $block ?? null;
+        $errors = []; $old = $_POST; $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    renderEditBlockPost:
+    ob_start(); require base_path('app/View/pages/company_driver_vehicle_block_edit.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/driver-vehicle-blocks/{id}/archive', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    if ($companyId <= 0) { header('Location: /company/driver-vehicle-blocks'); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: /company/driver-vehicle-blocks'); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM driver_vehicle_blocks LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/018_create_driver_vehicle_blocks.sql'))); }
+
+        try { $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/006_create_company_crews.sql'))); }
+
+        $crewCheck = $localPdo->prepare('SELECT COUNT(*) FROM crews WHERE driver_vehicle_block_id = ? AND status = ?');
+        $crewCheck->execute([(int)$id, 'active']);
+        if ($crewCheck->fetchColumn() > 0) {
+            $_SESSION['flash'] = 'Блок используется в активных экипажах. Сначала архивируйте экипажи.';
+            header('Location: /company/driver-vehicle-blocks/' . $id); exit;
+        }
+
+        $update = $localPdo->prepare("UPDATE driver_vehicle_blocks SET status = 'archived' WHERE id = ?");
+        $update->execute([(int)$id]);
+        header('Location: /company/driver-vehicle-blocks'); exit;
+    } catch (\Exception $e) {
+        header('Location: /company/driver-vehicle-blocks'); exit;
+    }
+});
+
 $router->get('/company/documents', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
 
@@ -6247,6 +6960,8 @@ $router->get('/company/documents', function () use ($config, $db) {
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
+                   'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
+                   'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     if (!isset($whitelist[$entityType])) {
@@ -6405,6 +7120,8 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
+                   'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
+                   'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     $replaceDocId = (int)($_GET['replace'] ?? 0);
@@ -6510,6 +7227,12 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
             case 'vehicle_unit':
                 $entityName = $entity['plate_number'];
                 break;
+            case 'vehicle_set':
+                $entityName = 'Комплект #' . $entity['id'];
+                break;
+            case 'driver_vehicle_block':
+                $entityName = 'Блок #' . $entity['id'];
+                break;
             case 'crew':
                 $entityName = 'Экипаж #' . $entity['id'];
                 break;
@@ -6552,6 +7275,8 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
+                   'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
+                   'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     $pageTitle = 'Загрузить документ';
@@ -6654,6 +7379,12 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
             case 'vehicle_unit':
                 $entityName = $entity['plate_number'];
                 break;
+            case 'vehicle_set':
+                $entityName = 'Комплект #' . $entity['id'];
+                break;
+            case 'driver_vehicle_block':
+                $entityName = 'Блок #' . $entity['id'];
+                break;
             case 'crew':
                 $entityName = 'Экипаж #' . $entity['id'];
                 break;
@@ -6661,10 +7392,17 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
                 $entityName = '';
         }
 
+        // File handling
         $documentType = trim($_POST['document_type'] ?? '');
+        // document_type is now optional (NOT required)
+        $documentName = trim($_POST['document_name'] ?? '');
+        $documentNumber = trim($_POST['document_number'] ?? '');
+        $documentDate = trim($_POST['document_date'] ?? '');
+        $documentExpire = trim($_POST['document_expire'] ?? '');
+        $comments = trim($_POST['comments'] ?? '');
 
         if ($documentType === '') {
-            $errors['document_type'] = 'Укажите тип документа';
+            // document_type is now optional - save as NULL
         }
 
         $fileError = $_FILES['document_file']['error'] ?? UPLOAD_ERR_NO_FILE;
@@ -6686,8 +7424,8 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
 
             if (empty($errors['document_file'])) {
                 $fileSize = $_FILES['document_file']['size'];
-                if ($fileSize > 10 * 1024 * 1024) {
-                    $errors['document_file'] = 'Размер файла превышает 10 МБ';
+                if ($fileSize > 20 * 1024 * 1024) {
+                    $errors['document_file'] = 'Размер файла превышает 20 МБ';
                 }
             }
 
@@ -6756,15 +7494,19 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
         $userRole = $_SESSION['role_code'] ?? '';
 
         $insert = $localPdo->prepare(
-            'INSERT INTO documents (entity_type, entity_id, document_type, original_name, stored_name,
+            'INSERT INTO documents (entity_type, entity_id, document_type, document_name, document_number, document_date, document_expire, original_name, stored_name,
              relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, comments, created_by_user_id, created_by_role)
-             VALUES (:entity_type, :entity_id, :document_type, :original_name, :stored_name,
+             VALUES (:entity_type, :entity_id, :document_type, :document_name, :document_number, :document_date, :document_expire, :original_name, :stored_name,
              :relative_path, :mime_type, :file_size, :status, :uploaded_by_user_id, :uploaded_by_role, :comments, :created_by_user_id, :created_by_role)'
         );
         $insert->execute([
             ':entity_type'         => $entityType,
             ':entity_id'           => $entityId,
-            ':document_type'       => $documentType,
+            ':document_type'       => $documentType !== '' ? $documentType : null,
+            ':document_name'       => $documentName !== '' ? $documentName : null,
+            ':document_number'     => $documentNumber !== '' ? $documentNumber : null,
+            ':document_date'       => $documentDate !== '' ? $documentDate : null,
+            ':document_expire'     => $documentExpire !== '' ? $documentExpire : null,
             ':original_name'       => $originalName,
             ':stored_name'         => $storedName,
             ':relative_path'       => $relativePath,
@@ -6923,8 +7665,8 @@ $router->post('/company/documents/delete', function () use ($config, $db) {
             exit;
         }
 
-        $updateStmt = $localPdo->prepare('UPDATE documents SET status = :status, updated_at = NOW() WHERE id = :id');
-        $updateStmt->execute([':status' => 'archived', ':id' => $docId]);
+        $updateStmt = $localPdo->prepare('UPDATE documents SET deleted_at = NOW(), deleted_by_user_id = :uid, delete_comment = :comment, updated_at = NOW() WHERE id = :id');
+        $updateStmt->execute([':uid' => (int)$_SESSION['user_id'], ':comment' => 'Удалено через интерфейс', ':id' => $docId]);
 
         header('Location: ' . $redirect);
         exit;
@@ -6988,7 +7730,7 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
         }
 
         $fileSize = $_FILES['document_file']['size'];
-        if ($fileSize > 10 * 1024 * 1024) {
+        if ($fileSize > 20 * 1024 * 1024) {
             header('Location: ' . $redirect);
             exit;
         }
@@ -7019,6 +7761,7 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
         $updateStmt = $localPdo->prepare(
             'UPDATE documents SET original_name = :oname, stored_name = :sname, mime_type = :mime,
              file_size = :fsize, document_type = :dtype, status = :status,
+             deleted_at = NULL, deleted_by_user_id = NULL, delete_comment = NULL,
              uploaded_by_user_id = :uid, uploaded_by_role = :urole, updated_at = NOW()
              WHERE id = :id'
         );
@@ -7270,7 +8013,7 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
     $grantedToUserId = (int)($_POST['granted_to_user_id'] ?? 0);
     $redirect = $_POST['redirect'] ?? '/company/dashboard';
 
-    $allowedEntityTypes = ['client', 'contractor', 'driver', 'vehicle_unit', 'crew'];
+    $allowedEntityTypes = ['client', 'contractor', 'driver', 'vehicle_unit', 'vehicle_set', 'driver_vehicle_block', 'crew'];
 
     if (!in_array($entityType, $allowedEntityTypes, true)) {
         header('Location: ' . $redirect);
@@ -7307,6 +8050,18 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
             $localPdo->exec($migrationSql);
         }
 
+        $accessLevel = trim($_POST['access_level'] ?? 'view');
+        if (!in_array($accessLevel, ['view', 'edit'], true)) { $accessLevel = 'view'; }
+
+        // Check for duplicate active grant
+        $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM entity_access_grants WHERE entity_type = ? AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL');
+        $dupStmt->execute([$entityType, $entityId, $grantedToUserId]);
+        if ($dupStmt->fetchColumn() > 0) {
+            $_SESSION['flash'] = 'Доступ уже выдан.';
+            header('Location: ' . $redirect);
+            exit;
+        }
+
         $insert = $localPdo->prepare(
             'INSERT INTO entity_access_grants (entity_type, entity_id, granted_to_user_id, granted_by_user_id, access_level)
              VALUES (:entity_type, :entity_id, :granted_to_user_id, :granted_by_user_id, :access_level)'
@@ -7316,13 +8071,43 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
             ':entity_id'          => $entityId,
             ':granted_to_user_id' => $grantedToUserId,
             ':granted_by_user_id' => (int)$_SESSION['user_id'],
-            ':access_level'       => 'view',
+            ':access_level'       => $accessLevel,
         ]);
     } catch (\Exception $e) {
         if ($e->getCode() != 23000) {
             error_log('Access grant error: ' . $e->getMessage());
         }
     }
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+// Revoke access grant
+$router->post('/company/access-grants/{id}/revoke', function ($id) use ($config, $db) {
+    requireRole('company_owner');
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = $_GET['redirect'] ?? '/company/dashboard';
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $update = $localPdo->prepare('UPDATE entity_access_grants SET revoked_at = NOW(), revoked_by_user_id = ? WHERE id = ?');
+        $update->execute([(int)$_SESSION['user_id'], (int)$id]);
+    } catch (\Exception $e) {}
 
     header('Location: ' . $redirect);
     exit;

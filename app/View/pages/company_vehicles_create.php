@@ -52,8 +52,8 @@
                 <span class="kv-value"><?= e($createdVehicle['model'] ?? '—') ?></span>
             </div>
             <div class="kv-row">
-                <span class="kv-key">Тип ТС</span>
-                <span class="kv-value"><?= e($createdVehicle['vehicle_type'] ?? '—') ?></span>
+                <span class="kv-key">Тип единицы</span>
+                <span class="kv-value"><?= e($createdVehicle['unit_type'] ?? '—') ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">VIN</span>
@@ -62,10 +62,6 @@
             <div class="kv-row">
                 <span class="kv-key">СТС</span>
                 <span class="kv-value"><?= e($createdVehicle['sts_number'] ?? '—') ?></span>
-            </div>
-            <div class="kv-row">
-                <span class="kv-key">ПТС</span>
-                <span class="kv-value"><?= e($createdVehicle['pts_number'] ?? '—') ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Грузоподъёмность (т)</span>
@@ -136,9 +132,15 @@
             </div>
 
             <div class="field">
-                <label class="field-label">Тип ТС</label>
-                <input type="text" name="vehicle_type" class="field-input"
-                       value="<?= e($old['vehicle_type'] ?? '') ?>">
+                <label class="field-label">Тип единицы</label>
+                <select name="unit_type" class="field-input">
+                    <option value="">— Не указан —</option>
+                    <option value="single" <?= ($old['unit_type'] ?? '') === 'single' ? 'selected' : '' ?>>Одиночное ТС</option>
+                    <option value="tractor" <?= ($old['unit_type'] ?? '') === 'tractor' ? 'selected' : '' ?>>Тягач</option>
+                    <option value="semi_trailer" <?= ($old['unit_type'] ?? '') === 'semi_trailer' ? 'selected' : '' ?>>Полуприцеп</option>
+                    <option value="truck" <?= ($old['unit_type'] ?? '') === 'truck' ? 'selected' : '' ?>>Грузовик</option>
+                    <option value="trailer" <?= ($old['unit_type'] ?? '') === 'trailer' ? 'selected' : '' ?>>Прицеп</option>
+                </select>
             </div>
 
             <div class="field">
@@ -167,12 +169,6 @@
                 <label class="field-label">СТС</label>
                 <input type="text" name="sts_number" class="field-input"
                        value="<?= e($old['sts_number'] ?? '') ?>">
-            </div>
-
-            <div class="field">
-                <label class="field-label">ПТС</label>
-                <input type="text" name="pts_number" class="field-input"
-                       value="<?= e($old['pts_number'] ?? '') ?>">
             </div>
         </div>
 

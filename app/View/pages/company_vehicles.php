@@ -73,7 +73,7 @@
                         <th>Госномер</th>
                         <th>Марка</th>
                         <th>Модель</th>
-                        <th>Тип</th>
+                        <th>Тип единицы</th>
                         <th>Грузоподъёмность (т)</th>
                         <th>Статус</th>
                         <th>Создан</th>
@@ -87,7 +87,7 @@
                         <td class="col-mono"><?= e($v['plate_number']) ?></td>
                         <td><?= e($v['brand'] ?? '—') ?></td>
                         <td><?= e($v['model'] ?? '—') ?></td>
-                        <td><?= e($v['vehicle_type'] ?? '—') ?></td>
+                        <td><?= e($v['unit_type'] ?? '—') ?></td>
                         <td class="col-mono"><?= $v['capacity_tons'] !== null ? e($v['capacity_tons']) : '—' ?></td>
                         <td>
                             <span class="badge<?= $v['status'] === 'active' ? ' badge-ok' : '' ?>">
@@ -99,7 +99,7 @@
                         <td class="col-actions">
                             <a href="/company/vehicles/<?= $v['id'] ?>" class="btn btn-toolbar">Просмотр</a>
                             <a href="/company/vehicles/<?= $v['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
-                            <a href="/company/documents?entity_type=vehicle&entity_id=<?= $v['id'] ?>" class="btn btn-toolbar">Документы</a>
+                            <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $v['id'] ?>" class="btn btn-toolbar">Документы</a>
                         </td>
                     </tr>
                     <?php endforeach; ?>

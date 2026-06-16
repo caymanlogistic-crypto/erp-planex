@@ -65,25 +65,31 @@ SUPERADMIN — ЗАКРЫТ на текущем этапе.
 ## Текущий блок
 
 ```text
-Водители / Машины / Экипажи — ЭТАП 1: фундамент БД
-Следующий шаг: функциональные CRUD-страницы и UX-сценарии
+Водители / Машины / Экипажи — ЭТАП 2: CRUD + функциональный UX
+Следующий шаг: runtime owner review → исправления → дизайн-полировка
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (DATABASE_FOUNDATION_ACCEPTED):
-- Созданы миграции 011-023 для локальной БД компании (database/migrations-local/)
-- Обновлена структура таблиц: contractors (тип, банк, индексы), contractor_contacts, contractor_tax_history
-- Обновлена структура drivers: паспорт, СНИЛС, driver_phones
-- vehicles → vehicle_units: переименование таблицы, новые поля (unit_type, диагностические карты), индекс idx_plate
-- Созданы таблицы vehicle_sets, driver_vehicle_blocks
-- Обновлена логика crews: contractor_id + driver_vehicle_block_id, безопасная миграция при пустой таблице
-- Обновлены documents: document_* поля, soft delete (deleted_at), документная статистика через deleted_at IS NULL
-- Расширены entity_access_grants: comment, revoked_at, idx_granted_user
-- Обновлены все ссылки vehicles→vehicle_units в PHP-коде (SQL, entity_type, статистика)
-- SUPERADMIN-статистика обновлена: vehicle_units, vehicle_sets, driver_vehicle_blocks
-- Добавлена функция applyLocalMigrations() — авто-применение миграций при доступе к локальной БД
+Принято erp-architect (CRUD_UX_ACCEPTED):
+- Созданы CRUD-страницы для vehicle_sets (транспортные комплекты)
+- Созданы CRUD-страницы для driver_vehicle_blocks (блоки «Водитель+ТС»)
+- Экипажи переписаны под новую схему: contractor_id + driver_vehicle_block_id
+- Транспортные единицы обновлены: unit_type, pts_number скрыт, entity_type=vehicle_unit
+- Grants расширены: vehicle_set, driver_vehicle_block, access_level view/edit, revoke
+- Документы расширены: новые entity_type, 20MB, document_type optional, soft delete (deleted_at)
+- Sidebar обновлён: пункты «Комплекты» и «Водитель+ТС»
+- Обновлены все view-файлы (9 изменено, 8 создано)
+- Document whitelist включает все 7 entity_type
+
+ИЗВЕСТНЫЕ ОГРАНИЧЕНИЯ (следующий подэтап):
+- Contractor contacts inline CRUD не реализован
+- Driver phones inline CRUD не реализован
+- Contractor tax history не реализован
+- Role-based access (logist vs company_owner) — базовый
+- Каскадная видимость не реализована
+- Списки contractors/drivers требуют расширения полей
 ```
 
 ## Правило обновления
