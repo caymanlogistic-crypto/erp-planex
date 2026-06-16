@@ -1,34 +1,34 @@
 # ERP PLANEX — текущая задача
 
-TASK: SUPERADMIN — разделение реквизитов руководителя и ERP-пользователя
+## ЗАКРЫТО: SUPERADMIN — разделение реквизитов руководителя и ERP-пользователя
 
-STATUS: ARCHITECT_ACCEPTED
+STATUS: CLOSED
 
-ARCHITECTURE DECISION (2026-06-16):
+STABLE COMMIT: da1cc90 — fix(superadmin): separate company director requisites from ERP user
+
+ARCHITECTURE DECISION (#16):
 - Руководитель в карточке компании — это реквизитные данные компании для документов.
 - Хранится в таблице companies: director_position, director_full_name.
 - ERP-доступ руководителя создаётся отдельно через /superadmin/companies/{id}/create-owner.
 - Автоматическое создание company_owner при создании/редактировании экспедитора запрещено.
-- Решение зафиксировано в docs/ai/DECISIONS.md (#16).
 
-WHAT WAS CHANGED:
-- database/migrations/008_add_director_requisites_to_companies.sql (NEW)
-- public/index.php: CREATE POST handler (director fields in INSERT), EDIT POST handler (director fields in UPDATE, removed owner creation), migration auto-applier
-- app/View/pages/superadmin_companies_create.php: removed contacts section, simplified director to position+full_name+hint, removed dead success block
-- app/View/pages/superadmin_company_edit.php: removed contacts section, simplified director to position+full_name+hint from companies
-- app/View/pages/superadmin_company_view.php: "Руководитель" panel shows requisites from companies + ERP access status
-- docs/ai/DECISIONS.md: added decision #16
+ВАЖНЫЕ COMMITS:
+- 488a88b — test(superadmin): verify post-design functionality
+- 49e7218 — fix(superadmin): restore company create handler
+- da1cc90 — fix(superadmin): separate company director requisites from ERP user
 
-DB RESULT:
-- companies table: +director_position VARCHAR(255), +director_full_name VARCHAR(255)
-- company_users table: unchanged (used for future ERP-user creation)
+ИСПРАВЛЕННАЯ РЕГРЕССИЯ:
+После дизайн/функциональных правок POST /superadmin/companies/create был ошибочно заменён логикой создания руководителя.
+Симптом: Warning: Undefined variable $company в superadmin_company_owner_create.php
+Причина: не выполнялся INSERT INTO companies, использовался неопределённый $id, рендерился неправильный view.
+Исправлено: 49e7218 — fix(superadmin): restore company create handler
 
-CHECKS:
-- PHP Syntax: 4 files — OK (0 errors)
-- flash_owner_created / flash_owner_password: removed
-- director_login / director_phone / director_email: removed from index.php handlers
-- create-owner route: intact, unchanged
+КОНТАКТЫ КОМПАНИИ:
+contact_person, contact_phone, contact_email остаются в БД, но убраны из форм создания/редактирования экспедитора и сейчас не используются в UI.
 
-NEXT:
-1. Commit
-2. Переход к блоку водители / машины / экипажи
+## NEXT TASK
+
+Водители / Машины / Экипажи
+
+Пока не начинать кодинг нового блока.
+Сначала передать задачу через erp-architect.
