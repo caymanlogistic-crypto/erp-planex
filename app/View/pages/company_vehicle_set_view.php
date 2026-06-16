@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../components/status_badge.php';
 ?>
 
@@ -17,7 +17,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Транспортный комплект</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 <div class="notice warn">
@@ -40,7 +40,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Комплект не найден</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
@@ -59,7 +59,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
@@ -77,13 +77,14 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
+        <div class="page-eyebrow">ТРАНСПОРТНЫЕ КОМПЛЕКТЫ / <?= e(mb_strtoupper($company['name'])) ?></div>
         <h1>Комплект #<?= $vehicleSet['id'] ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
         <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
-        <a href="/company/documents?entity_type=vehicle_set&entity_id=<?= $vehicleSet['id'] ?>" class="btn btn-toolbar">Документы</a>
+        <a href="/company/documents?entity_type=vehicle_set&entity_id=<?= $vehicleSet['id'] ?>" class="btn btn-ghost">Документы</a>
     </div>
 </div>
 
@@ -127,8 +128,8 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <?php foreach($grants as $g): ?>
                     <tr>
                         <td><?= e($g['logist_name']) ?></td>
-                        <td><?= e($g['access_level']) ?></td>
-                        <td class="col-muted"><?= e($g['created_at']) ?></td>
+                        <td><?= e(ui_access_level($g['access_level'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_date($g['created_at'] ?? null)) ?></td>
                     </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -162,8 +163,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <?php endif; ?>
 
         <div class="form-actions">
-            <a href="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-            <a href="/company/documents?entity_type=vehicle_set&entity_id=<?= $vehicleSet['id'] ?>" class="btn btn-toolbar">Документы</a>
+            <a href="/company/documents?entity_type=vehicle_set&entity_id=<?= $vehicleSet['id'] ?>" class="btn btn-ghost">Документы</a>
             <form method="post" action="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать транспортный комплект?')">
                 <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>

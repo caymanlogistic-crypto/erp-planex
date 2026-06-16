@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 require_once __DIR__ . '/../components/status_badge.php';
 
@@ -19,7 +19,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Редактировать подрядчика</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -45,7 +45,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Подрядчик не найден</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors" class="btn btn-ghost">← К списку</a>

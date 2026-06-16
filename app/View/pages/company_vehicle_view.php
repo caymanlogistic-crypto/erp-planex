@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -22,7 +22,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -35,7 +35,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортная единица не найдена</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
@@ -51,7 +51,7 @@
 <div class="page-head">
     <div>
         <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
@@ -70,13 +70,14 @@
 
 <div class="page-head">
     <div>
+        <div class="page-eyebrow">ТРАНСПОРТНЫЕ ЕДИНИЦЫ / <?= e(mb_strtoupper($company['name'])) ?></div>
         <h1>Транспортная единица: <?= e($vehicle['plate_number']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles/<?= $vehicle['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
         <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
-        <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-toolbar">Документы</a>
+        <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-ghost">Документы</a>
     </div>
 </div>
 
@@ -169,9 +170,9 @@
             <h3 class="panel-head-title">Техническая информация</h3>
             <dl class="kv">
                 <dt>Создан</dt>
-                <dd><?= e($vehicle['created_at'] ?? '') ?></dd>
+                <dd><?= e(ui_date($vehicle['created_at'] ?? null)) ?></dd>
                 <dt>Обновлён</dt>
-                <dd><?= e($vehicle['updated_at'] ?? '') ?></dd>
+                <dd><?= e(ui_date($vehicle['updated_at'] ?? null)) ?></dd>
             </dl>
         </div>
 
@@ -186,8 +187,8 @@
                     <?php foreach($grants as $g): ?>
                     <tr>
                         <td><?= e($g['logist_name']) ?></td>
-                        <td><?= e($g['access_level']) ?></td>
-                        <td class="col-muted"><?= e($g['created_at']) ?></td>
+                        <td><?= e(ui_access_level($g['access_level'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_date($g['created_at'] ?? null)) ?></td>
                     </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -215,8 +216,7 @@
         <?php endif; ?>
 
         <div class="form-actions">
-            <a href="/company/vehicles/<?= $vehicle['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-            <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-toolbar">Документы</a>
+            <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-ghost">Документы</a>
             <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать транспортную единицу?')">
                 <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>

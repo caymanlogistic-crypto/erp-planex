@@ -542,3 +542,45 @@ VERIFICATION:
 
 ISSUES / TODO:
 - No functional logic changes were made. If functional defects are found later, route them through architect/coder, not designer-side edits.
+
+## 2026-06-17 — Company reference CRUD audit fixes
+
+STATUS: DONE
+
+FILES TOUCHED:
+- app/View/components/view_formatters.php
+- app/View/layouts/main.php
+- app/View/pages/company_*.php reference CRUD views
+- public/assets/css/app.css
+- public/index.php
+- agent-main-design/screenshots/company-reference-1440x900/*.png
+- agent-main-design/screenshots/company-reference-1440x900/*.json
+- agent-main-design/DESIGN_WORK_LOG.md
+- agent-main-design/CHIEF_DESIGNER_CONTEXT_FOR_NEW_CHAT.md
+
+WHAT CHANGED:
+- Removed company DB id from company-level page subtitles.
+- Removed duplicated topbar crumbs such as `Пользователи — Пользователи — Компания`.
+- Replaced raw enum/user values in views with presentation labels:
+  `legal_entity` -> `Юридическое лицо`, `edit` -> `Редактирование`,
+  `logist #1` -> `Логист #1`.
+- Standardized visible dates to date-only where audited.
+- Changed `/company/vehicles` list from `Создан` datetime to `Создал` actor.
+- Hid always-open inline add forms on contractor/driver cards behind explicit add buttons.
+- Removed duplicate lower `Редактировать` CTA from detail cards and duplicate lower `← К списку` from audited create forms.
+- Improved contractor contact actions: destructive delete is a danger button with confirmation; secondary assignment actions are separated from the main action row.
+- Fixed logist-without-access vehicle empty state copy.
+- Aligned labels: `Транспортные комплекты` sidebar, vehicle edit titles, contractor INN/KPP grid, password generator button, and block section title.
+
+VERIFICATION:
+- `php -l` passed for all changed PHP files and `public/index.php`.
+- `git diff --check` passed; only Git LF/CRLF warnings were reported.
+- Static checks: no visible company subtitle `(ID: 9)`, no `pts_number`/`ПТС` in audited views, no raw access/user/contractor-type values in captured screens.
+- Inline style check: only hidden edit/add forms use `style="display:none"`.
+- Screenshot set refreshed at 1440x900:
+  `agent-main-design/screenshots/company-reference-1440x900`.
+- Screenshot manifest bad-flags are empty after recapture.
+- Visual sanity-check performed on `owner_15_contractor_view`, `owner_01_logists`, and `logist_runtime_2_vehicles_access`.
+
+ISSUES / TODO:
+- No business logic, routes, input names, form actions or methods were intentionally changed.

@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Редактировать комплект</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
@@ -25,7 +25,7 @@
 <div class="page-head">
     <div>
         <h1>Редактировать комплект</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
@@ -41,7 +41,7 @@
 <div class="page-head">
     <div>
         <h1>Комплект не найден</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
@@ -81,7 +81,7 @@
 <div class="page-head">
     <div>
         <h1>Редактировать комплект #<?= $vehicleSet['id'] ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets/<?= $vehicleSet['id'] ?>" class="btn btn-ghost">← К просмотру</a>
@@ -99,7 +99,7 @@
             <h3 class="panel-head-title">Транспортный комплект</h3>
 
             <div class="field">
-                <label class="field-label">Тип комплекта <span class="text-muted">(рекомендуемое)</span></label>
+                <label class="field-label">Тип комплекта</label>
                 <select name="set_type" class="field-input" id="set_type_select">
                     <option value="">— Выберите тип —</option>
                     <option value="single" <?= ($old['set_type'] ?? '') === 'single' ? 'selected' : '' ?>>Одиночка (одна единица)</option>

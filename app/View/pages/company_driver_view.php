@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 require_once __DIR__ . '/../components/status_badge.php';
 
@@ -19,7 +19,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Водитель</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -45,7 +45,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Водитель не найден</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
@@ -65,7 +65,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
@@ -84,6 +84,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
+        <div class="page-eyebrow">ВОДИТЕЛИ / <?= e(mb_strtoupper($company['name'])) ?></div>
         <h1>Водитель: <?= e($driver['full_name']) ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
@@ -192,11 +193,11 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <input type="hidden" name="phone_edit_id" id="phone-edit-id" value="">
                     <div class="frm-row">
                         <div class="field">
-                            <label class="field-label">Телефон <span class="text-muted">(рекомендуемое)</span></label>
+                            <label class="field-label">Телефон</label>
                             <input type="text" name="phone" class="field-input" id="phone-edit-value">
                         </div>
                         <div class="field">
-                            <label class="field-label">Комментарий <span class="text-muted">(рекомендуемое)</span></label>
+                            <label class="field-label">Комментарий</label>
                             <input type="text" name="comment" class="field-input" id="phone-edit-comment">
                         </div>
                     </div>
@@ -208,16 +209,17 @@ require_once __DIR__ . '/../components/status_badge.php';
             </div>
 
             <!-- Add phone form -->
-            <div class="entity-subform">
+            <button type="button" class="btn btn-ghost btn-sm mt-4" onclick="document.getElementById('phone-add-form').style.display='block'">Добавить телефон</button>
+            <div id="phone-add-form" class="hidden-subform" style="display:none">
                 <h4 class="section-title">Добавить телефон</h4>
                 <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/create">
                     <div class="frm-row">
                         <div class="field">
-                            <label class="field-label">Телефон <span class="text-muted">(рекомендуемое)</span></label>
+                            <label class="field-label">Телефон</label>
                             <input type="text" name="phone" class="field-input">
                         </div>
                         <div class="field">
-                            <label class="field-label">Комментарий <span class="text-muted">(рекомендуемое)</span></label>
+                            <label class="field-label">Комментарий</label>
                             <input type="text" name="comment" class="field-input">
                         </div>
                     </div>
@@ -275,8 +277,8 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <?php foreach($grants as $g): ?>
                     <tr>
                         <td><?= e($g['logist_name']) ?></td>
-                        <td><?= e($g['access_level']) ?></td>
-                        <td class="col-muted"><?= e($g['created_at']) ?></td>
+                        <td><?= e(ui_access_level($g['access_level'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_date($g['created_at'] ?? null)) ?></td>
                     </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -307,18 +309,17 @@ require_once __DIR__ . '/../components/status_badge.php';
             <h3 class="panel-head-title">Служебные данные</h3>
             <dl class="kv">
                 <dt>Создал</dt>
-                <dd><?= e($driver['created_by_role'] ?? '—') ?> (ID: <?= e($driver['created_by_user_id'] ?? '—') ?>)<?php if ($createdByUser): ?> — <?= e($createdByUser) ?><?php endif; ?></dd>
+                <dd><?= e(ui_actor($driver['created_by_role'] ?? null, $driver['created_by_user_id'] ?? null, $createdByUser ?? null)) ?></dd>
                 <dt>Создан</dt>
-                <dd><?= e($driver['created_at'] ?? '—') ?></dd>
+                <dd><?= e(ui_date($driver['created_at'] ?? null)) ?></dd>
                 <dt>Обновил</dt>
-                <dd><?= !empty($driver['updated_by_user_id']) ? (e($driver['updated_by_role'] ?? '—') . ' (ID: ' . e($driver['updated_by_user_id']) . ')' . ($updatedByUser ? ' — ' . e($updatedByUser) : '')) : '—' ?></dd>
+                <dd><?= !empty($driver['updated_by_user_id']) ? e(ui_actor($driver['updated_by_role'] ?? null, $driver['updated_by_user_id'] ?? null, $updatedByUser ?? null)) : '—' ?></dd>
                 <dt>Обновлён</dt>
-                <dd><?= e($driver['updated_at'] ?? '—') ?></dd>
+                <dd><?= e(ui_date($driver['updated_at'] ?? null)) ?></dd>
             </dl>
         </div>
 
         <div class="form-actions">
-            <a href="/company/drivers/<?= $driver['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/documents?entity_type=driver&entity_id=<?= $driver['id'] ?>" class="btn btn-ghost">Документы</a>
             <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать водителя?')">
                 <button type="submit" class="btn btn-secondary">Архивировать</button>

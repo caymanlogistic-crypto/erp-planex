@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Пользователи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -22,7 +22,7 @@
 <div class="page-head">
     <div>
         <h1>Пользователи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -35,7 +35,7 @@
 <div class="page-head">
     <div>
         <h1>Пользователи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/logists/create" class="btn btn-primary">Создать пользователя</a>
@@ -56,7 +56,7 @@
 <div class="page-head">
     <div>
         <h1>Пользователи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/logists/create" class="btn btn-primary">Создать пользователя</a>
@@ -80,7 +80,7 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($l['full_name']) ?></span>
-                            <span class="cell-sub">ID <?= $l['id'] ?> / <?= e($l['login']) ?> / создан <?= e($l['created_at']) ?></span>
+                            <span class="cell-sub">ID <?= $l['id'] ?> / <?= e($l['login']) ?> / создан <?= e(ui_date($l['created_at'] ?? null)) ?></span>
                         </td>
                         <td><?= ($l['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($l['role_code'] ?? '') ?></td>
                         <td>

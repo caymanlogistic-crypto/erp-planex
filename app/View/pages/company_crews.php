@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -22,7 +22,7 @@
 <div class="page-head">
     <div>
         <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -35,7 +35,7 @@
 <div class="page-head">
     <div>
         <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>
@@ -56,7 +56,7 @@
 <div class="page-head">
     <div>
         <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>
@@ -82,7 +82,7 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main">Экипаж #<?= $c['id'] ?></span>
-                            <span class="cell-sub">Создан <?= e($c['created_at']) ?></span>
+                            <span class="cell-sub">Создан <?= e(ui_date($c['created_at'] ?? null)) ?></span>
                         </td>
                         <td><?= e($c['contractor_name'] ?? '—') ?></td>
                         <td class="cell-double">

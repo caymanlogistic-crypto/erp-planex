@@ -1,0 +1,533 @@
+[
+  {
+    "role": "owner",
+    "file": "owner_01_logists.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Пользователи",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [
+      4
+    ],
+    "title": "Пользователи — ERP PLANEX",
+    "topbar": "Пользователи — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/logists",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_02_logists_create.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Создать пользователя",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Создать пользователя — ERP PLANEX",
+    "topbar": "Создать пользователя — Пользователи — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/logists/create",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_03_contractors.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "",
+    "thCounts": [
+      6
+    ],
+    "title": "Подрядчики — ERP PLANEX",
+    "topbar": "Подрядчики — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/contractors",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_04_contractors_create.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Создать подрядчика",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Создать подрядчика — ERP PLANEX",
+    "topbar": "Создать подрядчика — Подрядчики — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/contractors/create",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_05_drivers.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "",
+    "thCounts": [
+      6
+    ],
+    "title": "Водители — ERP PLANEX",
+    "topbar": "Водители — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/drivers",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_06_drivers_create.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Создать водителя",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Создать водителя — ERP PLANEX",
+    "topbar": "Создать водителя — Водители — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/drivers/create",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_07_vehicles.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Транспортные единицы",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [
+      6
+    ],
+    "title": "Транспортные единицы — ERP PLANEX",
+    "topbar": "Транспортные единицы — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/vehicles",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_08_vehicles_create.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Добавить транспортную единицу",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Добавить транспортную единицу — ERP PLANEX",
+    "topbar": "Добавить транспортную единицу — Транспортные единицы — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/vehicles/create",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_09_vehicle_sets.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Транспортные комплекты",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [
+      5
+    ],
+    "title": "Транспортные комплекты — ERP PLANEX",
+    "topbar": "Транспортные комплекты — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/vehicle-sets",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_10_vehicle_sets_create.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Создать транспортный комплект",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Создать транспортный комплект — ERP PLANEX",
+    "topbar": "Создать транспортный комплект — Транспортные комплекты — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/vehicle-sets/create",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_11_driver_vehicle_blocks.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Блоки \"Водитель + ТС\"",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [
+      6
+    ],
+    "title": "Блоки \"Водитель + ТС\" — ERP PLANEX",
+    "topbar": "Блоки \"Водитель + ТС\" — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/driver-vehicle-blocks",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_12_driver_vehicle_blocks_create.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Создать блок \"Водитель + ТС\"",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Создать блок \"Водитель + ТС\" — ERP PLANEX",
+    "topbar": "Создать блок \"Водитель + ТС\" — Блоки \"Водитель + ТС\" — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/driver-vehicle-blocks/create",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_13_crews.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Экипажи",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [
+      6
+    ],
+    "title": "Экипажи — ERP PLANEX",
+    "topbar": "Экипажи — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/crews",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_14_crews_create.png",
+    "badText": false,
+    "grantHeadings": [],
+    "h1": "Создать экипаж",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Создать экипаж — ERP PLANEX",
+    "topbar": "Создать экипаж — Экипажи — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/crews/create",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_15_contractor_view.png",
+    "badText": false,
+    "grantHeadings": [
+      "Доступ логистов"
+    ],
+    "h1": "Подрядчик: ООО Подрядчик Runtime",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [
+      5,
+      4
+    ],
+    "title": "Подрядчик: ООО Подрядчик Runtime — ERP PLANEX",
+    "topbar": "Подрядчик: ООО Подрядчик Runtime — Подрядчики — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/contractors/1",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_16_driver_view.png",
+    "badText": false,
+    "grantHeadings": [
+      "Доступ логистов"
+    ],
+    "h1": "Водитель: Тест без паспорта",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Водитель: Тест без паспорта — ERP PLANEX",
+    "topbar": "Водитель: Тест без паспорта — Водители — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/drivers/2",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_17_vehicle_view.png",
+    "badText": false,
+    "grantHeadings": [
+      "Доступ пользователей"
+    ],
+    "h1": "Транспортная единица: Т999ТТ77",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Транспортная единица: Т999ТТ77 — ERP PLANEX",
+    "topbar": "Транспортная единица: Т999ТТ77 — Транспортные единицы — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/vehicles/3",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_18_vehicle_set_view.png",
+    "badText": false,
+    "grantHeadings": [
+      "Доступ логистов"
+    ],
+    "h1": "Комплект #1",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Комплект #1 — ERP PLANEX",
+    "topbar": "Комплект #1 — Транспортные комплекты — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/vehicle-sets/1",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_19_driver_vehicle_block_view.png",
+    "badText": false,
+    "grantHeadings": [
+      "Доступ логистов"
+    ],
+    "h1": "Блок #1",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [],
+    "title": "Блок #1 — ERP PLANEX",
+    "topbar": "Блок #1 — Блоки \"Водитель + ТС\" — Компания",
+    "url": "/company/driver-vehicle-blocks/1",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  },
+  {
+    "role": "owner",
+    "file": "owner_20_crew_view.png",
+    "badText": false,
+    "grantHeadings": [
+      "Доступ логистов"
+    ],
+    "h1": "Экипаж #1",
+    "hasCompanyIdSubtitle": false,
+    "hasDatetime": false,
+    "hasPts": false,
+    "hasRawAccess": false,
+    "hasRawActor": false,
+    "hasRawContractorType": false,
+    "lowerEdit": [],
+    "notFound": false,
+    "subtitle": "Компания: ООО Тест Этап 2 Runtime",
+    "thCounts": [
+      3
+    ],
+    "title": "Экипаж #1 — ERP PLANEX",
+    "topbar": "Экипаж #1 — Экипажи — Компания: ООО Тест Этап 2 Runtime",
+    "url": "/company/crews/1",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleAddForms": []
+  }
+]

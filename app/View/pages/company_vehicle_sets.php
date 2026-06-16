@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные комплекты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -22,7 +22,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные комплекты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -35,7 +35,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные комплекты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать комплект</a>
@@ -56,7 +56,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные комплекты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать комплект</a>
@@ -96,7 +96,7 @@
                             </span>
                         </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                        <td class="col-muted"><?= e($vs['created_by_role'] ?? '—') ?> #<?= e($vs['created_by_user_id'] ?? '—') ?></td>
+                        <td class="col-muted"><?= e(ui_actor($vs['created_by_role'] ?? null, $vs['created_by_user_id'] ?? null)) ?></td>
                         <?php endif; ?>
                         <td class="col-actions">
                             <div class="row-actions">

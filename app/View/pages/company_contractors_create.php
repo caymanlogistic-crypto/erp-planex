@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Создать подрядчика</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
@@ -65,7 +65,7 @@
 <div class="page-head">
     <div>
         <h1>Создать подрядчика</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
@@ -91,19 +91,21 @@
                 <?php endif; ?>
             </div>
 
-            <div class="field">
-                <label class="field-label">ИНН <span class="req">*</span></label>
-                <input type="text" name="inn" class="field-input"
-                       value="<?= e($old['inn'] ?? '') ?>">
-                <?php if (!empty($errors['inn'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['inn']) ?></div>
-                <?php endif; ?>
-            </div>
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">ИНН <span class="req">*</span></label>
+                    <input type="text" name="inn" class="field-input"
+                           value="<?= e($old['inn'] ?? '') ?>">
+                    <?php if (!empty($errors['inn'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['inn']) ?></div>
+                    <?php endif; ?>
+                </div>
 
-            <div class="field">
-                <label class="field-label">КПП</label>
-                <input type="text" name="kpp" class="field-input"
-                       value="<?= e($old['kpp'] ?? '') ?>">
+                <div class="field">
+                    <label class="field-label">КПП</label>
+                    <input type="text" name="kpp" class="field-input"
+                           value="<?= e($old['kpp'] ?? '') ?>">
+                </div>
             </div>
 
             <div class="field">

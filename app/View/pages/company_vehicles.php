@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -22,7 +22,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -35,19 +35,26 @@
 <div class="page-head">
     <div>
         <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
+    <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
     <div class="page-head-actions">
         <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспортную единицу</a>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
+            <?php if (($_SESSION['role_code'] ?? '') === 'logist'): ?>
+            <p class="empty-title">У вас нет доступа к транспортным единицам.</p>
+            <p class="empty-desc">Обратитесь к руководителю, чтобы получить доступ к нужным записям.</p>
+            <?php else: ?>
             <p class="empty-title">Транспортные единицы ещё не добавлены.</p>
             <p class="empty-desc">Добавьте тягач или полуприцеп, чтобы собрать транспортный комплект и экипаж.</p>
             <a href="/company/vehicles/create" class="btn btn-primary">Добавить первую единицу</a>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -57,7 +64,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспортную единицу</a>
@@ -74,7 +81,7 @@
                         <th>Модель</th>
                         <th>Параметры</th>
                         <th>Статус</th>
-                        <th>Создан</th>
+                        <th>Создал</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -99,7 +106,7 @@
                                 <?= $v['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
                             </span>
                         </td>
-                        <td class="col-muted"><?= e($v['created_at']) ?></td>
+                        <td class="col-muted"><?= e(ui_actor($v['created_by_role'] ?? null, $v['created_by_user_id'] ?? null)) ?></td>
                         <td class="col-actions">
                             <div class="row-actions">
                                 <a href="/company/vehicles/<?= $v['id'] ?>" class="btn btn-toolbar">Просмотр</a>

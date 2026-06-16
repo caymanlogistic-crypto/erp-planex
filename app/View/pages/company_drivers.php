@@ -96,7 +96,7 @@
                             <span class="cell-sub">Паспорт <?= e($d['passport_number'] ?? '—') ?> / СНИЛС <?= e($d['snils'] ?? '—') ?></span>
                         </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                        <td class="col-muted"><?= e($d['created_by_role'] ?? '—') ?> #<?= e($d['created_by_user_id'] ?? '—') ?></td>
+                        <td class="col-muted"><?= e(ui_actor($d['created_by_role'] ?? null, $d['created_by_user_id'] ?? null)) ?></td>
                         <?php endif; ?>
                         <td>
                             <span class="badge<?= $d['status'] === 'active' ? ' badge-ok' : '' ?>">

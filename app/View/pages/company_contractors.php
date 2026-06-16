@@ -85,7 +85,7 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($c['name']) ?></span>
-                            <span class="cell-sub">ID <?= $c['id'] ?><?= !empty($c['contractor_type']) ? ' / ' . e($c['contractor_type']) : '' ?></span>
+                            <span class="cell-sub">ID <?= $c['id'] ?><?= !empty($c['contractor_type']) ? ' / ' . e(ui_contractor_type($c['contractor_type'])) : '' ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main col-mono"><?= e($c['inn']) ?></span>
@@ -96,7 +96,7 @@
                             <span class="cell-sub"><?= e($c['primary_contact_phone'] ?? '') ?: e($c['doc_email'] ?? '') ?: 'Контакт не указан' ?></span>
                         </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                        <td class="col-muted"><?= e($c['created_by_role'] ?? '—') ?> #<?= e($c['created_by_user_id'] ?? '—') ?></td>
+                        <td class="col-muted"><?= e(ui_actor($c['created_by_role'] ?? null, $c['created_by_user_id'] ?? null)) ?></td>
                         <?php endif; ?>
                         <td>
                             <span class="badge<?= $c['status'] === 'active' ? ' badge-ok' : '' ?>">

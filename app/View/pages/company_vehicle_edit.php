@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -8,8 +8,8 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать транспорт</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <h1>Редактировать транспортную единицу</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
@@ -17,15 +17,15 @@
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Редактирование транспорта недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». редактирование транспортной единицы недоступно.
 </div>
 
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Редактировать транспорт</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <h1>Редактировать транспортную единицу</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
@@ -41,7 +41,7 @@
 <div class="page-head">
     <div>
         <h1>Транспортная единица не найдена</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
@@ -49,7 +49,7 @@
 </div>
 
 <div class="notice warn">
-    Транспорт с ID <?= e((string)$vehicleId) ?> не найден в этой компании.
+    Транспортная единица с ID <?= e((string)$vehicleId) ?> не найден в этой компании.
 </div>
 
 <?php elseif ($success): ?>
@@ -67,7 +67,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Транспорт успешно обновлён.
+            Транспортная единица обновлена.
         </div>
 
         <div class="kv mt-4">
@@ -108,8 +108,8 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать транспорт</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <h1>Редактировать транспортную единицу</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles/<?= $vehicleId ?>" class="btn btn-ghost">← К просмотру</a>

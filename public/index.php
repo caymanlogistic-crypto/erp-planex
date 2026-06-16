@@ -31,6 +31,7 @@ require_once base_path('app/View/components/input.php');
 require_once base_path('app/View/components/page_header.php');
 require_once base_path('app/View/components/status_badge.php');
 require_once base_path('app/View/components/table.php');
+require_once base_path('app/View/components/view_formatters.php');
 
 function isAuthenticated(): bool
 {
@@ -5685,7 +5686,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             }
         }
 
-        $pageTitle = $vehicle ? 'Транспорт: ' . $vehicle['plate_number'] : 'Транспорт';
+        $pageTitle = $vehicle ? 'Транспортная единица: ' . $vehicle['plate_number'] : 'Транспортная единица';
 
         $grants = [];
         $logists = [];
@@ -5722,7 +5723,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
 $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
-    $pageTitle = 'Редактировать транспорт';
+    $pageTitle = 'Редактировать транспортную единицу';
     $pageContext = 'Транспортные единицы — Компания';
     $entityNotFound = false;
 
@@ -5827,7 +5828,7 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
 $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
-    $pageTitle = 'Редактировать транспорт';
+    $pageTitle = 'Редактировать транспортную единицу';
     $pageContext = 'Транспортные единицы — Компания';
     $entityNotFound = false;
 

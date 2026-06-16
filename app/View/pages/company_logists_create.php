@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Создать пользователя</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/logists" class="btn btn-ghost">← К списку</a>
@@ -82,7 +82,7 @@
 <div class="page-head">
     <div>
         <h1>Создать пользователя</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/logists" class="btn btn-ghost">← К списку</a>
@@ -124,7 +124,7 @@
                     <input type="text" name="password" class="field-input field-inline-grow"
                            value="<?= e($old['password'] ?? $generatedPassword ?? '') ?>"
                            placeholder="Оставьте пустым для автогенерации">
-                    <button type="button" class="btn btn-toolbar btn-nowrap btn-align-top" onclick="generatePassword()">
+                    <button type="button" class="btn btn-ghost btn-sm btn-nowrap btn-align-top" onclick="generatePassword()">
                         Сгенерировать
                     </button>
                 </div>
@@ -138,7 +138,7 @@
         </div>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Контакты (опционально)</h3>
+            <h3 class="panel-head-title">Контакты</h3>
 
             <div class="field">
                 <label class="field-label">Email</label>

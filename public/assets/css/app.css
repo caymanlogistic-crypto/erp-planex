@@ -1380,6 +1380,19 @@ tr:last-child td {
     min-height: 22px;
 }
 
+.row-actions-sub {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.row-actions-sub .btn {
+    font-size: 11px;
+    min-height: 22px;
+    padding: 2px 6px;
+}
+
 /* === empty-state inside panel === */
 .panel .empty-state {
     background: transparent;

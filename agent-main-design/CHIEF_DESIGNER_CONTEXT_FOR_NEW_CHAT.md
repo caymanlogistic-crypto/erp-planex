@@ -201,6 +201,28 @@ Layout `app/View/layouts/main.php` подключает сначала `/assets/
 5. Для inline edit blocks разрешён только `style="display:none"`; остальные отступы/inline-form через CSS-классы.
 ```
 
+## COMPANY reference CRUD audit fixes state (2026-06-17)
+
+```text
+✓ Исправлены замечания UX/UI-аудита по company-reference-1440x900:
+  A-1, A-2, A-3, A-4, A-5, A-6,
+  B-1, B-2, B-3, B-4, B-5, B-6, B-7, B-8,
+  C-1, C-2, C-3, C-4, C-5, C-6.
+✓ Company-level subtitles больше не показывают `(ID: 9)`.
+✓ Topbar не дублирует одинаковые section/page crumbs.
+✓ Raw enum/user values выводятся через `view_formatters.php`.
+✓ Inline add forms на contractor/driver cards скрыты до явного действия.
+✓ Detail-card lower actions больше не дублируют primary edit CTA.
+✓ Актуальные screenshots:
+  `agent-main-design/screenshots/company-reference-1440x900/*.png`
+✓ `manifest.json` в этой папке содержит 33 экрана и bad-flags после recapture пустые.
+✓ Проверено:
+  php -l по изменённым PHP,
+  git diff --check,
+  inline-style only display:none,
+  PNG dimensions 1440x900.
+```
+
 ## СТОП-ОШИБКИ — обязательно к исполнению
 
 ```text

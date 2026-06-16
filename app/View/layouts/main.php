@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 /**
  * Base ERP PLANEX layout with dynamic sidebar and topbar.
@@ -27,6 +27,15 @@ if ($userName !== '') {
     $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), $words));
     $initials = mb_strtoupper(mb_substr($initials, 0, 2));
 }
+
+$crumbTitle = (string)($pageTitle ?? 'ERP PLANEX');
+$crumbContext = trim((string)($pageContext ?? ''));
+if ($crumbContext !== '') {
+    $contextLead = trim(explode('—', $crumbContext, 2)[0]);
+    if ($contextLead === $crumbTitle) {
+        $crumbTitle = '';
+    }
+}
 ?>
 <!doctype html>
 <html lang="ru">
@@ -45,10 +54,14 @@ if ($userName !== '') {
                 <span class="brand-name">ERP PLANEX</span>
             </div>
             <div class="topbar-crumbs">
-                <span><?= e($pageTitle ?? 'ERP PLANEX') ?></span>
-                <?php if (!empty($pageContext ?? '')): ?>
+                <?php if ($crumbTitle !== ''): ?>
+                <span><?= e($crumbTitle) ?></span>
+                <?php endif; ?>
+                <?php if ($crumbContext !== ''): ?>
+                <?php if ($crumbTitle !== ''): ?>
                 <span class="sep">—</span>
-                <b><?= e($pageContext) ?></b>
+                <?php endif; ?>
+                <b><?= e($crumbContext) ?></b>
                 <?php endif; ?>
             </div>
             <div class="topbar-right">
@@ -102,7 +115,7 @@ if ($userName !== '') {
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><path d="M4 7V9.5H12V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M4 11.5V13C4 13.5 4.5 14 5 14H11C11.5 14 12 13.5 12 13V11.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="6" cy="13" r=".8" fill="currentColor"/><circle cx="10" cy="13" r=".8" fill="currentColor"/></svg>
-                    <span class="nav-label">Комплекты</span>
+                    <span class="nav-label">Транспортные комплекты</span>
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/driver-vehicle-blocks') ? ' is-active' : '' ?>" href="/company/driver-vehicle-blocks">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="4" r="2.2" stroke="currentColor" stroke-width="1.4"/><rect x="8.5" y="3.5" width="6" height="5" rx=".8" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 11.5C1.5 9.3 3.3 7.5 5.5 7.5C7.7 7.5 9.5 9.3 9.5 11.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7 13.5H10.5C11.8 13.5 13 12.3 13 11V7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -169,7 +182,7 @@ if ($userName !== '') {
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="3" width="5.5" height="4" rx=".8" stroke="currentColor" stroke-width="1.4"/><path d="M4 7V9.5H12V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M4 11.5V13C4 13.5 4.5 14 5 14H11C11.5 14 12 13.5 12 13V11.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="6" cy="13" r=".8" fill="currentColor"/><circle cx="10" cy="13" r=".8" fill="currentColor"/></svg>
-                    <span class="nav-label">Комплекты</span>
+                    <span class="nav-label">Транспортные комплекты</span>
                 </a>
                 <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/driver-vehicle-blocks') ? ' is-active' : '' ?>" href="/company/driver-vehicle-blocks">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="4" r="2.2" stroke="currentColor" stroke-width="1.4"/><rect x="8.5" y="3.5" width="6" height="5" rx=".8" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 11.5C1.5 9.3 3.3 7.5 5.5 7.5C7.7 7.5 9.5 9.3 9.5 11.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7 13.5H10.5C11.8 13.5 13 12.3 13 11V7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>

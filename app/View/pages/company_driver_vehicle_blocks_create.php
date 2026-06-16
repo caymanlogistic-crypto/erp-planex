@@ -1,4 +1,4 @@
-<?php if ($company === null): ?>
+﻿<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -9,7 +9,7 @@
 <div class="page-head">
     <div>
         <h1>Создать блок "Водитель + ТС"</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
@@ -63,7 +63,7 @@
 <div class="page-head">
     <div>
         <h1>Создать блок "Водитель + ТС"</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
@@ -78,7 +78,7 @@
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Блок "Водитель + ТС"</h3>
+            <h3 class="panel-head-title">Блок Водитель + ТС</h3>
 
             <div class="field">
                 <label class="field-label">Водитель <span class="req">*</span></label>
@@ -130,7 +130,6 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать блок</button>
-            <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
         </div>
 
     </div>

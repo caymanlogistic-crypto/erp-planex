@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 require_once __DIR__ . '/../components/status_badge.php';
 
@@ -15,7 +15,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Клиенты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/clients" class="btn btn-ghost">← К списку</a>
@@ -63,7 +63,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <h1>Клиент: <?= e($client['name']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
         <a href="/company/clients/<?= $client['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -136,8 +136,8 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <?php foreach($grants as $g): ?>
                     <tr>
                         <td><?= e($g['logist_name']) ?></td>
-                        <td><?= e($g['access_level']) ?></td>
-                        <td class="col-muted"><?= e($g['created_at']) ?></td>
+                        <td><?= e(ui_access_level($g['access_level'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_date($g['created_at'] ?? null)) ?></td>
                     </tr>
                     <?php endforeach; ?>
                     </tbody>
