@@ -72,6 +72,13 @@
                         <th>ID</th>
                         <th>Название</th>
                         <th>ИНН</th>
+                        <th>Тип</th>
+                        <th>КПП</th>
+                        <th>Главный контакт</th>
+                        <th>Email для док.</th>
+                        <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
+                        <th>Владелец</th>
+                        <?php endif; ?>
                         <th>Статус</th>
                         <th>Создан</th>
                         <th></th>
@@ -83,6 +90,13 @@
                         <td class="col-mono"><?= $c['id'] ?></td>
                         <td><?= e($c['name']) ?></td>
                         <td class="col-mono"><?= e($c['inn']) ?></td>
+                        <td><?= !empty($c['contractor_type']) ? e($c['contractor_type']) : '—' ?></td>
+                        <td class="col-mono"><?= e($c['kpp'] ?? '') ?: '—' ?></td>
+                        <td><?= e($c['primary_contact_person'] ?? '') ?: '—' ?><?php if (!empty($c['primary_contact_phone'])): ?><br><small class="text-muted"><?= e($c['primary_contact_phone']) ?></small><?php endif; ?></td>
+                        <td><?= e($c['doc_email'] ?? '') ?: '—' ?></td>
+                        <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
+                        <td class="col-muted"><?= e($c['created_by_role'] ?? '—') ?> #<?= e($c['created_by_user_id'] ?? '—') ?></td>
+                        <?php endif; ?>
                         <td>
                             <span class="badge<?= $c['status'] === 'active' ? ' badge-ok' : '' ?>">
                                 <span class="dot"></span>

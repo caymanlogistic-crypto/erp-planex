@@ -54,6 +54,25 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 </div>
 
+<?php elseif (isset($accessDenied)): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Доступ запрещён</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+<div class="panel">
+    <div class="panel-body">
+        <div class="notice warn">
+            <?= e($accessDenied) ?>
+        </div>
+    </div>
+</div>
+
 <?php else: ?>
 
 <div class="page-head">

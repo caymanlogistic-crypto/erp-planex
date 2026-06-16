@@ -65,31 +65,30 @@ SUPERADMIN — ЗАКРЫТ на текущем этапе.
 ## Текущий блок
 
 ```text
-Водители / Машины / Экипажи — ЭТАП 2: CRUD + функциональный UX
-Следующий шаг: runtime owner review → исправления → дизайн-полировка
+Водители / Машины / Экипажи — ЭТАП 2: CRUD + функциональный UX ЗАВЕРШЁН
+Следующий шаг: runtime owner review → при необходимости исправления → дизайн-полировка
 ```
 
 ## Последний принятый этап
 
 ```text
 Принято erp-architect (CRUD_UX_ACCEPTED):
-- Созданы CRUD-страницы для vehicle_sets (транспортные комплекты)
-- Созданы CRUD-страницы для driver_vehicle_blocks (блоки «Водитель+ТС»)
-- Экипажи переписаны под новую схему: contractor_id + driver_vehicle_block_id
-- Транспортные единицы обновлены: unit_type, pts_number скрыт, entity_type=vehicle_unit
-- Grants расширены: vehicle_set, driver_vehicle_block, access_level view/edit, revoke
-- Документы расширены: новые entity_type, 20MB, document_type optional, soft delete (deleted_at)
-- Sidebar обновлён: пункты «Комплекты» и «Водитель+ТС»
-- Обновлены все view-файлы (9 изменено, 8 создано)
-- Document whitelist включает все 7 entity_type
 
-ИЗВЕСТНЫЕ ОГРАНИЧЕНИЯ (следующий подэтап):
-- Contractor contacts inline CRUD не реализован
-- Driver phones inline CRUD не реализован
-- Contractor tax history не реализован
-- Role-based access (logist vs company_owner) — базовый
-- Каскадная видимость не реализована
-- Списки contractors/drivers требуют расширения полей
+Частичный подэтап (commit 65eaf8e):
+- vehicle_sets CRUD, driver_vehicle_blocks CRUD
+- crews по новой схеме contractor + driver_vehicle_block
+- vehicles → vehicle_units, pts_number скрыт
+- grants/documents расширены, sidebar обновлён
+
+Финальный подэтап (текущий commit):
+- Contractor contacts inline CRUD (6 маршрутов: create/edit/delete/set-primary/set-document-email)
+- Driver phones inline CRUD (4 маршрута: create/edit/delete/set-main)
+- Contractor tax history append-only
+- Role-based access: logist видит свои + grants, company_owner видит все
+- Card-level access checks (view/edit/archive)
+- Каскадная видимость в crew_view, driver_view, vehicle_view
+- Documents access after grants (logist удаляет только свои, company_owner видит удалённые)
+- Расширены views: contractors (тип, КПП, контакты, банк, налоги), drivers (паспорт, СНИЛС, телефоны, блоки)
 ```
 
 ## Правило обновления

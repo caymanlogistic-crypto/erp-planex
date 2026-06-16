@@ -42,6 +42,7 @@ CODEX-дизайнер не меняет функциональную логик
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 
 Водители / Машины / Экипажи — ЭТАП 2 (CRUD + UX) ЗАВЕРШЁН.
+Статус: CRUD_UX_ACCEPTED
 Следующий шаг: runtime owner review → исправления → дизайн-полировка.
 ```
 
@@ -54,10 +55,9 @@ da1cc90 — fix(superadmin): separate company director requisites from ERP user
 ### Важные последние commits
 
 ```text
-488a88b — test(superadmin): verify post-design functionality
-49e7218 — fix(superadmin): restore company create handler
-da1cc90 — fix(superadmin): separate company director requisites from ERP user
+65eaf8e — feat(reference): implement CRUD UX for drivers vehicles crews
 0fae71d — feat(reference): add database foundation for drivers vehicles crews
+da1cc90 — fix(superadmin): separate company director requisites from ERP user
 ```
 
 ## Реализованные маршруты (Этап 2)

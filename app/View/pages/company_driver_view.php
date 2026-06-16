@@ -60,6 +60,26 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 </div>
 
+<?php elseif (isset($accessDenied)): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Доступ запрещён</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-body">
+        <div class="notice warn">
+            <?= e($accessDenied) ?>
+        </div>
+    </div>
+</div>
+
 <?php else: ?>
 
 <div class="page-head">
@@ -86,8 +106,6 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dl class="kv">
                 <dt>ФИО</dt>
                 <dd><?= e($driver['full_name']) ?></dd>
-                <dt>Телефон</dt>
-                <dd><code><?= e($driver['phone']) ?></code></dd>
                 <dt>Статус</dt>
                 <dd><?= renderStatusBadge($driver['status']) ?></dd>
                 <dt>Комментарий</dt>
@@ -96,27 +114,154 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Водительское удостоверение</h3>
+            <h3 class="panel-head-title">Паспорт</h3>
             <dl class="kv">
-                <dt>Номер</dt>
-                <dd><?= e($driver['license_number'] ?? '') ?: '—' ?></dd>
-                <dt>Категория</dt>
-                <dd><?= e($driver['license_category'] ?? '') ?: '—' ?></dd>
+                <dt>Серия и номер</dt>
+                <dd><?= e($driver['passport_number'] ?? '') ?: '—' ?></dd>
+                <dt>Кем выдан</dt>
+                <dd><?= e($driver['passport_issued_by'] ?? '') ?: '—' ?></dd>
+                <dt>Код подразделения</dt>
+                <dd><?= e($driver['passport_department_code'] ?? '') ?: '—' ?></dd>
                 <dt>Дата выдачи</dt>
-                <dd><?= e($driver['license_issue_date'] ?? '') ?: '—' ?></dd>
-                <dt>Дата окончания</dt>
-                <dd><?= e($driver['license_expire_date'] ?? '') ?: '—' ?></dd>
+                <dd><?= e($driver['passport_issue_date'] ?? '') ?: '—' ?></dd>
             </dl>
         </div>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Техническая информация</h3>
+            <h3 class="panel-head-title">Водительское удостоверение</h3>
             <dl class="kv">
-                <dt>Создан</dt>
-                <dd><?= e($driver['created_at'] ?? '') ?></dd>
-                <dt>Обновлён</dt>
-                <dd><?= e($driver['updated_at'] ?? '') ?></dd>
+                <dt>Номер</dt>
+                <dd><?= e($driver['license_number'] ?? '') ?: '—' ?></dd>
+                <dt>Дата выдачи</dt>
+                <dd><?= e($driver['license_issue_date'] ?? '') ?: '—' ?></dd>
             </dl>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">СНИЛС</h3>
+            <dl class="kv">
+                <dt>Номер</dt>
+                <dd><?= e($driver['snils'] ?? '') ?: '—' ?></dd>
+            </dl>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Телефоны</h3>
+
+            <?php if (empty($phones)): ?>
+                <p class="text-muted">Телефоны не добавлены.</p>
+            <?php else: ?>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Телефон</th>
+                            <th>Основной</th>
+                            <th>Комментарий</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($phones as $ph): ?>
+                    <tr>
+                        <td class="col-mono"><?= e($ph['phone'] ?? '—') ?></td>
+                        <td><?= $ph['is_main'] ? '✓' : '—' ?></td>
+                        <td class="col-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><?= e($ph['comment'] ?? '') ?></td>
+                        <td class="col-actions">
+                            <button type="button" class="btn btn-toolbar" onclick="editPhone(<?= $ph['id'] ?>)">Редактировать</button>
+                            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/<?= $ph['id'] ?>/delete" style="display:inline" onsubmit="return confirm('Удалить телефон?')">
+                                <button type="submit" class="btn btn-toolbar" style="color:var(--danger)">Удалить</button>
+                            </form>
+                            <?php if (!$ph['is_main']): ?>
+                            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/<?= $ph['id'] ?>/set-main" style="display:inline">
+                                <button type="submit" class="btn btn-toolbar">Сделать основным</button>
+                            </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+
+            <!-- Inline phone edit form -->
+            <div id="phone-edit-form" style="display:none;margin-top:12px">
+                <h4 class="panel-head-title" style="font-size:1rem">Редактировать телефон</h4>
+                <form method="post" id="phone-edit-frm">
+                    <input type="hidden" name="phone_edit_id" id="phone-edit-id" value="">
+                    <div class="frm-row">
+                        <div class="field">
+                            <label class="field-label">Телефон <span class="text-muted">(рекомендуемое)</span></label>
+                            <input type="text" name="phone" class="field-input" id="phone-edit-value">
+                        </div>
+                        <div class="field">
+                            <label class="field-label">Комментарий <span class="text-muted">(рекомендуемое)</span></label>
+                            <input type="text" name="comment" class="field-input" id="phone-edit-comment">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                        <button type="button" class="btn btn-ghost" onclick="document.getElementById('phone-edit-form').style.display='none'">Отмена</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Add phone form -->
+            <div style="margin-top:16px">
+                <h4 class="panel-head-title" style="font-size:1rem">Добавить телефон</h4>
+                <form method="post" action="/company/drivers/<?= $driver['id'] ?>/phones/create">
+                    <div class="frm-row">
+                        <div class="field">
+                            <label class="field-label">Телефон <span class="text-muted">(рекомендуемое)</span></label>
+                            <input type="text" name="phone" class="field-input">
+                        </div>
+                        <div class="field">
+                            <label class="field-label">Комментарий <span class="text-muted">(рекомендуемое)</span></label>
+                            <input type="text" name="comment" class="field-input">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Добавить телефон</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Связанные блоки "Водитель+ТС"</h3>
+            <?php if (empty($driverBlocks)): ?>
+                <p class="text-muted">Нет связанных блоков.</p>
+            <?php else: ?>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>ID блока</th>
+                            <th>Тип комплекта</th>
+                            <th>Основная ед.</th>
+                            <th>Доп. ед.</th>
+                            <th>Статус</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($driverBlocks as $db): ?>
+                    <tr>
+                        <td class="col-mono"><?= $db['id'] ?></td>
+                        <td><?= e($db['set_type'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($db['primary_plate'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($db['secondary_plate'] ?? '—') ?></td>
+                        <td><?= renderStatusBadge($db['status']) ?></td>
+                        <td class="col-actions">
+                            <a href="/company/driver-vehicle-blocks/<?= $db['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
@@ -158,15 +303,42 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
         <?php endif; ?>
 
+        <div class="form-section">
+            <h3 class="panel-head-title">Служебные данные</h3>
+            <dl class="kv">
+                <dt>Создал</dt>
+                <dd><?= e($driver['created_by_role'] ?? '—') ?> (ID: <?= e($driver['created_by_user_id'] ?? '—') ?>)<?php if ($createdByUser): ?> — <?= e($createdByUser) ?><?php endif; ?></dd>
+                <dt>Создан</dt>
+                <dd><?= e($driver['created_at'] ?? '—') ?></dd>
+                <dt>Обновил</dt>
+                <dd><?= !empty($driver['updated_by_user_id']) ? (e($driver['updated_by_role'] ?? '—') . ' (ID: ' . e($driver['updated_by_user_id']) . ')' . ($updatedByUser ? ' — ' . e($updatedByUser) : '')) : '—' ?></dd>
+                <dt>Обновлён</dt>
+                <dd><?= e($driver['updated_at'] ?? '—') ?></dd>
+            </dl>
+        </div>
+
         <div class="form-actions">
             <a href="/company/drivers/<?= $driver['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <a href="/company/documents?entity_type=driver&entity_id=<?= $driver['id'] ?>" class="btn btn-ghost">Документы</a>
-            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" style="display:inline">
+            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" style="display:inline" onsubmit="return confirm('Архивировать водителя?')">
                 <button type="submit" class="btn btn-warn">Архивировать</button>
             </form>
         </div>
 
     </div>
 </div>
+
+<script>
+function editPhone(phoneId) {
+    var form = document.getElementById('phone-edit-form');
+    var frm = document.getElementById('phone-edit-frm');
+    document.getElementById('phone-edit-id').value = phoneId;
+    frm.action = '/company/drivers/<?= $driver['id'] ?>/phones/' + phoneId + '/edit';
+    document.getElementById('phone-edit-value').value = '';
+    document.getElementById('phone-edit-comment').value = '';
+    form.style.display = 'block';
+    form.scrollIntoView({behavior: 'smooth'});
+}
+</script>
 
 <?php endif; ?>

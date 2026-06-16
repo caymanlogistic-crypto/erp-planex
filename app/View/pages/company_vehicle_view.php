@@ -46,6 +46,26 @@
     Транспорт с ID <?= e((string)$vehicleId) ?> не найден в этой компании.
 </div>
 
+<?php elseif (isset($accessDenied)): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Доступ запрещён</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-body">
+        <div class="notice warn">
+            <?= e($accessDenied) ?>
+        </div>
+    </div>
+</div>
+
 <?php else: ?>
 
 <div class="page-head">
@@ -101,6 +121,48 @@
                 <dt>Объём кузова (м³)</dt>
                 <dd><?= $vehicle['volume_m3'] !== null ? e((string)$vehicle['volume_m3']) : '—' ?></dd>
             </dl>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Связанные транспортные комплекты</h3>
+            <?php if (empty($relatedSets)): ?>
+                <p class="text-muted">Нет связанных транспортных комплектов.</p>
+            <?php else: ?>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>ID комплекта</th>
+                            <th>Тип комплекта</th>
+                            <th>Основная ед.</th>
+                            <th>Доп. ед.</th>
+                            <th>Статус</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($relatedSets as $rs): ?>
+                    <tr>
+                        <td class="col-mono"><?= $rs['id'] ?></td>
+                        <td><?= e($rs['set_type'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($rs['primary_plate'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($rs['secondary_plate'] ?? '—') ?></td>
+                        <td>
+                            <?php if ($rs['status'] === 'active'): ?>
+                                <span class="badge badge-ok"><span class="dot"></span>Активен</span>
+                            <?php else: ?>
+                                <span class="badge"><span class="dot"></span><?= e($rs['status'] ?? 'Неактивен') ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="col-actions">
+                            <a href="/company/vehicle-sets/<?= $rs['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
         </div>
 
         <div class="form-section">

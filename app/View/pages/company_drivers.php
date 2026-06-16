@@ -71,9 +71,13 @@
                     <tr>
                         <th>ID</th>
                         <th>ФИО</th>
-                        <th>Телефон</th>
-                        <th>Дата выдачи ВУ</th>
-                        <th>Дата окончания ВУ</th>
+                        <th>Основной телефон</th>
+                        <th>Номер ВУ</th>
+                        <th>Паспорт</th>
+                        <th>СНИЛС</th>
+                        <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
+                        <th>Владелец</th>
+                        <?php endif; ?>
                         <th>Статус</th>
                         <th>Создан</th>
                         <th></th>
@@ -84,9 +88,13 @@
                     <tr>
                         <td class="col-mono"><?= $d['id'] ?></td>
                         <td><?= e($d['full_name']) ?></td>
-                        <td class="col-mono"><?= e($d['phone']) ?></td>
-                        <td class="col-mono"><?= e($d['license_issue_date'] ?? '—') ?></td>
-                        <td class="col-mono"><?= e($d['license_expire_date'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($d['main_phone'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($d['license_number'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($d['passport_number'] ?? '—') ?></td>
+                        <td class="col-mono"><?= e($d['snils'] ?? '—') ?></td>
+                        <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
+                        <td class="col-muted"><?= e($d['created_by_role'] ?? '—') ?> #<?= e($d['created_by_user_id'] ?? '—') ?></td>
+                        <?php endif; ?>
                         <td>
                             <span class="badge<?= $d['status'] === 'active' ? ' badge-ok' : '' ?>">
                                 <span class="dot"></span>

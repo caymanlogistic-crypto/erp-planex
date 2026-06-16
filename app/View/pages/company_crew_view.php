@@ -46,6 +46,26 @@
     Экипаж с ID <?= e((string)$crewId) ?> не найден в этой компании.
 </div>
 
+<?php elseif (isset($accessDenied)): ?>
+
+<div class="page-head">
+    <div>
+        <h1>Доступ запрещён</h1>
+        <p class="text-muted">Компания: <?= e($company['name']) ?> (ID: <?= $company['id'] ?>)</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/crews" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-body">
+        <div class="notice warn">
+            <?= e($accessDenied) ?>
+        </div>
+    </div>
+</div>
+
 <?php else: ?>
 
 <div class="page-head">

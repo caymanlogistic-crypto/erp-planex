@@ -2844,12 +2844,27 @@ $router->get('/company/contractors', function () use ($config, $db) {
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $contractorStmt = $localPdo->prepare(
-                "SELECT * FROM contractors WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'contractor' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT c.*,
+                        cc.contact_person AS primary_contact_person, cc.phone AS primary_contact_phone,
+                        cce.email AS doc_email
+                 FROM contractors c
+                 LEFT JOIN contractor_contacts cc ON c.id = cc.contractor_id AND cc.is_primary = 1
+                 LEFT JOIN contractor_contacts cce ON c.id = cce.contractor_id AND cce.is_document_email = 1
+                 WHERE (c.created_by_user_id = ? OR c.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'contractor' AND granted_to_user_id = ? AND access_level = 'view'))
+                 ORDER BY c.created_at DESC"
             );
             $contractorStmt->execute([$userId, $userId]);
             $contractors = $contractorStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $contractorStmt = $localPdo->query("SELECT * FROM contractors ORDER BY created_at DESC");
+            $contractorStmt = $localPdo->query(
+                "SELECT c.*,
+                        cc.contact_person AS primary_contact_person, cc.phone AS primary_contact_phone,
+                        cce.email AS doc_email
+                 FROM contractors c
+                 LEFT JOIN contractor_contacts cc ON c.id = cc.contractor_id AND cc.is_primary = 1
+                 LEFT JOIN contractor_contacts cce ON c.id = cce.contractor_id AND cce.is_document_email = 1
+                 ORDER BY c.created_at DESC"
+            );
             $contractors = $contractorStmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
@@ -3032,9 +3047,11 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         }
 
         $insert = $localPdo->prepare(
-            'INSERT INTO contractors (name, inn, kpp, ogrn, legal_address, physical_address,
+            'INSERT INTO contractors (name, inn, kpp, ogrn, contractor_type, legal_address, physical_address,
+             bank_account, bank_name, bank_bik, bank_corr_account,
              contact_person, contact_phone, contact_email, status, comments, created_by_user_id, created_by_role)
-             VALUES (:name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
+             VALUES (:name, :inn, :kpp, :ogrn, :contractor_type, :legal_address, :physical_address,
+             :bank_account, :bank_name, :bank_bik, :bank_corr_account,
              :contact_person, :contact_phone, :contact_email, :status, :comments, :created_by_user_id, :created_by_role)'
         );
         $insert->execute([
@@ -3042,8 +3059,13 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             ':inn'                => $inn,
             ':kpp'                => $kpp !== '' ? $kpp : null,
             ':ogrn'               => $ogrn !== '' ? $ogrn : null,
+            ':contractor_type'    => ($_POST['contractor_type'] ?? '') !== '' ? $_POST['contractor_type'] : null,
             ':legal_address'      => $legalAddress !== '' ? $legalAddress : null,
             ':physical_address'   => $physicalAddress !== '' ? $physicalAddress : null,
+            ':bank_account'       => ($_POST['bank_account'] ?? '') !== '' ? $_POST['bank_account'] : null,
+            ':bank_name'          => ($_POST['bank_name'] ?? '') !== '' ? $_POST['bank_name'] : null,
+            ':bank_bik'           => ($_POST['bank_bik'] ?? '') !== '' ? $_POST['bank_bik'] : null,
+            ':bank_corr_account'  => ($_POST['bank_corr_account'] ?? '') !== '' ? $_POST['bank_corr_account'] : null,
             ':contact_person'     => $contactPerson !== '' ? $contactPerson : null,
             ':contact_phone'      => $contactPhone !== '' ? $contactPhone : null,
             ':contact_email'      => $contactEmail !== '' ? $contactEmail : null,
@@ -3154,8 +3176,52 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
         $contractorStmt->execute([(int) $id]);
         $contractor = $contractorStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
+        // Role-based access check
+        $accessDenied = null;
+        $createdByUser = null;
+        $updatedByUser = null;
         if ($contractor) {
+            $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+            if ($isLogist) {
+                $userId = (int)$_SESSION['user_id'];
+                $hasGrant = false;
+                $grantCheck = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+                $grantCheck->execute([(int)$id, $userId]);
+                $grantRow = $grantCheck->fetch(PDO::FETCH_ASSOC);
+                $hasGrant = ($grantRow && in_array($grantRow['access_level'], ['view', 'edit']));
+                if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) {
+                    $accessDenied = 'У вас нет доступа к этой записи.';
+                }
+            }
+            // Load created/updated by user names
+            $createdByUser = $localPdo->prepare("SELECT full_name FROM users WHERE id = ?");
+            $createdByUser->execute([(int)$contractor['created_by_user_id']]);
+            $createdByUser = $createdByUser->fetchColumn() ?: null;
+            if (!empty($contractor['updated_by_user_id'])) {
+                $updatedByUser = $localPdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                $updatedByUser->execute([(int)$contractor['updated_by_user_id']]);
+                $updatedByUser = $updatedByUser->fetchColumn() ?: null;
+            }
+        }
+
+        if ($contractor && !$accessDenied) {
             $pageTitle = 'Подрядчик: ' . $contractor['name'];
+        }
+
+        // Load contacts
+        $contacts = [];
+        if ($contractor && !$accessDenied) {
+            $contacts = $localPdo->prepare("SELECT * FROM contractor_contacts WHERE contractor_id = ? ORDER BY is_primary DESC, id ASC");
+            $contacts->execute([(int)$id]);
+            $contacts = $contacts->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Load tax history
+        $taxHistory = [];
+        if ($contractor && !$accessDenied) {
+            $taxHistory = $localPdo->prepare("SELECT * FROM contractor_tax_history WHERE contractor_id = ? ORDER BY effective_from DESC, id DESC");
+            $taxHistory->execute([(int)$id]);
+            $taxHistory = $taxHistory->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $grants = [];
@@ -3384,6 +3450,26 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
             return;
         }
 
+        // Access check for logist
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrantEdit = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([(int)$id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrantEdit = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrantEdit) {
+                $errors = []; $old = $contractor;
+                $formError = (int)$contractor['created_by_user_id'] !== $userId ? 'У вас есть доступ на просмотр, но нет права редактировать эту запись.' : 'У вас нет доступа к этой записи.';
+                ob_start();
+                require base_path('app/View/pages/company_contractor_edit.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
+                return;
+            }
+        }
+
         $errors = [];
         $old = $_POST;
         $formError = null;
@@ -3419,13 +3505,20 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
                 inn = :inn,
                 kpp = :kpp,
                 ogrn = :ogrn,
+                contractor_type = :contractor_type,
                 legal_address = :legal_address,
                 physical_address = :physical_address,
+                bank_account = :bank_account,
+                bank_name = :bank_name,
+                bank_bik = :bank_bik,
+                bank_corr_account = :bank_corr_account,
                 contact_person = :contact_person,
                 contact_phone = :contact_phone,
                 contact_email = :contact_email,
                 status = :status,
-                comments = :comments
+                comments = :comments,
+                updated_by_user_id = :updated_by_user_id,
+                updated_by_role = :updated_by_role
              WHERE id = :id'
         );
 
@@ -3434,13 +3527,20 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
             ':inn'              => $inn,
             ':kpp'              => $_POST['kpp'] ?? null,
             ':ogrn'             => $_POST['ogrn'] ?? null,
+            ':contractor_type'  => $_POST['contractor_type'] ?? null,
             ':legal_address'    => $_POST['legal_address'] ?? null,
             ':physical_address' => $_POST['physical_address'] ?? null,
+            ':bank_account'     => $_POST['bank_account'] ?? null,
+            ':bank_name'        => $_POST['bank_name'] ?? null,
+            ':bank_bik'         => $_POST['bank_bik'] ?? null,
+            ':bank_corr_account'=> $_POST['bank_corr_account'] ?? null,
             ':contact_person'   => $_POST['contact_person'] ?? null,
             ':contact_phone'    => $_POST['contact_phone'] ?? null,
             ':contact_email'    => $_POST['contact_email'] ?? null,
             ':status'           => $_POST['status'] ?? $contractor['status'],
             ':comments'         => $_POST['comments'] ?? null,
+            ':updated_by_user_id' => (int)$_SESSION['user_id'],
+            ':updated_by_role'  => $_SESSION['role_code'] ?? null,
             ':id'               => (int) $id,
         ]);
 
@@ -3540,6 +3640,21 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
             return;
         }
 
+        // Archive access check: logist can only archive own records
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            if ((int)$contractor['created_by_user_id'] !== $userId) {
+                $archiveError = 'Логист может архивировать только записи, созданные им самим.';
+                $dbError = null;
+                ob_start();
+                require base_path('app/View/pages/company_contractor_view.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
+                return;
+            }
+        }
+
         $pageTitle = 'Подрядчик: ' . $contractor['name'];
 
         try {
@@ -3577,6 +3692,327 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
         $content = ob_get_clean();
         require base_path('app/View/layouts/main.php');
     }
+});
+
+// --- Contractor Contacts CRUD ---
+
+$router->post('/company/contractors/{contractor_id}/contacts/create', function ($contractor_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $contractor_id = (int)$contractor_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/contractors/' . $contractor_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $cStmt->execute([$contractor_id]);
+        $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$contractor) { header('Location: /company/contractors'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$contractor_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $contactPerson = trim($_POST['contact_person'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $comment = trim($_POST['comment'] ?? '');
+
+        // Check if this is the first contact
+        $cntStmt = $localPdo->prepare('SELECT COUNT(*) FROM contractor_contacts WHERE contractor_id = ?');
+        $cntStmt->execute([$contractor_id]);
+        $isFirst = ($cntStmt->fetchColumn() == 0);
+
+        $isPrimary = $isFirst ? 1 : 0;
+        $isDocEmail = ($isFirst && !empty($email)) ? 1 : 0;
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO contractor_contacts (contractor_id, contact_person, phone, email, is_primary, is_document_email, comment, created_by_user_id, created_by_role)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $insert->execute([$contractor_id, $contactPerson ?: null, $phone ?: null, $email ?: null, $isPrimary, $isDocEmail, $comment ?: null, (int)$_SESSION['user_id'], $_SESSION['role_code'] ?? null]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+$router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/edit', function ($contractor_id, $contact_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/contractors/' . $contractor_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $cStmt->execute([$contractor_id]);
+        $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$contractor) { header('Location: /company/contractors'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$contractor_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $contactPerson = trim($_POST['contact_person'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $comment = trim($_POST['comment'] ?? '');
+
+        $update = $localPdo->prepare(
+            'UPDATE contractor_contacts SET contact_person = ?, phone = ?, email = ?, comment = ?, updated_by_user_id = ?, updated_by_role = ? WHERE id = ? AND contractor_id = ?'
+        );
+        $update->execute([$contactPerson ?: null, $phone ?: null, $email ?: null, $comment ?: null, (int)$_SESSION['user_id'], $_SESSION['role_code'] ?? null, $contact_id, $contractor_id]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+$router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/delete', function ($contractor_id, $contact_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/contractors/' . $contractor_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $cStmt->execute([$contractor_id]);
+        $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$contractor) { header('Location: /company/contractors'); exit; }
+
+        // Access check: logist view — deny, logist edit — allow if can edit, company_owner — allow
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$contractor_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        // Check if deleting primary contact
+        $contactStmt = $localPdo->prepare('SELECT is_primary FROM contractor_contacts WHERE id = ? AND contractor_id = ?');
+        $contactStmt->execute([$contact_id, $contractor_id]);
+        $contact = $contactStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Delete
+        $delStmt = $localPdo->prepare('DELETE FROM contractor_contacts WHERE id = ? AND contractor_id = ?');
+        $delStmt->execute([$contact_id, $contractor_id]);
+
+        // If deleted primary, set first remaining as primary
+        if ($contact && $contact['is_primary']) {
+            $first = $localPdo->prepare('SELECT id FROM contractor_contacts WHERE contractor_id = ? ORDER BY id ASC LIMIT 1');
+            $first->execute([$contractor_id]);
+            $firstRow = $first->fetch(PDO::FETCH_ASSOC);
+            if ($firstRow) {
+                $localPdo->prepare('UPDATE contractor_contacts SET is_primary = 1 WHERE id = ?')->execute([$firstRow['id']]);
+            }
+        }
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+$router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/set-primary', function ($contractor_id, $contact_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/contractors/' . $contractor_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $cStmt->execute([$contractor_id]);
+        $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$contractor) { header('Location: /company/contractors'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$contractor_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $localPdo->prepare('UPDATE contractor_contacts SET is_primary = 0 WHERE contractor_id = ?')->execute([$contractor_id]);
+        $localPdo->prepare('UPDATE contractor_contacts SET is_primary = 1 WHERE id = ? AND contractor_id = ?')->execute([$contact_id, $contractor_id]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+$router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/set-document-email', function ($contractor_id, $contact_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/contractors/' . $contractor_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $cStmt->execute([$contractor_id]);
+        $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$contractor) { header('Location: /company/contractors'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$contractor_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $localPdo->prepare('UPDATE contractor_contacts SET is_document_email = 0 WHERE contractor_id = ?')->execute([$contractor_id]);
+        $localPdo->prepare('UPDATE contractor_contacts SET is_document_email = 1 WHERE id = ? AND contractor_id = ?')->execute([$contact_id, $contractor_id]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+// --- Contractor Tax History ---
+
+$router->post('/company/contractors/{contractor_id}/tax-history/create', function ($contractor_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $contractor_id = (int)$contractor_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/contractors/' . $contractor_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $cStmt->execute([$contractor_id]);
+        $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$contractor) { header('Location: /company/contractors'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$contractor_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $taxSystem = trim($_POST['tax_system'] ?? '');
+        $vatMode = trim($_POST['vat_mode'] ?? '');
+        $effectiveFrom = trim($_POST['effective_from'] ?? '');
+        $comment = trim($_POST['comment'] ?? '');
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO contractor_tax_history (contractor_id, tax_system, vat_mode, effective_from, comment, created_by_user_id, created_by_role)
+             VALUES (?, ?, ?, ?, ?, ?, ?)'
+        );
+        $insert->execute([$contractor_id, $taxSystem ?: null, $vatMode ?: null, $effectiveFrom ?: null, $comment ?: null, (int)$_SESSION['user_id'], $_SESSION['role_code'] ?? null]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
 });
 
 $router->get('/company/drivers', function () use ($config, $db) {
@@ -3660,12 +4096,21 @@ $router->get('/company/drivers', function () use ($config, $db) {
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $driverStmt = $localPdo->prepare(
-                "SELECT * FROM drivers WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT d.*, dp.phone AS main_phone
+                 FROM drivers d
+                 LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
+                 WHERE (d.created_by_user_id = ? OR d.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level = 'view'))
+                 ORDER BY d.created_at DESC"
             );
             $driverStmt->execute([$userId, $userId]);
             $drivers = $driverStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $driverStmt = $localPdo->query("SELECT * FROM drivers ORDER BY created_at DESC");
+            $driverStmt = $localPdo->query(
+                "SELECT d.*, dp.phone AS main_phone
+                 FROM drivers d
+                 LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
+                 ORDER BY d.created_at DESC"
+            );
             $drivers = $driverStmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
@@ -3846,21 +4291,28 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
 
         $insert = $localPdo->prepare(
             'INSERT INTO drivers (full_name, phone, license_number, license_category,
-             license_issue_date, license_expire_date, status, comments, created_by_user_id, created_by_role)
+             license_issue_date, license_expire_date, passport_number, passport_issued_by,
+             passport_department_code, passport_issue_date, snils, status, comments, created_by_user_id, created_by_role)
              VALUES (:full_name, :phone, :license_number, :license_category,
-             :license_issue_date, :license_expire_date, :status, :comments, :created_by_user_id, :created_by_role)'
+             :license_issue_date, :license_expire_date, :passport_number, :passport_issued_by,
+             :passport_department_code, :passport_issue_date, :snils, :status, :comments, :created_by_user_id, :created_by_role)'
         );
         $insert->execute([
-            ':full_name'           => $fullName,
-            ':phone'               => $phone,
-            ':license_number'      => $licenseNumber !== '' ? $licenseNumber : null,
-            ':license_category'    => $licenseCategory !== '' ? $licenseCategory : null,
-            ':license_issue_date'  => $licenseIssueDate !== '' ? $licenseIssueDate : null,
-            ':license_expire_date' => $licenseExpireDate !== '' ? $licenseExpireDate : null,
-            ':status'              => 'active',
-            ':comments'            => $comments !== '' ? $comments : null,
-            ':created_by_user_id'  => (int)$_SESSION['user_id'],
-            ':created_by_role'     => $_SESSION['role_code'],
+            ':full_name'              => $fullName,
+            ':phone'                  => $phone,
+            ':license_number'         => $licenseNumber !== '' ? $licenseNumber : null,
+            ':license_category'       => $licenseCategory !== '' ? $licenseCategory : null,
+            ':license_issue_date'     => $licenseIssueDate !== '' ? $licenseIssueDate : null,
+            ':license_expire_date'    => $licenseExpireDate !== '' ? $licenseExpireDate : null,
+            ':passport_number'        => ($_POST['passport_number'] ?? '') !== '' ? $_POST['passport_number'] : null,
+            ':passport_issued_by'     => ($_POST['passport_issued_by'] ?? '') !== '' ? $_POST['passport_issued_by'] : null,
+            ':passport_department_code' => ($_POST['passport_department_code'] ?? '') !== '' ? $_POST['passport_department_code'] : null,
+            ':passport_issue_date'    => ($_POST['passport_issue_date'] ?? '') !== '' ? $_POST['passport_issue_date'] : null,
+            ':snils'                  => ($_POST['snils'] ?? '') !== '' ? $_POST['snils'] : null,
+            ':status'                 => 'active',
+            ':comments'               => $comments !== '' ? $comments : null,
+            ':created_by_user_id'     => (int)$_SESSION['user_id'],
+            ':created_by_role'        => $_SESSION['role_code'],
         ]);
 
         $createdDriver = [
@@ -3966,8 +4418,60 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
         $driverStmt->execute([(int) $id]);
         $driver = $driverStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
+        // Role-based access check
+        $accessDenied = null;
+        $createdByUser = null;
+        $updatedByUser = null;
         if ($driver) {
+            $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+            if ($isLogist) {
+                $userId = (int)$_SESSION['user_id'];
+                $hasGrant = false;
+                $grantCheck = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+                $grantCheck->execute([(int)$id, $userId]);
+                $grantRow = $grantCheck->fetch(PDO::FETCH_ASSOC);
+                $hasGrant = ($grantRow && in_array($grantRow['access_level'], ['view', 'edit']));
+                if ((int)$driver['created_by_user_id'] !== $userId && !$hasGrant) {
+                    $accessDenied = 'У вас нет доступа к этой записи.';
+                }
+            }
+            // Load created/updated by user names
+            $createdByUser = $localPdo->prepare("SELECT full_name FROM users WHERE id = ?");
+            $createdByUser->execute([(int)$driver['created_by_user_id']]);
+            $createdByUser = $createdByUser->fetchColumn() ?: null;
+            if (!empty($driver['updated_by_user_id'])) {
+                $updatedByUser = $localPdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                $updatedByUser->execute([(int)$driver['updated_by_user_id']]);
+                $updatedByUser = $updatedByUser->fetchColumn() ?: null;
+            }
+        }
+
+        if ($driver && !$accessDenied) {
             $pageTitle = 'Водитель: ' . $driver['full_name'];
+        }
+
+        // Load phones
+        $phones = [];
+        if ($driver && !$accessDenied) {
+            $phones = $localPdo->prepare("SELECT * FROM driver_phones WHERE driver_id = ? ORDER BY is_main DESC, id ASC");
+            $phones->execute([(int)$id]);
+            $phones = $phones->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Load related driver_vehicle_blocks
+        $driverBlocks = [];
+        if ($driver && !$accessDenied) {
+            $driverBlocks = $localPdo->prepare(
+                "SELECT dvb.*, vs.set_type, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand, vu1.model AS primary_model,
+                 vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand, vu2.model AS secondary_model
+                 FROM driver_vehicle_blocks dvb
+                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 WHERE dvb.driver_id = ? ORDER BY dvb.id DESC"
+            );
+            $driverBlocks->execute([(int)$id]);
+            $driverBlocks = $driverBlocks->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $grants = [];
@@ -3991,6 +4495,8 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
         $driver = null;
         $grants = [];
         $logists = [];
+        $phones = [];
+        $driverBlocks = [];
         $dbError = 'Не удалось загрузить водителя: ' . $e->getMessage();
     }
 
@@ -4196,6 +4702,26 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
             return;
         }
 
+        // Access check for logist
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrantEdit = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([(int)$id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrantEdit = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$driver['created_by_user_id'] !== $userId && !$hasGrantEdit) {
+                $errors = []; $old = $driver;
+                $formError = (int)$driver['created_by_user_id'] !== $userId ? 'У вас есть доступ на просмотр, но нет права редактировать эту запись.' : 'У вас нет доступа к этой записи.';
+                ob_start();
+                require base_path('app/View/pages/company_driver_edit.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
+                return;
+            }
+        }
+
         $errors = [];
         $old = $_POST;
         $formError = null;
@@ -4233,21 +4759,35 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
                 license_category = :license_category,
                 license_issue_date = :license_issue_date,
                 license_expire_date = :license_expire_date,
+                passport_number = :passport_number,
+                passport_issued_by = :passport_issued_by,
+                passport_department_code = :passport_department_code,
+                passport_issue_date = :passport_issue_date,
+                snils = :snils,
                 status = :status,
-                comments = :comments
+                comments = :comments,
+                updated_by_user_id = :updated_by_user_id,
+                updated_by_role = :updated_by_role
              WHERE id = :id'
         );
 
         $update->execute([
-            ':full_name'           => $fullName,
-            ':phone'               => $phone,
-            ':license_number'      => $_POST['license_number'] ?? null,
-            ':license_category'    => $_POST['license_category'] ?? null,
-            ':license_issue_date'  => $_POST['license_issue_date'] ?? null,
-            ':license_expire_date' => $_POST['license_expire_date'] ?? null,
-            ':status'              => $_POST['status'] ?? $driver['status'],
-            ':comments'            => $_POST['comments'] ?? null,
-            ':id'                  => (int) $id,
+            ':full_name'              => $fullName,
+            ':phone'                  => $phone,
+            ':license_number'         => $_POST['license_number'] ?? null,
+            ':license_category'       => $_POST['license_category'] ?? null,
+            ':license_issue_date'     => $_POST['license_issue_date'] ?? null,
+            ':license_expire_date'    => $_POST['license_expire_date'] ?? null,
+            ':passport_number'        => $_POST['passport_number'] ?? null,
+            ':passport_issued_by'     => $_POST['passport_issued_by'] ?? null,
+            ':passport_department_code' => $_POST['passport_department_code'] ?? null,
+            ':passport_issue_date'    => $_POST['passport_issue_date'] ?? null,
+            ':snils'                  => $_POST['snils'] ?? null,
+            ':status'                 => $_POST['status'] ?? $driver['status'],
+            ':comments'               => $_POST['comments'] ?? null,
+            ':updated_by_user_id'     => (int)$_SESSION['user_id'],
+            ':updated_by_role'        => $_SESSION['role_code'] ?? null,
+            ':id'                     => (int) $id,
         ]);
 
         header('Location: /company/drivers/' . $id);
@@ -4346,6 +4886,21 @@ $router->post('/company/drivers/{id}/archive', function ($id) use ($config, $db)
             return;
         }
 
+        // Archive access check: logist can only archive own records
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            if ((int)$driver['created_by_user_id'] !== $userId) {
+                $archiveError = 'Логист может архивировать только записи, созданные им самим.';
+                $dbError = null;
+                ob_start();
+                require base_path('app/View/pages/company_driver_view.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
+                return;
+            }
+        }
+
         $pageTitle = 'Водитель: ' . $driver['full_name'];
 
         try {
@@ -4383,6 +4938,216 @@ $router->post('/company/drivers/{id}/archive', function ($id) use ($config, $db)
         $content = ob_get_clean();
         require base_path('app/View/layouts/main.php');
     }
+});
+
+// --- Driver Phones CRUD ---
+
+$router->post('/company/drivers/{driver_id}/phones/create', function ($driver_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $driver_id = (int)$driver_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/drivers/' . $driver_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $dStmt = $localPdo->prepare('SELECT * FROM drivers WHERE id = ?');
+        $dStmt->execute([$driver_id]);
+        $driver = $dStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$driver) { header('Location: /company/drivers'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$driver_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$driver['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $phone = trim($_POST['phone'] ?? '');
+        $comment = trim($_POST['comment'] ?? '');
+
+        $cntStmt = $localPdo->prepare('SELECT COUNT(*) FROM driver_phones WHERE driver_id = ?');
+        $cntStmt->execute([$driver_id]);
+        $isFirst = ($cntStmt->fetchColumn() == 0);
+        $isMain = $isFirst ? 1 : 0;
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO driver_phones (driver_id, phone, is_main, comment, created_by_user_id, created_by_role) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $insert->execute([$driver_id, $phone ?: null, $isMain, $comment ?: null, (int)$_SESSION['user_id'], $_SESSION['role_code'] ?? null]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+$router->post('/company/drivers/{driver_id}/phones/{phone_id}/edit', function ($driver_id, $phone_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $driver_id = (int)$driver_id; $phone_id = (int)$phone_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/drivers/' . $driver_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $dStmt = $localPdo->prepare('SELECT * FROM drivers WHERE id = ?');
+        $dStmt->execute([$driver_id]);
+        $driver = $dStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$driver) { header('Location: /company/drivers'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$driver_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$driver['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $phone = trim($_POST['phone'] ?? '');
+        $comment = trim($_POST['comment'] ?? '');
+
+        $update = $localPdo->prepare(
+            'UPDATE driver_phones SET phone = ?, comment = ?, updated_by_user_id = ?, updated_by_role = ? WHERE id = ? AND driver_id = ?'
+        );
+        $update->execute([$phone ?: null, $comment ?: null, (int)$_SESSION['user_id'], $_SESSION['role_code'] ?? null, $phone_id, $driver_id]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+$router->post('/company/drivers/{driver_id}/phones/{phone_id}/delete', function ($driver_id, $phone_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $driver_id = (int)$driver_id; $phone_id = (int)$phone_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/drivers/' . $driver_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $dStmt = $localPdo->prepare('SELECT * FROM drivers WHERE id = ?');
+        $dStmt->execute([$driver_id]);
+        $driver = $dStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$driver) { header('Location: /company/drivers'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$driver_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$driver['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $phoneStmt = $localPdo->prepare('SELECT is_main FROM driver_phones WHERE id = ? AND driver_id = ?');
+        $phoneStmt->execute([$phone_id, $driver_id]);
+        $phoneData = $phoneStmt->fetch(PDO::FETCH_ASSOC);
+
+        $delStmt = $localPdo->prepare('DELETE FROM driver_phones WHERE id = ? AND driver_id = ?');
+        $delStmt->execute([$phone_id, $driver_id]);
+
+        if ($phoneData && $phoneData['is_main']) {
+            $first = $localPdo->prepare('SELECT id FROM driver_phones WHERE driver_id = ? ORDER BY id ASC LIMIT 1');
+            $first->execute([$driver_id]);
+            $firstRow = $first->fetch(PDO::FETCH_ASSOC);
+            if ($firstRow) {
+                $localPdo->prepare('UPDATE driver_phones SET is_main = 1 WHERE id = ?')->execute([$firstRow['id']]);
+            }
+        }
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+$router->post('/company/drivers/{driver_id}/phones/{phone_id}/set-main', function ($driver_id, $phone_id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $driver_id = (int)$driver_id; $phone_id = (int)$phone_id;
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $redirect = '/company/drivers/' . $driver_id;
+
+    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $dStmt = $localPdo->prepare('SELECT * FROM drivers WHERE id = ?');
+        $dStmt->execute([$driver_id]);
+        $driver = $dStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$driver) { header('Location: /company/drivers'); exit; }
+
+        // Access check
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            $hasGrant = false;
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([$driver_id, $userId]);
+            $gr = $gc->fetch(PDO::FETCH_ASSOC);
+            $hasGrant = ($gr && $gr['access_level'] === 'edit');
+            if ((int)$driver['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
+        }
+
+        $localPdo->prepare('UPDATE driver_phones SET is_main = 0 WHERE driver_id = ?')->execute([$driver_id]);
+        $localPdo->prepare('UPDATE driver_phones SET is_main = 1 WHERE id = ? AND driver_id = ?')->execute([$phone_id, $driver_id]);
+    } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
 });
 
 $router->get('/company/vehicles', function () use ($config, $db) {
@@ -4799,6 +5564,38 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             $entityNotFound = true;
         }
 
+        $accessDenied = null;
+        $relatedSets = [];
+        if ($vehicle) {
+            // Access check for logist
+            $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+            if ($isLogist) {
+                $userId = (int)$_SESSION['user_id'];
+                $hasGrant = false;
+                $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'vehicle_unit' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+                $gc->execute([$vehicleId, $userId]);
+                $gr = $gc->fetch(PDO::FETCH_ASSOC);
+                $hasGrant = ($gr && in_array($gr['access_level'], ['view', 'edit']));
+                if ((int)$vehicle['created_by_user_id'] !== $userId && !$hasGrant) {
+                    $accessDenied = 'У вас нет доступа к этой записи.';
+                }
+            }
+            // Load related vehicle sets
+            if (!$accessDenied) {
+                $rsStmt = $localPdo->prepare(
+                    "SELECT vs.*, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand,
+                     vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand
+                     FROM vehicle_sets vs
+                     LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                     LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                     WHERE vs.primary_vehicle_unit_id = ? OR vs.secondary_vehicle_unit_id = ?
+                     ORDER BY vs.id DESC"
+                );
+                $rsStmt->execute([$vehicleId, $vehicleId]);
+                $relatedSets = $rsStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
+
         $pageTitle = $vehicle ? 'Транспорт: ' . $vehicle['plate_number'] : 'Транспорт';
 
         $grants = [];
@@ -4822,6 +5619,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
         $vehicle = null;
         $grants = [];
         $logists = [];
+        $relatedSets = [];
         $dbError = 'Не удалось подключиться к базе данных компании.';
     }
 
@@ -5643,7 +6441,24 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
             $entityNotFound = true;
         }
 
-        $pageTitle = $crew ? 'Экипаж #' . $crew['id'] : 'Экипаж';
+        // Access check for logist
+        $accessDenied = null;
+        if ($crew) {
+            $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+            if ($isLogist) {
+                $userId = (int)$_SESSION['user_id'];
+                $hasGrant = false;
+                $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'crew' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+                $gc->execute([$crewId, $userId]);
+                $gr = $gc->fetch(PDO::FETCH_ASSOC);
+                $hasGrant = ($gr && in_array($gr['access_level'], ['view', 'edit']));
+                if ((int)$crew['created_by_user_id'] !== $userId && !$hasGrant) {
+                    $accessDenied = 'У вас нет доступа к этой записи.';
+                }
+            }
+        }
+
+        $pageTitle = ($crew && !$accessDenied) ? 'Экипаж #' . $crew['id'] : 'Экипаж';
 
         $grants = [];
         $logists = [];
@@ -6377,7 +7192,23 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
         );
         $stmt->execute([(int)$id]); $vehicleSet = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-        if ($vehicleSet) { $pageTitle = 'Комплект #' . $vehicleSet['id']; }
+        $accessDenied = null;
+        if ($vehicleSet) {
+            $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+            if ($isLogist) {
+                $userId = (int)$_SESSION['user_id'];
+                $hasGrant = false;
+                $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+                $gc->execute([(int)$id, $userId]);
+                $gr = $gc->fetch(PDO::FETCH_ASSOC);
+                $hasGrant = ($gr && in_array($gr['access_level'], ['view', 'edit']));
+                if ((int)$vehicleSet['created_by_user_id'] !== $userId && !$hasGrant) {
+                    $accessDenied = 'У вас нет доступа к этой записи.';
+                }
+            }
+        }
+
+        if ($vehicleSet && !$accessDenied) { $pageTitle = 'Комплект #' . $vehicleSet['id']; }
 
         if (($_SESSION['role_code'] ?? '') === 'company_owner') {
             $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
@@ -6777,7 +7608,24 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
              WHERE dvb.id = ?"
         );
         $stmt->execute([(int)$id]); $block = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-        if ($block) { $pageTitle = 'Блок #' . $block['id']; }
+
+        $accessDenied = null;
+        if ($block) {
+            $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+            if ($isLogist) {
+                $userId = (int)$_SESSION['user_id'];
+                $hasGrant = false;
+                $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver_vehicle_block' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
+                $gc->execute([(int)$id, $userId]);
+                $gr = $gc->fetch(PDO::FETCH_ASSOC);
+                $hasGrant = ($gr && in_array($gr['access_level'], ['view', 'edit']));
+                if ((int)$block['created_by_user_id'] !== $userId && !$hasGrant) {
+                    $accessDenied = 'У вас нет доступа к этой записи.';
+                }
+            }
+        }
+
+        if ($block && !$accessDenied) { $pageTitle = 'Блок #' . $block['id']; }
 
         if (($_SESSION['role_code'] ?? '') === 'company_owner') {
             $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
@@ -7085,9 +7933,16 @@ $router->get('/company/documents', function () use ($config, $db) {
             $localPdo->exec("ALTER TABLE documents ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
         }
 
-        $docStmt = $localPdo->prepare(
-            "SELECT * FROM documents WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY created_at DESC"
-        );
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $docStmt = $localPdo->prepare(
+                "SELECT * FROM documents WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY created_at DESC"
+            );
+        } else {
+            $docStmt = $localPdo->prepare(
+                "SELECT * FROM documents WHERE entity_type = ? AND entity_id = ? ORDER BY created_at DESC"
+            );
+        }
         $docStmt->execute([$entityType, $entityId]);
         $documents = $docStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -7663,6 +8518,18 @@ $router->post('/company/documents/delete', function () use ($config, $db) {
         if (!$doc) {
             header('Location: ' . $redirect);
             exit;
+        }
+
+        // Role-based access check for document deletion
+        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        if ($isLogist) {
+            $userId = (int)$_SESSION['user_id'];
+            // Logist can only delete documents they uploaded
+            $uploadedBy = $doc['uploaded_by_user_id'] ?? $doc['created_by_user_id'] ?? null;
+            if ((int)$uploadedBy !== $userId) {
+                header('Location: ' . $redirect);
+                exit;
+            }
         }
 
         $updateStmt = $localPdo->prepare('UPDATE documents SET deleted_at = NOW(), deleted_by_user_id = :uid, delete_comment = :comment, updated_at = NOW() WHERE id = :id');

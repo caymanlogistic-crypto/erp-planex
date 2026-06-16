@@ -1,7 +1,7 @@
 <?php if ($entityTypeError): ?>
 
 <div class="notice warn">
-    Неизвестный тип сущности «<?= e($entityType) ?>». Допустимые типы: client, contractor, driver, vehicle, crew.
+    Неизвестный тип сущности «<?= e($entityType) ?>». Допустимые типы: client, contractor, driver, vehicle_unit, vehicle_set, driver_vehicle_block, crew.
 </div>
 
 <?php elseif ($company === null): ?>
@@ -102,25 +102,33 @@
                 </thead>
                 <tbody>
                     <?php foreach ($documents as $doc): ?>
-                    <tr>
-                        <td><?= e($doc['document_type']) ?></td>
+                    <?php $isDeleted = !empty($doc['deleted_at']); ?>
+                    <tr<?= $isDeleted ? ' style="opacity:0.6"' : '' ?>>
+                        <td><?= e($doc['document_type']) ?><?php if ($isDeleted): ?> <span class="badge badge-warn">Удалён</span><?php endif; ?></td>
                         <td><?= e($doc['original_name']) ?></td>
                         <td class="col-num"><?= e($doc['file_size_formatted']) ?></td>
                         <td class="col-mono"><?= e($doc['mime_type']) ?></td>
                         <td>
-                            <span class="badge<?= $doc['status'] === 'uploaded' ? ' badge-ok' : '' ?>">
-                                <span class="dot"></span>
-                                <?= $doc['status'] === 'uploaded' ? 'Загружен' : e($doc['status']) ?>
-                            </span>
+                            <?php if ($isDeleted): ?>
+                                <span class="badge badge-warn"><span class="dot"></span>Удалён</span>
+                            <?php elseif ($doc['status'] === 'uploaded'): ?>
+                                <span class="badge badge-ok"><span class="dot"></span>Загружен</span>
+                            <?php else: ?>
+                                <span class="badge"><span class="dot"></span><?= e($doc['status']) ?></span>
+                            <?php endif; ?>
                         </td>
                         <td class="col-muted"><?= e($doc['created_at']) ?></td>
                         <td class="col-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><?= e($doc['comments'] ?? '') ?></td>
                         <td class="col-actions">
+                            <?php if (!$isDeleted): ?>
                             <a href="/company/documents/download?id=<?= $doc['id'] ?>" class="btn btn-toolbar">Скачать</a>
                             <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>&replace=<?= $doc['id'] ?>" class="btn btn-toolbar">Заменить</a>
                             <form method="post" action="/company/documents/delete?id=<?= $doc['id'] ?>&redirect=<?= urlencode('/company/documents?entity_type=' . $entityType . '&entity_id=' . $entityId) ?>" style="display:inline" onsubmit="return confirm('Архивировать документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
                                 <button type="submit" class="btn btn-toolbar" style="color:var(--danger)">Архивировать</button>
                             </form>
+                            <?php else: ?>
+                            <span class="text-muted">Документ удалён</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>

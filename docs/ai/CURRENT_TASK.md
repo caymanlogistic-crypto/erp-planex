@@ -30,27 +30,28 @@ contact_person, contact_phone, contact_email остаются в БД, но уб
 
 STATUS: CRUD_UX_ACCEPTED
 
-ARCHITECTURE:
+ЧАСТИЧНО ПРИНЯТ (commit 65eaf8e):
+- vehicle_sets CRUD, driver_vehicle_blocks CRUD
+- crews по новой схеме contractor + driver_vehicle_block
+- vehicles → vehicle_units, pts_number скрыт
+- grants/documents расширены, sidebar обновлён
+
+ДОДЕЛАНО (текущая задача):
+- Contractor contacts inline CRUD: 6 маршрутов (create/edit/delete/set-primary/set-document-email)
+- Driver phones inline CRUD: 4 маршрута (create/edit/delete/set-main)
+- Contractor tax history append-only
+- Role-based access: card-level checks (view/edit/archive) для всех сущностей
+- Grants: реально применяются в списках и карточках
+- Каскадная видимость: crew→dvb→driver/set/units, связанные блоки/комплекты
+- Documents access: logist удаляет только свои, company_owner видит удалённые
+- Расширены views: contractors (+тип, КПП, контакты, банк, налоги), drivers (+паспорт, СНИЛС, телефоны, блоки)
+
+АРХИТЕКТУРА (не изменилась):
 - Подрядчик + (Водитель + ТС) = Экипаж
 - driver_vehicle_blocks = Водитель + ТС (vehicle_set)
 - crews = contractor_id + driver_vehicle_block_id
 
-ВЫПОЛНЕНО (Этап 2):
-- CRUD vehicle_sets: list, create, view, edit, archive (8 маршрутов)
-- CRUD driver_vehicle_blocks: list, create, view, edit, archive (8 маршрутов)
-- Crews переписаны: 7 маршрутов обновлены под driver_vehicle_block_id
-- Vehicles обновлены: unit_type, pts_number скрыт, entity_type=vehicle_unit
-- Добавлены grants: vehicle_set, driver_vehicle_block, access_level view/edit, revoke
-- Обновлены documents: новые entity_type, 20MB, document_type optional, soft delete deleted_at
-- Sidebar: vehicle-sets, driver-vehicle-blocks
-- Document whitelist: все 7 entity_type
-- 8 новых view-файлов, 9 изменённых
-
-ОГРАНИЧЕНИЯ (следующий подэтап):
-- Contractor contacts/driver phones inline CRUD не реализован
-- Contractor tax history не реализован
-- Role-based access (logist vs company_owner) требует доработки
-- Каскадная видимость не реализована
+Всего маршрутов (включая Этап 1+2): 53
 
 СЛЕДУЮЩИЙ ШАГ:
 - Runtime owner review / исправления / дизайн-полировка
