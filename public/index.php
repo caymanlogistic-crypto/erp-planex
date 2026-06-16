@@ -82,6 +82,11 @@ function applyCentralMigrations(\App\Core\Database $db): void
         if ($migrationSql !== false) {
             $pdo->exec($migrationSql);
         }
+        // Migration 008: Add director requisites to companies
+        $migrationSql = file_get_contents(base_path('database/migrations/008_add_director_requisites_to_companies.sql'));
+        if ($migrationSql !== false) {
+            $pdo->exec($migrationSql);
+        }
     } catch (\Exception $e) {
         // Silently ignore migration errors in production
     }
@@ -263,9 +268,9 @@ $router->post('/superadmin/companies/create', function () use ($config, $db) {
 
         $insert = $pdo->prepare(
             'INSERT INTO companies (`key`, name, inn, kpp, ogrn, legal_address, physical_address,
-                contact_person, contact_phone, contact_email, comments, status)
+                director_position, director_full_name, comments, status)
              VALUES (:key, :name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
-                :contact_person, :contact_phone, :contact_email, :comments, :status)'
+                :director_position, :director_full_name, :comments, :status)'
         );
 
         $insert->execute([
@@ -276,9 +281,8 @@ $router->post('/superadmin/companies/create', function () use ($config, $db) {
             ':ogrn'             => $_POST['ogrn'] ?? null,
             ':legal_address'   => $_POST['legal_address'] ?? null,
             ':physical_address' => $_POST['physical_address'] ?? null,
-            ':contact_person'  => $_POST['contact_person'] ?? null,
-            ':contact_phone'   => $_POST['contact_phone'] ?? null,
-            ':contact_email'   => $_POST['contact_email'] ?? null,
+            ':director_position' => $_POST['director_position'] ?? null,
+            ':director_full_name' => $_POST['director_full_name'] ?? null,
             ':comments'         => $_POST['comments'] ?? null,
             ':status'           => 'provisioning',
         ]);
@@ -681,12 +685,7 @@ $router->get('/superadmin/companies/{id}/edit', function ($id) use ($config, $db
         $old = $company;
         $formError = null;
 
-        // FR6: Load owner data for director fields
-        $ownerStmt = $pdo->prepare(
-            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
-        );
-        $ownerStmt->execute([(int)$id]);
-        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $owner = null; // Director now stored in companies table, not company_users
 
         ob_start();
         require base_path('app/View/pages/superadmin_company_edit.php');
@@ -735,12 +734,7 @@ $router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $d
         $old = $_POST;
         $formError = null;
 
-        // Load owner for director fields
-        $ownerStmt = $pdo->prepare(
-            "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
-        );
-        $ownerStmt->execute([(int)$id]);
-        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $owner = null;
 
         $name = trim($_POST['name'] ?? '');
         $inn  = trim($_POST['inn'] ?? '');
@@ -775,9 +769,8 @@ $router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $d
                 ogrn = :ogrn,
                 legal_address = :legal_address,
                 physical_address = :physical_address,
-                contact_person = :contact_person,
-                contact_phone = :contact_phone,
-                contact_email = :contact_email,
+                director_position = :director_position,
+                director_full_name = :director_full_name,
                 status = :status,
                 comments = :comments
              WHERE id = :id'
@@ -790,86 +783,12 @@ $router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $d
             ':ogrn'             => $_POST['ogrn'] ?? null,
             ':legal_address'    => $_POST['legal_address'] ?? null,
             ':physical_address' => $_POST['physical_address'] ?? null,
-            ':contact_person'   => $_POST['contact_person'] ?? null,
-            ':contact_phone'    => $_POST['contact_phone'] ?? null,
-            ':contact_email'    => $_POST['contact_email'] ?? null,
+            ':director_position' => $_POST['director_position'] ?? null,
+            ':director_full_name' => $_POST['director_full_name'] ?? null,
             ':status'           => $_POST['status'] ?? $company['status'],
             ':comments'         => $_POST['comments'] ?? null,
             ':id'               => (int) $id,
         ]);
-
-        // FR7: Save director fields to company_users
-        $directorFullName = trim($_POST['director_full_name'] ?? '');
-        $directorLogin    = trim($_POST['director_login'] ?? '');
-        $directorPosition = trim($_POST['director_position'] ?? '');
-        $directorPhone    = trim($_POST['director_phone'] ?? '');
-        $directorEmail    = trim($_POST['director_email'] ?? '');
-
-        // Validate director phone and email
-        $directorErrors = [];
-        if ($directorPhone !== '' && !preg_match('/^[+\d()\-\s]{1,30}$/', $directorPhone)) {
-            $errors['director_phone'] = 'Некорректный телефон';
-        }
-        if ($directorEmail !== '' && !filter_var($directorEmail, FILTER_VALIDATE_EMAIL)) {
-            $errors['director_email'] = 'Некорректный email';
-        }
-
-        if (!empty($errors)) {
-            ob_start();
-            require base_path('app/View/pages/superadmin_company_edit.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        if ($owner) {
-            // UPDATE existing owner's position, phone, email
-            $updateOwner = $pdo->prepare(
-                'UPDATE company_users SET position = :position, phone = :phone, email = :email WHERE id = :id'
-            );
-            $updateOwner->execute([
-                ':position' => $directorPosition !== '' ? $directorPosition : null,
-                ':phone'    => $directorPhone !== '' ? $directorPhone : null,
-                ':email'    => $directorEmail !== '' ? $directorEmail : null,
-                ':id'       => (int)$owner['id'],
-            ]);
-        } elseif ($directorFullName !== '' && $directorLogin !== '') {
-            // INSERT new owner if fields are filled and no owner exists
-            if (!preg_match('/^[a-zA-Z0-9_]+$/', $directorLogin)) {
-                $errors['director_login'] = 'Логин: только латинские буквы, цифры и подчёркивание';
-                ob_start();
-                require base_path('app/View/pages/superadmin_company_edit.php');
-                $content = ob_get_clean();
-                require base_path('app/View/layouts/main.php');
-                return;
-            }
-
-            $directorPassword = generatePassword();
-            $directorPasswordHash = password_hash($directorPassword, PASSWORD_BCRYPT);
-
-            $insertOwner = $pdo->prepare(
-                'INSERT INTO company_users (company_id, full_name, login, email, phone, position, password_hash, role, status)
-                 VALUES (:company_id, :full_name, :login, :email, :phone, :position, :password_hash, :role, :status)'
-            );
-            $insertOwner->execute([
-                ':company_id'    => (int)$id,
-                ':full_name'     => $directorFullName,
-                ':login'         => $directorLogin,
-                ':email'         => $directorEmail !== '' ? $directorEmail : null,
-                ':phone'         => $directorPhone !== '' ? $directorPhone : null,
-                ':position'      => $directorPosition !== '' ? $directorPosition : null,
-                ':password_hash' => $directorPasswordHash,
-                ':role'          => 'company_owner',
-                ':status'        => 'active',
-            ]);
-
-            // Show success with generated password
-            $success    = false; // not success state for the edit view
-            $pageTitle  = 'Редактировать компанию';
-            $pageContext = 'Реестр компаний';
-            $_SESSION['flash_owner_created'] = true;
-            $_SESSION['flash_owner_password'] = $directorPassword;
-        }
 
         header('Location: /superadmin/companies/' . $id);
         exit;

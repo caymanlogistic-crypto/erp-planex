@@ -1,38 +1,33 @@
 # ERP PLANEX — текущая задача
 
-TASK: SUPERADMIN — пост-дизайн функциональная приёмка
+TASK: SUPERADMIN — разделение реквизитов руководителя и ERP-пользователя
 
-STATUS: ARCHITECT_ACCEPTED (regression found and fixed)
+STATUS: ARCHITECT_ACCEPTED
 
-DESIGNER CHANGES (2026-06-16):
-- Главный дизайнер завершил дизайн-полировку блока SUPERADMIN
-- Изменено: 20 view-файлов superadmin_*.php + main.php + erp-ui.css + app.css + index.php
-- Убраны все inline-style, заменены на utility-классы erp-ui.css
-- Добавлен <link> erp-ui.css в layout (был пропущен)
-- Исправлен баг роутинга: create-route перенесён ПЕРЕД динамическим {user_id}
-- Добавлен полноценный маршрут /superadmin/companies/{id}/create-owner
-- Добавлены null-safe счётчики ($countsIncomplete, $hasColumn) в logist_view
+ARCHITECTURE DECISION (2026-06-16):
+- Руководитель в карточке компании — это реквизитные данные компании для документов.
+- Хранится в таблице companies: director_position, director_full_name.
+- ERP-доступ руководителя создаётся отдельно через /superadmin/companies/{id}/create-owner.
+- Автоматическое создание company_owner при создании/редактировании экспедитора запрещено.
+- Решение зафиксировано в docs/ai/DECISIONS.md (#16).
 
-POST-DESIGN VERIFICATION (2026-06-16):
-- PHP Syntax: все 21 файл — OK (0 ошибок)
-- Git diff --check: OK (только LF→CRLF warnings)
-- Form Integrity: 5 критичных форм — action/method/names/submit/CSRF целы
-- Runtime Routes: 0 ошибок 500; все protected → 302; /login → 200
-- Design Safety: erp-ui.css подключён, layout цел, inline-style чисты
+WHAT WAS CHANGED:
+- database/migrations/008_add_director_requisites_to_companies.sql (NEW)
+- public/index.php: CREATE POST handler (director fields in INSERT), EDIT POST handler (director fields in UPDATE, removed owner creation), migration auto-applier
+- app/View/pages/superadmin_companies_create.php: removed contacts section, simplified director to position+full_name+hint, removed dead success block
+- app/View/pages/superadmin_company_edit.php: removed contacts section, simplified director to position+full_name+hint from companies
+- app/View/pages/superadmin_company_view.php: "Руководитель" panel shows requisites from companies + ERP access status
+- docs/ai/DECISIONS.md: added decision #16
 
-REGRESSION FOUND (2026-06-16):
-- POST /superadmin/companies/create был сломан: обработчик читал поля руководителя,
-  INSERT INTO company_users с неопределённым $id, рендерил owner_create template.
-- Причина: в коммите 3d4ee24 обработчик был ошибочно заменён на код create-owner.
-- Warning: Undefined variable $company в superadmin_company_owner_create.php:1.
+DB RESULT:
+- companies table: +director_position VARCHAR(255), +director_full_name VARCHAR(255)
+- company_users table: unchanged (used for future ERP-user creation)
 
-REGRESSION FIXED (2026-06-16):
-- Восстановлен оригинальный POST-обработчик создания экспедитора из коммита 627c100.
-- Обработчик: читает поля компании, INSERT INTO companies, создаёт БД+storage,
-  редиректит на /superadmin/companies.
-- Рендерит superadmin_companies_create.php (не owner_create).
-- PHP Syntax: public/index.php — OK.
-- Git diff --check: OK.
+CHECKS:
+- PHP Syntax: 4 files — OK (0 errors)
+- flash_owner_created / flash_owner_password: removed
+- director_login / director_phone / director_email: removed from index.php handlers
+- create-owner route: intact, unchanged
 
 NEXT:
 1. Commit

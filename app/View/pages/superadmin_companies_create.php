@@ -1,49 +1,3 @@
-<?php if ($success ?? false): ?>
-
-<div class="page-head">
-    <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / Реестр компаний</span>
-        <span class="page-title">Экспедитор создан</span>
-    </div>
-    <div class="page-head-actions">
-        <a href="/superadmin/companies" class="btn btn-ghost">&larr; К реестру</a>
-    </div>
-</div>
-
-<div class="page-content">
-
-<div class="panel">
-    <div class="panel-body">
-        <div class="notice success">
-            Компания и Руководитель успешно созданы.
-        </div>
-
-        <dl class="kv">
-            <dt>Компания</dt>
-            <dd><?= e($company['name'] ?? '') ?></dd>
-            <dt>Руководитель (ФИО)</dt>
-            <dd><?= e($createdOwner['full_name'] ?? '') ?></dd>
-            <dt>Логин</dt>
-            <dd><code><?= e($createdOwner['login'] ?? '') ?></code></dd>
-            <dt>Временный пароль</dt>
-            <dd><code class="code-hi"><?= e($tempPassword ?? '') ?></code></dd>
-        </dl>
-
-        <div class="notice warn">
-            Временный пароль показан только один раз. Сохраните его или передайте Руководителю сейчас.
-            Пароль не хранится в открытом виде и не может быть восстановлен.
-        </div>
-
-        <div class="form-actions">
-            <a href="/superadmin/companies" class="btn btn-secondary">&larr; К реестру компаний</a>
-        </div>
-    </div>
-</div>
-
-</div>
-
-<?php else: ?>
-
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">SUPERADMIN / Реестр компаний</span>
@@ -102,33 +56,7 @@
         </div>
 
         <div class="form-section">
-            <p class="section-title">Контакты</p>
-            <div class="form-grid-2">
-                <div class="field">
-                    <label class="field-label">Контактное лицо</label>
-                    <input type="text" name="contact_person" class="field-input" value="<?= e($old['contact_person'] ?? '') ?>">
-                </div>
-                <div class="field">
-                    <label class="field-label">Телефон</label>
-                    <input type="text" name="contact_phone" class="field-input" value="<?= e($old['contact_phone'] ?? '') ?>">
-                </div>
-            </div>
-            <div class="field">
-                <label class="field-label">Email</label>
-                <input type="email" name="contact_email" class="field-input" value="<?= e($old['contact_email'] ?? '') ?>">
-            </div>
-        </div>
-
-        <div class="form-section">
-            <p class="section-title">Дополнительно</p>
-            <div class="field">
-                <label class="field-label">Комментарий</label>
-                <textarea name="comments" class="field-textarea"><?= e($old['comments'] ?? '') ?></textarea>
-            </div>
-        </div>
-
-        <div class="form-section">
-            <p class="section-title">Руководитель (опционально)</p>
+            <p class="section-title">Руководитель</p>
             <div class="field">
                 <label class="field-label">Должность</label>
                 <input type="text" name="director_position" class="field-input" value="<?= e($old['director_position'] ?? '') ?>" placeholder="Например: Генеральный директор">
@@ -137,23 +65,15 @@
                 <label class="field-label">ФИО руководителя</label>
                 <input type="text" name="director_full_name" class="field-input" value="<?= e($old['director_full_name'] ?? '') ?>" placeholder="Иванов Иван Иванович">
             </div>
+            <div class="field-hint">Эти данные используются в реквизитах, счетах и документах. Доступ в ERP для руководителя создаётся отдельно.</div>
+        </div>
+
+        <div class="form-section">
+            <p class="section-title">Дополнительно</p>
             <div class="field">
-                <label class="field-label">Логин</label>
-                <input type="text" name="director_login" class="field-input" value="<?= e($old['director_login'] ?? '') ?>" placeholder="Латинские буквы, цифры, подчёркивание">
+                <label class="field-label">Комментарий</label>
+                <textarea name="comments" class="field-textarea"><?= e($old['comments'] ?? '') ?></textarea>
             </div>
-            <div class="form-grid-2">
-                <div class="field<?= isset($errors['director_phone']) ? ' is-error' : '' ?>">
-                    <label class="field-label">Телефон</label>
-                    <input type="text" name="director_phone" class="field-input" value="<?= e($old['director_phone'] ?? '') ?>">
-                    <div class="field-msg"<?= isset($errors['director_phone']) ? '' : ' style="display:none"' ?>><?= e($errors['director_phone'] ?? '') ?></div>
-                </div>
-                <div class="field<?= isset($errors['director_email']) ? ' is-error' : '' ?>">
-                    <label class="field-label">Email</label>
-                    <input type="email" name="director_email" class="field-input" value="<?= e($old['director_email'] ?? '') ?>">
-                    <div class="field-msg"<?= isset($errors['director_email']) ? '' : ' style="display:none"' ?>><?= e($errors['director_email'] ?? '') ?></div>
-                </div>
-            </div>
-            <div class="field-hint">Если ФИО и Логин заполнены — Руководитель будет создан автоматически с временным паролем.</div>
         </div>
 
         <div class="form-actions">
@@ -165,5 +85,3 @@
 </form>
 
 </div><!-- /.page-content -->
-
-<?php endif; ?>

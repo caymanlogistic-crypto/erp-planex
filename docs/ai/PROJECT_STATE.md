@@ -58,8 +58,9 @@ docs/ui/DESIGN_STANDARD.md
 ## Активная задача
 
 ```text
-SUPERADMIN — пост-дизайн функциональная приёмка: ARCHITECT_ACCEPTED с исправлением регрессии.
-Исправлен сломанный POST-обработчик создания экспедитора, заменённый в коммите 3d4ee24.
+SUPERADMIN — разделение реквизитов руководителя и ERP-пользователя: ARCHITECT_ACCEPTED.
+Директор (должность + ФИО) хранится в companies как реквизиты для документов.
+ERP-доступ руководителя не создаётся автоматически при создании/редактировании экспедитора.
 Файл: docs/ai/CURRENT_TASK.md
 ```
 
@@ -67,19 +68,21 @@ SUPERADMIN — пост-дизайн функциональная приёмка
 
 ```text
 Принято erp-architect:
-- Восстановлен оригинальный POST-обработчик /superadmin/companies/create
-  (был ошибочно заменён на код создания руководителя в коммите 3d4ee24)
-- Устранён warning Undefined variable $company
-- POST handler теперь: читает поля компании, INSERT INTO companies,
-  создаёт БД + storage, редиректит на /superadmin/companies
-- Рендерит superadmin_companies_create.php (не owner_create)
-- Оставшиеся 5 ссылок на owner_create — в легитимных маршрутах create-owner
+- Добавлены колонки director_position и director_full_name в таблицу companies (migration 008)
+- Форма создания экспедитора: убраны контакты, убраны логин/телефон/email руководителя,
+  оставлены только Должность и ФИО руководителя как реквизиты
+- Форма редактирования экспедитора: аналогично убраны контакты и ERP-поля руководителя
+- POST /superadmin/companies/create: сохраняет director_position/director_full_name в companies
+- POST /superadmin/companies/{id}/edit: обновляет director_position/director_full_name в companies,
+  убрано автосоздание company_owner, убрана генерация пароля
+- Карточка компании: показывает реквизиты руководителя из companies + статус ERP-доступа
+- Маршрут /superadmin/companies/{id}/create-owner сохранён для будущего создания ERP-пользователя
 ```
 
 ## Следующий шаг
 
 ```text
-1. Commit (message: "fix(superadmin): restore company create handler")
+1. Commit (message: "fix(superadmin): separate company director requisites from ERP user")
 2. Переход к блоку водители / машины / экипажи
 ```
 

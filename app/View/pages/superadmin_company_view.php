@@ -194,33 +194,24 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="panel-head">
             <span class="panel-head-title">Руководитель</span>
             <?php if ($owner): ?>
-            <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost btn-sm">Управлять</a>
+            <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost btn-sm">ERP-доступ</a>
             <?php else: ?>
-            <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary btn-sm">Создать</a>
+            <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary btn-sm">Создать ERP-доступ</a>
             <?php endif; ?>
         </div>
         <div class="panel-body">
-            <?php if ($owner): ?>
             <dl class="kv">
-                <dt>ФИО</dt>
-                <dd><?= e($owner['full_name']) ?></dd>
                 <dt>Должность</dt>
-                <dd><?= e($owner['position'] ?? '') ?: '—' ?></dd>
-                <dt>Логин</dt>
-                <dd><code><?= e($owner['login']) ?></code></dd>
-                <dt>Email</dt>
-                <dd><?= e($owner['email'] ?? '') ?: '—' ?></dd>
-                <dt>Телефон</dt>
-                <dd><?= e($owner['phone'] ?? '') ?: '—' ?></dd>
-                <dt>Статус</dt>
+                <dd><?= e($company['director_position'] ?? '') ?: '—' ?></dd>
+                <dt>ФИО руководителя</dt>
+                <dd><?= e($company['director_full_name'] ?? '') ?: '—' ?></dd>
+                <?php if ($owner): ?>
+                <dt>Статус ERP-доступа</dt>
                 <dd><?= renderStatusBadge($owner['status']) ?></dd>
+                <?php endif; ?>
             </dl>
-            <?php else: ?>
-            <div class="empty-state empty-state-left">
-                <p class="empty-title">Руководитель не создан</p>
-                <p class="empty-desc">Это критический блокер запуска: после создания руководитель получит первичный доступ, а компания станет управляемой.</p>
-                <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary">Создать руководителя</a>
-            </div>
+            <?php if (!$owner): ?>
+            <div class="notice info mt-2">ERP-доступ для руководителя не создан. Это можно сделать отдельно.</div>
             <?php endif; ?>
         </div>
     </div>

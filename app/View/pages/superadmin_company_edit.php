@@ -98,75 +98,20 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
 
         <div class="form-section">
-            <p class="section-title">Контакты</p>
-
-            <div class="field">
-                <label class="field-label">Контактное лицо</label>
-                <input type="text" name="contact_person" class="field-input"
-                       value="<?= e($old['contact_person'] ?? $company['contact_person'] ?? '') ?>">
-            </div>
-            <div class="form-grid-2">
-                <div class="field">
-                    <label class="field-label">Телефон</label>
-                    <input type="text" name="contact_phone" class="field-input"
-                           value="<?= e($old['contact_phone'] ?? $company['contact_phone'] ?? '') ?>">
-                </div>
-                <div class="field">
-                    <label class="field-label">Email</label>
-                    <input type="email" name="contact_email" class="field-input"
-                           value="<?= e($old['contact_email'] ?? $company['contact_email'] ?? '') ?>">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section">
             <p class="section-title">Руководитель</p>
-
             <div class="field">
                 <label class="field-label">Должность</label>
                 <input type="text" name="director_position" class="field-input"
-                       value="<?= e($old['director_position'] ?? $owner['position'] ?? '') ?>"
+                       value="<?= e($old['director_position'] ?? $company['director_position'] ?? '') ?>"
                        placeholder="Например: Генеральный директор">
             </div>
-
             <div class="field">
-                <label class="field-label">ФИО</label>
+                <label class="field-label">ФИО руководителя</label>
                 <input type="text" name="director_full_name" class="field-input"
-                       value="<?= e($old['director_full_name'] ?? $owner['full_name'] ?? '') ?>" readonly
-                       >
-                <div class="field-msg">ФИО руководителя редактируется в карточке Руководителя</div>
+                       value="<?= e($old['director_full_name'] ?? $company['director_full_name'] ?? '') ?>"
+                       placeholder="Иванов Иван Иванович">
             </div>
-
-            <div class="field">
-                <label class="field-label">Логин</label>
-                <input type="text" name="director_login" class="field-input"
-                       value="<?= e($old['director_login'] ?? $owner['login'] ?? '') ?>" readonly
-                       >
-                <div class="field-msg">Логин руководителя редактируется в карточке Руководителя</div>
-            </div>
-
-            <div class="form-grid-2">
-                <div class="field<?= !empty($errors['director_phone']) ? ' is-error' : '' ?>">
-                    <label class="field-label">Телефон</label>
-                    <input type="text" name="director_phone" class="field-input"
-                           value="<?= e($old['director_phone'] ?? $owner['phone'] ?? '') ?>">
-                    <?php if (!empty($errors['director_phone'])): ?>
-                        <div class="field-msg is-error"><?= e($errors['director_phone']) ?></div>
-                    <?php endif; ?>
-                </div>
-                <div class="field<?= !empty($errors['director_email']) ? ' is-error' : '' ?>">
-                    <label class="field-label">Email</label>
-                    <input type="email" name="director_email" class="field-input"
-                           value="<?= e($old['director_email'] ?? $owner['email'] ?? '') ?>">
-                    <?php if (!empty($errors['director_email'])): ?>
-                        <div class="field-msg is-error"><?= e($errors['director_email']) ?></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <?php if (empty($owner)): ?>
-            <div class="notice info mt-2">Руководитель ещё не создан. Заполните поля, чтобы создать Руководителя при сохранении.</div>
-            <?php endif; ?>
+            <div class="field-hint">Эти данные используются в реквизитах, счетах и документах. Доступ в ERP для руководителя создаётся отдельно.</div>
         </div>
 
         <div class="form-section">
