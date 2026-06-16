@@ -92,6 +92,37 @@ function applyCentralMigrations(\App\Core\Database $db): void
     }
 }
 
+function applyLocalMigrations(\PDO $localPdo): void
+{
+    $migrations = [
+        '011_add_contractor_fields.sql',
+        '012_create_contractor_contacts.sql',
+        '013_create_contractor_tax_history.sql',
+        '014_add_driver_fields.sql',
+        '015_create_driver_phones.sql',
+        '016_rename_vehicles_to_vehicle_units.sql',
+        '017_create_vehicle_sets.sql',
+        '018_create_driver_vehicle_blocks.sql',
+        '019_update_crews.sql',
+        '020_update_documents.sql',
+        '021_update_entity_access_grants.sql',
+        '022_data_migrate_driver_phones.sql',
+        '023_add_superadmin_vehicle_stats.sql',
+    ];
+
+    foreach ($migrations as $file) {
+        try {
+            $sql = file_get_contents(base_path('database/migrations-local/' . $file));
+            if ($sql !== false && trim($sql) !== '') {
+                $localPdo->exec($sql);
+            }
+        } catch (\Exception $e) {
+            // Log warning but don't fail
+            error_log('Local migration ' . $file . ': ' . $e->getMessage());
+        }
+    }
+}
+
 function formatFileSize(int $bytes): string
 {
     if ($bytes >= 1048576) {
@@ -198,6 +229,7 @@ $router->get('/superadmin/companies', function () use ($config, $db) {
                     $localDbConfig['database'] = $c['db_identifier'];
                     $localDb = new \App\Core\Database($localDbConfig);
                     $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
                     $logistCount = $localPdo->query("SELECT COUNT(*) FROM users WHERE role_code = 'logist'")->fetchColumn();
                     $c['user_count'] += (int)$logistCount;
                 } catch (\Exception $e) {
@@ -572,7 +604,9 @@ $router->get('/superadmin/companies/{id}', function ($id) use ($config, $db) {
             'clients_total' => 0, 'clients_active' => 0, 'clients_archived' => 0,
             'contractors_total' => 0, 'contractors_active' => 0, 'contractors_archived' => 0,
             'drivers_total' => 0, 'drivers_active' => 0, 'drivers_archived' => 0,
-            'vehicles_total' => 0, 'vehicles_active' => 0, 'vehicles_archived' => 0,
+            'vehicle_units_total' => 0, 'vehicle_units_active' => 0, 'vehicle_units_archived' => 0,
+            'vehicle_sets_total' => 0, 'vehicle_sets_active' => 0, 'vehicle_sets_archived' => 0,
+            'driver_vehicle_blocks_total' => 0, 'driver_vehicle_blocks_active' => 0, 'driver_vehicle_blocks_archived' => 0,
             'crews_total' => 0, 'crews_active' => 0, 'crews_archived' => 0,
         ];
         $docStats = ['total' => 0, 'active' => 0];
@@ -586,6 +620,7 @@ $router->get('/superadmin/companies/{id}', function ($id) use ($config, $db) {
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
                 $localDbExists = true;
 
                 $logistCountStmt = $localPdo->prepare(
@@ -601,7 +636,7 @@ $router->get('/superadmin/companies/{id}', function ($id) use ($config, $db) {
                 $userStats['active'] += (int)($logistCounts['logist_active'] ?? 0);
                 $userStats['blocked'] += (int)($logistCounts['logist_blocked'] ?? 0);
 
-                $dirTables = ['clients', 'contractors', 'drivers', 'vehicles', 'crews'];
+                $dirTables = ['clients', 'contractors', 'drivers', 'vehicle_units', 'vehicle_sets', 'driver_vehicle_blocks', 'crews'];
                 foreach ($dirTables as $table) {
                     $dirStmt = $localPdo->prepare(
                         "SELECT COUNT(*) as total,
@@ -618,7 +653,7 @@ $router->get('/superadmin/companies/{id}', function ($id) use ($config, $db) {
 
                 $docCountStmt = $localPdo->prepare(
                     "SELECT COUNT(*) as total,
-                            SUM(CASE WHEN status != 'archived' THEN 1 ELSE 0 END) as active
+                            SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) as active
                      FROM documents"
                 );
                 $docCountStmt->execute();
@@ -1192,6 +1227,7 @@ $router->get('/company/logists', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1379,6 +1415,7 @@ $router->post('/company/logists/create', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1532,6 +1569,7 @@ $router->get('/company/logists/{id}', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1627,6 +1665,7 @@ $router->get('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1721,6 +1760,7 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1885,6 +1925,7 @@ $router->post('/company/logists/{id}/reset-password', function ($id) use ($confi
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -1965,6 +2006,7 @@ $router->post('/company/logists/{id}/archive', function ($id) use ($config, $db)
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM users LIMIT 1")->fetch();
@@ -2039,6 +2081,7 @@ $router->get('/company/clients', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
@@ -2207,6 +2250,7 @@ $router->post('/company/clients/create', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
@@ -2345,6 +2389,7 @@ $router->get('/company/clients/{id}', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
@@ -2467,6 +2512,7 @@ $router->get('/company/clients/{id}/edit', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
@@ -2561,6 +2607,7 @@ $router->post('/company/clients/{id}/edit', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
@@ -2696,6 +2743,7 @@ $router->post('/company/clients/{id}/archive', function ($id) use ($config, $db)
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
@@ -2770,6 +2818,7 @@ $router->get('/company/contractors', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
@@ -2938,6 +2987,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
@@ -3078,6 +3128,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
@@ -3198,6 +3249,7 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
@@ -3306,6 +3358,7 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
@@ -3463,6 +3516,7 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch();
@@ -3580,6 +3634,7 @@ $router->get('/company/drivers', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
@@ -3748,6 +3803,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
@@ -3884,6 +3940,7 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
@@ -4004,6 +4061,7 @@ $router->get('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
@@ -4112,6 +4170,7 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
@@ -4263,6 +4322,7 @@ $router->post('/company/drivers/{id}/archive', function ($id) use ($config, $db)
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
@@ -4380,18 +4440,26 @@ $router->get('/company/vehicles', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
-            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
             $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
-            $localPdo->exec($migrationSql);
+            if ($migrationSql !== false) {
+                $localPdo->exec($migrationSql);
+            }
+            try {
+                $localPdo->exec("RENAME TABLE vehicles TO vehicle_units");
+            } catch (\Exception $renameEx) {
+                // Table may already be vehicle_units or vehicles may not exist
+            }
         }
 
         try {
-            $localPdo->query("SELECT created_by_user_id FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT created_by_user_id FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
-            $localPdo->exec("ALTER TABLE vehicles ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
+            $localPdo->exec("ALTER TABLE vehicle_units ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
         }
 
         try {
@@ -4405,12 +4473,12 @@ $router->get('/company/vehicles', function () use ($config, $db) {
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $vehicleStmt = $localPdo->prepare(
-                "SELECT * FROM vehicles WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT * FROM vehicle_units WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_unit' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
             );
             $vehicleStmt->execute([$userId, $userId]);
             $vehicles = $vehicleStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $vehicleStmt = $localPdo->query("SELECT * FROM vehicles ORDER BY created_at DESC");
+            $vehicleStmt = $localPdo->query("SELECT * FROM vehicle_units ORDER BY created_at DESC");
             $vehicles = $vehicleStmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
@@ -4548,12 +4616,20 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
-            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
             $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
-            $localPdo->exec($migrationSql);
+            if ($migrationSql !== false) {
+                $localPdo->exec($migrationSql);
+            }
+            try {
+                $localPdo->exec("RENAME TABLE vehicles TO vehicle_units");
+            } catch (\Exception $renameEx) {
+                // Table may already be vehicle_units or vehicles may not exist
+            }
         }
 
         $plateNumber = trim($_POST['plate_number'] ?? '');
@@ -4563,7 +4639,7 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
         }
 
         if (empty($errors['plate_number'])) {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicles WHERE plate_number = ?');
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ?');
             $checkStmt->execute([$plateNumber]);
             if ($checkStmt->fetchColumn() > 0) {
                 $errors['plate_number'] = 'Госномер уже используется в этой компании';
@@ -4589,7 +4665,7 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
         $comments = trim($_POST['comments'] ?? '');
 
         $insert = $localPdo->prepare(
-            'INSERT INTO vehicles (plate_number, brand, model, vehicle_type, vin,
+            'INSERT INTO vehicle_units (plate_number, brand, model, vehicle_type, vin,
              sts_number, pts_number, capacity_tons, volume_m3, status, comments, created_by_user_id, created_by_role)
              VALUES (:plate_number, :brand, :model, :vehicle_type, :vin,
              :sts_number, :pts_number, :capacity_tons, :volume_m3, :status, :comments, :created_by_user_id, :created_by_role)'
@@ -4611,7 +4687,7 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
         ]);
 
         $lastId = $localPdo->lastInsertId();
-        $selectStmt = $localPdo->prepare('SELECT * FROM vehicles WHERE id = ?');
+        $selectStmt = $localPdo->prepare('SELECT * FROM vehicle_units WHERE id = ?');
         $selectStmt->execute([$lastId]);
         $createdVehicle = $selectStmt->fetch(PDO::FETCH_ASSOC);
         $success = true;
@@ -4686,18 +4762,26 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
-            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
             $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
-            $localPdo->exec($migrationSql);
+            if ($migrationSql !== false) {
+                $localPdo->exec($migrationSql);
+            }
+            try {
+                $localPdo->exec("RENAME TABLE vehicles TO vehicle_units");
+            } catch (\Exception $renameEx) {
+                // Table may already be vehicle_units or vehicles may not exist
+            }
         }
 
         try {
-            $localPdo->query("SELECT created_by_user_id FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT created_by_user_id FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
-            $localPdo->exec("ALTER TABLE vehicles ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
+            $localPdo->exec("ALTER TABLE vehicle_units ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
         }
 
         try {
@@ -4707,7 +4791,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             $localPdo->exec($migrationSql);
         }
 
-        $vStmt = $localPdo->prepare('SELECT * FROM vehicles WHERE id = ?');
+        $vStmt = $localPdo->prepare('SELECT * FROM vehicle_units WHERE id = ?');
         $vStmt->execute([$vehicleId]);
         $vehicle = $vStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -4726,7 +4810,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
                  LEFT JOIN users u ON g.granted_to_user_id = u.id 
                  WHERE g.entity_type = ? AND g.entity_id = ?"
             );
-            $grantsStmt->execute(['vehicle', $vehicleId]);
+            $grantsStmt->execute(['vehicle_unit', $vehicleId]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
             $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
@@ -4811,15 +4895,23 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
-            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
             $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
-            $localPdo->exec($migrationSql);
+            if ($migrationSql !== false) {
+                $localPdo->exec($migrationSql);
+            }
+            try {
+                $localPdo->exec("RENAME TABLE vehicles TO vehicle_units");
+            } catch (\Exception $renameEx) {
+                // Table may already be vehicle_units or vehicles may not exist
+            }
         }
 
-        $vStmt = $localPdo->prepare('SELECT * FROM vehicles WHERE id = ?');
+        $vStmt = $localPdo->prepare('SELECT * FROM vehicle_units WHERE id = ?');
         $vStmt->execute([$vehicleId]);
         $vehicle = $vStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -4909,15 +5001,23 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
-            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
             $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
-            $localPdo->exec($migrationSql);
+            if ($migrationSql !== false) {
+                $localPdo->exec($migrationSql);
+            }
+            try {
+                $localPdo->exec("RENAME TABLE vehicles TO vehicle_units");
+            } catch (\Exception $renameEx) {
+                // Table may already be vehicle_units or vehicles may not exist
+            }
         }
 
-        $vStmt = $localPdo->prepare('SELECT * FROM vehicles WHERE id = ?');
+        $vStmt = $localPdo->prepare('SELECT * FROM vehicle_units WHERE id = ?');
         $vStmt->execute([$vehicleId]);
         $vehicle = $vStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -4939,7 +5039,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
         }
 
         if (empty($errors['plate_number'])) {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicles WHERE plate_number = ? AND id != ?');
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ? AND id != ?');
             $checkStmt->execute([$plateNumber, $vehicleId]);
             if ($checkStmt->fetchColumn() > 0) {
                 $errors['plate_number'] = 'Госномер уже используется в этой компании';
@@ -4966,7 +5066,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
         $comments = trim($_POST['comments'] ?? '');
 
         $update = $localPdo->prepare(
-            'UPDATE vehicles SET plate_number = :plate_number, brand = :brand, model = :model,
+            'UPDATE vehicle_units SET plate_number = :plate_number, brand = :brand, model = :model,
              vehicle_type = :vehicle_type, vin = :vin, sts_number = :sts_number,
              pts_number = :pts_number, capacity_tons = :capacity_tons, volume_m3 = :volume_m3,
              status = :status, comments = :comments
@@ -4987,7 +5087,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
             ':id'            => $vehicleId,
         ]);
 
-        $vStmt = $localPdo->prepare('SELECT * FROM vehicles WHERE id = ?');
+        $vStmt = $localPdo->prepare('SELECT * FROM vehicle_units WHERE id = ?');
         $vStmt->execute([$vehicleId]);
         $vehicle = $vStmt->fetch(PDO::FETCH_ASSOC);
         $success = true;
@@ -5033,12 +5133,20 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
-            $localPdo->query("SELECT 1 FROM vehicles LIMIT 1")->fetch();
+            $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch();
         } catch (\Exception $e) {
             $migrationSql = file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql'));
-            $localPdo->exec($migrationSql);
+            if ($migrationSql !== false) {
+                $localPdo->exec($migrationSql);
+            }
+            try {
+                $localPdo->exec("RENAME TABLE vehicles TO vehicle_units");
+            } catch (\Exception $renameEx) {
+                // Table may already be vehicle_units or vehicles may not exist
+            }
         }
 
         try {
@@ -5066,7 +5174,7 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
             return;
         }
 
-        $update = $localPdo->prepare("UPDATE vehicles SET status = 'archived' WHERE id = ?");
+        $update = $localPdo->prepare("UPDATE vehicle_units SET status = 'archived' WHERE id = ?");
         $update->execute([$vehicleId]);
 
         header('Location: /company/vehicles/' . $vehicleId);
@@ -5132,6 +5240,7 @@ $router->get('/company/crews', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -5163,7 +5272,7 @@ $router->get('/company/crews', function () use ($config, $db) {
                         d.full_name AS driver_name
                  FROM crews c
                  LEFT JOIN contractors ct ON c.contractor_id = ct.id
-                 LEFT JOIN vehicles v ON c.vehicle_id = v.id
+                 LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
                  LEFT JOIN drivers d ON c.driver_id = d.id
                  WHERE (c.created_by_user_id = ? OR c.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'crew' AND granted_to_user_id = ? AND access_level = 'view'))
                  ORDER BY c.created_at DESC"
@@ -5178,7 +5287,7 @@ $router->get('/company/crews', function () use ($config, $db) {
                         d.full_name AS driver_name
                  FROM crews c
                  LEFT JOIN contractors ct ON c.contractor_id = ct.id
-                 LEFT JOIN vehicles v ON c.vehicle_id = v.id
+                 LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
                  LEFT JOIN drivers d ON c.driver_id = d.id
                  ORDER BY c.created_at DESC"
             );
@@ -5267,6 +5376,7 @@ $router->get('/company/crews/create', function () use ($config, $db) {
             $localDbConfig['database'] = $dbIdentifier;
             $localDb = new \App\Core\Database($localDbConfig);
             $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
             try {
                 $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -5280,7 +5390,7 @@ $router->get('/company/crews/create', function () use ($config, $db) {
             )->fetchAll(PDO::FETCH_ASSOC);
 
             $vehicles = $localPdo->query(
-                "SELECT id, plate_number, brand, model FROM vehicles WHERE status = 'active' ORDER BY plate_number"
+                "SELECT id, plate_number, brand, model FROM vehicle_units WHERE status = 'active' ORDER BY plate_number"
             )->fetchAll(PDO::FETCH_ASSOC);
 
             $drivers = $localPdo->query(
@@ -5396,6 +5506,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -5409,7 +5520,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $vehicles = $localPdo->query(
-            "SELECT id, plate_number, brand, model FROM vehicles WHERE status = 'active' ORDER BY plate_number"
+            "SELECT id, plate_number, brand, model FROM vehicle_units WHERE status = 'active' ORDER BY plate_number"
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $drivers = $localPdo->query(
@@ -5464,7 +5575,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
         if ($vehicleId === '') {
             $errors['vehicle_id'] = 'Выберите транспорт';
         } else {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicles WHERE id = ? AND status = ?');
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE id = ? AND status = ?');
             $checkStmt->execute([$vehicleId, 'active']);
             if ($checkStmt->fetchColumn() == 0) {
                 $errors['vehicle_id'] = 'Транспорт не найден';
@@ -5523,7 +5634,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
                     d.full_name AS driver_name
              FROM crews c
              LEFT JOIN contractors ct ON c.contractor_id = ct.id
-             LEFT JOIN vehicles v ON c.vehicle_id = v.id
+             LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
              LEFT JOIN drivers d ON c.driver_id = d.id
              WHERE c.id = ?"
         );
@@ -5604,6 +5715,7 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -5632,7 +5744,7 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
                     d.full_name AS driver_name
              FROM crews c
              LEFT JOIN contractors ct ON c.contractor_id = ct.id
-             LEFT JOIN vehicles v ON c.vehicle_id = v.id
+             LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
              LEFT JOIN drivers d ON c.driver_id = d.id
              WHERE c.id = ?"
         );
@@ -5751,6 +5863,7 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -5778,7 +5891,7 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
             )->fetchAll(PDO::FETCH_ASSOC);
 
             $vehicles = $localPdo->query(
-                "SELECT id, plate_number, brand, model FROM vehicles WHERE status = 'active' ORDER BY plate_number"
+                "SELECT id, plate_number, brand, model FROM vehicle_units WHERE status = 'active' ORDER BY plate_number"
             )->fetchAll(PDO::FETCH_ASSOC);
 
             $drivers = $localPdo->query(
@@ -5904,6 +6017,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -5917,7 +6031,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $vehicles = $localPdo->query(
-            "SELECT id, plate_number, brand, model FROM vehicles WHERE status = 'active' ORDER BY plate_number"
+            "SELECT id, plate_number, brand, model FROM vehicle_units WHERE status = 'active' ORDER BY plate_number"
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $drivers = $localPdo->query(
@@ -5990,7 +6104,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
         if ($vehicleId === '') {
             $errors['vehicle_id'] = 'Выберите транспорт';
         } else {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicles WHERE id = ? AND status = ?');
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE id = ? AND status = ?');
             $checkStmt->execute([$vehicleId, 'active']);
             if ($checkStmt->fetchColumn() == 0) {
                 $errors['vehicle_id'] = 'Транспорт не найден';
@@ -6049,7 +6163,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
                     d.full_name AS driver_name
              FROM crews c
              LEFT JOIN contractors ct ON c.contractor_id = ct.id
-             LEFT JOIN vehicles v ON c.vehicle_id = v.id
+             LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
              LEFT JOIN drivers d ON c.driver_id = d.id
              WHERE c.id = ?"
         );
@@ -6102,6 +6216,7 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -6131,7 +6246,7 @@ $router->get('/company/documents', function () use ($config, $db) {
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
-                   'vehicle' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicles', 'backRoute' => '/company/vehicles'],
+                   'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     if (!isset($whitelist[$entityType])) {
@@ -6208,6 +6323,7 @@ $router->get('/company/documents', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $entityStmt = $localPdo->prepare("SELECT * FROM `{$tableName}` WHERE id = ?");
         $entityStmt->execute([$entityId]);
@@ -6231,7 +6347,7 @@ $router->get('/company/documents', function () use ($config, $db) {
             case 'driver':
                 $entityName = $entity['full_name'];
                 break;
-            case 'vehicle':
+            case 'vehicle_unit':
                 $entityName = $entity['plate_number'];
                 break;
             case 'crew':
@@ -6255,7 +6371,7 @@ $router->get('/company/documents', function () use ($config, $db) {
         }
 
         $docStmt = $localPdo->prepare(
-            "SELECT * FROM documents WHERE entity_type = ? AND entity_id = ? AND status != 'archived' ORDER BY created_at DESC"
+            "SELECT * FROM documents WHERE entity_type = ? AND entity_id = ? AND deleted_at IS NULL ORDER BY created_at DESC"
         );
         $docStmt->execute([$entityType, $entityId]);
         $documents = $docStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -6288,7 +6404,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
-                   'vehicle' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicles', 'backRoute' => '/company/vehicles'],
+                   'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     $replaceDocId = (int)($_GET['replace'] ?? 0);
@@ -6366,6 +6482,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $entityStmt = $localPdo->prepare("SELECT * FROM `{$tableName}` WHERE id = ?");
         $entityStmt->execute([$entityId]);
@@ -6390,7 +6507,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
             case 'driver':
                 $entityName = $entity['full_name'];
                 break;
-            case 'vehicle':
+            case 'vehicle_unit':
                 $entityName = $entity['plate_number'];
                 break;
             case 'crew':
@@ -6434,7 +6551,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
                    'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
-                   'vehicle' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicles', 'backRoute' => '/company/vehicles'],
+                   'vehicle_unit' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     $pageTitle = 'Загрузить документ';
@@ -6509,6 +6626,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $entityStmt = $localPdo->prepare("SELECT * FROM `{$tableName}` WHERE id = ?");
         $entityStmt->execute([$entityId]);
@@ -6533,7 +6651,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
             case 'driver':
                 $entityName = $entity['full_name'];
                 break;
-            case 'vehicle':
+            case 'vehicle_unit':
                 $entityName = $entity['plate_number'];
                 break;
             case 'crew':
@@ -6710,6 +6828,7 @@ $router->get('/company/documents/download', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();
@@ -6793,6 +6912,7 @@ $router->post('/company/documents/delete', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $docStmt = $localPdo->prepare('SELECT * FROM documents WHERE id = ?');
         $docStmt->execute([$docId]);
@@ -6842,6 +6962,7 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $docStmt = $localPdo->prepare('SELECT * FROM documents WHERE id = ?');
         $docStmt->execute([$docId]);
@@ -7051,6 +7172,7 @@ $router->post('/login', function () use ($config, $db) {
                 $localDbConfig['database'] = $ac['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $logistStmt = $localPdo->prepare(
                     "SELECT * FROM users WHERE login = :login AND status = 'active'"
@@ -7148,7 +7270,7 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
     $grantedToUserId = (int)($_POST['granted_to_user_id'] ?? 0);
     $redirect = $_POST['redirect'] ?? '/company/dashboard';
 
-    $allowedEntityTypes = ['client', 'contractor', 'driver', 'vehicle', 'crew'];
+    $allowedEntityTypes = ['client', 'contractor', 'driver', 'vehicle_unit', 'crew'];
 
     if (!in_array($entityType, $allowedEntityTypes, true)) {
         header('Location: ' . $redirect);
@@ -7176,6 +7298,7 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
         $localDbConfig['database'] = $dbIdentifier;
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         try {
             $localPdo->query("SELECT 1 FROM entity_access_grants LIMIT 1")->fetch();
@@ -7330,6 +7453,7 @@ $router->get('/superadmin/companies/{id}/users', function ($id) use ($config, $d
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
                 $logistStmt = $localPdo->prepare(
                     "SELECT id, full_name, login, email, phone, role_code, status, created_at
                      FROM users ORDER BY created_at DESC"
@@ -7417,8 +7541,9 @@ $router->get('/superadmin/companies/{id}/directories', function ($id) use ($conf
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
-                $tables = ['clients', 'contractors', 'drivers', 'vehicles', 'crews'];
+                $tables = ['clients', 'contractors', 'drivers', 'vehicle_units', 'vehicle_sets', 'driver_vehicle_blocks', 'crews'];
                 foreach ($tables as $table) {
                     $countStmt = $localPdo->prepare(
                         "SELECT COUNT(*) as total,
@@ -7484,6 +7609,7 @@ $router->get('/superadmin/companies/{id}/clients', function ($id) use ($config, 
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $stmt = $localPdo->prepare("SELECT * FROM clients ORDER BY created_at DESC LIMIT 200");
                 $stmt->execute();
@@ -7543,6 +7669,7 @@ $router->get('/superadmin/companies/{id}/contractors', function ($id) use ($conf
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $stmt = $localPdo->prepare("SELECT * FROM contractors ORDER BY created_at DESC LIMIT 200");
                 $stmt->execute();
@@ -7602,6 +7729,7 @@ $router->get('/superadmin/companies/{id}/drivers', function ($id) use ($config, 
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $stmt = $localPdo->prepare("SELECT * FROM drivers ORDER BY created_at DESC LIMIT 200");
                 $stmt->execute();
@@ -7661,8 +7789,9 @@ $router->get('/superadmin/companies/{id}/vehicles', function ($id) use ($config,
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
-                $stmt = $localPdo->prepare("SELECT * FROM vehicles ORDER BY created_at DESC LIMIT 200");
+                $stmt = $localPdo->prepare("SELECT * FROM vehicle_units ORDER BY created_at DESC LIMIT 200");
                 $stmt->execute();
                 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 $totalCount = count($items);
@@ -7720,6 +7849,7 @@ $router->get('/superadmin/companies/{id}/crews', function ($id) use ($config, $d
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $stmt = $localPdo->prepare(
                     "SELECT c.*,
@@ -7728,7 +7858,7 @@ $router->get('/superadmin/companies/{id}/crews', function ($id) use ($config, $d
                             d.full_name AS driver_name
                      FROM crews c
                      LEFT JOIN contractors ct ON c.contractor_id = ct.id
-                     LEFT JOIN vehicles v ON c.vehicle_id = v.id
+                     LEFT JOIN vehicle_units v ON c.vehicle_id = v.id
                      LEFT JOIN drivers d ON c.driver_id = d.id
                      ORDER BY c.created_at DESC LIMIT 200"
                 );
@@ -7789,6 +7919,7 @@ $router->get('/superadmin/companies/{id}/documents', function ($id) use ($config
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
                 $stmt = $localPdo->prepare(
                     "SELECT id, entity_type, entity_id, original_name, stored_name,
                             file_size, mime_type, status, created_at,
@@ -7840,8 +7971,9 @@ $router->get('/superadmin/companies/{company_id}/documents/{document_id}/downloa
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
-        $docStmt = $localPdo->prepare("SELECT * FROM documents WHERE id = ? AND status != 'archived'");
+        $docStmt = $localPdo->prepare("SELECT * FROM documents WHERE id = ? AND deleted_at IS NULL");
         $docStmt->execute([(int)$document_id]);
         $document = $docStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -7920,6 +8052,7 @@ $router->get('/superadmin/companies/{id}/access-grants', function ($id) use ($co
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
                 $stmt = $localPdo->prepare(
                     "SELECT g.id, g.entity_type, g.entity_id, g.granted_to_user_id,
                             g.granted_by_user_id, g.access_level, g.created_at,
@@ -7973,6 +8106,7 @@ $router->post('/superadmin/companies/{id}/access-grants/{grant_id}/revoke', func
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $localPdo->prepare("DELETE FROM entity_access_grants WHERE id = ?")->execute([(int)$grant_id]);
     } catch (\Exception $e) {
@@ -8072,6 +8206,7 @@ $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}', funct
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
                 $hasColumn = static function (PDO $pdo, string $table, string $column): bool {
                     try {
                         $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
@@ -8089,7 +8224,7 @@ $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}', funct
                 if ($logist) {
                     $pageTitle = 'Пользователь: ' . $logist['full_name'];
 
-                    $countTables = ['clients', 'contractors', 'drivers', 'vehicles', 'crews'];
+                    $countTables = ['clients', 'contractors', 'drivers', 'vehicle_units', 'crews'];
                     foreach ($countTables as $table) {
                         if ($hasColumn($localPdo, $table, 'created_by_user_id')) {
                             $countStmt = $localPdo->prepare("SELECT COUNT(*) FROM `{$table}` WHERE created_by_user_id = ?");
@@ -8185,6 +8320,7 @@ $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}/edit', 
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
                 $logistStmt->execute([(int)$user_id]);
@@ -8263,6 +8399,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit',
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $logistStmt = $localPdo->prepare("SELECT * FROM users WHERE id = ?");
         $logistStmt->execute([(int)$user_id]);
@@ -8419,6 +8556,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/reset-
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
         $hasColumn = static function (PDO $pdo, string $table, string $column): bool {
             try {
                 $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
@@ -8459,7 +8597,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/reset-
         $passwordReset = true;
         $dbError = null;
 
-        $countTables = ['clients', 'contractors', 'drivers', 'vehicles', 'crews'];
+        $countTables = ['clients', 'contractors', 'drivers', 'vehicle_units', 'crews'];
         $counts = [];
         $countsIncomplete = false;
         foreach ($countTables as $table) {
@@ -8529,6 +8667,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/activa
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $localPdo->prepare("UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ?")
             ->execute([(int)$user_id]);
@@ -8557,6 +8696,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/block'
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $localPdo->prepare("UPDATE users SET status = 'blocked', updated_at = NOW() WHERE id = ?")
             ->execute([(int)$user_id]);
@@ -8585,6 +8725,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/archiv
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $localPdo->prepare("UPDATE users SET status = 'archived', updated_at = NOW() WHERE id = ?")
             ->execute([(int)$user_id]);
@@ -8667,6 +8808,7 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
         $localDbConfig['database'] = $company['db_identifier'];
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
         $dupStmt = $localPdo->prepare("SELECT COUNT(*) FROM users WHERE login = ?");
         $dupStmt->execute([$login]);
@@ -8788,13 +8930,14 @@ $router->get('/superadmin/companies/{id}/delete', function ($id) use ($config, $
             $localDbConfig['database'] = $company['db_identifier'];
             $localDb = new \App\Core\Database($localDbConfig);
             $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
             $tables = [
                 'users' => 'logists_count',
                 'clients' => 'clients_count',
                 'contractors' => 'contractors_count',
                 'drivers' => 'drivers_count',
-                'vehicles' => 'vehicles_count',
+                'vehicle_units' => 'vehicles_count',
                 'crews' => 'crews_count',
                 'documents' => 'documents_count'
             ];
@@ -8878,13 +9021,14 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $tables = [
                     'users' => 'logists_count',
                     'clients' => 'clients_count',
                     'contractors' => 'contractors_count',
                     'drivers' => 'drivers_count',
-                    'vehicles' => 'vehicles_count',
+                    'vehicle_units' => 'vehicles_count',
                     'crews' => 'crews_count',
                     'documents' => 'documents_count'
                 ];
@@ -9090,13 +9234,14 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
                 $localDbConfig['database'] = $company['db_identifier'];
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
 
                 $tables = [
                     'users' => 'logists_count',
                     'clients' => 'clients_count',
                     'contractors' => 'contractors_count',
                     'drivers' => 'drivers_count',
-                    'vehicles' => 'vehicles_count',
+                    'vehicle_units' => 'vehicles_count',
                     'crews' => 'crews_count',
                     'documents' => 'documents_count'
                 ];

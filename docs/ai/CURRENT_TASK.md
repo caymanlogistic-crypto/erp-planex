@@ -26,9 +26,23 @@ ARCHITECTURE DECISION (#16):
 КОНТАКТЫ КОМПАНИИ:
 contact_person, contact_phone, contact_email остаются в БД, но убраны из форм создания/редактирования экспедитора и сейчас не используются в UI.
 
-## NEXT TASK
+## IN PROGRESS: Водители / Машины / Экипажи — Этап 1: фундамент БД
 
-Водители / Машины / Экипажи
+STATUS: DATABASE_FOUNDATION_ACCEPTED
 
-Пока не начинать кодинг нового блока.
-Сначала передать задачу через erp-architect.
+ARCHITECTURE:
+- Подрядчик + (Водитель + ТС) = Экипаж
+- driver_vehicle_blocks = Водитель + ТС
+- crews = contractor_id + driver_vehicle_block_id
+
+ВЫПОЛНЕНО (Этап 1):
+- Миграции 011-023 (database/migrations-local/)
+- applyLocalMigrations() в index.php
+- vehicles → vehicle_units (переименование таблицы + обновление всех ссылок в коде)
+- SUPERADMIN-статистика обновлена
+- documents: soft delete через deleted_at
+- entity_access_grants расширены
+
+СЛЕДУЮЩИЙ ШАГ (Этап 2):
+- Функциональные CRUD-страницы для contractors, drivers, vehicle_units, crews
+- Формы, дизайн, UX-сценарии

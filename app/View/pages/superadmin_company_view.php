@@ -34,7 +34,9 @@ require_once __DIR__ . '/../components/status_badge.php';
     $dirsTotal = (int)($dirs['clients_total'] ?? 0)
         + (int)($dirs['contractors_total'] ?? 0)
         + (int)($dirs['drivers_total'] ?? 0)
-        + (int)($dirs['vehicles_total'] ?? 0)
+        + (int)($dirs['vehicle_units_total'] ?? 0)
+        + (int)($dirs['vehicle_sets_total'] ?? 0)
+        + (int)($dirs['driver_vehicle_blocks_total'] ?? 0)
         + (int)($dirs['crews_total'] ?? 0);
     $hasDocuments = (int)($docStats['active'] ?? 0) > 0;
     $isOperational = $company['status'] === 'active' && $hasOwner && $hasLocalDb;
@@ -333,11 +335,25 @@ require_once __DIR__ . '/../components/status_badge.php';
                         <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
-                        <td>Транспорт</td>
-                        <td class="col-num"><?= (int)$dirs['vehicles_total'] ?></td>
-                        <td class="col-num"><?= (int)$dirs['vehicles_active'] ?></td>
-                        <td class="col-num"><?= (int)$dirs['vehicles_archived'] ?></td>
+                        <td>Транспортные единицы</td>
+                        <td class="col-num"><?= (int)$dirs['vehicle_units_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['vehicle_units_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['vehicle_units_archived'] ?></td>
                         <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost btn-sm">Открыть</a></td>
+                    </tr>
+                    <tr>
+                        <td>Транспортные комплекты</td>
+                        <td class="col-num"><?= (int)$dirs['vehicle_sets_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['vehicle_sets_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['vehicle_sets_archived'] ?></td>
+                        <td class="col-tight"><span class="text-muted">—</span></td>
+                    </tr>
+                    <tr>
+                        <td>Блоки водитель+ТС</td>
+                        <td class="col-num"><?= (int)$dirs['driver_vehicle_blocks_total'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['driver_vehicle_blocks_active'] ?></td>
+                        <td class="col-num"><?= (int)$dirs['driver_vehicle_blocks_archived'] ?></td>
+                        <td class="col-tight"><span class="text-muted">—</span></td>
                     </tr>
                     <tr>
                         <td>Экипажи</td>

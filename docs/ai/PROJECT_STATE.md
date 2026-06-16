@@ -62,25 +62,28 @@ SUPERADMIN — ЗАКРЫТ на текущем этапе.
 Последний стабильный commit: da1cc90
 ```
 
-## Следующий блок
+## Текущий блок
 
 ```text
-Водители / Машины / Экипажи
+Водители / Машины / Экипажи — ЭТАП 1: фундамент БД
+Следующий шаг: функциональные CRUD-страницы и UX-сценарии
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (commit da1cc90):
-- Добавлены колонки director_position и director_full_name в таблицу companies (migration 008)
-- Форма создания экспедитора: убраны контакты, убраны логин/телефон/email руководителя,
-  оставлены только Должность и ФИО руководителя как реквизиты
-- Форма редактирования экспедитора: аналогично убраны контакты и ERP-поля руководителя
-- POST /superadmin/companies/create: сохраняет director_position/director_full_name в companies
-- POST /superadmin/companies/{id}/edit: обновляет director_position/director_full_name в companies,
-  убрано автосоздание company_owner, убрана генерация пароля
-- Карточка компании: показывает реквизиты руководителя из companies + статус ERP-доступа
-- Маршрут /superadmin/companies/{id}/create-owner сохранён для будущего создания ERP-пользователя
+Принято erp-architect (DATABASE_FOUNDATION_ACCEPTED):
+- Созданы миграции 011-023 для локальной БД компании (database/migrations-local/)
+- Обновлена структура таблиц: contractors (тип, банк, индексы), contractor_contacts, contractor_tax_history
+- Обновлена структура drivers: паспорт, СНИЛС, driver_phones
+- vehicles → vehicle_units: переименование таблицы, новые поля (unit_type, диагностические карты), индекс idx_plate
+- Созданы таблицы vehicle_sets, driver_vehicle_blocks
+- Обновлена логика crews: contractor_id + driver_vehicle_block_id, безопасная миграция при пустой таблице
+- Обновлены documents: document_* поля, soft delete (deleted_at), документная статистика через deleted_at IS NULL
+- Расширены entity_access_grants: comment, revoked_at, idx_granted_user
+- Обновлены все ссылки vehicles→vehicle_units в PHP-коде (SQL, entity_type, статистика)
+- SUPERADMIN-статистика обновлена: vehicle_units, vehicle_sets, driver_vehicle_blocks
+- Добавлена функция applyLocalMigrations() — авто-применение миграций при доступе к локальной БД
 ```
 
 ## Правило обновления

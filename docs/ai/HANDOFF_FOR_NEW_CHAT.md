@@ -40,6 +40,9 @@ CODEX-дизайнер не меняет функциональную логик
 
 ```text
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
+
+Водители / Машины / Экипажи — ЭТАП 1 (фундамент БД) ЗАВЕРШЁН.
+Следующий шаг: функциональные CRUD-страницы и UX-сценарии.
 ```
 
 ### Стабильный commit
@@ -55,6 +58,40 @@ da1cc90 — fix(superadmin): separate company director requisites from ERP user
 49e7218 — fix(superadmin): restore company create handler
 da1cc90 — fix(superadmin): separate company director requisites from ERP user
 ```
+
+## Архитектура блока «Водители / Машины / Экипажи»
+
+```text
+Подрядчик + (Водитель + ТС) = Экипаж
+driver_vehicle_blocks = Водитель + ТС
+crews = contractor_id + driver_vehicle_block_id
+```
+
+Таблицы в локальной БД компании (`erp_company_{id}`):
+
+| Таблица | Назначение |
+|---|---|
+| contractors | Подрядчики (ИНН не unique, bank-реквизиты) |
+| contractor_contacts | Множественные контакты подрядчика |
+| contractor_tax_history | История систем налогообложения |
+| drivers | Водители (паспорт, СНИЛС, права — legacy) |
+| driver_phones | Телефоны водителей |
+| vehicle_units | Транспортные единицы (бывшие vehicles) |
+| vehicle_sets | Транспортные комплекты (single/coupling/road_train) |
+| driver_vehicle_blocks | Блоки водитель+ТС |
+| crews | Экипажи (contractor + driver_vehicle_block) |
+| documents | Документы (soft delete через deleted_at) |
+| entity_access_grants | Гранты доступа |
+
+Ключевые правила:
+- `vehicles` → `vehicle_units` (переименование), URL /company/vehicles сохранён
+- `inn` в contractors — не unique (idx_inn)
+- `plate_number` в vehicle_units — не unique (idx_plate)
+- `documents.deleted_at IS NULL` = активный документ
+- `documents.status` — legacy, не используется в новом коде
+- `crews`: безопасная миграция, блокировка если есть старые записи
+- `pts_number`, `license_category`, `license_expire_date` сохранены как legacy
+- Все миграции (011-023) идемпотентны, auto-run через applyLocalMigrations()
 
 ## Ключевое архитектурное решение: руководитель компании
 
@@ -127,11 +164,10 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 ## Следующий блок в работе
 
 ```text
-Водители / Машины / Экипажи
+Водители / Машины / Экипажи — Этап 2: функциональные CRUD-страницы и UX-сценарии
 ```
 
-Пока не начинать кодинг нового блока.
-Сначала передать задачу через erp-architect.
+Этап 1 (фундамент БД) завершён. Следующий этап — создание страниц, форм, списков для contractors, drivers, vehicle_units, vehicle_sets, driver_vehicle_blocks, crews.
 
 ## Что нельзя нарушать
 

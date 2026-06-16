@@ -87,12 +87,28 @@
                         <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
-                        <td>Транспорт</td>
-                        <td class="col-num"><?= (int)($dirs['vehicles']['total'] ?? 0) ?></td>
-                        <td class="col-num"><?= (int)($dirs['vehicles']['active'] ?? 0) ?></td>
-                        <td class="col-num"><?= (int)($dirs['vehicles']['archived'] ?? 0) ?></td>
-                        <td class="col-tight"><span class="badge <?= (int)($dirs['vehicles']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['vehicles']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
+                        <td>Транспортные единицы</td>
+                        <td class="col-num"><?= (int)($dirs['vehicle_units']['total'] ?? 0) ?></td>
+                        <td class="col-num"><?= (int)($dirs['vehicle_units']['active'] ?? 0) ?></td>
+                        <td class="col-num"><?= (int)($dirs['vehicle_units']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['vehicle_units']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['vehicle_units']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
                         <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost btn-sm">Открыть</a></td>
+                    </tr>
+                    <tr>
+                        <td>Транспортные комплекты</td>
+                        <td class="col-num"><?= (int)($dirs['vehicle_sets']['total'] ?? 0) ?></td>
+                        <td class="col-num"><?= (int)($dirs['vehicle_sets']['active'] ?? 0) ?></td>
+                        <td class="col-num"><?= (int)($dirs['vehicle_sets']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['vehicle_sets']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['vehicle_sets']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
+                        <td class="col-actions"><span class="text-muted">—</span></td>
+                    </tr>
+                    <tr>
+                        <td>Блоки водитель+ТС</td>
+                        <td class="col-num"><?= (int)($dirs['driver_vehicle_blocks']['total'] ?? 0) ?></td>
+                        <td class="col-num"><?= (int)($dirs['driver_vehicle_blocks']['active'] ?? 0) ?></td>
+                        <td class="col-num"><?= (int)($dirs['driver_vehicle_blocks']['archived'] ?? 0) ?></td>
+                        <td class="col-tight"><span class="badge <?= (int)($dirs['driver_vehicle_blocks']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['driver_vehicle_blocks']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
+                        <td class="col-actions"><span class="text-muted">—</span></td>
                     </tr>
                     <tr>
                         <td>Экипажи</td>
