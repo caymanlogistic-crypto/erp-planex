@@ -78,6 +78,13 @@ COMMIT: e2a1da9 — fix: remove negative margins from page-head, restore content
 
 Аудит CSS: проблемных negative margin / large border-radius / box-shadow на shell/page/table/panel блоках не найдено.
 
+COMMIT: fe1f7ff — fix: global border-radius 0 + content padding 0, hard edge normalization
+
+Глобальная зачистка скруглений и внешних зазоров:
+- Добавлен блок `ERP PLANEX HARD EDGE NORMALIZATION`: `* { border-radius: 0 !important }` — убраны все скругления (кнопки, инпуты, бейджи, таблицы, панели, dropdown, modal, toast)
+- `.content { padding: 10px → 0 }` — убран внешний зазор по периметру рабочей области
+- Media query `.content { padding: var(--space-4) → 0 }` — синхронизировано
+
 ---
 
 ## NEXT TASK
