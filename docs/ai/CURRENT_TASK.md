@@ -61,6 +61,13 @@ COMMIT: 51f548d — fix: align shell-layout with FINAL3 reference
 - filters-bar margin-bottom: 8px → 0 (устранён двойной вертикальный зазор с панелью)
 - main.php: очищен BOM и NULL-byte после </html>
 
+COMMIT: 8161b5a — fix: make page-head flush to edges with full border matching FINAL3
+
+Дополнительно исправлено:
+- page-head border: none+border-bottom → border: 1px solid var(--line) (полная рамка как в FINAL3)
+- page-head margin: -10px -10px 0 -10px (отрицательные margin'ы компенсируют content padding, шапка flush к краям)
+- Устранён визуальный эффект «скругления» — шапка получила острый индустриальный контур
+
 ---
 
 ## NEXT TASK
