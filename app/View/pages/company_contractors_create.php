@@ -53,8 +53,46 @@
             </div>
         </div>
 
+        <?php if (!empty($uploadedDocs)): ?>
+        <div class="form-section mt-4">
+            <h3 class="panel-head-title">Загруженные документы</h3>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Файл</th>
+                            <th>Тип</th>
+                            <th>Размер</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($uploadedDocs as $doc): ?>
+                        <tr>
+                            <td><?= e($doc['original_name']) ?></td>
+                            <td><?= e($doc['mime_type']) ?></td>
+                            <td><?= e(formatFileSize($doc['file_size'])) ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($docErrors)): ?>
+        <div class="notice warn mt-4">
+            <p>Некоторые файлы не удалось загрузить:</p>
+            <ul>
+                <?php foreach ($docErrors as $de): ?>
+                <li><?= e($de) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+
         <div class="form-actions mt-4">
-            <a href="/company/contractors" class="btn btn-primary">← К списку перевозчиков</a>
+            <a href="/company/contractors/<?= $createdContractor['id'] ?>" class="btn btn-primary">← К карточке перевозчика</a>
+            <a href="/company/documents?entity_type=contractor&entity_id=<?= $createdContractor['id'] ?>" class="btn btn-ghost">Документы</a>
             <a href="/company/contractors/create" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
@@ -76,7 +114,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/contractors/create" class="panel">
+<form method="post" action="/company/contractors/create" enctype="multipart/form-data" class="panel">
     <div class="panel-body">
 
         <div class="form-section">
@@ -157,6 +195,29 @@
             <div class="field">
                 <label class="field-label">Комментарий</label>
                 <textarea name="comments" class="field-textarea" rows="3"><?= e($old['comments'] ?? '') ?></textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Документы перевозчика</h3>
+
+            <div class="field">
+                <label class="field-label">Тип документа</label>
+                <input type="text" name="documents_type" class="field-input"
+                       value="<?= e($old['documents_type'] ?? '') ?>"
+                       placeholder="Например: Договор, Свидетельство, Устав">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Файлы</label>
+                <input type="file" name="documents_file[]" class="field-input" multiple
+                       accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
+                <div class="field-msg">
+                    Допустимые форматы: PDF, JPG, PNG, WEBP, DOC, DOCX, XLS, XLSX. Максимальный размер: 20 МБ.
+                </div>
+                <?php if (!empty($errors['documents_file'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['documents_file']) ?></div>
+                <?php endif; ?>
             </div>
         </div>
 

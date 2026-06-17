@@ -1246,7 +1246,7 @@ $router->post('/superadmin/companies/{id}/owner/reset-password', function ($id) 
 $router->get('/company/logists', function () use ($config, $db) {
     requireRole('company_owner');
     $pageTitle = 'Пользователи';
-    $pageContext = 'Пользователи — Компания';
+    $pageContext = 'Пользователи › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -1280,7 +1280,7 @@ $router->get('/company/logists', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Пользователи — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $logists = [];
@@ -1372,7 +1372,7 @@ $router->get('/company/logists', function () use ($config, $db) {
 $router->get('/company/logists/create', function () use ($config, $db) {
     requireRole('company_owner');
     $pageTitle = 'Создать пользователя';
-    $pageContext = 'Пользователи — Компания';
+    $pageContext = 'Пользователи › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -1416,7 +1416,7 @@ $router->get('/company/logists/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Пользователи — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи › Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -1445,7 +1445,7 @@ $router->get('/company/logists/create', function () use ($config, $db) {
 $router->post('/company/logists/create', function () use ($config, $db) {
     requireRole('company_owner');
     $pageTitle = 'Создать пользователя';
-    $pageContext = 'Пользователи — Компания';
+    $pageContext = 'Пользователи › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -1484,7 +1484,7 @@ $router->post('/company/logists/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Пользователи — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Создание пользователей недоступно';
@@ -1650,7 +1650,7 @@ $router->get('/company/logists/{id}', function ($id) use ($config, $db) {
         }
 
         $pageTitle = 'Пользователь';
-        $pageContext = 'Пользователи — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $logist = null;
@@ -1761,7 +1761,7 @@ $router->get('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         }
 
         $pageTitle = 'Редактировать пользователя';
-        $pageContext = 'Пользователи — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $logist = null;
@@ -1871,7 +1871,7 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         }
 
         $pageTitle = 'Редактировать пользователя';
-        $pageContext = 'Пользователи — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $logist = null;
@@ -2051,7 +2051,7 @@ $router->post('/company/logists/{id}/reset-password', function ($id) use ($confi
         }
 
         $pageTitle = 'Пользователь';
-        $pageContext = 'Пользователи — Компания: ' . $company['name'];
+        $pageContext = 'Пользователи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $logist = null;
@@ -2205,7 +2205,7 @@ $router->post('/company/logists/{id}/archive', function ($id) use ($config, $db)
 $router->get('/company/clients', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Клиенты';
-    $pageContext = 'Клиенты — Компания';
+    $pageContext = 'Клиенты › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2239,7 +2239,7 @@ $router->get('/company/clients', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+        $pageContext = 'Клиенты › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $clients = [];
@@ -2307,7 +2307,7 @@ $router->get('/company/clients', function () use ($config, $db) {
 $router->get('/company/clients/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать клиента';
-    $pageContext = 'Клиенты — Компания';
+    $pageContext = 'Клиенты › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2347,7 +2347,7 @@ $router->get('/company/clients/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+        $pageContext = 'Клиенты › Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -2372,7 +2372,7 @@ $router->get('/company/clients/create', function () use ($config, $db) {
 $router->post('/company/clients/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать клиента';
-    $pageContext = 'Клиенты — Компания';
+    $pageContext = 'Клиенты › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -2409,7 +2409,7 @@ $router->post('/company/clients/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+        $pageContext = 'Клиенты › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Создание клиентов недоступно';
@@ -2547,7 +2547,7 @@ $router->get('/company/clients/{id}', function ($id) use ($config, $db) {
         }
 
         $pageTitle = 'Клиент';
-        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+        $pageContext = 'Клиенты › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $client = null;
@@ -2668,7 +2668,7 @@ $router->get('/company/clients/{id}/edit', function ($id) use ($config, $db) {
         }
 
         $pageTitle = 'Редактировать клиента';
-        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+        $pageContext = 'Клиенты › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $client = null;
@@ -2763,7 +2763,7 @@ $router->post('/company/clients/{id}/edit', function ($id) use ($config, $db) {
         }
 
         $pageTitle = 'Редактировать клиента';
-        $pageContext = 'Клиенты — Компания: ' . $company['name'];
+        $pageContext = 'Клиенты › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $client = null;
@@ -2942,7 +2942,7 @@ $router->post('/company/clients/{id}/archive', function ($id) use ($config, $db)
 $router->get('/company/contractors', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Перевозчики';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2976,7 +2976,12 @@ $router->get('/company/contractors', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
+        $topbarCrumbs = [
+            ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
+            ['label' => 'Подрядчики', 'url' => null],
+            ['label' => 'Перевозчики', 'url' => null],
+        ];
 
         if ($company['status'] !== 'active') {
             $contractors = [];
@@ -3059,7 +3064,7 @@ $router->get('/company/contractors', function () use ($config, $db) {
 $router->get('/company/contractors/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать перевозчика';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3099,7 +3104,7 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -3124,7 +3129,7 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
 $router->get('/company/contractors/create-full', function () use ($config, $db) {
     requireRole(['company_owner']);
     $pageTitle = 'Создать перевозчика + Водителя + Транспорт';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3162,7 +3167,7 @@ $router->get('/company/contractors/create-full', function () use ($config, $db) 
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -3185,7 +3190,7 @@ $router->get('/company/contractors/create-full', function () use ($config, $db) 
 $router->post('/company/contractors/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать перевозчика';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -3193,6 +3198,8 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
     $formError = null;
     $success = false;
     $createdContractor = null;
+    $uploadedDocs = [];
+    $docErrors = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -3222,7 +3229,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Создание перевозчиков недоступно';
@@ -3313,6 +3320,124 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             'name' => $name,
             'inn'  => $inn,
         ];
+
+        // --- Document upload ---
+        $documentsFile = $_FILES['documents_file'] ?? null;
+
+        if ($documentsFile && !empty($documentsFile['name'][0])) {
+            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
+            $maxSize = 20 * 1024 * 1024;
+            $entityType = 'contractor';
+            $entityId = (int)$createdContractor['id'];
+            $documentsType = trim($_POST['documents_type'] ?? '');
+            $userId = (int)$_SESSION['user_id'];
+            $userRole = $_SESSION['role_code'];
+
+            try {
+                $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();
+            } catch (\Exception $e) {
+                $migrationSql = file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'));
+                $localPdo->exec($migrationSql);
+            }
+
+            try {
+                $localPdo->query("SELECT created_by_user_id FROM documents LIMIT 1")->fetch();
+            } catch (\Exception $e) {
+                $localPdo->exec("ALTER TABLE documents ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
+            }
+
+            $fileCount = count($documentsFile['name']);
+            for ($i = 0; $i < $fileCount; $i++) {
+                $fileError = $documentsFile['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+                $originalName = $documentsFile['name'][$i] ?? '';
+                $tmpPath = $documentsFile['tmp_name'][$i] ?? '';
+                $fileSize = $documentsFile['size'][$i] ?? 0;
+
+                if ($fileError === UPLOAD_ERR_NO_FILE || $originalName === '') {
+                    continue;
+                }
+
+                $fileValidationError = null;
+                if ($fileError === UPLOAD_ERR_INI_SIZE || $fileError === UPLOAD_ERR_FORM_SIZE) {
+                    $fileValidationError = 'Файл «' . e($originalName) . '» превышает допустимый лимит';
+                } elseif ($fileError !== UPLOAD_ERR_OK) {
+                    $fileValidationError = 'Ошибка загрузки файла «' . e($originalName) . '»';
+                } else {
+                    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowedExt, true)) {
+                        $fileValidationError = 'Недопустимый формат файла «' . e($originalName) . '». Разрешены: PDF, JPG, PNG, WEBP, DOC, DOCX, XLS, XLSX';
+                    } elseif ($fileSize > $maxSize) {
+                        $fileValidationError = 'Файл «' . e($originalName) . '» превышает 20 МБ';
+                    } elseif (strpos($originalName, '../') !== false || strpos($originalName, '..\\') !== false
+                              || strpos($originalName, '/') !== false || strpos($originalName, '\\') !== false) {
+                        $fileValidationError = 'Недопустимое имя файла «' . e($originalName) . '»';
+                    }
+                }
+
+                if ($fileValidationError !== null) {
+                    $docErrors[] = $fileValidationError;
+                    continue;
+                }
+
+                $storedName = uniqid('doc_', true) . '.' . $ext;
+                $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $entityId;
+                $relativePath = $relativeDir . '/' . $storedName;
+                $absoluteDir = storage_path($relativeDir);
+
+                if (!is_dir($absoluteDir)) {
+                    if (!mkdir($absoluteDir, 0755, true)) {
+                        $docErrors[] = 'Не удалось создать директорию для файла «' . e($originalName) . '»';
+                        continue;
+                    }
+                }
+
+                $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
+                if (!move_uploaded_file($tmpPath, $destPath)) {
+                    $docErrors[] = 'Не удалось сохранить файл «' . e($originalName) . '»';
+                    continue;
+                }
+
+                $mimeType = $documentsFile['type'][$i] ?? 'application/octet-stream';
+
+                try {
+                    $insertDoc = $localPdo->prepare(
+                        'INSERT INTO documents (entity_type, entity_id, document_type, original_name, stored_name,
+                         relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role,
+                         created_by_user_id, created_by_role)
+                         VALUES (:entity_type, :entity_id, :document_type, :original_name, :stored_name,
+                         :relative_path, :mime_type, :file_size, :status, :uploaded_by_user_id, :uploaded_by_role,
+                         :created_by_user_id, :created_by_role)'
+                    );
+                    $insertDoc->execute([
+                        ':entity_type'         => $entityType,
+                        ':entity_id'           => $entityId,
+                        ':document_type'       => $documentsType !== '' ? $documentsType : null,
+                        ':original_name'       => $originalName,
+                        ':stored_name'         => $storedName,
+                        ':relative_path'       => $relativePath,
+                        ':mime_type'           => $mimeType,
+                        ':file_size'           => $fileSize,
+                        ':status'              => 'uploaded',
+                        ':uploaded_by_user_id' => $userId > 0 ? $userId : null,
+                        ':uploaded_by_role'    => $userRole !== '' ? $userRole : null,
+                        ':created_by_user_id'  => $userId > 0 ? $userId : null,
+                        ':created_by_role'     => $userRole !== '' ? $userRole : null,
+                    ]);
+                    $uploadedDocs[] = [
+                        'id' => $localPdo->lastInsertId(),
+                        'original_name' => $originalName,
+                        'mime_type' => $mimeType,
+                        'file_size' => $fileSize,
+                    ];
+                } catch (\Exception $e) {
+                    if (file_exists($destPath)) {
+                        @unlink($destPath);
+                    }
+                    $docErrors[] = 'Ошибка сохранения метаданных для файла «' . e($originalName) . '»';
+                }
+            }
+        }
+
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
@@ -3328,7 +3453,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
 $router->post('/company/contractors/create-full', function () use ($config, $db) {
     requireRole(['company_owner']);
     $pageTitle = 'Создать перевозчика + Водителя + Транспорт';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -3368,7 +3493,7 @@ $router->post('/company/contractors/create-full', function () use ($config, $db)
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Создание недоступно';
@@ -3619,7 +3744,7 @@ $router->post('/company/contractors/create-full', function () use ($config, $db)
 $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Перевозчик';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $archiveError = null;
@@ -3657,7 +3782,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
@@ -3842,7 +3967,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
 $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать перевозчика';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3880,7 +4005,7 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
@@ -3951,7 +4076,7 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
 $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать перевозчика';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3989,7 +4114,7 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
@@ -4148,7 +4273,7 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
 $router->post('/company/contractors/{id}/archive', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Перевозчик';
-    $pageContext = 'Перевозчики — Компания';
+    $pageContext = 'Перевозчики › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $archiveError = null;
@@ -4183,7 +4308,7 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
             return;
         }
 
-        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
@@ -4603,7 +4728,7 @@ $router->post('/company/contractors/{contractor_id}/tax-history/create', functio
 $router->get('/company/drivers', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Водители';
-    $pageContext = 'Водители — Компания';
+    $pageContext = 'Водители › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -4637,7 +4762,12 @@ $router->get('/company/drivers', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Водители — Компания: ' . $company['name'];
+        $pageContext = 'Водители › Компания: ' . $company['name'];
+        $topbarCrumbs = [
+            ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
+            ['label' => 'Подрядчики', 'url' => null],
+            ['label' => 'Водители', 'url' => null],
+        ];
 
         if ($company['status'] !== 'active') {
             $drivers = [];
@@ -4714,7 +4844,7 @@ $router->get('/company/drivers', function () use ($config, $db) {
 $router->get('/company/drivers/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать водителя';
-    $pageContext = 'Водители — Компания';
+    $pageContext = 'Водители › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -4754,7 +4884,7 @@ $router->get('/company/drivers/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Водители — Компания: ' . $company['name'];
+        $pageContext = 'Водители › Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -4779,7 +4909,7 @@ $router->get('/company/drivers/create', function () use ($config, $db) {
 $router->post('/company/drivers/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать водителя';
-    $pageContext = 'Водители — Компания';
+    $pageContext = 'Водители › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -4787,6 +4917,8 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
     $formError = null;
     $success = false;
     $createdDriver = null;
+    $uploadedDocs = [];
+    $docErrors = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -4816,7 +4948,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Водители — Компания: ' . $company['name'];
+        $pageContext = 'Водители › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Создание водителей недоступно';
@@ -4904,6 +5036,124 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             'license_number'    => $licenseNumber !== '' ? $licenseNumber : null,
             'license_category'  => $licenseCategory !== '' ? $licenseCategory : null,
         ];
+
+        // --- Document upload ---
+        $documentsFile = $_FILES['documents_file'] ?? null;
+
+        if ($documentsFile && !empty($documentsFile['name'][0])) {
+            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
+            $maxSize = 20 * 1024 * 1024;
+            $entityType = 'driver';
+            $entityId = (int)$createdDriver['id'];
+            $documentsType = trim($_POST['documents_type'] ?? '');
+            $userId = (int)$_SESSION['user_id'];
+            $userRole = $_SESSION['role_code'];
+
+            try {
+                $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();
+            } catch (\Exception $e) {
+                $migrationSql = file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'));
+                $localPdo->exec($migrationSql);
+            }
+
+            try {
+                $localPdo->query("SELECT created_by_user_id FROM documents LIMIT 1")->fetch();
+            } catch (\Exception $e) {
+                $localPdo->exec("ALTER TABLE documents ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
+            }
+
+            $fileCount = count($documentsFile['name']);
+            for ($i = 0; $i < $fileCount; $i++) {
+                $fileError = $documentsFile['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+                $originalName = $documentsFile['name'][$i] ?? '';
+                $tmpPath = $documentsFile['tmp_name'][$i] ?? '';
+                $fileSize = $documentsFile['size'][$i] ?? 0;
+
+                if ($fileError === UPLOAD_ERR_NO_FILE || $originalName === '') {
+                    continue;
+                }
+
+                $fileValidationError = null;
+                if ($fileError === UPLOAD_ERR_INI_SIZE || $fileError === UPLOAD_ERR_FORM_SIZE) {
+                    $fileValidationError = 'Файл «' . e($originalName) . '» превышает допустимый лимит';
+                } elseif ($fileError !== UPLOAD_ERR_OK) {
+                    $fileValidationError = 'Ошибка загрузки файла «' . e($originalName) . '»';
+                } else {
+                    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowedExt, true)) {
+                        $fileValidationError = 'Недопустимый формат файла «' . e($originalName) . '». Разрешены: PDF, JPG, PNG, WEBP, DOC, DOCX, XLS, XLSX';
+                    } elseif ($fileSize > $maxSize) {
+                        $fileValidationError = 'Файл «' . e($originalName) . '» превышает 20 МБ';
+                    } elseif (strpos($originalName, '../') !== false || strpos($originalName, '..\\') !== false
+                              || strpos($originalName, '/') !== false || strpos($originalName, '\\') !== false) {
+                        $fileValidationError = 'Недопустимое имя файла «' . e($originalName) . '»';
+                    }
+                }
+
+                if ($fileValidationError !== null) {
+                    $docErrors[] = $fileValidationError;
+                    continue;
+                }
+
+                $storedName = uniqid('doc_', true) . '.' . $ext;
+                $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $entityId;
+                $relativePath = $relativeDir . '/' . $storedName;
+                $absoluteDir = storage_path($relativeDir);
+
+                if (!is_dir($absoluteDir)) {
+                    if (!mkdir($absoluteDir, 0755, true)) {
+                        $docErrors[] = 'Не удалось создать директорию для файла «' . e($originalName) . '»';
+                        continue;
+                    }
+                }
+
+                $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
+                if (!move_uploaded_file($tmpPath, $destPath)) {
+                    $docErrors[] = 'Не удалось сохранить файл «' . e($originalName) . '»';
+                    continue;
+                }
+
+                $mimeType = $documentsFile['type'][$i] ?? 'application/octet-stream';
+
+                try {
+                    $insertDoc = $localPdo->prepare(
+                        'INSERT INTO documents (entity_type, entity_id, document_type, original_name, stored_name,
+                         relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role,
+                         created_by_user_id, created_by_role)
+                         VALUES (:entity_type, :entity_id, :document_type, :original_name, :stored_name,
+                         :relative_path, :mime_type, :file_size, :status, :uploaded_by_user_id, :uploaded_by_role,
+                         :created_by_user_id, :created_by_role)'
+                    );
+                    $insertDoc->execute([
+                        ':entity_type'         => $entityType,
+                        ':entity_id'           => $entityId,
+                        ':document_type'       => $documentsType !== '' ? $documentsType : null,
+                        ':original_name'       => $originalName,
+                        ':stored_name'         => $storedName,
+                        ':relative_path'       => $relativePath,
+                        ':mime_type'           => $mimeType,
+                        ':file_size'           => $fileSize,
+                        ':status'              => 'uploaded',
+                        ':uploaded_by_user_id' => $userId > 0 ? $userId : null,
+                        ':uploaded_by_role'    => $userRole !== '' ? $userRole : null,
+                        ':created_by_user_id'  => $userId > 0 ? $userId : null,
+                        ':created_by_role'     => $userRole !== '' ? $userRole : null,
+                    ]);
+                    $uploadedDocs[] = [
+                        'id' => $localPdo->lastInsertId(),
+                        'original_name' => $originalName,
+                        'mime_type' => $mimeType,
+                        'file_size' => $fileSize,
+                    ];
+                } catch (\Exception $e) {
+                    if (file_exists($destPath)) {
+                        @unlink($destPath);
+                    }
+                    $docErrors[] = 'Ошибка сохранения метаданных для файла «' . e($originalName) . '»';
+                }
+            }
+        }
+
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
@@ -4919,7 +5169,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
 $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Водитель';
-    $pageContext = 'Водители — Компания';
+    $pageContext = 'Водители › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $archiveError = null;
@@ -4956,7 +5206,7 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Водители — Компания: ' . $company['name'];
+        $pageContext = 'Водители › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $driver = null;
@@ -5096,7 +5346,7 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
 $router->get('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать водителя';
-    $pageContext = 'Водители — Компания';
+    $pageContext = 'Водители › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -5134,7 +5384,7 @@ $router->get('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Водители — Компания: ' . $company['name'];
+        $pageContext = 'Водители › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $driver = null;
@@ -5205,7 +5455,7 @@ $router->get('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
 $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать водителя';
-    $pageContext = 'Водители — Компания';
+    $pageContext = 'Водители › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -5243,7 +5493,7 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Водители — Компания: ' . $company['name'];
+        $pageContext = 'Водители › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $driver = null;
@@ -5396,7 +5646,7 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
 $router->post('/company/drivers/{id}/archive', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Водитель';
-    $pageContext = 'Водители — Компания';
+    $pageContext = 'Водители › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $archiveError = null;
@@ -5431,7 +5681,7 @@ $router->post('/company/drivers/{id}/archive', function ($id) use ($config, $db)
             return;
         }
 
-        $pageContext = 'Водители — Компания: ' . $company['name'];
+        $pageContext = 'Водители › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $driver = null;
@@ -5740,7 +5990,7 @@ $router->post('/company/drivers/{driver_id}/phones/{phone_id}/set-main', functio
 $router->get('/company/vehicles', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Транспортные единицы';
-    $pageContext = 'Транспортные единицы — Компания';
+    $pageContext = 'Транспортные единицы › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -5774,7 +6024,7 @@ $router->get('/company/vehicles', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicles = [];
@@ -5849,7 +6099,7 @@ $router->get('/company/vehicles', function () use ($config, $db) {
 $router->get('/company/vehicles/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Добавить транспортную единицу';
-    $pageContext = 'Транспортные единицы — Компания';
+    $pageContext = 'Транспортные единицы › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -5889,7 +6139,7 @@ $router->get('/company/vehicles/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы › Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -5914,7 +6164,7 @@ $router->get('/company/vehicles/create', function () use ($config, $db) {
 $router->post('/company/vehicles/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Добавить транспортную единицу';
-    $pageContext = 'Транспортные единицы — Компания';
+    $pageContext = 'Транспортные единицы › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -5951,7 +6201,7 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Добавление транспорта недоступно';
@@ -6062,7 +6312,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Транспортные единицы';
-    $pageContext = 'Транспортные единицы — Компания';
+    $pageContext = 'Транспортные единицы › Компания';
     $entityNotFound = false;
     $grants = [];
     $logists = [];
@@ -6099,7 +6349,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             return;
         }
 
-        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicle = null;
@@ -6224,7 +6474,7 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Редактировать транспортную единицу';
-    $pageContext = 'Транспортные единицы — Компания';
+    $pageContext = 'Транспортные единицы › Компания';
     $entityNotFound = false;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -6264,7 +6514,7 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
             return;
         }
 
-        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicle = null;
@@ -6329,7 +6579,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
     requireRole(['company_owner', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Редактировать транспортную единицу';
-    $pageContext = 'Транспортные единицы — Компания';
+    $pageContext = 'Транспортные единицы › Компания';
     $entityNotFound = false;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -6370,7 +6620,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
             return;
         }
 
-        $pageContext = 'Транспортные единицы — Компания: ' . $company['name'];
+        $pageContext = 'Транспортные единицы › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $vehicle = null;
@@ -6551,7 +6801,7 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
         $crewCheck->execute([$vehicleId, 'active']);
         if ($crewCheck->fetchColumn() > 0) {
             $pageTitle = 'Невозможно архивировать';
-            $pageContext = 'Транспортные единицы — Компания';
+            $pageContext = 'Транспортные единицы › Компания';
             $companyError = false;
             $company = $company;
             $message = 'Транспорт используется в активных экипажах. Сначала удалите транспорт из всех экипажей.';
@@ -6579,7 +6829,7 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
 $router->get('/company/crews', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Экипажи';
-    $pageContext = 'Экипажи — Компания';
+    $pageContext = 'Экипажи › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -6613,7 +6863,7 @@ $router->get('/company/crews', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Экипажи — Компания: ' . $company['name'];
+        $pageContext = 'Экипажи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $crews = [];
@@ -6721,7 +6971,7 @@ $router->get('/company/crews', function () use ($config, $db) {
 $router->get('/company/crews/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать экипаж';
-    $pageContext = 'Экипажи — Компания';
+    $pageContext = 'Экипажи › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -6749,7 +6999,7 @@ $router->get('/company/crews/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Экипажи — Компания: ' . $company['name'];
+        $pageContext = 'Экипажи › Компания: ' . $company['name'];
 
         $success = false; $errors = []; $old = []; $formError = null; $createdCrew = null;
 
@@ -6800,7 +7050,7 @@ $router->get('/company/crews/create', function () use ($config, $db) {
 $router->post('/company/crews/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать экипаж';
-    $pageContext = 'Экипажи — Компания';
+    $pageContext = 'Экипажи › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -6834,7 +7084,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Экипажи — Компания: ' . $company['name'];
+        $pageContext = 'Экипажи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $formError = 'Создание экипажа недоступно';
@@ -6944,7 +7194,7 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $crewId = (int)$crewId;
     $pageTitle = 'Экипаж';
-    $pageContext = 'Экипажи — Компания';
+    $pageContext = 'Экипажи › Компания';
     $entityNotFound = false;
     $grants = [];
     $logists = [];
@@ -6981,7 +7231,7 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Экипажи — Компания: ' . $company['name'];
+        $pageContext = 'Экипажи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $crew = null;
@@ -7099,7 +7349,7 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $crewId = (int)$crewId;
     $pageTitle = 'Редактировать экипаж';
-    $pageContext = 'Экипажи — Компания';
+    $pageContext = 'Экипажи › Компания';
     $entityNotFound = false;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -7145,7 +7395,7 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Экипажи — Компания: ' . $company['name'];
+        $pageContext = 'Экипажи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $crew = null;
@@ -7268,7 +7518,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
     requireRole(['company_owner', 'logist']);
     $crewId = (int)$crewId;
     $pageTitle = 'Редактировать экипаж';
-    $pageContext = 'Экипажи — Компания';
+    $pageContext = 'Экипажи › Компания';
     $entityNotFound = false;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -7315,7 +7565,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
             return;
         }
 
-        $pageContext = 'Экипажи — Компания: ' . $company['name'];
+        $pageContext = 'Экипажи › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $crew = null;
@@ -7601,7 +7851,7 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
 $router->get('/company/vehicle-sets', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспорт › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -7623,7 +7873,12 @@ $router->get('/company/vehicle-sets', function () use ($config, $db) {
             $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт › Компания: ' . $company['name'];
+        $topbarCrumbs = [
+            ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
+            ['label' => 'Подрядчики', 'url' => null],
+            ['label' => 'Транспорт', 'url' => null],
+        ];
         if ($company['status'] !== 'active') {
             $vehicleSets = []; $dbError = null;
             ob_start(); require base_path('app/View/pages/company_vehicle_sets.php');
@@ -7680,7 +7935,7 @@ $router->get('/company/vehicle-sets', function () use ($config, $db) {
 $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспорт › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -7701,7 +7956,7 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
             $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт › Компания: ' . $company['name'];
 
         $dbIdentifier = $company['db_identifier'];
         $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
@@ -7726,10 +7981,11 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
 $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспорт › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = []; $old = $_POST; $formError = null; $success = false; $createdVehicleSet = null; $vehicleUnits = [];
+    $uploadedDocs = []; $docErrors = [];
 
     if ($companyId <= 0) {
         $company = null; $formError = 'Компания не найдена';
@@ -7744,7 +8000,7 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
         $stmt->execute([$companyId]);
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderCreateVS; }
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт › Компания: ' . $company['name'];
         if ($company['status'] !== 'active') { $formError = 'Создание недоступно'; goto renderCreateVS; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -7795,6 +8051,124 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
             'primary_plate' => $vehicleUnits[array_search((int)$primaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '',
             'secondary_plate' => $secondaryId ? ($vehicleUnits[array_search((int)$secondaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '') : null,
         ];
+
+        // --- Document upload ---
+        $documentsFile = $_FILES['documents_file'] ?? null;
+
+        if ($documentsFile && !empty($documentsFile['name'][0])) {
+            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
+            $maxSize = 20 * 1024 * 1024;
+            $entityType = 'vehicle_set';
+            $entityId = $newId;
+            $documentsType = trim($_POST['documents_type'] ?? '');
+            $userId = (int)$_SESSION['user_id'];
+            $userRole = $_SESSION['role_code'];
+
+            try {
+                $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();
+            } catch (\Exception $e) {
+                $migrationSql = file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'));
+                $localPdo->exec($migrationSql);
+            }
+
+            try {
+                $localPdo->query("SELECT created_by_user_id FROM documents LIMIT 1")->fetch();
+            } catch (\Exception $e) {
+                $localPdo->exec("ALTER TABLE documents ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
+            }
+
+            $fileCount = count($documentsFile['name']);
+            for ($i = 0; $i < $fileCount; $i++) {
+                $fileError = $documentsFile['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+                $originalName = $documentsFile['name'][$i] ?? '';
+                $tmpPath = $documentsFile['tmp_name'][$i] ?? '';
+                $fileSize = $documentsFile['size'][$i] ?? 0;
+
+                if ($fileError === UPLOAD_ERR_NO_FILE || $originalName === '') {
+                    continue;
+                }
+
+                $fileValidationError = null;
+                if ($fileError === UPLOAD_ERR_INI_SIZE || $fileError === UPLOAD_ERR_FORM_SIZE) {
+                    $fileValidationError = 'Файл «' . e($originalName) . '» превышает допустимый лимит';
+                } elseif ($fileError !== UPLOAD_ERR_OK) {
+                    $fileValidationError = 'Ошибка загрузки файла «' . e($originalName) . '»';
+                } else {
+                    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowedExt, true)) {
+                        $fileValidationError = 'Недопустимый формат файла «' . e($originalName) . '». Разрешены: PDF, JPG, PNG, WEBP, DOC, DOCX, XLS, XLSX';
+                    } elseif ($fileSize > $maxSize) {
+                        $fileValidationError = 'Файл «' . e($originalName) . '» превышает 20 МБ';
+                    } elseif (strpos($originalName, '../') !== false || strpos($originalName, '..\\') !== false
+                              || strpos($originalName, '/') !== false || strpos($originalName, '\\') !== false) {
+                        $fileValidationError = 'Недопустимое имя файла «' . e($originalName) . '»';
+                    }
+                }
+
+                if ($fileValidationError !== null) {
+                    $docErrors[] = $fileValidationError;
+                    continue;
+                }
+
+                $storedName = uniqid('doc_', true) . '.' . $ext;
+                $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $entityId;
+                $relativePath = $relativeDir . '/' . $storedName;
+                $absoluteDir = storage_path($relativeDir);
+
+                if (!is_dir($absoluteDir)) {
+                    if (!mkdir($absoluteDir, 0755, true)) {
+                        $docErrors[] = 'Не удалось создать директорию для файла «' . e($originalName) . '»';
+                        continue;
+                    }
+                }
+
+                $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
+                if (!move_uploaded_file($tmpPath, $destPath)) {
+                    $docErrors[] = 'Не удалось сохранить файл «' . e($originalName) . '»';
+                    continue;
+                }
+
+                $mimeType = $documentsFile['type'][$i] ?? 'application/octet-stream';
+
+                try {
+                    $insertDoc = $localPdo->prepare(
+                        'INSERT INTO documents (entity_type, entity_id, document_type, original_name, stored_name,
+                         relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role,
+                         created_by_user_id, created_by_role)
+                         VALUES (:entity_type, :entity_id, :document_type, :original_name, :stored_name,
+                         :relative_path, :mime_type, :file_size, :status, :uploaded_by_user_id, :uploaded_by_role,
+                         :created_by_user_id, :created_by_role)'
+                    );
+                    $insertDoc->execute([
+                        ':entity_type'         => $entityType,
+                        ':entity_id'           => $entityId,
+                        ':document_type'       => $documentsType !== '' ? $documentsType : null,
+                        ':original_name'       => $originalName,
+                        ':stored_name'         => $storedName,
+                        ':relative_path'       => $relativePath,
+                        ':mime_type'           => $mimeType,
+                        ':file_size'           => $fileSize,
+                        ':status'              => 'uploaded',
+                        ':uploaded_by_user_id' => $userId > 0 ? $userId : null,
+                        ':uploaded_by_role'    => $userRole !== '' ? $userRole : null,
+                        ':created_by_user_id'  => $userId > 0 ? $userId : null,
+                        ':created_by_role'     => $userRole !== '' ? $userRole : null,
+                    ]);
+                    $uploadedDocs[] = [
+                        'id' => $localPdo->lastInsertId(),
+                        'original_name' => $originalName,
+                        'mime_type' => $mimeType,
+                        'file_size' => $fileSize,
+                    ];
+                } catch (\Exception $e) {
+                    if (file_exists($destPath)) {
+                        @unlink($destPath);
+                    }
+                    $docErrors[] = 'Ошибка сохранения метаданных для файла «' . e($originalName) . '»';
+                }
+            }
+        }
+
         $success = true;
         ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
         $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
@@ -7811,7 +8185,7 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
 $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспорт › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $grants = []; $logists = [];
@@ -7828,7 +8202,7 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $vehicleSet = null; $dbError = null; goto renderViewVS; }
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт › Компания: ' . $company['name'];
         if ($company['status'] !== 'active') { $vehicleSet = null; $dbError = null; goto renderViewVS; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -7907,7 +8281,7 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
 $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспорт › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityNotFound = false; $success = false; $vehicleUnits = [];
@@ -7924,7 +8298,7 @@ $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $vehicleSet = null; $errors = []; $old = []; $formError = null; goto renderEditVS; }
-        $pageContext = 'Транспорт — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт › Компания: ' . $company['name'];
         if ($company['status'] !== 'active') { $vehicleSet = null; $errors = []; $old = []; $formError = null; goto renderEditVS; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -7951,7 +8325,7 @@ $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db
 $router->post('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать транспорт';
-    $pageContext = 'Транспорт — Компания';
+    $pageContext = 'Транспорт › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityNotFound = false; $success = false; $vehicleUnits = [];
@@ -8060,7 +8434,7 @@ $router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config,
 $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Водители+ТС';
-    $pageContext = 'Водители+ТС — Компания';
+    $pageContext = 'Водители+ТС › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -8075,7 +8449,12 @@ $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $blocks = []; $dbError = null; goto renderBlocks; }
-        $pageContext = 'Водители+ТС — Компания: ' . $company['name'];
+        $pageContext = 'Водители+ТС › Компания: ' . $company['name'];
+        $topbarCrumbs = [
+            ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
+            ['label' => 'Подрядчики', 'url' => null],
+            ['label' => 'Водители+ТС', 'url' => null],
+        ];
         if ($company['status'] !== 'active') { $blocks = []; $dbError = null; goto renderBlocks; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -8129,7 +8508,7 @@ $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
 $router->get('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать связку';
-    $pageContext = 'Водители+ТС — Компания';
+    $pageContext = 'Водители+ТС › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -8144,7 +8523,7 @@ $router->get('/company/driver-vehicle-blocks/create', function () use ($config, 
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdBlock = null; $drivers = []; $vehicleSets = []; goto renderCreateBlock; }
-        $pageContext = 'Водители+ТС — Компания: ' . $company['name'];
+        $pageContext = 'Водители+ТС › Компания: ' . $company['name'];
 
         $dbIdentifier = $company['db_identifier'];
         $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
@@ -8173,7 +8552,7 @@ $router->get('/company/driver-vehicle-blocks/create', function () use ($config, 
 $router->post('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать связку';
-    $pageContext = 'Водители+ТС — Компания';
+    $pageContext = 'Водители+ТС › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = []; $old = $_POST; $formError = null; $success = false; $createdBlock = null; $drivers = []; $vehicleSets = [];
@@ -8254,7 +8633,7 @@ $router->post('/company/driver-vehicle-blocks/create', function () use ($config,
 $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Водители+ТС';
-    $pageContext = 'Водители+ТС — Компания';
+    $pageContext = 'Водители+ТС › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $grants = []; $logists = []; $linkedContractor = null;
@@ -8344,7 +8723,7 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
 $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать связку';
-    $pageContext = 'Водители+ТС — Компания';
+    $pageContext = 'Водители+ТС › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityNotFound = false; $success = false; $drivers = []; $vehicleSets = [];
@@ -8413,7 +8792,7 @@ $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($co
 $router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Редактировать связку';
-    $pageContext = 'Водители+ТС — Компания';
+    $pageContext = 'Водители+ТС › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityNotFound = false; $success = false;
@@ -8559,7 +8938,7 @@ $router->get('/company/documents', function () use ($config, $db) {
         $entityNotFound = false;
 
         $pageTitle = 'Документы';
-        $pageContext = 'Документы — Компания';
+        $pageContext = 'Документы › Компания';
 
         if ($missingEntityContext && $companyId > 0) {
             try {
@@ -8568,7 +8947,7 @@ $router->get('/company/documents', function () use ($config, $db) {
                 $stmt->execute([$companyId]);
                 $company = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                 if ($company) {
-                    $pageContext = 'Документы — Компания: ' . $company['name'];
+                    $pageContext = 'Документы › Компания: ' . $company['name'];
                 }
             } catch (\Exception $e) {
                 $company = null;
@@ -8589,7 +8968,7 @@ $router->get('/company/documents', function () use ($config, $db) {
     $backRoute = $entityMeta['backRoute'];
 
     $pageTitle = 'Документы';
-    $pageContext = $entityLabel . ' — Компания';
+    $pageContext = $entityLabel . ' › Компания';
     $entityTypeError = false;
     $entityNotFound = false;
     $documents = [];
@@ -8620,7 +8999,7 @@ $router->get('/company/documents', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = $entityLabel . ' — Компания: ' . $company['name'];
+        $pageContext = $entityLabel . ' › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             ob_start();
@@ -8733,7 +9112,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
     $replacedDoc = null;
 
     $pageTitle = $replaceDocId > 0 ? 'Заменить документ' : 'Загрузить документ';
-    $pageContext = ($replaceDocId > 0 ? 'Замена документа — ' : 'Загрузка документа — ') . 'Компания';
+    $pageContext = ($replaceDocId > 0 ? 'Замена документа › ' : 'Загрузка документа › ') . 'Компания';
     $entityTypeError = false;
     $entityNotFound = false;
     $success = false;
@@ -8756,7 +9135,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
                 $stmt->execute([$companyId]);
                 $company = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                 if ($company) {
-                    $pageContext = 'Загрузка документа — Компания: ' . $company['name'];
+                    $pageContext = 'Загрузка документа › Компания: ' . $company['name'];
                 }
             } catch (\Exception $e) {
                 $company = null;
@@ -8801,7 +9180,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = $entityLabel . ' — Загрузка документа — Компания: ' . $company['name'];
+        $pageContext = $entityLabel . ' › Загрузка документа › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $entityName = '';
@@ -8899,7 +9278,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     $pageTitle = 'Загрузить документ';
-    $pageContext = 'Загрузка документа — Компания';
+    $pageContext = 'Загрузка документа › Компания';
     $entityTypeError = false;
     $entityNotFound = false;
     $success = false;
@@ -8953,7 +9332,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = $entityLabel . ' — Загрузка документа — Компания: ' . $company['name'];
+        $pageContext = $entityLabel . ' › Загрузка документа › Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $entityName = '';
@@ -9035,10 +9414,10 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
         } else {
             $originalName = $_FILES['document_file']['name'];
             $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
 
             if (!in_array($ext, $allowedExt, true)) {
-                $errors['document_file'] = 'Недопустимый формат файла. Разрешены: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX';
+                $errors['document_file'] = 'Недопустимый формат файла. Разрешены: PDF, JPG, PNG, WEBP, DOC, DOCX, XLS, XLSX';
             }
 
             if (empty($errors['document_file'])) {
@@ -9147,7 +9526,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
         $success = true;
 
         $pageTitle = 'Документ загружен';
-        $pageContext = $entityLabel . ' — Компания: ' . $company['name'];
+        $pageContext = $entityLabel . ' › Компания: ' . $company['name'];
     } catch (\Exception $e) {
         $company = $company ?? null;
         $entityName = $entityName ?? '';
@@ -9354,7 +9733,7 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
 
         $originalName = $_FILES['document_file']['name'];
         $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
         if (!in_array($ext, $allowedExt, true)) {
             header('Location: ' . $redirect);
             exit;
