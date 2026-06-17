@@ -8,20 +8,20 @@
 
 <div class="page-head">
     <div>
-        <h1>Блоки Водитель + ТС</h1>
+        <h1>Водители+ТС</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Работа с блоками недоступна.
+    Компания находится в статусе «<?= e($company['status']) ?>». Работа со связками недоступна.
 </div>
 
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Блоки Водитель + ТС</h1>
+        <h1>Водители+ТС</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -35,12 +35,12 @@
 
 <div class="page-head">
     <div>
-        <h1>Блоки Водитель + ТС</h1>
+        <h1>Водители+ТС</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <?php if (!$isLogist): ?>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать блок</a>
+        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку</a>
     </div>
     <?php endif; ?>
 </div>
@@ -51,13 +51,13 @@
         <div class="empty-state">
             <div class="empty-icon">🔒</div>
             <p class="empty-title">Нет доступа</p>
-            <p class="empty-desc">У вас нет доступа к блокам Водитель + ТС. Обратитесь к руководителю для получения доступа.</p>
+            <p class="empty-desc">У вас нет доступа к связкам Водители+ТС. Обратитесь к руководителю для получения доступа.</p>
         </div>
         <?php else: ?>
         <div class="empty-state">
-            <p class="empty-title">Блоки Водитель + ТС ещё не созданы.</p>
-            <p class="empty-desc">Создайте блок, чтобы связать водителя с транспортным комплектом для экипажа.</p>
-            <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать первый блок</a>
+            <p class="empty-title">Водители+ТС ещё не созданы.</p>
+            <p class="empty-desc">Создайте связку, чтобы связать водителя с транспортом для экипажа.</p>
+            <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать первую связку</a>
         </div>
         <?php endif; ?>
     </div>
@@ -67,11 +67,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Блоки Водитель + ТС</h1>
+        <h1>Водители+ТС</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать блок</a>
+        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку</a>
     </div>
 </div>
 
@@ -81,9 +81,9 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>Блок</th>
+                        <th>Связка</th>
                         <th>Водитель</th>
-                        <th>Транспортный комплект</th>
+                        <th>Транспорт</th>
                         <th>Статус</th>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
                         <th>Создал</th>
@@ -95,7 +95,7 @@
                     <?php foreach ($blocks as $b): ?>
                     <tr>
                         <td class="cell-double">
-                            <span class="cell-main">Водитель + ТС</span>
+                            <span class="cell-main">Водители+ТС</span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($b['driver_name'] ?? '—') ?></span>

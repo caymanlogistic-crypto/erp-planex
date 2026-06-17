@@ -16,7 +16,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Блок "Водитель + ТС"</h1>
+        <h1>Водители+ТС</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Блок не найден</h1>
+        <h1>Связка не найдена</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -49,7 +49,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Блок "Водитель + ТС" с указанным ID не найден.
+            Связка с указанным ID не найдена.
         </div>
     </div>
 </div>
@@ -83,8 +83,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <div class="page-eyebrow">ВОДИТЕЛЬ + ТС / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Водитель + ТС: <?= e($block['driver_name'] ?? '—') ?> + <?= e($block['primary_plate'] ?? '—') ?></h1>
+        <div class="page-eyebrow">ВОДИТЕЛИ+ТС / <?= e(mb_strtoupper($company['name'])) ?></div>
+        <h1>Водители+ТС: <?= e($block['driver_name'] ?? '—') ?> + <?= e($block['primary_plate'] ?? '—') ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -104,7 +104,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= e($block['driver_name'] ?? '—') ?></dd>
                 <dt>Телефон водителя</dt>
                 <dd><?= e($block['driver_phone'] ?? '—') ?></dd>
-                <dt>Транспортный комплект</dt>
+                <dt>Транспорт</dt>
                 <dd>
                     <?= e(ui_set_type($block['set_type'] ?? null)) ?> — 
                     <?= e($block['primary_plate'] ?? '—') ?><?= !empty($block['secondary_plate']) ? ' + ' . e($block['secondary_plate']) : '' ?>
@@ -114,6 +114,37 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dt>Комментарий</dt>
                 <dd><?= e($block['comments'] ?? '') ?: '—' ?></dd>
             </dl>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Связанные сущности</h3>
+
+            <div class="panel-section">
+                <div>
+                    <strong>Водитель:</strong> <?= e($block['driver_name'] ?? '—') ?>
+                </div>
+                <a href="/company/drivers/<?= $block['driver_id'] ?>" class="btn btn-ghost">Открыть карточку водителя</a>
+            </div>
+
+            <div class="panel-section">
+                <div>
+                    <strong>Транспорт:</strong> <?= e($block['primary_plate'] ?? '—') ?>
+                </div>
+                <a href="/company/vehicle-sets/<?= $block['vehicle_set_id'] ?>" class="btn btn-ghost">Открыть карточку транспорта</a>
+            </div>
+
+            <div class="panel-section">
+                <?php if (!empty($linkedContractor)): ?>
+                <div>
+                    <strong>Перевозчик:</strong> <?= e($linkedContractor['name']) ?>
+                </div>
+                <a href="/company/contractors/<?= $linkedContractor['id'] ?>" class="btn btn-ghost">Открыть карточку перевозчика</a>
+                <?php else: ?>
+                <div>
+                    <strong>Перевозчик:</strong> <span class="text-muted">Не привязан к перевозчику.</span>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>

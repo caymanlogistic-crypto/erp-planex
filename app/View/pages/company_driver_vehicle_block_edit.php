@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать блок</h1>
+        <h1>Редактировать связку</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -24,7 +24,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать блок</h1>
+        <h1>Редактировать связку</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -40,7 +40,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Блок не найден</h1>
+        <h1>Связка не найдена</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -49,14 +49,14 @@
 </div>
 
 <div class="notice warn">
-    Блок "Водитель + ТС" с указанным ID не найден.
+    Связка с указанным ID не найдена.
 </div>
 
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div>
-        <h1>Блок обновлён</h1>
+        <h1>Связка обновлена</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -67,7 +67,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Блок "Водитель + ТС" успешно обновлён.
+            Связка успешно обновлена.
         </div>
         <div class="form-actions mt-4">
             <a href="/company/driver-vehicle-blocks/<?= $block['id'] ?>" class="btn btn-primary">← К просмотру</a>
@@ -80,7 +80,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать блок #<?= $block['id'] ?></h1>
+        <h1>Редактировать связку #<?= $block['id'] ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -96,37 +96,28 @@
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Блок "Водитель + ТС"</h3>
+            <h3 class="panel-head-title">Водители+ТС</h3>
 
-            <div class="field">
-                <label class="field-label">Водитель <span class="req">*</span></label>
-                <select name="driver_id" class="field-input">
-                    <option value="">— Выберите водителя —</option>
-                    <?php foreach ($drivers as $d): ?>
-                    <option value="<?= $d['id'] ?>" <?= ($old['driver_id'] ?? '') == $d['id'] ? 'selected' : '' ?>>
-                        <?= e($d['full_name']) ?> (<?= e($d['phone'] ?? '') ?>)
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (!empty($errors['driver_id'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['driver_id']) ?></div>
-                <?php endif; ?>
+            <div class="panel-section">
+                <div>
+                    <strong>Водитель:</strong>
+                    <?= e($blockDriver['full_name'] ?? '—') ?>
+                    <?php if (!empty($blockDriver['phone'])): ?>
+                    (<?= e($blockDriver['phone']) ?>)
+                    <?php endif; ?>
+                </div>
+                <a href="/company/drivers/<?= $block['driver_id'] ?>" class="btn btn-ghost">Открыть карточку водителя</a>
             </div>
 
-            <div class="field">
-                <label class="field-label">Транспортный комплект <span class="req">*</span></label>
-                <select name="vehicle_set_id" class="field-input">
-                    <option value="">— Выберите комплект —</option>
-                    <?php foreach ($vehicleSets as $vs): ?>
-                    <option value="<?= $vs['id'] ?>" <?= ($old['vehicle_set_id'] ?? '') == $vs['id'] ? 'selected' : '' ?>>
-                        <?= e(ui_set_type($vs['set_type'] ?? null)) ?> — <?= e($vs['primary_plate'] ?? '—') ?><?= !empty($vs['secondary_plate']) ? ' + ' . e($vs['secondary_plate']) : '' ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (!empty($errors['vehicle_set_id'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['vehicle_set_id']) ?></div>
-                <?php endif; ?>
+            <div class="panel-section">
+                <div>
+                    <strong>Транспорт:</strong>
+                    <?= e($blockPlate ?? '—') ?>
+                </div>
+                <a href="/company/vehicle-sets/<?= $block['vehicle_set_id'] ?>" class="btn btn-ghost">Открыть карточку транспорта</a>
             </div>
+
+            <p class="text-muted">Состав связки нельзя изменить. Если нужен другой водитель или транспорт — создайте новую связку.</p>
         </div>
 
         <div class="form-section">

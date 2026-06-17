@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать блок "Водитель + ТС"</h1>
+        <h1>Создать связку</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -17,14 +17,14 @@
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Создание блоков недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». Создание связок недоступно.
 </div>
 
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div>
-        <h1>Блок создан</h1>
+        <h1>Связка создана</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -35,7 +35,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Блок "Водитель + ТС" успешно создан.
+            Связка успешно создана.
         </div>
         <div class="kv mt-4">
             <div class="kv-row">
@@ -43,7 +43,7 @@
                 <span class="kv-value"><?= e($createdBlock['driver_name'] ?? '—') ?></span>
             </div>
             <div class="kv-row">
-                <span class="kv-key">Комплект</span>
+                <span class="kv-key">Транспорт</span>
                 <span class="kv-value"><?= e(ui_set_type($createdBlock['set_type'] ?? null)) ?></span>
             </div>
             <div class="kv-row">
@@ -62,7 +62,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать блок "Водитель + ТС"</h1>
+        <h1>Создать связку</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -78,7 +78,7 @@
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Блок Водитель + ТС</h3>
+            <h3 class="panel-head-title">Водители+ТС</h3>
 
             <div class="field">
                 <label class="field-label">Водитель <span class="req">*</span></label>
@@ -99,9 +99,9 @@
             </div>
 
             <div class="field">
-                <label class="field-label">Транспортный комплект <span class="req">*</span></label>
+                <label class="field-label">Транспорт <span class="req">*</span></label>
                 <select name="vehicle_set_id" class="field-input"<?= empty($vehicleSets) ? ' disabled' : '' ?>>
-                    <option value="">— Выберите комплект —</option>
+                    <option value="">— Выберите транспорт —</option>
                     <?php foreach ($vehicleSets as $vs): ?>
                     <option value="<?= $vs['id'] ?>" <?= ($old['vehicle_set_id'] ?? '') == $vs['id'] ? 'selected' : '' ?>>
                         <?= e(ui_set_type($vs['set_type'] ?? null)) ?> — <?= e($vs['primary_plate'] ?? '—') ?><?= !empty($vs['secondary_plate']) ? ' + ' . e($vs['secondary_plate']) : '' ?>
@@ -109,7 +109,7 @@
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($vehicleSets)): ?>
-                    <p class="field-hint">Нет доступных транспортных комплектов. <a href="/company/vehicle-sets/create">Создать транспортный комплект</a></p>
+                    <p class="field-hint">Нет доступного транспорта. <a href="/company/vehicle-sets/create">Создать транспорт</a></p>
                 <?php endif; ?>
                 <?php if (!empty($errors['vehicle_set_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['vehicle_set_id']) ?></div>
@@ -135,7 +135,7 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Создать блок</button>
+            <button type="submit" class="btn btn-primary">Создать связку</button>
         </div>
 
     </div>

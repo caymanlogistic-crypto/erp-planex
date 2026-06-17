@@ -6430,7 +6430,7 @@ $router->get('/company/crews/create', function () use ($config, $db) {
                 $blockingNotices[] = ['message' => 'Сначала создайте подрядчика.', 'link' => '/company/contractors/create', 'action' => 'Создать подрядчика'];
             }
             if (empty($driverVehicleBlocks)) {
-                $blockingNotices[] = ['message' => 'Сначала создайте блок «Водитель+ТС».', 'link' => '/company/driver-vehicle-blocks/create', 'action' => 'Создать блок'];
+                $blockingNotices[] = ['message' => 'Сначала создайте связку.', 'link' => '/company/driver-vehicle-blocks/create', 'action' => 'Создать связку'];
             }
         }
     } catch (\Exception $e) {
@@ -6526,7 +6526,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
             $blockingNotices[] = ['message' => 'Сначала создайте подрядчика.', 'link' => '/company/contractors/create', 'action' => 'Создать подрядчика'];
         }
         if (empty($driverVehicleBlocks)) {
-            $blockingNotices[] = ['message' => 'Сначала создайте блок «Водитель+ТС».', 'link' => '/company/driver-vehicle-blocks/create', 'action' => 'Создать блок'];
+            $blockingNotices[] = ['message' => 'Сначала создайте связку «Водители+ТС».', 'link' => '/company/driver-vehicle-blocks/create', 'action' => 'Создать связку'];
         }
 
         $contractorId = trim($_POST['contractor_id'] ?? '');
@@ -6887,9 +6887,9 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
             }
             if (empty($driverVehicleBlocks)) {
                 $blockingNotices[] = [
-                    'message' => 'Нет активных блоков «Водитель + ТС».',
+                    'message' => 'Нет активных связок.',
                     'link' => '/company/driver-vehicle-blocks/create',
-                    'action' => 'Создать блок',
+                    'action' => 'Создать связку',
                 ];
             }
         }
@@ -7020,7 +7020,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
         }
         if (empty($driverVehicleBlocks)) {
             $blockingNotices[] = [
-                'message' => 'Нет активных блоков «Водитель + ТС».',
+                'message' => 'Нет активных связок «Водители+ТС».',
                 'link' => '/company/driver-vehicle-blocks/create',
                 'action' => 'Создать блок',
             ];
@@ -7090,13 +7090,10 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
         }
 
         if ($driverVehicleBlockId === '') {
-            $errors['driver_vehicle_block_id'] = 'Выберите блок «Водитель + ТС»';
-        } else {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE id = ? AND (status = ? OR id = ?)');
-            $checkStmt->execute([$driverVehicleBlockId, 'active', (int)($crew['driver_vehicle_block_id'] ?? 0)]);
-            if ($checkStmt->fetchColumn() == 0) {
-                $errors['driver_vehicle_block_id'] = 'Блок «Водитель + ТС» не найден';
-            }
+            $errors['driver_vehicle_block_id'] = 'Выберите связку «Водители+ТС»';
+
+        } elseif (!$dvBlock) {
+            $errors['driver_vehicle_block_id'] = 'Связка «Водители+ТС» не найдена';
         }
 
         if (empty($errors)) {
@@ -7694,7 +7691,7 @@ $router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config,
         $blockCheck = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE vehicle_set_id = ? AND status = ?');
         $blockCheck->execute([(int)$id, 'active']);
         if ($blockCheck->fetchColumn() > 0) {
-            $_SESSION['flash'] = 'Транспорт используется в активных блоках «Водитель+ТС». Сначала архивируйте блоки.';
+            $_SESSION['flash'] = 'Транспорт используется в активных связках «Водители+ТС». Сначала архивируйте связки.';
             header('Location: /company/vehicle-sets/' . $id); exit;
         }
 
@@ -7706,12 +7703,12 @@ $router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config,
     }
 });
 
-// ---- DRIVER VEHICLE BLOCKS (Блоки "Водитель+ТС") ----
+// ---- DRIVER VEHICLE BLOCKS (Водители+ТС) ----
 
 $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Блоки "Водитель + ТС"';
-    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+    $pageTitle = 'Водители+ТС';
+    $pageContext = 'Водители+ТС — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -7726,7 +7723,7 @@ $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $blocks = []; $dbError = null; goto renderBlocks; }
-        $pageContext = 'Блоки "Водитель + ТС" — Компания: ' . $company['name'];
+        $pageContext = 'Водители+ТС — Компания: ' . $company['name'];
         if ($company['status'] !== 'active') { $blocks = []; $dbError = null; goto renderBlocks; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -7779,8 +7776,8 @@ $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
 
 $router->get('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Создать блок "Водитель + ТС"';
-    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+    $pageTitle = 'Создать связку';
+    $pageContext = 'Водители+ТС — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -7795,7 +7792,7 @@ $router->get('/company/driver-vehicle-blocks/create', function () use ($config, 
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdBlock = null; $drivers = []; $vehicleSets = []; goto renderCreateBlock; }
-        $pageContext = 'Блоки "Водитель + ТС" — Компания: ' . $company['name'];
+        $pageContext = 'Водители+ТС — Компания: ' . $company['name'];
 
         $dbIdentifier = $company['db_identifier'];
         $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
@@ -7823,8 +7820,8 @@ $router->get('/company/driver-vehicle-blocks/create', function () use ($config, 
 
 $router->post('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Создать блок "Водитель + ТС"';
-    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+    $pageTitle = 'Создать связку';
+    $pageContext = 'Водители+ТС — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = []; $old = $_POST; $formError = null; $success = false; $createdBlock = null; $drivers = []; $vehicleSets = [];
@@ -7862,7 +7859,7 @@ $router->post('/company/driver-vehicle-blocks/create', function () use ($config,
             $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ?');
             $dupStmt->execute([(int)$driverId, (int)$vehicleSetId]);
             if ($dupStmt->fetchColumn() > 0) {
-                $errors['driver_id'] = 'Такой блок «Водитель + ТС» уже существует.';
+                $errors['driver_id'] = 'Такая связка уже существует.';
             }
         }
 
@@ -7904,11 +7901,11 @@ $router->post('/company/driver-vehicle-blocks/create', function () use ($config,
 
 $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Блок "Водитель + ТС"';
-    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+    $pageTitle = 'Водители+ТС';
+    $pageContext = 'Водители+ТС — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
-    $grants = []; $logists = [];
+    $grants = []; $logists = []; $linkedContractor = null;
 
     if ($companyId <= 0) { $company = null; $block = null; $dbError = null; goto renderViewBlock; }
 
@@ -7953,7 +7950,27 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
             }
         }
 
-        if ($block && !$accessDenied) { $pageTitle = 'Блок #' . $block['id']; }
+        // Загрузка привязанного перевозчика через crews
+        $linkedContractor = null;
+        if ($block) {
+            try {
+                $crewStmt = $localPdo->prepare("SELECT c.contractor_id FROM crews c WHERE c.driver_vehicle_block_id = ? AND c.status != 'archived' LIMIT 1");
+                $crewStmt->execute([(int)$id]);
+                $crewRow = $crewStmt->fetch(PDO::FETCH_ASSOC);
+                if ($crewRow && !empty($crewRow['contractor_id'])) {
+                    $cStmt = $localPdo->prepare('SELECT id, name FROM contractors WHERE id = ?');
+                    $cStmt->execute([(int)$crewRow['contractor_id']]);
+                    $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($contractor) {
+                        $linkedContractor = ['id' => $contractor['id'], 'name' => $contractor['name']];
+                    }
+                }
+            } catch (\Exception $e) {
+                // Игнорируем ошибку загрузки перевозчика
+            }
+        }
+
+        if ($block && !$accessDenied) { $pageTitle = 'Связка #' . $block['id']; }
 
         if (($_SESSION['role_code'] ?? '') === 'company_owner') {
             $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
@@ -7963,7 +7980,7 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
         }
         $dbError = null;
     } catch (\Exception $e) {
-        $company = $company ?? null; $block = null; $grants = []; $logists = [];
+        $company = $company ?? null; $block = null; $grants = []; $logists = []; $linkedContractor = null;
         $dbError = 'Не удалось загрузить: ' . $e->getMessage();
     }
 
@@ -7974,11 +7991,12 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
 
 $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Редактировать блок';
-    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+    $pageTitle = 'Редактировать связку';
+    $pageContext = 'Водители+ТС — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityNotFound = false; $success = false; $drivers = []; $vehicleSets = [];
+    $blockDriver = null; $blockPlate = null;
 
     if ($companyId <= 0) { $company = null; $block = null; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
 
@@ -7998,6 +8016,31 @@ $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($co
         $stmt->execute([(int)$id]); $block = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if (!$block) { $entityNotFound = true; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
 
+        // Загрузка данных водителя и транспорта для информационного блока
+        try {
+            $dStmt = $localPdo->prepare('SELECT full_name, phone FROM drivers WHERE id = ?');
+            $dStmt->execute([(int)$block['driver_id']]);
+            $blockDriver = $dStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+            $vsStmt = $localPdo->prepare(
+                "SELECT vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+                 FROM vehicle_sets vs
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 WHERE vs.id = ?"
+            );
+            $vsStmt->execute([(int)$block['vehicle_set_id']]);
+            $vsRow = $vsStmt->fetch(PDO::FETCH_ASSOC);
+            if ($vsRow) {
+                $blockPlate = $vsRow['primary_plate'] ?? '';
+                if (!empty($vsRow['secondary_plate'])) {
+                    $blockPlate .= ' + ' . $vsRow['secondary_plate'];
+                }
+            }
+        } catch (\Exception $e) {
+            $blockDriver = null; $blockPlate = null;
+        }
+
         $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         $vehicleSets = $localPdo->query(
             "SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
@@ -8007,6 +8050,7 @@ $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($co
         $errors = []; $old = $block; $formError = null;
     } catch (\Exception $e) {
         $company = $company ?? null; $block = null; $errors = []; $old = []; $formError = 'Ошибка: ' . $e->getMessage();
+        $blockDriver = null; $blockPlate = null;
     }
 
     renderEditBlock:
@@ -8016,11 +8060,12 @@ $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($co
 
 $router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Редактировать блок';
-    $pageContext = 'Блоки "Водитель + ТС" — Компания';
+    $pageTitle = 'Редактировать связку';
+    $pageContext = 'Водители+ТС — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
-    $entityNotFound = false; $success = false; $drivers = []; $vehicleSets = [];
+    $entityNotFound = false; $success = false;
+    $blockDriver = null; $blockPlate = null;
 
     if ($companyId <= 0) { $company = null; $block = null; $errors = []; $old = $_POST; $formError = 'Компания не найдена'; goto renderEditBlockPost; }
 
@@ -8040,34 +8085,42 @@ $router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($c
         $stmt->execute([(int)$id]); $block = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if (!$block) { $entityNotFound = true; $errors = []; $old = $_POST; $formError = null; goto renderEditBlockPost; }
 
-        $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
-        $vehicleSets = $localPdo->query(
-            "SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
-             FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
-             WHERE vs.status = 'active' ORDER BY vs.id"
-        )->fetchAll(PDO::FETCH_ASSOC);
+        // Загрузка данных водителя и транспорта для информационного блока
+        try {
+            $dStmt = $localPdo->prepare('SELECT full_name, phone FROM drivers WHERE id = ?');
+            $dStmt->execute([(int)$block['driver_id']]);
+            $blockDriver = $dStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+            $vsStmt = $localPdo->prepare(
+                "SELECT vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+                 FROM vehicle_sets vs
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 WHERE vs.id = ?"
+            );
+            $vsStmt->execute([(int)$block['vehicle_set_id']]);
+            $vsRow = $vsStmt->fetch(PDO::FETCH_ASSOC);
+            if ($vsRow) {
+                $blockPlate = $vsRow['primary_plate'] ?? '';
+                if (!empty($vsRow['secondary_plate'])) {
+                    $blockPlate .= ' + ' . $vsRow['secondary_plate'];
+                }
+            }
+        } catch (\Exception $e) {
+            $blockDriver = null; $blockPlate = null;
+        }
 
         $errors = []; $old = $_POST; $formError = null;
-        $driverId = trim($_POST['driver_id'] ?? '');
-        $vehicleSetId = trim($_POST['vehicle_set_id'] ?? '');
 
-        if ($driverId === '') { $errors['driver_id'] = 'Обязательное поле'; }
-        if ($vehicleSetId === '') { $errors['vehicle_set_id'] = 'Обязательное поле'; }
-
-        if ($driverId !== '' && $vehicleSetId !== '') {
-            $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ? AND id != ?');
-            $dupStmt->execute([(int)$driverId, (int)$vehicleSetId, (int)$id]);
-            if ($dupStmt->fetchColumn() > 0) { $errors['driver_id'] = 'Такой блок «Водитель + ТС» уже существует.'; }
-        }
+        // Immutable: driver_id и vehicle_set_id не принимаются из формы
+        // Обновляются только status и comments
 
         if (!empty($errors)) { goto renderEditBlockPost; }
 
         $update = $localPdo->prepare(
-            'UPDATE driver_vehicle_blocks SET driver_id = :driver_id, vehicle_set_id = :vehicle_set_id, status = :status, comments = :comments, updated_by_user_id = :uid, updated_by_role = :role WHERE id = :id'
+            'UPDATE driver_vehicle_blocks SET status = :status, comments = :comments, updated_by_user_id = :uid, updated_by_role = :role WHERE id = :id'
         );
         $update->execute([
-            ':driver_id' => (int)$driverId,
-            ':vehicle_set_id' => (int)$vehicleSetId,
             ':status' => $_POST['status'] ?? $block['status'],
             ':comments' => $_POST['comments'] ?? null,
             ':uid' => (int)$_SESSION['user_id'],
@@ -8081,6 +8134,7 @@ $router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($c
     } catch (\Exception $e) {
         $company = $company ?? null; $block = $block ?? null;
         $errors = []; $old = $_POST; $formError = 'Ошибка: ' . $e->getMessage();
+        $blockDriver = null; $blockPlate = null;
     }
 
     renderEditBlockPost:
@@ -8113,7 +8167,7 @@ $router->post('/company/driver-vehicle-blocks/{id}/archive', function ($id) use 
         $crewCheck = $localPdo->prepare('SELECT COUNT(*) FROM crews WHERE driver_vehicle_block_id = ? AND status = ?');
         $crewCheck->execute([(int)$id, 'active']);
         if ($crewCheck->fetchColumn() > 0) {
-            $_SESSION['flash'] = 'Блок используется в активных экипажах. Сначала архивируйте экипажи.';
+            $_SESSION['flash'] = 'Связка используется в активных экипажах. Сначала архивируйте экипажи.';
             header('Location: /company/driver-vehicle-blocks/' . $id); exit;
         }
 
@@ -8138,7 +8192,7 @@ $router->get('/company/documents', function () use ($config, $db) {
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                     'vehicle_set' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
-                   'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
+                   'driver_vehicle_block' => ['label' => 'Водители+ТС', 'labelDative' => 'связкам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     if (!isset($whitelist[$entityType])) {
@@ -8320,7 +8374,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                     'vehicle_set' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
-                   'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
+                   'driver_vehicle_block' => ['label' => 'Водители+ТС', 'labelDative' => 'связкам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     $replaceDocId = (int)($_GET['replace'] ?? 0);
@@ -8444,7 +8498,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
                 $entityName = 'Комплект #' . $entity['id'];
                 break;
             case 'driver_vehicle_block':
-                $entityName = 'Блок #' . $entity['id'];
+                $entityName = 'Связка #' . $entity['id'];
                 break;
             case 'crew':
                 $entityName = 'Экипаж #' . $entity['id'];
@@ -8489,7 +8543,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                     'vehicle_set' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
-                   'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
+                   'driver_vehicle_block' => ['label' => 'Водители+ТС', 'labelDative' => 'связкам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
     $pageTitle = 'Загрузить документ';
@@ -8596,7 +8650,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
                 $entityName = 'Комплект #' . $entity['id'];
                 break;
             case 'driver_vehicle_block':
-                $entityName = 'Блок #' . $entity['id'];
+                $entityName = 'Связка #' . $entity['id'];
                 break;
             case 'crew':
                 $entityName = 'Экипаж #' . $entity['id'];
