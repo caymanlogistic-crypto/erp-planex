@@ -182,6 +182,60 @@ $router->get('/superadmin', function () use ($config, $db) {
     $pageTitle = 'SUPERADMIN';
     $pageContext = 'Центральная панель управления';
 
+    $metrics = [
+        'total_companies' => 0,
+        'active_companies' => 0,
+        'blocked_companies' => 0,
+        'archived_companies' => 0,
+        'companies_without_owner' => 0,
+        'companies_without_users' => 0,
+    ];
+    $recentCompanies = [];
+
+    try {
+        $pdo = $db->connection();
+
+        $stmt = $pdo->query(
+            "SELECT COUNT(*) as total,
+                    SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+                    SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked,
+                    SUM(CASE WHEN status = 'archived' THEN 1 ELSE 0 END) as archived
+             FROM companies"
+        );
+        $row = $stmt->fetch();
+        if ($row) {
+            $metrics['total_companies'] = (int)$row['total'];
+            $metrics['active_companies'] = (int)$row['active'];
+            $metrics['blocked_companies'] = (int)($row['blocked'] ?? 0);
+            $metrics['archived_companies'] = (int)($row['archived'] ?? 0);
+        }
+
+        $stmt = $pdo->query(
+            "SELECT COUNT(*) FROM companies c
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM company_users cu WHERE cu.company_id = c.id AND cu.role = 'company_owner'
+             )"
+        );
+        $metrics['companies_without_owner'] = (int)$stmt->fetchColumn();
+
+        $stmt = $pdo->query(
+            "SELECT COUNT(*) FROM companies c
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM company_users cu WHERE cu.company_id = c.id
+             )"
+        );
+        $metrics['companies_without_users'] = (int)$stmt->fetchColumn();
+
+        $recentCompanies = $pdo->query(
+            "SELECT c.id, c.name, c.inn, c.status, c.created_at
+             FROM companies c
+             ORDER BY c.created_at DESC
+             LIMIT 5"
+        )->fetchAll(\PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {
+        // metrics remain at zero defaults
+    }
+
     ob_start();
     require base_path('app/View/pages/superadmin_dashboard.php');
     $content = ob_get_clean();
@@ -9058,25 +9112,109 @@ $router->get('/logout', function () {
 $router->get('/company/dashboard', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
 
-    $pageTitle = 'Компания';
-    $pageContext = 'Панель управления';
+    $pageTitle = 'Обзор';
+    $pageContext = 'ДАШБОРД';
 
     $roleCode = $_SESSION['role_code'];
     $companyId = (int)$_SESSION['company_id'];
+    $userId = (int)$_SESSION['user_id'];
 
     $companyName = null;
     $companyError = false;
+    $metrics = [];
+    $logistNoAccess = false;
 
     try {
         $pdo = $db->connection();
-        $stmt = $pdo->prepare('SELECT name FROM companies WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT id, name, db_identifier, status FROM companies WHERE id = ?');
         $stmt->execute([$companyId]);
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($company) {
-            $companyName = $company['name'];
-        } else {
+        if (!$company || $company['status'] !== 'active') {
             $companyError = true;
+        } else {
+            $companyName = $company['name'];
+            $dbIdentifier = $company['db_identifier'];
+
+            $localDbConfig = $config['database'];
+            $localDbConfig['database'] = $dbIdentifier;
+            $localDb = new \App\Core\Database($localDbConfig);
+            $localPdo = $localDb->connection();
+            applyLocalMigrations($localPdo);
+
+            if ($roleCode === 'company_owner') {
+                $metrics = [
+                    'total_contractors' => 0, 'active_contractors' => 0,
+                    'total_drivers' => 0, 'active_drivers' => 0,
+                    'total_vehicles' => 0, 'active_vehicles' => 0,
+                    'total_vehicle_sets' => 0, 'active_vehicle_sets' => 0,
+                    'total_dvbs' => 0, 'active_dvbs' => 0,
+                    'total_crews' => 0, 'active_crews' => 0, 'archived_crews' => 0,
+                    'total_documents' => 0,
+                ];
+
+                $tables = ['contractors', 'drivers', 'vehicle_units', 'vehicle_sets', 'driver_vehicle_blocks', 'crews'];
+                foreach ($tables as $table) {
+                    try {
+                        $key = ($table === 'vehicle_units') ? 'vehicles' : $table;
+                        $key = ($table === 'driver_vehicle_blocks') ? 'dvbs' : $key;
+                        $lStmt = $localPdo->query("SELECT COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active FROM `{$table}`");
+                        $row = $lStmt->fetch();
+                        $metrics["total_{$key}"] = (int)$row['total'];
+                        $metrics["active_{$key}"] = (int)$row['active'];
+                    } catch (\Exception $e) { /* table may not exist */ }
+                }
+
+                try {
+                    $stmtA = $localPdo->query("SELECT COUNT(*) FROM crews WHERE status = 'archived'");
+                    $metrics['archived_crews'] = (int)$stmtA->fetchColumn();
+                } catch (\Exception $e) {}
+
+                try {
+                    $stmtD = $localPdo->query("SELECT COUNT(*) FROM documents WHERE deleted_at IS NULL");
+                    $metrics['total_documents'] = (int)$stmtD->fetchColumn();
+                } catch (\Exception $e) {}
+            } else {
+                // logist
+                $myMetrics = [
+                    'my_contractors' => 0,
+                    'my_drivers' => 0,
+                    'my_vehicles' => 0,
+                    'my_vehicle_sets' => 0,
+                    'my_dvbs' => 0,
+                    'my_crews' => 0,
+                    'grants_count' => 0,
+                ];
+                $hasData = false;
+
+                $myTables = ['contractors', 'drivers', 'vehicle_units', 'vehicle_sets', 'driver_vehicle_blocks', 'crews'];
+                foreach ($myTables as $table) {
+                    try {
+                        $key = ($table === 'vehicle_units') ? 'vehicles' : $table;
+                        $key = ($table === 'driver_vehicle_blocks') ? 'dvbs' : $key;
+                        $mStmt = $localPdo->prepare("SELECT COUNT(*) FROM `{$table}` WHERE created_by_user_id = ?");
+                        $mStmt->execute([$userId]);
+                        $count = (int)$mStmt->fetchColumn();
+                        $myMetrics["my_{$key}"] = $count;
+                        if ($count > 0) $hasData = true;
+                    } catch (\Exception $e) {
+                        // column created_by_user_id may not exist; silently skip
+                    }
+                }
+
+                try {
+                    $gStmt = $localPdo->prepare("SELECT COUNT(*) FROM entity_access_grants WHERE granted_to_user_id = ? AND revoked_at IS NULL");
+                    $gStmt->execute([$userId]);
+                    $myMetrics['grants_count'] = (int)$gStmt->fetchColumn();
+                    if ($myMetrics['grants_count'] > 0) $hasData = true;
+                } catch (\Exception $e) {}
+
+                if ($hasData) {
+                    $metrics = $myMetrics;
+                } else {
+                    $logistNoAccess = true;
+                }
+            }
         }
     } catch (\Exception $e) {
         $companyError = true;
