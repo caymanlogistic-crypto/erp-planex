@@ -84,7 +84,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <div class="page-eyebrow">ТРАНСПОРТНЫЕ КОМПЛЕКТЫ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Комплект #<?= $vehicleSet['id'] ?></h1>
+        <h1>Комплект: <?= e($vehicleSet['primary_plate'] ?? '—') ?><?= !empty($vehicleSet['secondary_plate']) ? ' + ' . e($vehicleSet['secondary_plate']) : '' ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -106,14 +106,12 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd>
                     <?= e($vehicleSet['primary_plate'] ?? '—') ?>
                     <?php if (!empty($vehicleSet['primary_brand'])): ?>(<?= e($vehicleSet['primary_brand']) ?> <?= e($vehicleSet['primary_model'] ?? '') ?>)<?php endif; ?>
-                    <?php if (!empty($vehicleSet['primary_vin'])): ?><br><small class="text-muted">VIN: <?= e($vehicleSet['primary_vin']) ?></small><?php endif; ?>
                 </dd>
                 <?php if (!empty($vehicleSet['secondary_plate'])): ?>
                 <dt>Доп. единица</dt>
                 <dd>
                     <?= e($vehicleSet['secondary_plate']) ?>
                     <?php if (!empty($vehicleSet['secondary_brand'])): ?>(<?= e($vehicleSet['secondary_brand']) ?> <?= e($vehicleSet['secondary_model'] ?? '') ?>)<?php endif; ?>
-                    <?php if (!empty($vehicleSet['secondary_vin'])): ?><br><small class="text-muted">VIN: <?= e($vehicleSet['secondary_vin']) ?></small><?php endif; ?>
                 </dd>
                 <?php endif; ?>
                 <dt>Статус</dt>

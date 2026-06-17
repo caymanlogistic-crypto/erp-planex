@@ -70,7 +70,6 @@
                 <thead>
                     <tr>
                         <th>Пользователь</th>
-                        <th>Роль</th>
                         <th>Статус</th>
                         <th></th>
                     </tr>
@@ -80,9 +79,8 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($l['full_name']) ?></span>
-                            <span class="cell-sub"><?= e($l['login']) ?> · создан <?= e(ui_date($l['created_at'] ?? null)) ?></span>
+                            <span class="cell-sub">@<?= e($l['login']) ?></span>
                         </td>
-                        <td><?= ($l['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($l['role_code'] ?? '') ?></td>
                         <td>
                             <?php if ($l['status'] === 'active'): ?>
                             <span class="badge badge-ok"><span class="dot"></span>Активен</span>

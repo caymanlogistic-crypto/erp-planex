@@ -129,30 +129,6 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Адреса</h3>
-            <dl class="kv">
-                <dt>Юридический адрес</dt>
-                <dd><?= e($contractor['legal_address'] ?? '') ?: '—' ?></dd>
-                <dt>Фактический адрес</dt>
-                <dd><?= e($contractor['physical_address'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
-
-        <div class="form-section">
-            <h3 class="panel-head-title">Банковские реквизиты</h3>
-            <dl class="kv">
-                <dt>Расчётный счёт</dt>
-                <dd><?= e($contractor['bank_account'] ?? '') ?: '—' ?></dd>
-                <dt>Банк</dt>
-                <dd><?= e($contractor['bank_name'] ?? '') ?: '—' ?></dd>
-                <dt>БИК</dt>
-                <dd><?= e($contractor['bank_bik'] ?? '') ?: '—' ?></dd>
-                <dt>Корр. счёт</dt>
-                <dd><?= e($contractor['bank_corr_account'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
-
-        <div class="form-section">
             <h3 class="panel-head-title">Контакты</h3>
 
             <?php if (empty($contacts)): ?>
@@ -274,6 +250,30 @@ require_once __DIR__ . '/../components/status_badge.php';
                 </form>
             </div>
         </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Адреса</h3>
+            <dl class="kv">
+                <dt>Юридический адрес</dt>
+                <dd><?= e($contractor['legal_address'] ?? '') ?: '—' ?></dd>
+                <dt>Фактический адрес</dt>
+                <dd><?= e($contractor['physical_address'] ?? '') ?: '—' ?></dd>
+            </dl>
+        </div>
+
+        <details class="panel-section" style="margin-top:12px;">
+            <summary class="section-title" style="cursor:pointer;">Банковские реквизиты</summary>
+            <dl class="kv">
+                <dt>Расчётный счёт</dt>
+                <dd><?= e($contractor['bank_account'] ?? '') ?: '—' ?></dd>
+                <dt>Банк</dt>
+                <dd><?= e($contractor['bank_name'] ?? '') ?: '—' ?></dd>
+                <dt>БИК</dt>
+                <dd><?= e($contractor['bank_bik'] ?? '') ?: '—' ?></dd>
+                <dt>Корр. счёт</dt>
+                <dd><?= e($contractor['bank_corr_account'] ?? '') ?: '—' ?></dd>
+            </dl>
+        </details>
 
         <div class="form-section">
             <h3 class="panel-head-title">История налогообложения</h3>

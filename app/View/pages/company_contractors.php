@@ -82,7 +82,6 @@
                 <thead>
                     <tr>
                         <th>Подрядчик</th>
-                        <th>Реквизиты</th>
                         <th>Контакт</th>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
                         <th>Создал</th>
@@ -96,18 +95,14 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($c['name']) ?></span>
-                            <span class="cell-sub"><?= !empty($c['contractor_type']) ? e(ui_contractor_type($c['contractor_type'])) : '—' ?></span>
-                        </td>
-                        <td class="cell-double">
-                            <span class="cell-main col-mono"><?= e($c['inn']) ?></span>
-                            <span class="cell-sub">КПП <?= e($c['kpp'] ?? '') ?: '—' ?></span>
+                            <span class="cell-sub">ИНН <?= e($c['inn']) ?> · <?= !empty($c['contractor_type']) ? e(ui_contractor_type($c['contractor_type'])) : '—' ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($c['primary_contact_person'] ?? '') ?: '—' ?></span>
                             <span class="cell-sub"><?= e($c['primary_contact_phone'] ?? '') ?: e($c['doc_email'] ?? '') ?: 'Контакт не указан' ?></span>
                         </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                        <td class="col-muted"><?= e(ui_actor($c['created_by_role'] ?? null, $c['created_by_user_id'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_actor($c['created_by_role'] ?? null, $c['created_by_user_id'] ?? null, $c['created_by_name'] ?? null)) ?></td>
                         <?php endif; ?>
                         <td>
                             <span class="badge<?= $c['status'] === 'active' ? ' badge-ok' : '' ?>">

@@ -110,7 +110,7 @@
                                 <?= $v['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
                             </span>
                         </td>
-                        <td class="col-muted"><?= e(ui_actor($v['created_by_role'] ?? null, $v['created_by_user_id'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_actor($v['created_by_role'] ?? null, $v['created_by_user_id'] ?? null, $v['created_by_name'] ?? null)) ?></td>
                         <td class="col-actions">
                             <div class="row-actions">
                                 <a href="/company/vehicles/<?= $v['id'] ?>" class="btn btn-toolbar">Просмотр</a>

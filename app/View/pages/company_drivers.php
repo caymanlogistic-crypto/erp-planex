@@ -111,7 +111,7 @@
                             <?php endif; ?>
                         </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                        <td class="col-muted"><?= e(ui_actor($d['created_by_role'] ?? null, $d['created_by_user_id'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_actor($d['created_by_role'] ?? null, $d['created_by_user_id'] ?? null, $d['created_by_name'] ?? null)) ?></td>
                         <?php endif; ?>
                         <td>
                             <span class="badge<?= $d['status'] === 'active' ? ' badge-ok' : '' ?>">

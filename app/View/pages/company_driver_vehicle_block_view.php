@@ -84,7 +84,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div>
         <div class="page-eyebrow">ВОДИТЕЛЬ + ТС / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Блок #<?= $block['id'] ?></h1>
+        <h1>Водитель + ТС: <?= e($block['driver_name'] ?? '—') ?> + <?= e($block['primary_plate'] ?? '—') ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">

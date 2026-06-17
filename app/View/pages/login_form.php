@@ -13,6 +13,8 @@
 ?>
 <div class="login-card">
     <div class="login-card-head">
+        <div class="login-brand">ERP PLANEX</div>
+        <p class="login-brand-sub">Система управления транспортной логистикой</p>
         <h1>Вход в систему</h1>
         <p>Введите логин и пароль для доступа к рабочей среде.</p>
     </div>

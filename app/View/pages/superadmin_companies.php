@@ -78,7 +78,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($c['name']) ?></span>
-                            <span class="cell-sub">ИНН <?= e($c['inn']) ?> · ID <?= $c['id'] ?></span>
+                            <span class="cell-sub">ИНН <?= e($c['inn']) ?></span>
                         </td>
                         <td class="col-tight"><?= renderStatusBadge($c['status']) ?></td>
                         <td>

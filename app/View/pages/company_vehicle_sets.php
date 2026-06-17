@@ -107,7 +107,7 @@
                             </span>
                         </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                        <td class="col-muted"><?= e(ui_actor($vs['created_by_role'] ?? null, $vs['created_by_user_id'] ?? null)) ?></td>
+                        <td class="col-muted"><?= e(ui_actor($vs['created_by_role'] ?? null, $vs['created_by_user_id'] ?? null, $vs['created_by_name'] ?? null)) ?></td>
                         <?php endif; ?>
                         <td class="col-actions">
                             <div class="row-actions">

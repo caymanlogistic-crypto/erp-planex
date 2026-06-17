@@ -23,14 +23,8 @@ function ui_actor(?string $role, mixed $id, ?string $name = null): string
         return '—';
     }
 
-    $roleLabel = match ((string) $role) {
-        'company_owner' => 'Руководитель',
-        'logist' => 'Логист',
-        'superadmin' => 'Суперадминистратор',
-        default => 'Пользователь',
-    };
-
-    return $roleLabel . ' #' . $idValue;
+    // If name is not available, show dash instead of «Логист #N»
+    return '—';
 }
 
 function ui_access_level(?string $level): string
