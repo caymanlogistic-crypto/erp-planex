@@ -18,7 +18,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Подрядчик</h1>
+        <h1>Перевозчик</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -44,7 +44,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Подрядчик не найден</h1>
+        <h1>Перевозчик не найден</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -55,7 +55,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Подрядчик с указанным ID не найден.
+            Перевозчик с указанным ID не найден.
         </div>
     </div>
 </div>
@@ -79,7 +79,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="empty-title">Доступ запрещён</p>
             <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
             <div class="form-actions">
-                <a href="/company/contractors" class="btn btn-ghost">← К списку подрядчиков</a>
+                <a href="/company/contractors" class="btn btn-ghost">← К списку перевозчиков</a>
                 <a href="/company/dashboard" class="btn btn-primary">На главную</a>
             </div>
         </div>
@@ -90,8 +90,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <div class="page-eyebrow">ПОДРЯДЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Подрядчик: <?= e($contractor['name']) ?></h1>
+        <div class="page-eyebrow">ПЕРЕВОЗЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></div>
+        <h1>Перевозчик: <?= e($contractor['name']) ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -347,6 +347,57 @@ require_once __DIR__ . '/../components/status_badge.php';
                     </div>
                 </form>
             </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Водители+ТС</h3>
+
+            <?php if (empty($crewBlocks)): ?>
+                <p class="text-muted">Нет привязанных водителей и транспорта.</p>
+            <?php else: ?>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Водитель</th>
+                            <th>Транспорт</th>
+                            <th>Статус связки</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($crewBlocks as $cb): ?>
+                    <tr>
+                        <td class="cell-double">
+                            <span class="cell-main">
+                                <a href="/company/drivers/<?= $cb['driver_id'] ?>"><?= e($cb['driver_name']) ?></a>
+                            </span>
+                        </td>
+                        <td class="cell-double">
+                            <span class="cell-main">
+                                <a href="/company/vehicle-sets/<?= $cb['vehicle_set_id'] ?>"><?= e($cb['vehicle_plate'] ?? '—') ?></a>
+                            </span>
+                            <?php if (!empty($cb['secondary_plate'])): ?>
+                            <span class="cell-sub">+ <?= e($cb['secondary_plate']) ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="badge<?= $cb['block_status'] === 'active' ? ' badge-ok' : '' ?>">
+                                <span class="dot"></span>
+                                <?= $cb['block_status'] === 'active' ? 'Активен' : e(ucfirst($cb['block_status'] ?? '—')) ?>
+                            </span>
+                        </td>
+                        <td class="col-actions">
+                            <a href="/company/driver-vehicle-blocks/<?= $cb['block_id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+
+            <a href="/company/contractors/<?= $contractor['id'] ?>/add-block" class="btn btn-primary mt-4">Добавить Водителя+ТС</a>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>

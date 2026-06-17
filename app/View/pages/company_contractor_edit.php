@@ -18,7 +18,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Редактировать подрядчика</h1>
+        <h1>Редактировать перевозчика</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -44,7 +44,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Подрядчик не найден</h1>
+        <h1>Перевозчик не найден</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -55,7 +55,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Подрядчик с указанным ID не найден.
+            Перевозчик с указанным ID не найден.
         </div>
     </div>
 </div>
@@ -64,7 +64,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Редактировать подрядчика</h1>
+        <h1>Редактировать перевозчика</h1>
         <p class="text-muted"><?= e($contractor['name']) ?></p>
     </div>
     <div class="page-head-actions">

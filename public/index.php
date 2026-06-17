@@ -2941,8 +2941,8 @@ $router->post('/company/clients/{id}/archive', function ($id) use ($config, $db)
 
 $router->get('/company/contractors', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Подрядчики';
-    $pageContext = 'Подрядчики — Компания';
+    $pageTitle = 'Перевозчики';
+    $pageContext = 'Перевозчики — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2976,7 +2976,7 @@ $router->get('/company/contractors', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractors = [];
@@ -3058,8 +3058,8 @@ $router->get('/company/contractors', function () use ($config, $db) {
 
 $router->get('/company/contractors/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Создать подрядчика';
-    $pageContext = 'Подрядчики — Компания';
+    $pageTitle = 'Создать перевозчика';
+    $pageContext = 'Перевозчики — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3099,7 +3099,7 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
 
         $success = false;
         $errors = [];
@@ -3123,8 +3123,8 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
 
 $router->post('/company/contractors/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Создать подрядчика';
-    $pageContext = 'Подрядчики — Компания';
+    $pageTitle = 'Создать перевозчика';
+    $pageContext = 'Перевозчики — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -3161,10 +3161,10 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
-            $formError = 'Создание подрядчиков недоступно';
+            $formError = 'Создание перевозчиков недоступно';
 
             ob_start();
             require base_path('app/View/pages/company_contractors_create.php');
@@ -3255,7 +3255,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
-        $formError = 'Ошибка создания подрядчика: ' . $e->getMessage();
+        $formError = 'Ошибка создания перевозчика: ' . $e->getMessage();
     }
 
     ob_start();
@@ -3266,13 +3266,14 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
 
 $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Подрядчик';
-    $pageContext = 'Подрядчики — Компания';
+    $pageTitle = 'Перевозчик';
+    $pageContext = 'Перевозчики — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $archiveError = null;
     $grants = [];
     $logists = [];
+    $crewBlocks = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -3304,7 +3305,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
             return;
         }
 
-        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
@@ -3377,7 +3378,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
         }
 
         if ($contractor && !$accessDenied) {
-            $pageTitle = 'Подрядчик: ' . $contractor['name'];
+            $pageTitle = 'Перевозчик: ' . $contractor['name'];
         }
 
         // Load contacts
@@ -3394,6 +3395,65 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
             $taxHistory = $localPdo->prepare("SELECT * FROM contractor_tax_history WHERE contractor_id = ? ORDER BY effective_from DESC, id DESC");
             $taxHistory->execute([(int)$id]);
             $taxHistory = $taxHistory->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Load crew blocks (Водители+ТС)
+        if ($contractor && !$accessDenied) {
+            try {
+                $crewBlockStmt = $localPdo->prepare(
+                    "SELECT c.id AS crew_id, dvb.id AS block_id, dvb.status AS block_status,
+                            d.full_name AS driver_name, d.id AS driver_id,
+                            vs.id AS vehicle_set_id,
+                            vs.primary_vehicle_unit_id, vs.secondary_vehicle_unit_id
+                     FROM crews c
+                     JOIN driver_vehicle_blocks dvb ON c.driver_vehicle_block_id = dvb.id
+                     JOIN drivers d ON dvb.driver_id = d.id
+                     JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                     WHERE c.contractor_id = ? AND c.status != 'archived'
+                     ORDER BY d.full_name"
+                );
+                $crewBlockStmt->execute([(int)$id]);
+                $crewBlocks = $crewBlockStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Load vehicle plates
+                if (!empty($crewBlocks)) {
+                    $vehicleUnitIds = [];
+                    foreach ($crewBlocks as $cb) {
+                        if (!empty($cb['primary_vehicle_unit_id'])) {
+                            $vehicleUnitIds[] = (int)$cb['primary_vehicle_unit_id'];
+                        }
+                        if (!empty($cb['secondary_vehicle_unit_id'])) {
+                            $vehicleUnitIds[] = (int)$cb['secondary_vehicle_unit_id'];
+                        }
+                    }
+                    $vehicleUnitIds = array_unique($vehicleUnitIds);
+                    $vehicleUnitIds = array_values($vehicleUnitIds);
+
+                    $plateMap = [];
+                    if (!empty($vehicleUnitIds)) {
+                        $placeholders = implode(',', array_fill(0, count($vehicleUnitIds), '?'));
+                        $plateStmt = $localPdo->prepare("SELECT id, plate_number FROM vehicle_units WHERE id IN ($placeholders)");
+                        $plateStmt->execute($vehicleUnitIds);
+                        while ($row = $plateStmt->fetch(PDO::FETCH_ASSOC)) {
+                            $plateMap[$row['id']] = $row['plate_number'];
+                        }
+                    }
+
+                    // Enrich crewBlocks with plate info
+                    foreach ($crewBlocks as &$cb) {
+                        $primaryPlate = $plateMap[$cb['primary_vehicle_unit_id']] ?? null;
+                        $secondaryPlate = !empty($cb['secondary_vehicle_unit_id'])
+                            ? ($plateMap[$cb['secondary_vehicle_unit_id']] ?? null)
+                            : null;
+
+                        $cb['vehicle_plate'] = $primaryPlate ?: 'ТС #' . $cb['vehicle_set_id'];
+                        $cb['secondary_plate'] = $secondaryPlate;
+                    }
+                    unset($cb);
+                }
+            } catch (\Exception $e) {
+                $crewBlocks = [];
+            }
         }
 
         $grants = [];
@@ -3417,7 +3477,8 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
         $contractor = null;
         $grants = [];
         $logists = [];
-        $dbError = 'Не удалось загрузить подрядчика: ' . $e->getMessage();
+        $crewBlocks = [];
+        $dbError = 'Не удалось загрузить перевозчика: ' . $e->getMessage();
     }
 
     ob_start();
@@ -3428,8 +3489,8 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
 
 $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Редактировать подрядчика';
-    $pageContext = 'Подрядчики — Компания';
+    $pageTitle = 'Редактировать перевозчика';
+    $pageContext = 'Перевозчики — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3467,7 +3528,7 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
             return;
         }
 
-        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
@@ -3526,7 +3587,7 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
         $contractor = null;
         $errors = [];
         $old = [];
-        $formError = 'Не удалось загрузить подрядчика: ' . $e->getMessage();
+        $formError = 'Не удалось загрузить перевозчика: ' . $e->getMessage();
 
         ob_start();
         require base_path('app/View/pages/company_contractor_edit.php');
@@ -3537,8 +3598,8 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
 
 $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Редактировать подрядчика';
-    $pageContext = 'Подрядчики — Компания';
+    $pageTitle = 'Редактировать перевозчика';
+    $pageContext = 'Перевозчики — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3576,13 +3637,13 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
             return;
         }
 
-        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
             $errors = [];
             $old = $_POST;
-            $formError = 'Редактирование подрядчиков недоступно';
+            $formError = 'Редактирование перевозчиков недоступно';
 
             ob_start();
             require base_path('app/View/pages/company_contractor_edit.php');
@@ -3613,7 +3674,7 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
             $contractor = null;
             $errors = [];
             $old = $_POST;
-            $formError = 'Подрядчик не найден';
+            $formError = 'Перевозчик не найден';
 
             ob_start();
             require base_path('app/View/pages/company_contractor_edit.php');
@@ -3734,8 +3795,8 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
 
 $router->post('/company/contractors/{id}/archive', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Подрядчик';
-    $pageContext = 'Подрядчики — Компания';
+    $pageTitle = 'Перевозчик';
+    $pageContext = 'Перевозчики — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $archiveError = null;
@@ -3770,7 +3831,7 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
             return;
         }
 
-        $pageContext = 'Подрядчики — Компания: ' . $company['name'];
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
 
         if ($company['status'] !== 'active') {
             $contractor = null;
@@ -3827,7 +3888,7 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
             }
         }
 
-        $pageTitle = 'Подрядчик: ' . $contractor['name'];
+        $pageTitle = 'Перевозчик: ' . $contractor['name']; // archive handler
 
         try {
             $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -3839,7 +3900,7 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
         $crewCheck = $localPdo->prepare('SELECT COUNT(*) FROM crews WHERE contractor_id = ?');
         $crewCheck->execute([(int) $id]);
         if ($crewCheck->fetchColumn() > 0) {
-            $archiveError = 'Подрядчик участвует в экипажах. Сначала удалите экипажи.';
+            $archiveError = 'Перевозчик участвует в экипажах. Сначала удалите экипажи.';
             $dbError = null;
 
             ob_start();
@@ -8048,7 +8109,7 @@ $router->get('/company/documents', function () use ($config, $db) {
     $missingEntityContext = ($entityType === '' && $entityId <= 0);
 
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
-                   'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
+                    'contractor' => ['label' => 'Перевозчик', 'labelDative' => 'перевозчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
@@ -8230,7 +8291,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
     $missingEntityContext = ($entityType === '' && $entityId <= 0);
 
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
-                   'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
+                    'contractor' => ['label' => 'Перевозчик', 'labelDative' => 'перевозчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
@@ -8399,7 +8460,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
     $entityId = (int)($_GET['entity_id'] ?? 0);
 
     $whitelist = ['client' => ['label' => 'Клиент', 'labelDative' => 'клиентам', 'table' => 'clients', 'backRoute' => '/company/clients'],
-                   'contractor' => ['label' => 'Подрядчик', 'labelDative' => 'подрядчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
+                    'contractor' => ['label' => 'Перевозчик', 'labelDative' => 'перевозчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
                    'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
@@ -9672,7 +9733,7 @@ $router->get('/superadmin/companies/{id}/contractors', function ($id) use ($conf
             return;
         }
 
-        $pageTitle = 'Подрядчики: ' . $company['name'];
+        $pageTitle = 'Перевозчики: ' . $company['name'];
         $pageContext = 'Реестр компаний';
 
         $items = [];

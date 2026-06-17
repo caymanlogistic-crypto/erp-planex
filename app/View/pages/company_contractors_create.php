@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать подрядчика</h1>
+        <h1>Создать перевозчика</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -17,14 +17,14 @@
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Создание подрядчиков недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». Создание перевозчиков недоступно.
 </div>
 
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div>
-        <h1>Подрядчик создан</h1>
+        <h1>Перевозчик создан</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -35,7 +35,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Подрядчик успешно создан.
+            Перевозчик успешно создан.
         </div>
 
         <div class="kv mt-4">
@@ -54,7 +54,7 @@
         </div>
 
         <div class="form-actions mt-4">
-            <a href="/company/contractors" class="btn btn-primary">← К списку подрядчиков</a>
+            <a href="/company/contractors" class="btn btn-primary">← К списку перевозчиков</a>
             <a href="/company/contractors/create" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
@@ -64,7 +64,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать подрядчика</h1>
+        <h1>Создать перевозчика</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -161,7 +161,7 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Создать подрядчика</button>
+            <button type="submit" class="btn btn-primary">Создать перевозчика</button>
             <a href="/company/contractors" class="btn btn-ghost">Отмена</a>
         </div>
 
