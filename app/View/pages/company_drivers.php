@@ -92,8 +92,13 @@
                             <span class="cell-sub">Основной телефон</span>
                         </td>
                         <td class="cell-double">
-                            <span class="cell-main">ВУ <?= e($d['license_number'] ?? '—') ?></span>
-                            <span class="cell-sub">Паспорт <?= e($d['passport_number'] ?? '—') ?> / СНИЛС <?= e($d['snils'] ?? '—') ?></span>
+                            <?php if (!empty($d['license_number'])): ?>
+                                <span class="cell-main">ВУ <?= e($d['license_number']) ?></span>
+                                <span class="cell-sub">Водительское удостоверение</span>
+                            <?php else: ?>
+                                <span class="cell-main">ВУ: нет</span>
+                                <span class="cell-sub">Документы доступны в карточке водителя</span>
+                            <?php endif; ?>
                         </td>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
                         <td class="col-muted"><?= e(ui_actor($d['created_by_role'] ?? null, $d['created_by_user_id'] ?? null)) ?></td>

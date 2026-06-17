@@ -1,7 +1,30 @@
-<?php if ($entityTypeError): ?>
+<?php if (!empty($missingEntityContext)): ?>
+
+<div class="page-head">
+    <div class="page-head-left">
+        <span class="page-eyebrow">КОМПАНИЯ<?= !empty($company['name']) ? ' / ' . e($company['name']) : '' ?></span>
+        <span class="page-title">Документы</span>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/dashboard" class="btn btn-ghost">← На главную</a>
+        <a href="/company/contractors" class="btn btn-secondary">К справочникам</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Документы</p>
+            <p class="empty-desc">Для просмотра документов откройте карточку подрядчика, водителя, транспортной единицы, транспортного комплекта, блока «Водитель + ТС» или экипажа.</p>
+            <a href="/company/contractors" class="btn btn-primary">К справочникам</a>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($entityTypeError): ?>
 
 <div class="notice warn">
-    Неизвестный тип сущности «<?= e($entityType) ?>». Допустимые типы: client, contractor, driver, vehicle_unit, vehicle_set, driver_vehicle_block, crew.
+    Не удалось открыть документы для выбранного объекта. Вернитесь в карточку объекта и откройте раздел «Документы» оттуда.
 </div>
 
 <?php elseif ($company === null): ?>

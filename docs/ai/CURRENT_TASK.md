@@ -1,5 +1,38 @@
 # ERP PLANEX — текущая задача
 
+## DONE: CRITICAL_UX_FIX_PACKAGE_1
+
+STATUS: CRITICAL_UX_FIX_PACKAGE_1_ACCEPTED
+
+ИСПРАВЛЕНО:
+- TASK-001: из списка `/company/drivers` убраны паспорт и СНИЛС; в колонке документов остаётся только ВУ или «ВУ: нет».
+- TASK-002: `/company/documents` без параметров показывает нормальное empty-state, без backend entity_type.
+- TASK-028: `/company/documents/upload` без параметров показывает инструкцию, без backend entity_type.
+- TASK-016: edit экипажа использует текущий `driver_vehicle_block_id`, selected-значения не сбрасываются.
+- TASK-029: тип транспортной единицы обязателен в UI и серверной валидации create/edit.
+- TASK-005: на архивном экипаже кнопка «Архивировать» не показывается; отображается статус «В архиве».
+
+ИЗМЕНЕНЫ:
+- `public/index.php`
+- `app/View/pages/company_drivers.php`
+- `app/View/pages/company_documents.php`
+- `app/View/pages/company_documents_upload.php`
+- `app/View/pages/company_crew_edit.php`
+- `app/View/pages/company_crew_view.php`
+- `app/View/pages/company_vehicles_create.php`
+- `app/View/pages/company_vehicle_edit.php`
+
+ПРОВЕРКИ:
+- `php -l` по изменённым PHP и `public/index.php`
+- `git diff --check`
+- UTF-8/null-byte/div-balance sanity check
+- inline-style check
+- runtime browser: owner, `logist_runtime_1`, `logist_runtime_2`
+- screenshots: `docs/design-audit/fix-package-1/screenshots`
+
+СЛЕДУЮЩИЙ ПАКЕТ:
+- Package 2: enum translation, backend terms, grants, disabled menu, ID cleanup.
+
 ## ЗАКРЫТО: SUPERADMIN — разделение реквизитов руководителя и ERP-пользователя
 
 STATUS: CLOSED

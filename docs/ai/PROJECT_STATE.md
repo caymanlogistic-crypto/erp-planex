@@ -65,9 +65,22 @@ SUPERADMIN — ЗАКРЫТ на текущем этапе.
 ## Текущий блок
 
 ```text
-Водители / Машины / Экипажи — ЭТАП 2: CRUD + функциональный UX ЗАВЕРШЁН
-STATUS: COMPANY_USERS_AND_RUNTIME_ACCEPTED
-Следующий шаг: owner review → дизайн-полировка
+Водители / Машины / Экипажи — CRITICAL UX FIX PACKAGE 1 ЗАВЕРШЁН
+STATUS: CRITICAL_UX_FIX_PACKAGE_1_ACCEPTED
+Следующий шаг: Package 2 из дизайн-аудита
+```
+
+## Последнее принятое исправление
+
+```text
+CRITICAL_UX_FIX_PACKAGE_1:
+- список водителей больше не раскрывает паспорт и СНИЛС;
+- /company/documents и /company/documents/upload без параметров показывают UX empty-state;
+- edit экипажа сохраняет текущий driver_vehicle_block_id;
+- тип транспортной единицы обязателен в UI и серверной валидации;
+- архивный экипаж не показывает кнопку «Архивировать»;
+- runtime проверен под owner, logist_runtime_1, logist_runtime_2;
+- screenshots: docs/design-audit/fix-package-1/screenshots.
 ```
 
 ## Последний принятый этап

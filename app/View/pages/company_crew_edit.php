@@ -161,32 +161,17 @@
             </div>
 
             <div class="field">
-                <label class="field-label">Транспорт <span class="req">*</span></label>
-                <select name="vehicle_id" class="field-input" required>
-                    <option value="">— Выберите транспорт —</option>
-                    <?php foreach ($vehicles as $v): ?>
-                    <option value="<?= $v['id'] ?>" <?= ($old['vehicle_id'] ?? '') == $v['id'] ? 'selected' : '' ?>>
-                        <?= e($v['plate_number']) ?> — <?= e($v['brand'] ?? '') ?> <?= e($v['model'] ?? '') ?>
+                <label class="field-label">Блок «Водитель + ТС» <span class="req">*</span></label>
+                <select name="driver_vehicle_block_id" class="field-input" required>
+                    <option value="">— Выберите блок —</option>
+                    <?php foreach ($driverVehicleBlocks as $dvb): ?>
+                    <option value="<?= $dvb['id'] ?>" <?= ($old['driver_vehicle_block_id'] ?? '') == $dvb['id'] ? 'selected' : '' ?>>
+                        <?= e($dvb['driver_name']) ?> — <?= e($dvb['set_type'] ?? '—') ?> — <?= e($dvb['primary_plate'] ?? '') ?><?= !empty($dvb['secondary_plate']) ? ' + ' . e($dvb['secondary_plate']) : '' ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
-                <?php if (!empty($errors['vehicle_id'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['vehicle_id']) ?></div>
-                <?php endif; ?>
-            </div>
-
-            <div class="field">
-                <label class="field-label">Водитель <span class="req">*</span></label>
-                <select name="driver_id" class="field-input" required>
-                    <option value="">— Выберите водителя —</option>
-                    <?php foreach ($drivers as $d): ?>
-                    <option value="<?= $d['id'] ?>" <?= ($old['driver_id'] ?? '') == $d['id'] ? 'selected' : '' ?>>
-                        <?= e($d['full_name']) ?> (<?= e($d['phone'] ?? '') ?>)
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (!empty($errors['driver_id'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['driver_id']) ?></div>
+                <?php if (!empty($errors['driver_vehicle_block_id'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['driver_vehicle_block_id']) ?></div>
                 <?php endif; ?>
             </div>
         </div>

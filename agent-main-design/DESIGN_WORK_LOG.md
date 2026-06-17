@@ -584,3 +584,34 @@ VERIFICATION:
 
 ISSUES / TODO:
 - No business logic, routes, input names, form actions or methods were intentionally changed.
+
+## 2026-06-17 — Critical UX fix package 1
+
+STATUS: DONE
+
+FILES TOUCHED:
+- public/index.php
+- app/View/pages/company_drivers.php
+- app/View/pages/company_documents.php
+- app/View/pages/company_documents_upload.php
+- app/View/pages/company_crew_edit.php
+- app/View/pages/company_crew_view.php
+- app/View/pages/company_vehicles_create.php
+- app/View/pages/company_vehicle_edit.php
+- docs/design-audit/fix-package-1/screenshots/*.png
+
+WHAT CHANGED:
+- Removed passport/SNILS from the drivers list.
+- Added controlled empty states for direct documents and document-upload routes.
+- Fixed crew edit to keep selected driver+transport block.
+- Made vehicle unit type required in UI and server validation.
+- Hid archive action on already archived crew cards.
+
+UX RESULT:
+- Critical PII exposure and technical-error states from audit package 1 are closed.
+
+UI RESULT:
+- COMPLIANT: existing ERP panels, empty states, buttons and form fields reused; no new UI kit.
+
+ISSUES / TODO:
+- Package 2 remains: enum translation, backend terms, grants, disabled menu, ID cleanup.

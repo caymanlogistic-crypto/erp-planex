@@ -152,15 +152,18 @@
             </div>
 
             <div class="field">
-                <label class="field-label">Тип единицы</label>
-                <select name="unit_type" class="field-input">
-                    <option value="">— Не указан —</option>
+                <label class="field-label">Тип единицы <span class="req">*</span></label>
+                <select name="unit_type" class="field-input" required>
+                    <option value="">Укажите тип (обязательно)</option>
                     <option value="single" <?= ($old['unit_type'] ?? '') === 'single' ? 'selected' : '' ?>>Одиночное ТС</option>
                     <option value="tractor" <?= ($old['unit_type'] ?? '') === 'tractor' ? 'selected' : '' ?>>Тягач</option>
                     <option value="semi_trailer" <?= ($old['unit_type'] ?? '') === 'semi_trailer' ? 'selected' : '' ?>>Полуприцеп</option>
                     <option value="truck" <?= ($old['unit_type'] ?? '') === 'truck' ? 'selected' : '' ?>>Грузовик</option>
                     <option value="trailer" <?= ($old['unit_type'] ?? '') === 'trailer' ? 'selected' : '' ?>>Прицеп</option>
                 </select>
+                <?php if (!empty($errors['unit_type'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['unit_type']) ?></div>
+                <?php endif; ?>
             </div>
 
             <div class="field">

@@ -246,10 +246,18 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 ## Следующий блок в работе
 
 ```text
-Водители / Машины / Экипажи — Этап 3: runtime owner review + доработки + дизайн-полировка
+Водители / Машины / Экипажи — Package 2 из дизайн-аудита
 ```
 
-Этап 2 (CRUD + функциональный UX) завершён. Следующий этап — проверка владельцем, исправление замечаний, дизайн-полировка. Известные ограничения: inline CRUD для contacts/phones/tax-history, расширение списков contractors/drivers, role-based доступ, каскадная видимость.
+Этап 2 (CRUD + функциональный UX) завершён. CRITICAL_UX_FIX_PACKAGE_1 принят:
+- `/company/drivers` не показывает паспорт и СНИЛС в списке;
+- прямые `/company/documents` и `/company/documents/upload` показывают controlled UX-state;
+- `/company/crews/{id}/edit` сохраняет текущий `driver_vehicle_block_id`;
+- тип транспортной единицы обязателен в create/edit UI и серверной валидации;
+- архивный `/company/crews/{id}` не показывает «Архивировать»;
+- screenshots лежат в `docs/design-audit/fix-package-1/screenshots`.
+
+Следующий пакет: enum translation, backend terms, grants, disabled menu, ID cleanup.
 
 ## Что нельзя нарушать
 

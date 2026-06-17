@@ -186,9 +186,13 @@
 
         <div class="form-actions">
             <a href="/company/documents?entity_type=crew&entity_id=<?= $crew['id'] ?>" class="btn btn-ghost">Документы</a>
+            <?php if (($crew['status'] ?? '') === 'archived'): ?>
+                <span class="badge badge-warn"><span class="dot"></span>В архиве</span>
+            <?php else: ?>
             <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать экипаж?')">
                 <button type="submit" class="btn btn-secondary">Архивировать</button>
             </form>
+            <?php endif; ?>
         </div>
 
     </div>

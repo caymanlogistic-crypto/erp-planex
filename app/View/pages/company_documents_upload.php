@@ -1,4 +1,28 @@
-<?php if ($entityTypeError): ?>
+<?php if (!empty($missingEntityContext)): ?>
+
+<div class="page-head">
+    <div class="page-head-left">
+        <span class="page-eyebrow">КОМПАНИЯ<?= !empty($company['name']) ? ' / ' . e($company['name']) : '' ?></span>
+        <span class="page-title">Загрузка документа</span>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/dashboard" class="btn btn-ghost">← На главную</a>
+        <a href="/company/contractors" class="btn btn-secondary">К справочникам</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Загрузка документа</p>
+            <p class="empty-desc">Сначала откройте карточку объекта, к которому относится документ, и нажмите «Документы» или «Загрузить документ».</p>
+            <p class="empty-desc">Например: подрядчик, водитель, транспортная единица, транспортный комплект, водитель + ТС, экипаж.</p>
+            <a href="/company/contractors" class="btn btn-primary">К справочникам</a>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($entityTypeError): ?>
 
 <div class="page-head">
     <div>
@@ -6,7 +30,7 @@
     </div>
 </div>
 <div class="notice warn">
-    Неизвестный тип сущности «<?= e($entityType) ?>». Допустимые типы: client, contractor, driver, vehicle, crew.
+    Не удалось открыть форму загрузки для выбранного объекта. Вернитесь в карточку объекта и откройте загрузку документа оттуда.
 </div>
 
 <?php elseif ($company === null): ?>

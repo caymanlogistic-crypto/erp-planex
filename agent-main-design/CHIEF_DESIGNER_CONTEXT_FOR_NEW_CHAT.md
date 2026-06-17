@@ -223,6 +223,25 @@ Layout `app/View/layouts/main.php` подключает сначала `/assets/
   PNG dimensions 1440x900.
 ```
 
+## Critical UX fix package 1 state (2026-06-17)
+
+```text
+✓ TASK-001: /company/drivers list no longer shows passport or SNILS.
+✓ TASK-002: /company/documents without params shows controlled empty state.
+✓ TASK-028: /company/documents/upload without params shows controlled instruction.
+✓ TASK-016: /company/crews/{id}/edit keeps current driver_vehicle_block_id selected.
+✓ TASK-029: vehicle unit type is required in create/edit UI and server validation.
+✓ TASK-005: archived crew card does not show Archive action.
+✓ Screenshots:
+  docs/design-audit/fix-package-1/screenshots
+✓ Checked:
+  php -l, git diff --check, inline-style check, UTF-8/null-byte/div balance,
+  browser runtime under owner_test_runtime, logist_runtime_1, logist_runtime_2.
+
+Next package:
+- enum translation, backend terms, grants, disabled menu, ID cleanup.
+```
+
 ## СТОП-ОШИБКИ — обязательно к исполнению
 
 ```text
