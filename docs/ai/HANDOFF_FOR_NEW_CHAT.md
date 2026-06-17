@@ -64,8 +64,8 @@ fix(ui): close critical design audit issues package 2
 ### Важные последние commits
 
 ```text
-fix(ui): close critical design audit issues package 2
-fix(ui): close critical design audit issues package 1
+8a19d13 — fix(ui): close critical design audit issues package 2
+ebdf072 — fix(ui): close critical design audit issues package 1
 65eaf8e — feat(reference): implement CRUD UX for drivers vehicles crews
 ```
 
