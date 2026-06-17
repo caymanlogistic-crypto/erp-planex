@@ -94,7 +94,7 @@
                 <dt>Модель</dt>
                 <dd><?= e($vehicle['model'] ?? '') ?: '—' ?></dd>
                 <dt>Тип единицы</dt>
-                <dd><?= e($vehicle['unit_type'] ?? '') ?: '—' ?></dd>
+                <dd><?= e(ui_unit_type($vehicle['unit_type'] ?? null)) ?></dd>
                 <dt>Статус</dt>
                 <dd>
                     <?php if ($vehicle['status'] === 'active'): ?>
@@ -145,7 +145,7 @@
                     <?php foreach ($relatedSets as $rs): ?>
                     <tr>
                         <td class="col-mono"><?= $rs['id'] ?></td>
-                        <td><?= e($rs['set_type'] ?? '—') ?></td>
+                        <td><?= e(ui_set_type($rs['set_type'] ?? null)) ?></td>
                         <td class="col-mono"><?= e($rs['primary_plate'] ?? '—') ?></td>
                         <td class="col-mono"><?= e($rs['secondary_plate'] ?? '—') ?></td>
                         <td>
@@ -178,7 +178,7 @@
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
         <div class="form-section">
-            <h3 class="panel-head-title">Доступ пользователей</h3>
+            <h3 class="panel-head-title">Доступ логистов</h3>
             <?php if (!empty($grants)): ?>
             <div class="tbl-wrap">
                 <table class="tbl">
@@ -195,7 +195,7 @@
                 </table>
             </div>
             <?php else: ?>
-            <p class="text-muted">Доступ пользователям не выдан.</p>
+            <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
             <form method="post" action="/company/access-grants/grant" class="grant-form">

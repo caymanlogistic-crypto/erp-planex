@@ -1,5 +1,53 @@
 # ERP PLANEX — текущая задача
 
+## DONE: CRITICAL_UX_FIX_PACKAGE_2
+
+STATUS: CRITICAL_UX_FIX_PACKAGE_2_DONE
+
+ИСПРАВЛЕНО:
+- TASK-003: Enum formatter — ui_set_type, ui_unit_type, ui_entity_type, ui_role, ui_document_status в view_formatters.php; применены во всех view-файлах.
+- TASK-013: grants superadmin — entity_type и access_level переведены через ui_entity_type / ui_access_level.
+- TASK-019: documents superadmin — entity_type переведён, роль через ui_role, статус «uploaded» добавлен в docStatusBadge.
+- TASK-018: superadmin vehicles — заголовок «Транспорт компании» → «Транспортные единицы»; vehicle_type через ui_unit_type.
+- TASK-007: Убраны «ID X» из cell-sub в company_drivers, company_vehicles, company_contractors, company_logists, company_driver_vehicle_blocks, company_vehicle_sets.
+- TASK-004: «Пользователи» / «ДОСТУП ПОЛЬЗОВАТЕЛЕЙ» → «Логисты» / «Доступ логистов» во всех company_-страницах и сайдбаре.
+- TASK-009: Убраны все disabled «Рейсы» и «Настройки» из меню для company_owner, logist, superadmin.
+
+ИСПРАВЛЕНО В ПРОЦЕССЕ ВЕРИФИКАЦИИ:
+- Logist nav-block в main.php был случайно удалён Python-скриптом вместе с disabled-элементами — восстановлен.
+- docStatusBadge в superadmin_company_documents.php не содержала 'uploaded' — добавлена и расширена полная карта статусов.
+
+ИЗМЕНЕНЫ:
+- app/View/layouts/main.php
+- app/View/pages/company_vehicles.php
+- app/View/pages/company_contractors.php
+- app/View/pages/company_logists.php
+- app/View/pages/company_logist_view.php
+- app/View/pages/company_drivers.php
+- app/View/pages/company_driver_vehicle_blocks.php
+- app/View/pages/company_driver_vehicle_blocks_create.php
+- app/View/pages/company_driver_vehicle_block_edit.php
+- app/View/pages/company_driver_vehicle_block_view.php
+- app/View/pages/company_driver_view.php
+- app/View/pages/company_vehicle_view.php
+- app/View/pages/company_vehicles_create.php
+- app/View/pages/company_vehicle_sets.php
+- app/View/pages/company_vehicle_sets_create.php
+- app/View/pages/company_vehicle_set_view.php
+- app/View/pages/company_crew_view.php
+- app/View/pages/company_crews_create.php
+- app/View/pages/company_crew_edit.php
+- app/View/pages/company_dashboard.php
+- app/View/pages/superadmin_company_vehicles.php
+- app/View/pages/superadmin_company_access_grants.php
+- app/View/pages/superadmin_company_documents.php
+
+ПРОВЕРКИ:
+- php -l: все 23 файла — PASS
+- git diff --check: PASS
+- runtime browser: company_owner (dashboard, drivers, vehicles, logists, contractors), logist (menu, drivers), superadmin (grants, documents, vehicles)
+- screenshots: docs/design-audit/fix-package-2/screenshots/
+
 ## DONE: CRITICAL_UX_FIX_PACKAGE_1
 
 STATUS: CRITICAL_UX_FIX_PACKAGE_1_ACCEPTED

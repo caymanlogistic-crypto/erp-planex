@@ -100,7 +100,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= e($block['driver_phone'] ?? '—') ?></dd>
                 <dt>Транспортный комплект</dt>
                 <dd>
-                    <?= e($block['set_type'] ?? '—') ?> — 
+                    <?= e(ui_set_type($block['set_type'] ?? null)) ?> — 
                     <?= e($block['primary_plate'] ?? '—') ?><?= !empty($block['secondary_plate']) ? ' + ' . e($block['secondary_plate']) : '' ?>
                 </dd>
                 <dt>Статус</dt>

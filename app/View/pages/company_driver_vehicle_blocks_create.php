@@ -44,7 +44,7 @@
             </div>
             <div class="kv-row">
                 <span class="kv-key">Комплект</span>
-                <span class="kv-value"><?= e($createdBlock['set_type'] ?? '—') ?></span>
+                <span class="kv-value"><?= e(ui_set_type($createdBlock['set_type'] ?? null)) ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Статус</span>
@@ -101,7 +101,7 @@
                     <option value="">— Выберите комплект —</option>
                     <?php foreach ($vehicleSets as $vs): ?>
                     <option value="<?= $vs['id'] ?>" <?= ($old['vehicle_set_id'] ?? '') == $vs['id'] ? 'selected' : '' ?>>
-                        #<?= $vs['id'] ?> — <?= e($vs['set_type'] ?? '—') ?> — <?= e($vs['primary_plate'] ?? '—') ?><?= !empty($vs['secondary_plate']) ? ' + ' . e($vs['secondary_plate']) : '' ?>
+                        <?= e(ui_set_type($vs['set_type'] ?? null)) ?> — <?= e($vs['primary_plate'] ?? '—') ?><?= !empty($vs['secondary_plate']) ? ' + ' . e($vs['secondary_plate']) : '' ?>
                     </option>
                     <?php endforeach; ?>
                 </select>

@@ -85,7 +85,6 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($d['full_name']) ?></span>
-                            <span class="cell-sub">ID <?= $d['id'] ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main col-mono"><?= e($d['main_phone'] ?? '—') ?></span>

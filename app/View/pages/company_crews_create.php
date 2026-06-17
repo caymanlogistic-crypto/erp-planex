@@ -126,7 +126,7 @@
                     <option value="">— Выберите блок —</option>
                     <?php foreach ($driverVehicleBlocks as $dvb): ?>
                     <option value="<?= $dvb['id'] ?>" <?= ($old['driver_vehicle_block_id'] ?? '') == $dvb['id'] ? 'selected' : '' ?>>
-                        <?= e($dvb['driver_name']) ?> — <?= e($dvb['set_type'] ?? '—') ?> — <?= e($dvb['primary_plate'] ?? '') ?><?= !empty($dvb['secondary_plate']) ? ' + ' . e($dvb['secondary_plate']) : '' ?>
+                        <?= e($dvb['driver_name']) ?> — <?= e(ui_set_type($dvb['set_type'] ?? null)) ?> — <?= e($dvb['primary_plate'] ?? '') ?><?= !empty($dvb['secondary_plate']) ? ' + ' . e($dvb['secondary_plate']) : '' ?>
                     </option>
                     <?php endforeach; ?>
                 </select>

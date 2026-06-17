@@ -71,12 +71,12 @@
                     <?php foreach ($grants as $g): ?>
                     <tr>
                         <td class="cell-double">
-                            <span class="cell-main"><?= e($g['entity_type']) ?></span>
-                            <span class="cell-sub">ID <?= (int)$g['entity_id'] ?> · #<?= $g['id'] ?></span>
+                            <span class="cell-main"><?= e(ui_entity_type($g['entity_type'])) ?></span>
+                            <span class="cell-sub">ID <?= (int)$g['entity_id'] ?></span>
                         </td>
                         <td><?= e($g['granted_to_name'] ?? '—') ?></td>
                         <td><?= e($g['granted_by_name'] ?? '—') ?></td>
-                        <td class="col-tight col-mono"><?= e($g['access_level']) ?></td>
+                        <td class="col-tight col-mono"><?= e(ui_access_level($g['access_level'])) ?></td>
                         <td class="col-tight col-muted"><?= e(substr($g['created_at'] ?? '', 0, 10)) ?></td>
                         <td class="col-tight col-actions">
                             <div class="row-actions">

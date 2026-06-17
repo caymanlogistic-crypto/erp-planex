@@ -14,7 +14,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Пользователи</h1>
+        <h1>Логисты</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">

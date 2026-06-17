@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Пользователи</h1>
+        <h1>Логисты</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -21,7 +21,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Пользователи</h1>
+        <h1>Логисты</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -34,7 +34,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Пользователи</h1>
+        <h1>Логисты</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -45,7 +45,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
-            <p>Пользователи ещё не созданы.</p>
+            <p>Логисты ещё не созданы.</p>
             <a href="/company/logists/create" class="btn btn-primary">Создать первого пользователя</a>
         </div>
     </div>
@@ -55,7 +55,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Пользователи</h1>
+        <h1>Логисты</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -80,7 +80,7 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($l['full_name']) ?></span>
-                            <span class="cell-sub">ID <?= $l['id'] ?> / <?= e($l['login']) ?> / создан <?= e(ui_date($l['created_at'] ?? null)) ?></span>
+                            <span class="cell-sub"><?= e($l['login']) ?> · создан <?= e(ui_date($l['created_at'] ?? null)) ?></span>
                         </td>
                         <td><?= ($l['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($l['role_code'] ?? '') ?></td>
                         <td>

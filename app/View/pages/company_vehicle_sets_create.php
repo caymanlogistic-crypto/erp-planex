@@ -40,7 +40,7 @@
         <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Тип комплекта</span>
-                <span class="kv-value"><?= e($createdVehicleSet['set_type']) ?></span>
+                <span class="kv-value"><?= e(ui_set_type($createdVehicleSet['set_type'] ?? null)) ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">Основная единица</span>

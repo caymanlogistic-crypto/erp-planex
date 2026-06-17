@@ -38,7 +38,7 @@ if ($companyError): ?>
 
         <?php if ($roleCode === 'company_owner'): ?>
         <a href="/company/logists" class="dash-link">
-            <span class="dash-link-label">Пользователи</span>
+            <span class="dash-link-label">Логисты</span>
             <span class="dash-link-desc">Управление пользователями компании</span>
         </a>
         <?php endif; ?>

@@ -65,22 +65,27 @@ SUPERADMIN — ЗАКРЫТ на текущем этапе.
 ## Текущий блок
 
 ```text
-Водители / Машины / Экипажи — CRITICAL UX FIX PACKAGE 1 ЗАВЕРШЁН
-STATUS: CRITICAL_UX_FIX_PACKAGE_1_ACCEPTED
-Следующий шаг: Package 2 из дизайн-аудита
+CRITICAL_UX_FIX_PACKAGE_2 ЗАВЕРШЁН
+STATUS: CRITICAL_UX_FIX_PACKAGE_2_DONE
+Следующий шаг: владелец принимает → Package 3 или иная задача
 ```
 
 ## Последнее принятое исправление
 
 ```text
-CRITICAL_UX_FIX_PACKAGE_1:
-- список водителей больше не раскрывает паспорт и СНИЛС;
-- /company/documents и /company/documents/upload без параметров показывают UX empty-state;
-- edit экипажа сохраняет текущий driver_vehicle_block_id;
-- тип транспортной единицы обязателен в UI и серверной валидации;
-- архивный экипаж не показывает кнопку «Архивировать»;
-- runtime проверен под owner, logist_runtime_1, logist_runtime_2;
-- screenshots: docs/design-audit/fix-package-1/screenshots.
+CRITICAL_UX_FIX_PACKAGE_2 (2026-06-17):
+- Enum formatter: ui_set_type, ui_unit_type, ui_entity_type, ui_role, ui_document_status — применены везде
+- superadmin grants: entity_type и access_level переведены
+- superadmin documents: entity_type, роль, статус «uploaded» переведены
+- superadmin vehicles: заголовок «Транспортные единицы», vehicle_type переведены
+- ID X убраны из всех cell-sub таблиц company_*
+- «Пользователи» → «Логисты» везде во фронтенде
+- Disabled «Рейсы» и «Настройки» убраны из меню для всех ролей
+- Logist nav-block восстановлен (был случайно удалён в процессе)
+- docStatusBadge расширена (added: uploaded, pending, approved, rejected)
+- runtime проверен: company_owner, logist (новый logist_test_1), superadmin
+- screenshots: docs/design-audit/fix-package-2/screenshots/
+- commit: fix(ui): close critical design audit issues package 2
 ```
 
 ## Последний принятый этап

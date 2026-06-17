@@ -3,8 +3,12 @@
 function docStatusBadge(string $status): string
 {
     $map = [
-        'active'   => ['class' => 'badge-ok',   'label' => 'Активен'],
+        'uploaded' => ['class' => '',            'label' => 'Загружен'],
+        'pending'  => ['class' => 'badge-warn',  'label' => 'Ожидает проверки'],
+        'approved' => ['class' => 'badge-ok',    'label' => 'Принят'],
+        'rejected' => ['class' => '',            'label' => 'Отклонён'],
         'archived' => ['class' => '',            'label' => 'Архивирован'],
+        'active'   => ['class' => 'badge-ok',   'label' => 'Активен'],
         'verified' => ['class' => 'badge-ok',   'label' => 'Проверен'],
         'review'   => ['class' => 'badge-warn',  'label' => 'На проверке'],
     ];
@@ -90,14 +94,14 @@ function docStatusBadge(string $status): string
                             <span class="cell-sub"><?= e($d['mime_type']) ?></span>
                         </td>
                         <td class="cell-double">
-                            <span class="cell-main"><?= e($d['entity_type']) ?></span>
+                            <span class="cell-main"><?= e(ui_entity_type($d['entity_type'])) ?></span>
                             <span class="cell-sub">ID <?= (int)$d['entity_id'] ?></span>
                         </td>
                         <td class="col-tight col-num col-mono"><?= formatFileSize((int)$d['file_size']) ?></td>
                         <td class="col-tight"><?= docStatusBadge($d['status']) ?></td>
                         <td class="col-tight cell-double">
                             <span class="cell-main col-muted"><?= e(substr($d['created_at'] ?? '', 0, 10)) ?></span>
-                            <span class="cell-sub"><?= e($d['uploaded_by_role'] ?? '—') ?></span>
+                            <span class="cell-sub"><?= e(ui_role($d['uploaded_by_role'] ?? null)) ?></span>
                         </td>
                         <td class="col-tight col-actions">
                             <div class="row-actions">

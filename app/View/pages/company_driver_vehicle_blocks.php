@@ -84,7 +84,6 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main">Водитель + ТС</span>
-                            <span class="cell-sub">ID <?= $b['id'] ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($b['driver_name'] ?? '—') ?></span>
@@ -92,7 +91,7 @@
                         </td>
                         <td class="cell-double">
                             <span class="cell-main col-mono"><?= e($b['plates'] ?? '—') ?></span>
-                            <span class="cell-sub"><?= e($b['set_type'] ?? '—') ?></span>
+                            <span class="cell-sub"><?= e(ui_set_type($b['set_type'] ?? null)) ?></span>
                         </td>
                         <td>
                             <span class="badge<?= $b['status'] === 'active' ? ' badge-ok' : ($b['status'] === 'archived' ? ' badge-warn' : '') ?>">

@@ -111,7 +111,7 @@
                 </dd>
                 <dt>Транспортный комплект</dt>
                 <dd>
-                    <?= e($crew['set_type'] ?? '—') ?>
+                    <?= e(ui_set_type($crew['set_type'] ?? null)) ?>
                 </dd>
                 <dt>Транспортные единицы</dt>
                 <dd>

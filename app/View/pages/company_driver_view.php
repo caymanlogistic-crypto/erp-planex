@@ -251,7 +251,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <?php foreach ($driverBlocks as $db): ?>
                     <tr>
                         <td class="col-mono"><?= $db['id'] ?></td>
-                        <td><?= e($db['set_type'] ?? '—') ?></td>
+                        <td><?= e(ui_set_type($db['set_type'] ?? null)) ?></td>
                         <td class="col-mono"><?= e($db['primary_plate'] ?? '—') ?></td>
                         <td class="col-mono"><?= e($db['secondary_plate'] ?? '—') ?></td>
                         <td><?= renderStatusBadge($db['status']) ?></td>

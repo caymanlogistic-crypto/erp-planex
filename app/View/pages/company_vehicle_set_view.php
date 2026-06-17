@@ -95,7 +95,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <h3 class="panel-head-title">Основные данные</h3>
             <dl class="kv">
                 <dt>Тип комплекта</dt>
-                <dd><?= e($vehicleSet['set_type'] ?? '—') ?></dd>
+                <dd><?= e(ui_set_type($vehicleSet['set_type'] ?? null)) ?></dd>
                 <dt>Основная единица</dt>
                 <dd>
                     <?= e($vehicleSet['primary_plate'] ?? '—') ?>

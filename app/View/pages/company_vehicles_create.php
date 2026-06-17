@@ -53,7 +53,7 @@
             </div>
             <div class="kv-row">
                 <span class="kv-key">Тип единицы</span>
-                <span class="kv-value"><?= e($createdVehicle['unit_type'] ?? '—') ?></span>
+                <span class="kv-value"><?= e(ui_unit_type($createdVehicle['unit_type'] ?? null)) ?></span>
             </div>
             <div class="kv-row">
                 <span class="kv-key">VIN</span>

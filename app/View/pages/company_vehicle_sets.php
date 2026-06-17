@@ -83,7 +83,6 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($vs['set_type'] ?? 'Комплект') ?></span>
-                            <span class="cell-sub">ID <?= $vs['id'] ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main col-mono"><?= e($vs['primary_plate'] ?? '—') ?><?= !empty($vs['secondary_plate']) ? ' + ' . e($vs['secondary_plate']) : '' ?></span>

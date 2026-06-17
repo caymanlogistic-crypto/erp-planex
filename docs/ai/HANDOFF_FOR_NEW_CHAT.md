@@ -41,31 +41,32 @@ CODEX-дизайнер не меняет функциональную логик
 ```text
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 
-Водители / Машины / Экипажи — ЭТАП 2 (CRUD + UX) ЗАВЕРШЁН.
-Статус: COMPANY_USERS_AND_RUNTIME_ACCEPTED
-Следующий шаг: owner review → дизайн-полировка.
+Водители / Машины / Экипажи — CRITICAL UX FIX PACKAGE 2 ЗАВЕРШЁН.
+Статус: CRITICAL_UX_FIX_PACKAGE_2_DONE
+Следующий шаг: владелец принимает → Package 3 или иная задача.
 
-Исправление пользователей компании:
-- SUPERADMIN создание пользователя исправлено
-- /company/logists исправлен (автосоздание локальной БД)
-- PDO unbuffered query fix
-- applyLocalMigrations расширен до 001-030
-- Проверки прав archive/edit
-- Полный runtime-сценарий пройден
+Package 2 закрыл:
+- Enum formatter — все raw enum-значения переведены (set_type, unit_type, entity_type, role, doc_status)
+- superadmin grants: entity_type, access_level переведены, убран #id гранта
+- superadmin documents: entity_type, роль, статус 'uploaded' переведены
+- superadmin vehicles: «Транспортные единицы», unit_type переведены
+- ID X убраны из всех cell-sub таблиц
+- «Пользователи» → «Логисты» везде во фронтенде
+- Disabled Рейсы и Настройки убраны из меню для всех ролей
 ```
 
 ### Стабильный commit
 
 ```text
-da1cc90 — fix(superadmin): separate company director requisites from ERP user
+fix(ui): close critical design audit issues package 2
 ```
 
 ### Важные последние commits
 
 ```text
+fix(ui): close critical design audit issues package 2
+fix(ui): close critical design audit issues package 1
 65eaf8e — feat(reference): implement CRUD UX for drivers vehicles crews
-0fae71d — feat(reference): add database foundation for drivers vehicles crews
-da1cc90 — fix(superadmin): separate company director requisites from ERP user
 ```
 
 ## Реализованные маршруты (Этап 2)

@@ -31,7 +31,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Транспорт компании</span>
+        <span class="page-title">Транспортные единицы</span>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
@@ -76,7 +76,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                         </td>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($item['brand'] ?? '—') ?> <?= e($item['model'] ?? '') ?></span>
-                            <span class="cell-sub"><?= e($item['vehicle_type'] ?? '—') ?></span>
+                            <span class="cell-sub"><?= e(ui_unit_type($item['vehicle_type'] ?? null)) ?></span>
                         </td>
                         <td><?= renderStatusBadge($item['status'] ?? '') ?></td>
                         <td class="col-muted"><?= e($item['created_at'] ?? '') ?></td>

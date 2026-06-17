@@ -90,7 +90,7 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main col-mono"><?= e($v['plate_number']) ?></span>
-                            <span class="cell-sub">ID <?= $v['id'] ?> / <?= e($v['unit_type'] ?? '—') ?></span>
+                            <span class="cell-sub"><?= e(ui_unit_type($v['unit_type'] ?? null)) ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($v['brand'] ?? '—') ?></span>

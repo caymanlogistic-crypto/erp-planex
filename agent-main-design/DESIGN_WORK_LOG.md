@@ -615,3 +615,62 @@ UI RESULT:
 
 ISSUES / TODO:
 - Package 2 remains: enum translation, backend terms, grants, disabled menu, ID cleanup.
+
+## 2026-06-17 — Critical UX fix package 2
+
+STATUS: DONE
+
+FILES TOUCHED:
+- app/View/layouts/main.php
+- app/View/components/view_formatters.php (already committed, functions existed)
+- app/View/pages/company_vehicles.php
+- app/View/pages/company_logists.php
+- app/View/pages/company_logist_view.php
+- app/View/pages/company_drivers.php
+- app/View/pages/company_driver_vehicle_blocks.php
+- app/View/pages/company_driver_vehicle_blocks_create.php
+- app/View/pages/company_driver_vehicle_block_edit.php
+- app/View/pages/company_driver_vehicle_block_view.php
+- app/View/pages/company_driver_view.php
+- app/View/pages/company_vehicle_view.php
+- app/View/pages/company_vehicles_create.php
+- app/View/pages/company_vehicle_sets.php
+- app/View/pages/company_vehicle_sets_create.php
+- app/View/pages/company_vehicle_set_view.php
+- app/View/pages/company_crew_view.php
+- app/View/pages/company_crews_create.php
+- app/View/pages/company_crew_edit.php
+- app/View/pages/company_dashboard.php
+- app/View/pages/superadmin_company_vehicles.php
+- app/View/pages/superadmin_company_access_grants.php
+- app/View/pages/superadmin_company_documents.php
+- docs/design-audit/fix-package-2/screenshots/ (folder created)
+
+WHAT CHANGED:
+- TASK-003: All raw enum values replaced via ui_set_type / ui_unit_type / ui_entity_type / ui_role / ui_document_status throughout all company_* pages.
+- TASK-013: superadmin grants — entity_type via ui_entity_type, access_level via ui_access_level, removed grant's own #id from cell-sub (kept entity_id for superadmin context).
+- TASK-019: superadmin documents — entity_type via ui_entity_type, uploaded_by_role via ui_role; docStatusBadge extended to cover uploaded/pending/approved/rejected.
+- TASK-018: superadmin vehicles — title «Транспорт компании» → «Транспортные единицы»; vehicle_type via ui_unit_type.
+- TASK-007: Removed «ID X» cell-sub from drivers, vehicles, contractors, logists, driver_vehicle_blocks, vehicle_sets.
+- TASK-004: «Пользователи» / «Пользователей» → «Логисты» / «Логистов» in all company pages and sidebar nav label.
+- TASK-009: Removed all is-disabled nav items (Рейсы, Настройки) from company_owner and logist nav blocks; removed superadmin's entire nav-bottom.
+- FIX: Logist nav block was accidentally removed by Python regex along with disabled items — restored with all active links (Водители, ТЕ, ТК, Водитель+ТС, Клиенты, Подрядчики, Экипажи), no СИСТЕМА section.
+
+VERIFICATION:
+- php -l passed for all 23 changed PHP files.
+- git diff --check: PASS (no trailing whitespace or conflict markers).
+- runtime browser check: company_owner (dashboard, drivers, vehicles, logists, contractors), logist (menu, drivers), superadmin (grants, documents, vehicles).
+- No is-disabled items remain in main.php (count = 0).
+- No raw enum values visible in browser for tested pages.
+
+UX RESULT:
+- No backend/technical terms exposed to end users in tested pages.
+- Sidebar is clean: no ghost/disabled menu items for any role.
+- «Логисты» used consistently across UI (nav, headings, cell-sub, dashboard links).
+
+UI RESULT:
+- COMPLIANT: cell-sub patterns retained without IDs.
+- COMPLIANT: main.php structure preserved for all three roles.
+
+ISSUES / TODO:
+- Verify remaining company_* pages not tested in runtime (vehicle_set_edit, vehicle_edit, driver_edit, etc.) — deferred to Package 3 audit.
