@@ -662,10 +662,9 @@ a.nav-item {
     align-items: center;
     padding: 0 14px;
     height: 56px;
+    margin: -10px -10px 0 -10px;
     background: linear-gradient(180deg, var(--surface-strong) 0%, #ece8de 100%);
-    border: none;
-    border-bottom: 1px solid var(--line-soft);
-    margin-bottom: 0;
+    border: 1px solid var(--line);
     flex-shrink: 0;
 }
 
