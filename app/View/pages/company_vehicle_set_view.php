@@ -67,8 +67,14 @@ require_once __DIR__ . '/../components/status_badge.php';
 </div>
 <div class="panel">
     <div class="panel-body">
-        <div class="notice warn">
-            <?= e($accessDenied) ?>
+        <div class="empty-state">
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Доступ запрещён</p>
+            <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
+            <div class="form-actions">
+                <a href="/company/vehicle-sets" class="btn btn-ghost">← К списку</a>
+                <a href="/company/dashboard" class="btn btn-primary">На главную</a>
+            </div>
         </div>
     </div>
 </div>

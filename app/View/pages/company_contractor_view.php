@@ -74,8 +74,14 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="panel">
     <div class="panel-body">
-        <div class="notice warn">
-            <?= e($accessDenied) ?>
+        <div class="empty-state">
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Доступ запрещён</p>
+            <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
+            <div class="form-actions">
+                <a href="/company/contractors" class="btn btn-ghost">← К списку подрядчиков</a>
+                <a href="/company/dashboard" class="btn btn-primary">На главную</a>
+            </div>
         </div>
     </div>
 </div>
@@ -382,6 +388,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
         <?php endif; ?>
 
+        <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
         <div class="form-section">
             <h3 class="panel-head-title">Служебные данные</h3>
             <dl class="kv">
@@ -395,6 +402,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= e(ui_date($contractor['updated_at'] ?? null)) ?></dd>
             </dl>
         </div>
+        <?php endif; ?>
 
         <div class="form-actions">
             <a href="/company/documents?entity_type=contractor&entity_id=<?= $contractor['id'] ?>" class="btn btn-ghost">Документы</a>

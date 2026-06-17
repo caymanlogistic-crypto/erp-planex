@@ -31,24 +31,35 @@
 </div>
 
 <?php elseif (empty($drivers)): ?>
+<?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
         <span class="page-title">Водители</span>
     </div>
+    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/drivers/create" class="btn btn-primary">Создать водителя</a>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="panel">
     <div class="panel-body">
+        <?php if ($isLogist): ?>
+        <div class="empty-state">
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Нет доступа</p>
+            <p class="empty-desc">У вас нет доступа к водителям. Обратитесь к руководителю для получения доступа.</p>
+        </div>
+        <?php else: ?>
         <div class="empty-state">
             <p class="empty-title">Водители ещё не созданы.</p>
             <p class="empty-desc">Добавьте водителя, затем привяжите телефоны, документы и блоки «Водитель + ТС».</p>
             <a href="/company/drivers/create" class="btn btn-primary">Создать первого водителя</a>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

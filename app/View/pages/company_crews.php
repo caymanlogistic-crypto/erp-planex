@@ -31,23 +31,41 @@
 </div>
 
 <?php elseif (empty($crews)): ?>
+<?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
     <div>
         <h1>Экипажи</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
+    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="panel">
     <div class="panel-body">
+        <?php if ($isLogist && !empty($hasGrantsButAllArchived)): ?>
         <div class="empty-state">
-            <p>Экипажи ещё не созданы.</p>
+            <div class="empty-icon">📦</div>
+            <p class="empty-title">Экипажи в архиве</p>
+            <p class="empty-desc">Доступные вам экипажи заархивированы. Обратитесь к руководителю для восстановления записи или назначения доступа к другому экипажу.</p>
+        </div>
+        <?php elseif ($isLogist): ?>
+        <div class="empty-state">
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Нет доступа</p>
+            <p class="empty-desc">У вас нет доступа к экипажам. Обратитесь к руководителю для получения доступа.</p>
+        </div>
+        <?php else: ?>
+        <div class="empty-state">
+            <p class="empty-title">Экипажи ещё не созданы.</p>
+            <p class="empty-desc">Создайте экипаж, чтобы объединить подрядчика, водителя и транспортный комплект.</p>
             <a href="/company/crews/create" class="btn btn-primary">Создать первый экипаж</a>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

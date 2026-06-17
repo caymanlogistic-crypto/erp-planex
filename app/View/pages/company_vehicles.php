@@ -31,13 +31,14 @@
 </div>
 
 <?php elseif (empty($vehicles)): ?>
+<?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
     <div>
         <h1>Транспортные единицы</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
-    <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
+    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспортную единицу</a>
     </div>
@@ -46,16 +47,19 @@
 
 <div class="panel">
     <div class="panel-body">
+        <?php if ($isLogist): ?>
         <div class="empty-state">
-            <?php if (($_SESSION['role_code'] ?? '') === 'logist'): ?>
-            <p class="empty-title">У вас нет доступа к транспортным единицам.</p>
-            <p class="empty-desc">Обратитесь к руководителю, чтобы получить доступ к нужным записям.</p>
-            <?php else: ?>
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Нет доступа</p>
+            <p class="empty-desc">У вас нет доступа к транспортным единицам. Обратитесь к руководителю для получения доступа.</p>
+        </div>
+        <?php else: ?>
+        <div class="empty-state">
             <p class="empty-title">Транспортные единицы ещё не добавлены.</p>
             <p class="empty-desc">Добавьте тягач или полуприцеп, чтобы собрать транспортный комплект и экипаж.</p>
             <a href="/company/vehicles/create" class="btn btn-primary">Добавить первую единицу</a>
-            <?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

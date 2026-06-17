@@ -31,23 +31,35 @@
 </div>
 
 <?php elseif (empty($blocks)): ?>
+<?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
     <div>
         <h1>Блоки "Водитель + ТС"</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
+    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать блок</a>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="panel">
     <div class="panel-body">
+        <?php if ($isLogist): ?>
         <div class="empty-state">
-            <p>Блоки "Водитель + ТС" ещё не созданы.</p>
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Нет доступа</p>
+            <p class="empty-desc">У вас нет доступа к блокам «Водитель + ТС». Обратитесь к руководителю для получения доступа.</p>
+        </div>
+        <?php else: ?>
+        <div class="empty-state">
+            <p class="empty-title">Блоки «Водитель + ТС» ещё не созданы.</p>
+            <p class="empty-desc">Создайте блок, чтобы связать водителя с транспортным комплектом для экипажа.</p>
             <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать первый блок</a>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

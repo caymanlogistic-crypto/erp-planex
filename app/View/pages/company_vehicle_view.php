@@ -60,8 +60,14 @@
 
 <div class="panel">
     <div class="panel-body">
-        <div class="notice warn">
-            <?= e($accessDenied) ?>
+        <div class="empty-state">
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Доступ запрещён</p>
+            <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
+            <div class="form-actions">
+                <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+                <a href="/company/dashboard" class="btn btn-primary">На главную</a>
+            </div>
         </div>
     </div>
 </div>
@@ -166,6 +172,7 @@
             <?php endif; ?>
         </div>
 
+        <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
         <div class="form-section">
             <h3 class="panel-head-title">Техническая информация</h3>
             <dl class="kv">
@@ -175,6 +182,7 @@
                 <dd><?= e(ui_date($vehicle['updated_at'] ?? null)) ?></dd>
             </dl>
         </div>
+        <?php endif; ?>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
         <div class="form-section">

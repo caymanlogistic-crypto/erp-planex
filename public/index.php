@@ -47,8 +47,12 @@ function requireRole(string|array $roles): void
     $allowed = is_array($roles) ? $roles : [$roles];
     if (!in_array($_SESSION['role_code'] ?? '', $allowed, true)) {
         http_response_code(403);
-        header('Content-Type: text/plain');
-        echo '403 Forbidden';
+        header('Content-Type: text/html; charset=utf-8');
+        $pageTitle = 'Доступ запрещён';
+        ob_start();
+        require base_path('app/View/pages/error_403.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
         exit;
     }
 }
@@ -6157,6 +6161,7 @@ $router->get('/company/crews', function () use ($config, $db) {
         }
 
         $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+        $hasGrantsButAllArchived = false;
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $crewStmt = $localPdo->prepare(
@@ -6178,6 +6183,15 @@ $router->get('/company/crews', function () use ($config, $db) {
             );
             $crewStmt->execute([$userId, $userId]);
             $crews = $crewStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // TASK-021: detect if logist has grants but all granted crews are archived
+            if (empty($crews)) {
+                $grantCountStmt = $localPdo->prepare(
+                    "SELECT COUNT(*) FROM entity_access_grants WHERE entity_type = 'crew' AND granted_to_user_id = ? AND revoked_at IS NULL"
+                );
+                $grantCountStmt->execute([$userId]);
+                $hasGrantsButAllArchived = ((int)$grantCountStmt->fetchColumn() > 0);
+            }
         } else {
             $crewStmt = $localPdo->query(
                 "SELECT c.*,
@@ -6201,6 +6215,7 @@ $router->get('/company/crews', function () use ($config, $db) {
     } catch (\Exception $e) {
         $company = $company ?? null;
         $crews = [];
+        $hasGrantsButAllArchived = false;
         $dbError = 'Не удалось подключиться к базе данных компании.';
     }
 

@@ -31,24 +31,35 @@
 </div>
 
 <?php elseif (empty($contractors)): ?>
+<?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
         <span class="page-title">Подрядчики</span>
     </div>
+    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/contractors/create" class="btn btn-primary">Создать подрядчика</a>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="panel">
     <div class="panel-body">
+        <?php if ($isLogist): ?>
+        <div class="empty-state">
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Нет доступа</p>
+            <p class="empty-desc">У вас нет доступа к подрядчикам. Обратитесь к руководителю для получения доступа.</p>
+        </div>
+        <?php else: ?>
         <div class="empty-state">
             <p class="empty-title">Подрядчики ещё не созданы.</p>
             <p class="empty-desc">Добавьте первого подрядчика, чтобы вести контакты, документы, налоговую историю и экипажи.</p>
             <a href="/company/contractors/create" class="btn btn-primary">Создать первого подрядчика</a>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

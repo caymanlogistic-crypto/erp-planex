@@ -115,6 +115,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             </dl>
         </div>
 
+        <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
         <div class="form-section">
             <h3 class="panel-head-title">Техническая информация</h3>
             <dl class="kv">
@@ -124,6 +125,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= e($client['updated_at'] ?? '') ?></dd>
             </dl>
         </div>
+        <?php endif; ?>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
         <div class="form-section">

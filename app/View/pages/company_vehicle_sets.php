@@ -31,23 +31,35 @@
 </div>
 
 <?php elseif (empty($vehicleSets)): ?>
+<?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
     <div>
         <h1>Транспортные комплекты</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
+    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать комплект</a>
     </div>
+    <?php endif; ?>
 </div>
 
 <div class="panel">
     <div class="panel-body">
+        <?php if ($isLogist): ?>
         <div class="empty-state">
-            <p>Транспортные комплекты ещё не созданы.</p>
+            <div class="empty-icon">🔒</div>
+            <p class="empty-title">Нет доступа</p>
+            <p class="empty-desc">У вас нет доступа к транспортным комплектам. Обратитесь к руководителю для получения доступа.</p>
+        </div>
+        <?php else: ?>
+        <div class="empty-state">
+            <p class="empty-title">Транспортные комплекты ещё не созданы.</p>
+            <p class="empty-desc">Создайте транспортный комплект, чтобы объединить тягач и полуприцеп для экипажа.</p>
             <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать первый комплект</a>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
