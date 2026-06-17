@@ -140,7 +140,6 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <th class="col-tight">Статус</th>
                     <th class="col-tight">Создан</th>
                     <th class="col-tight">Основные действия</th>
-                    <th class="col-tight">Риск</th>
                 </tr>
             </thead>
             <tbody>
@@ -149,7 +148,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <td class="cell-double">
                         <span class="cell-main">
                             <?= e($u['full_name']) ?>
-                            <span class="badge">Пользователь</span>
+                            <span class="badge">Логист</span>
                         </span>
                         <span class="cell-sub"><?= e($u['login']) ?></span>
                     </td>
@@ -168,23 +167,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                             </form>
                         </div>
                     </td>
-                    <td class="col-tight col-actions">
-                        <div class="row-actions row-actions-risk">
-                            <?php if ($u['status'] !== 'active'): ?>
-                            <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/activate" onsubmit="return confirm('Активировать пользователя?')">
-                                <button type="submit" class="btn btn-ghost btn-sm">Активировать</button>
-                            </form>
-                            <?php endif; ?>
-                            <?php if ($u['status'] === 'active'): ?>
-                            <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/block" onsubmit="return confirm('Заблокировать пользователя?')">
-                                <button type="submit" class="btn btn-secondary btn-sm">Блок</button>
-                            </form>
-                            <?php endif; ?>
-                            <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/archive" onsubmit="return confirm('Архивировать пользователя?')">
-                                <button type="submit" class="btn btn-danger btn-sm">Архив</button>
-                            </form>
-                        </div>
-                    </td>
+                    <!-- DESIGN_TODO: кнопки Блок/Архив перенесены в карточку пользователя; ранее были здесь в колонке «Риск» -->
                 </tr>
                 <?php endforeach; ?>
             </tbody>

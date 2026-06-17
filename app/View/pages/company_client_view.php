@@ -167,18 +167,15 @@ require_once __DIR__ . '/../components/status_badge.php';
         <?php endif; ?>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Действия</h3>
+            <h3 class="panel-head-title">Опасная зона</h3>
             <?php if ($client['status'] !== 'archived'): ?>
-            <form method="post" action="/company/clients/<?= $client['id'] ?>/archive" onsubmit="return confirm('Вы уверены, что хотите архивировать клиента?')">
-                <button type="submit" class="btn btn-secondary">Архивировать</button>
-            </form>
+                <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
+                <form method="post" action="/company/clients/<?= $client['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
+                    <button type="submit" class="btn btn-danger">Архивировать</button>
+                </form>
+            <?php else: ?>
+                <p class="text-muted">Клиент уже находится в архиве.</p>
             <?php endif; ?>
-        </div>
-
-        <div class="form-actions mt-4">
-            <a href="/company/clients/<?= $client['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-            <a href="/company/documents?entity_type=client&entity_id=<?= $client['id'] ?>" class="btn btn-ghost">Документы</a>
-            <a href="/company/clients" class="btn btn-ghost">← К списку</a>
         </div>
 
     </div>

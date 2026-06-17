@@ -192,14 +192,15 @@
         </div>
         <?php endif; ?>
 
-        <div class="form-actions">
-            <a href="/company/documents?entity_type=crew&entity_id=<?= $crew['id'] ?>" class="btn btn-ghost">Документы</a>
+        <div class="form-section">
+            <h3 class="panel-head-title">Опасная зона</h3>
             <?php if (($crew['status'] ?? '') === 'archived'): ?>
-                <span class="badge badge-warn"><span class="dot"></span>В архиве</span>
+                <p class="text-muted">Экипаж уже находится в архиве.</p>
             <?php else: ?>
-            <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать экипаж?')">
-                <button type="submit" class="btn btn-secondary">Архивировать</button>
-            </form>
+                <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
+                <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
+                    <button type="submit" class="btn btn-danger">Архивировать</button>
+                </form>
             <?php endif; ?>
         </div>
 

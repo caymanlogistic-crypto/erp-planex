@@ -115,6 +115,8 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= e($driver['full_name']) ?></dd>
                 <dt>Статус</dt>
                 <dd><?= renderStatusBadge($driver['status']) ?></dd>
+                <dt>СНИЛС</dt>
+                <dd><?= e($driver['snils'] ?? '') ?: '—' ?></dd>
                 <dt>Комментарий</dt>
                 <dd><?= e($driver['comments'] ?? '') ?: '—' ?></dd>
             </dl>
@@ -141,14 +143,6 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= e($driver['license_number'] ?? '') ?: '—' ?></dd>
                 <dt>Дата выдачи</dt>
                 <dd><?= e($driver['license_issue_date'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
-
-        <div class="form-section">
-            <h3 class="panel-head-title">СНИЛС</h3>
-            <dl class="kv">
-                <dt>Номер</dt>
-                <dd><?= e($driver['snils'] ?? '') ?: '—' ?></dd>
             </dl>
         </div>
 
@@ -327,10 +321,11 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
         <?php endif; ?>
 
-        <div class="form-actions">
-            <a href="/company/documents?entity_type=driver&entity_id=<?= $driver['id'] ?>" class="btn btn-ghost">Документы</a>
-            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать водителя?')">
-                <button type="submit" class="btn btn-secondary">Архивировать</button>
+        <div class="form-section">
+            <h3 class="panel-head-title">Опасная зона</h3>
+            <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
+            <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
+                <button type="submit" class="btn btn-danger">Архивировать</button>
             </form>
         </div>
 

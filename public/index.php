@@ -78,6 +78,27 @@ function generatePassword(int $length = 10): string
     return $password;
 }
 
+/**
+ * Build passport number from series and number.
+ * If series is provided, concatenates "series number" into passport_number DB column.
+ * DESIGN_TODO: add separate passport_series column to drivers table.
+ */
+function buildPassportNumber(?string $series, ?string $number): ?string
+{
+    $series = trim($series ?? '');
+    $number = trim($number ?? '');
+
+    if ($series === '' && $number === '') {
+        return null;
+    }
+
+    if ($series !== '') {
+        return $series . ' ' . $number;
+    }
+
+    return $number;
+}
+
 function applyCentralMigrations(\App\Core\Database $db): void
 {
     try {
@@ -4872,7 +4893,7 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
             ':license_category'       => $_POST['license_category'] ?? null,
             ':license_issue_date'     => $_POST['license_issue_date'] ?? null,
             ':license_expire_date'    => $_POST['license_expire_date'] ?? null,
-            ':passport_number'        => $_POST['passport_number'] ?? null,
+            ':passport_number'        => buildPassportNumber($_POST['passport_series'] ?? null, $_POST['passport_number'] ?? null),
             ':passport_issued_by'     => $_POST['passport_issued_by'] ?? null,
             ':passport_department_code' => $_POST['passport_department_code'] ?? null,
             ':passport_issue_date'    => $_POST['passport_issue_date'] ?? null,
@@ -4880,7 +4901,7 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
             ':status'                 => $_POST['status'] ?? $driver['status'],
             ':comments'               => $_POST['comments'] ?? null,
             ':updated_by_user_id'     => (int)$_SESSION['user_id'],
-            ':updated_by_role'        => $_SESSION['role_code'] ?? null,
+            ':updated_by_role'        => $_POST['role_code'] ?? null,
             ':id'                     => (int) $id,
         ]);
 

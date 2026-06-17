@@ -82,7 +82,7 @@
 
             <div class="field">
                 <label class="field-label">Водитель <span class="req">*</span></label>
-                <select name="driver_id" class="field-input">
+                <select name="driver_id" class="field-input"<?= empty($drivers) ? ' disabled' : '' ?>>
                     <option value="">— Выберите водителя —</option>
                     <?php foreach ($drivers as $d): ?>
                     <option value="<?= $d['id'] ?>" <?= ($old['driver_id'] ?? '') == $d['id'] ? 'selected' : '' ?>>
@@ -90,6 +90,9 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (empty($drivers)): ?>
+                    <p class="field-hint">Нет доступных водителей. <a href="/company/drivers/create">Создать водителя</a></p>
+                <?php endif; ?>
                 <?php if (!empty($errors['driver_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['driver_id']) ?></div>
                 <?php endif; ?>
@@ -97,7 +100,7 @@
 
             <div class="field">
                 <label class="field-label">Транспортный комплект <span class="req">*</span></label>
-                <select name="vehicle_set_id" class="field-input">
+                <select name="vehicle_set_id" class="field-input"<?= empty($vehicleSets) ? ' disabled' : '' ?>>
                     <option value="">— Выберите комплект —</option>
                     <?php foreach ($vehicleSets as $vs): ?>
                     <option value="<?= $vs['id'] ?>" <?= ($old['vehicle_set_id'] ?? '') == $vs['id'] ? 'selected' : '' ?>>
@@ -105,6 +108,9 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (empty($vehicleSets)): ?>
+                    <p class="field-hint">Нет доступных транспортных комплектов. <a href="/company/vehicle-sets/create">Создать транспортный комплект</a></p>
+                <?php endif; ?>
                 <?php if (!empty($errors['vehicle_set_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['vehicle_set_id']) ?></div>
                 <?php endif; ?>

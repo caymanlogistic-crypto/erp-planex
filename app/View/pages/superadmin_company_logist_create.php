@@ -122,10 +122,12 @@
             <div class="field">
                 <label class="field-label">Пароль</label>
                 <div class="input-group">
-                    <input type="text" name="password" id="password_field" class="field-input" placeholder="Оставьте пустым для автогенерации" value="<?= e($old['password'] ?? '') ?>">
-                    <button type="button" class="btn btn-secondary" onclick="generatePasswordField()">Сгенерировать</button>
+                    <input type="password" name="password" id="password_field" class="field-input code-hi" placeholder="Оставьте пустым для автогенерации" value="<?= e($old['password'] ?? '') ?>">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="var p=document.getElementById('password_field'); p.type=p.type==='password'?'text':'password';" style="margin-left:4px;">👁</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('password_field').value)" style="margin-left:4px;">📋 Копировать</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="generatePasswordField()" style="margin-left:4px;">Сгенерировать</button>
                 </div>
-                <div class="field-msg">Оставьте пустым — пароль будет сгенерирован автоматически.</div>
+                <div class="field-msg">Оставьте пустым — пароль будет сгенерирован автоматически. Сохраните пароль — после создания пользователя он не будет доступен повторно.</div>
             </div>
         </div>
 

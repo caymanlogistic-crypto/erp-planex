@@ -153,9 +153,9 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="notice info">
             Сброс пароля заменит текущий пароль Руководителя. Новый временный пароль будет показан только один раз.
         </div>
-        <form method="post" action="/superadmin/companies/<?= $company['id'] ?>/owner/reset-password" onsubmit="return confirm('Сбросить пароль Руководителя? Текущий пароль будет заменён.')">
+        <form method="post" action="/superadmin/companies/<?= $company['id'] ?>/owner/reset-password" onsubmit="return confirm('Вы уверены? Руководитель потеряет текущий пароль. Новый пароль будет показан однократно.')">
             <div class="form-actions">
-                <button type="submit" class="btn btn-secondary">Сбросить пароль</button>
+                <button type="submit" class="btn btn-danger">Сбросить пароль</button>
             </div>
         </form>
     </div>

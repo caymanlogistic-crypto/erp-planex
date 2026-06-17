@@ -121,15 +121,17 @@
             <div class="field">
                 <label class="field-label">Пароль</label>
                 <div class="field-inline-group">
-                    <input type="text" name="password" class="field-input field-inline-grow"
+                    <input type="password" name="password" id="password_field" class="field-input field-inline-grow code-hi"
                            value="<?= e($old['password'] ?? $generatedPassword ?? '') ?>"
                            placeholder="Оставьте пустым для автогенерации">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="var p=document.getElementById('password_field'); p.type=p.type==='password'?'text':'password';" style="margin-left:4px;">👁</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('password_field').value)" style="margin-left:4px;">📋 Копировать</button>
                     <button type="button" class="btn btn-ghost btn-sm btn-nowrap btn-align-top" onclick="generatePassword()">
                         Сгенерировать
                     </button>
                 </div>
                 <div class="field-msg field-msg-tight">
-                    Если не заполнено — пароль будет сгенерирован автоматически.
+                    Если не заполнено — пароль будет сгенерирован автоматически. Сохраните пароль — после создания пользователя он не будет доступен повторно.
                 </div>
                 <?php if (!empty($errors['password'])): ?>
                     <div class="field-msg is-error"><?= e($errors['password']) ?></div>

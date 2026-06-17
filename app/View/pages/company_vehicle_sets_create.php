@@ -101,7 +101,7 @@
 
             <div class="field">
                 <label class="field-label">Основная транспортная единица <span class="req">*</span></label>
-                <select name="primary_vehicle_unit_id" class="field-input">
+                <select name="primary_vehicle_unit_id" class="field-input"<?= empty($vehicleUnits) ? ' disabled' : '' ?>>
                     <option value="">— Выберите единицу —</option>
                     <?php foreach ($vehicleUnits as $vu): ?>
                     <option value="<?= $vu['id'] ?>" <?= ($old['primary_vehicle_unit_id'] ?? '') == $vu['id'] ? 'selected' : '' ?>>
@@ -109,6 +109,9 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (empty($vehicleUnits)): ?>
+                    <p class="field-hint">Нет доступных транспортных единиц. <a href="/company/vehicles/create">Создать транспортную единицу</a></p>
+                <?php endif; ?>
                 <?php if (!empty($errors['primary_vehicle_unit_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['primary_vehicle_unit_id']) ?></div>
                 <?php endif; ?>
@@ -116,7 +119,7 @@
 
             <div class="field" id="secondary_field">
                 <label class="field-label">Дополнительная транспортная единица <span class="text-muted">(обязательно для сцепки и автопоезда)</span></label>
-                <select name="secondary_vehicle_unit_id" class="field-input">
+                <select name="secondary_vehicle_unit_id" class="field-input"<?= empty($vehicleUnits) ? ' disabled' : '' ?>>
                     <option value="">— Выберите единицу —</option>
                     <?php foreach ($vehicleUnits as $vu): ?>
                     <option value="<?= $vu['id'] ?>" <?= ($old['secondary_vehicle_unit_id'] ?? '') == $vu['id'] ? 'selected' : '' ?>>
@@ -124,6 +127,9 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (empty($vehicleUnits)): ?>
+                    <p class="field-hint">Нет доступных транспортных единиц. <a href="/company/vehicles/create">Создать транспортную единицу</a></p>
+                <?php endif; ?>
                 <?php if (!empty($errors['secondary_vehicle_unit_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['secondary_vehicle_unit_id']) ?></div>
                 <?php endif; ?>

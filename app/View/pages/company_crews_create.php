@@ -107,7 +107,7 @@
 
             <div class="field">
                 <label class="field-label">Подрядчик <span class="req">*</span></label>
-                <select name="contractor_id" class="field-input" required>
+                <select name="contractor_id" class="field-input" required<?= empty($contractors) ? ' disabled' : '' ?>>
                     <option value="">— Выберите подрядчика —</option>
                     <?php foreach ($contractors as $ctr): ?>
                     <option value="<?= $ctr['id'] ?>" <?= ($old['contractor_id'] ?? '') == $ctr['id'] ? 'selected' : '' ?>>
@@ -115,6 +115,9 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (empty($contractors)): ?>
+                    <p class="field-hint">Нет доступных подрядчиков. <a href="/company/contractors/create">Создать подрядчика</a></p>
+                <?php endif; ?>
                 <?php if (!empty($errors['contractor_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['contractor_id']) ?></div>
                 <?php endif; ?>
@@ -122,7 +125,7 @@
 
             <div class="field">
                 <label class="field-label">Блок "Водитель + ТС" <span class="req">*</span></label>
-                <select name="driver_vehicle_block_id" class="field-input">
+                <select name="driver_vehicle_block_id" class="field-input"<?= empty($driverVehicleBlocks) ? ' disabled' : '' ?>>
                     <option value="">— Выберите блок —</option>
                     <?php foreach ($driverVehicleBlocks as $dvb): ?>
                     <option value="<?= $dvb['id'] ?>" <?= ($old['driver_vehicle_block_id'] ?? '') == $dvb['id'] ? 'selected' : '' ?>>
@@ -130,6 +133,9 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (empty($driverVehicleBlocks)): ?>
+                    <p class="field-hint">Нет доступных блоков «Водитель + ТС». Сначала <a href="/company/driver-vehicle-blocks/create">создайте блок</a>.</p>
+                <?php endif; ?>
                 <?php if (!empty($errors['driver_vehicle_block_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['driver_vehicle_block_id']) ?></div>
                 <?php endif; ?>

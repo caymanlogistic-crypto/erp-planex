@@ -223,10 +223,11 @@
         </div>
         <?php endif; ?>
 
-        <div class="form-actions">
-            <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-ghost">Документы</a>
-            <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive" class="inline-form" onsubmit="return confirm('Архивировать транспортную единицу?')">
-                <button type="submit" class="btn btn-secondary">Архивировать</button>
+        <div class="form-section">
+            <h3 class="panel-head-title">Опасная зона</h3>
+            <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
+            <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
+                <button type="submit" class="btn btn-danger">Архивировать</button>
             </form>
         </div>
 

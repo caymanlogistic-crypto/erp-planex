@@ -130,6 +130,62 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
 
         <div class="form-section">
+            <h3 class="panel-head-title">Паспортные данные</h3>
+
+            <?php
+            // Determine passport series and number for pre-fill
+            if (!empty($old)) {
+                // Form was submitted — use form values
+                $passportSeries = $old['passport_series'] ?? '';
+                $passportNumber = $old['passport_number'] ?? '';
+            } else {
+                // First load — split DB value if combined
+                $storedPassport = $driver['passport_number'] ?? '';
+                if (!empty($storedPassport) && strpos($storedPassport, ' ') !== false) {
+                    [$passportSeries, $passportNumber] = explode(' ', $storedPassport, 2);
+                } else {
+                    $passportSeries = '';
+                    $passportNumber = $storedPassport;
+                }
+            }
+            ?>
+
+            <div class="frm-row">
+                <div class="field">
+                    <label class="field-label">Серия паспорта</label>
+                    <input type="text" name="passport_series" class="field-input" maxlength="4" placeholder="4 цифры"
+                           value="<?= e($passportSeries) ?>">
+                </div>
+                <div class="field">
+                    <label class="field-label">Номер паспорта</label>
+                    <input type="text" name="passport_number" class="field-input" maxlength="6" placeholder="6 цифр"
+                           value="<?= e($passportNumber) ?>">
+                </div>
+            </div>
+
+            <div class="frm-row">
+                <div class="field">
+                    <label class="field-label">Дата выдачи</label>
+                    <input type="date" name="passport_issue_date" class="field-input"
+                           value="<?= e($old['passport_issue_date'] ?? $driver['passport_issue_date'] ?? '') ?>">
+                </div>
+                <div class="field">
+                    <label class="field-label">Код подразделения</label>
+                    <input type="text" name="passport_department_code" class="field-input" maxlength="10"
+                           value="<?= e($old['passport_department_code'] ?? $driver['passport_department_code'] ?? '') ?>">
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="field-label">Кем выдан</label>
+                <input type="text" name="passport_issued_by" class="field-input"
+                       value="<?= e($old['passport_issued_by'] ?? $driver['passport_issued_by'] ?? '') ?>">
+            </div>
+
+            <p class="field-hint">Все поля паспортных данных необязательные.</p>
+        </div>
+
+        <div class="form-section">
             <h3 class="panel-head-title">Статус и комментарий</h3>
 
             <div class="field">
