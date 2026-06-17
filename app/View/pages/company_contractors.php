@@ -85,7 +85,7 @@
                     <tr>
                         <td class="cell-double">
                             <span class="cell-main"><?= e($c['name']) ?></span>
-                            <span class="cell-sub">ID <?= $c['id'] ?><?= !empty($c['contractor_type']) ? ' / ' . e(ui_contractor_type($c['contractor_type'])) : '' ?></span>
+                            <span class="cell-sub"><?= !empty($c['contractor_type']) ? e(ui_contractor_type($c['contractor_type'])) : '—' ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main col-mono"><?= e($c['inn']) ?></span>

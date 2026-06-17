@@ -51,3 +51,63 @@ function ui_contractor_type(?string $type): string
         default => trim((string) $type) !== '' ? (string) $type : '—',
     };
 }
+
+function ui_set_type(?string $type): string
+{
+    return match ((string) $type) {
+        'single'     => 'Одиночка',
+        'coupling'   => 'Сцепка',
+        'road_train' => 'Автопоезд',
+        default      => trim((string) $type) !== '' ? (string) $type : '—',
+    };
+}
+
+function ui_unit_type(?string $type): string
+{
+    return match ((string) $type) {
+        'single'       => 'Одиночное ТС',
+        'tractor'      => 'Тягач',
+        'semi_trailer' => 'Полуприцеп',
+        'truck'        => 'Грузовик',
+        'trailer'      => 'Прицеп',
+        default        => trim((string) $type) !== '' ? (string) $type : '—',
+    };
+}
+
+function ui_entity_type(?string $type): string
+{
+    return match ((string) $type) {
+        'driver'               => 'Водитель',
+        'vehicle'              => 'Транспортная единица',
+        'vehicle_unit'         => 'Транспортная единица',
+        'vehicle_set'          => 'Транспортный комплект',
+        'crew'                 => 'Экипаж',
+        'contractor'           => 'Подрядчик',
+        'client'               => 'Клиент',
+        'driver_vehicle_block' => 'Водитель + ТС',
+        default                => trim((string) $type) !== '' ? (string) $type : '—',
+    };
+}
+
+function ui_role(?string $role): string
+{
+    return match ((string) $role) {
+        'company_owner' => 'Руководитель',
+        'logist'        => 'Логист',
+        'superadmin'    => 'Суперадминистратор',
+        default         => trim((string) $role) !== '' ? (string) $role : '—',
+    };
+}
+
+function ui_document_status(?string $status): string
+{
+    return match ((string) $status) {
+        'uploaded' => 'Загружен',
+        'pending'  => 'Ожидает проверки',
+        'approved' => 'Принят',
+        'rejected' => 'Отклонён',
+        'archived' => 'Архивирован',
+        'active'   => 'Активен',
+        default    => trim((string) $status) !== '' ? (string) $status : '—',
+    };
+}
