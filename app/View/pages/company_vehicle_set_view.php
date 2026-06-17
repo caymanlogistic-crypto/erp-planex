@@ -16,7 +16,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Транспортный комплект</h1>
+        <h1>Транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <h1>Комплект не найден</h1>
+        <h1>Транспорт не найден</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -49,7 +49,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Транспортный комплект с указанным ID не найден.
+            Транспорт с указанным ID не найден.
         </div>
     </div>
 </div>
@@ -83,8 +83,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div>
-        <div class="page-eyebrow">ТРАНСПОРТНЫЕ КОМПЛЕКТЫ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Комплект: <?= e($vehicleSet['primary_plate'] ?? '—') ?><?= !empty($vehicleSet['secondary_plate']) ? ' + ' . e($vehicleSet['secondary_plate']) : '' ?></h1>
+        <div class="page-eyebrow">ТРАНСПОРТ / <?= e(mb_strtoupper($company['name'])) ?></div>
+        <h1>Транспорт: <?= e($vehicleSet['primary_plate'] ?? '—') ?><?= !empty($vehicleSet['secondary_plate']) ? ' + ' . e($vehicleSet['secondary_plate']) : '' ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -119,6 +119,38 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dt>Комментарий</dt>
                 <dd><?= e($vehicleSet['comments'] ?? '') ?: '—' ?></dd>
             </dl>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Водители+ТС</h3>
+            <?php if (empty($vehicleSetBlocks)): ?>
+                <p class="text-muted">Транспорт не используется в связках Водитель+ТС.</p>
+            <?php else: ?>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Водитель</th>
+                            <th>Статус связки</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($vehicleSetBlocks as $vsb): ?>
+                    <tr>
+                        <td class="cell-double">
+                            <a href="/company/drivers/<?= $vsb['driver_id'] ?>"><?= e($vsb['driver_name'] ?? '—') ?></a>
+                        </td>
+                        <td><?= renderStatusBadge($vsb['block_status'] ?? 'active') ?></td>
+                        <td class="col-actions">
+                            <a href="/company/driver-vehicle-blocks/<?= $vsb['block_id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>

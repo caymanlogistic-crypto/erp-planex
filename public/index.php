@@ -4691,17 +4691,22 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
         // Load related driver_vehicle_blocks
         $driverBlocks = [];
         if ($driver && !$accessDenied) {
-            $driverBlocks = $localPdo->prepare(
-                "SELECT dvb.*, vs.set_type, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand, vu1.model AS primary_model,
-                 vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand, vu2.model AS secondary_model
-                 FROM driver_vehicle_blocks dvb
-                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
-                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
-                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
-                 WHERE dvb.driver_id = ? ORDER BY dvb.id DESC"
-            );
-            $driverBlocks->execute([(int)$id]);
-            $driverBlocks = $driverBlocks->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $driverBlocks = $localPdo->prepare(
+                    "SELECT dvb.id, dvb.status, dvb.driver_id, dvb.vehicle_set_id,
+                     vs.set_type, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand, vu1.model AS primary_model,
+                     vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand, vu2.model AS secondary_model
+                     FROM driver_vehicle_blocks dvb
+                     JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                     LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                     LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                     WHERE dvb.driver_id = ? AND dvb.status != 'archived' ORDER BY dvb.id DESC"
+                );
+                $driverBlocks->execute([(int)$id]);
+                $driverBlocks = $driverBlocks->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {
+                $driverBlocks = [];
+            }
         }
 
         $grants = [];
@@ -7242,12 +7247,12 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
     }
 });
 
-// ---- VEHICLE SETS (Транспортные комплекты) ----
+// ---- VEHICLE SETS (Транспорт) ----
 
 $router->get('/company/vehicle-sets', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Транспортные комплекты';
-    $pageContext = 'Транспортные комплекты — Компания';
+    $pageTitle = 'Транспорт';
+    $pageContext = 'Транспорт — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -7269,7 +7274,7 @@ $router->get('/company/vehicle-sets', function () use ($config, $db) {
             $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
-        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
         if ($company['status'] !== 'active') {
             $vehicleSets = []; $dbError = null;
             ob_start(); require base_path('app/View/pages/company_vehicle_sets.php');
@@ -7325,8 +7330,8 @@ $router->get('/company/vehicle-sets', function () use ($config, $db) {
 
 $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Создать транспортный комплект';
-    $pageContext = 'Транспортные комплекты — Компания';
+    $pageTitle = 'Создать транспорт';
+    $pageContext = 'Транспорт — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -7347,7 +7352,7 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
             $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
             return;
         }
-        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
 
         $dbIdentifier = $company['db_identifier'];
         $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
@@ -7371,8 +7376,8 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
 
 $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Создать транспортный комплект';
-    $pageContext = 'Транспортные комплекты — Компания';
+    $pageTitle = 'Создать транспорт';
+    $pageContext = 'Транспорт — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = []; $old = $_POST; $formError = null; $success = false; $createdVehicleSet = null; $vehicleUnits = [];
@@ -7390,7 +7395,7 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
         $stmt->execute([$companyId]);
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderCreateVS; }
-        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
         if ($company['status'] !== 'active') { $formError = 'Создание недоступно'; goto renderCreateVS; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -7456,8 +7461,8 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
 
 $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Транспортный комплект';
-    $pageContext = 'Транспортные комплекты — Компания';
+    $pageTitle = 'Транспорт';
+    $pageContext = 'Транспорт — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $grants = []; $logists = [];
@@ -7474,7 +7479,7 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $vehicleSet = null; $dbError = null; goto renderViewVS; }
-        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
         if ($company['status'] !== 'active') { $vehicleSet = null; $dbError = null; goto renderViewVS; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -7511,7 +7516,7 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
             }
         }
 
-        if ($vehicleSet && !$accessDenied) { $pageTitle = 'Комплект #' . $vehicleSet['id']; }
+        if ($vehicleSet && !$accessDenied) { $pageTitle = 'Транспорт #' . $vehicleSet['id']; }
 
         if (($_SESSION['role_code'] ?? '') === 'company_owner') {
             $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
@@ -7519,9 +7524,29 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
             $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
+
+        // Load driver_vehicle_blocks for this vehicle set
+        $vehicleSetBlocks = [];
+        if ($vehicleSet) {
+            try {
+                $vsbStmt = $localPdo->prepare(
+                    "SELECT dvb.id AS block_id, dvb.status AS block_status,
+                     d.full_name AS driver_name, d.id AS driver_id
+                     FROM driver_vehicle_blocks dvb
+                     JOIN drivers d ON dvb.driver_id = d.id
+                     WHERE dvb.vehicle_set_id = ? AND dvb.status != 'archived'
+                     ORDER BY dvb.id DESC"
+                );
+                $vsbStmt->execute([(int)$id]);
+                $vehicleSetBlocks = $vsbStmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {
+                $vehicleSetBlocks = [];
+            }
+        }
+
         $dbError = null;
     } catch (\Exception $e) {
-        $company = $company ?? null; $vehicleSet = null; $grants = []; $logists = [];
+        $company = $company ?? null; $vehicleSet = null; $grants = []; $logists = []; $vehicleSetBlocks = [];
         $dbError = 'Не удалось загрузить: ' . $e->getMessage();
     }
 
@@ -7532,8 +7557,8 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
 
 $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Редактировать комплект';
-    $pageContext = 'Транспортные комплекты — Компания';
+    $pageTitle = 'Редактировать транспорт';
+    $pageContext = 'Транспорт — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityNotFound = false; $success = false; $vehicleUnits = [];
@@ -7550,7 +7575,7 @@ $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) { $company = null; $vehicleSet = null; $errors = []; $old = []; $formError = null; goto renderEditVS; }
-        $pageContext = 'Транспортные комплекты — Компания: ' . $company['name'];
+        $pageContext = 'Транспорт — Компания: ' . $company['name'];
         if ($company['status'] !== 'active') { $vehicleSet = null; $errors = []; $old = []; $formError = null; goto renderEditVS; }
 
         $dbIdentifier = $company['db_identifier'];
@@ -7576,8 +7601,8 @@ $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db
 
 $router->post('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
     requireRole(['company_owner', 'logist']);
-    $pageTitle = 'Редактировать комплект';
-    $pageContext = 'Транспортные комплекты — Компания';
+    $pageTitle = 'Редактировать транспорт';
+    $pageContext = 'Транспорт — Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityNotFound = false; $success = false; $vehicleUnits = [];
@@ -7669,7 +7694,7 @@ $router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config,
         $blockCheck = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE vehicle_set_id = ? AND status = ?');
         $blockCheck->execute([(int)$id, 'active']);
         if ($blockCheck->fetchColumn() > 0) {
-            $_SESSION['flash'] = 'Комплект используется в активных блоках «Водитель+ТС». Сначала архивируйте блоки.';
+            $_SESSION['flash'] = 'Транспорт используется в активных блоках «Водитель+ТС». Сначала архивируйте блоки.';
             header('Location: /company/vehicle-sets/' . $id); exit;
         }
 
@@ -8112,7 +8137,7 @@ $router->get('/company/documents', function () use ($config, $db) {
                     'contractor' => ['label' => 'Перевозчик', 'labelDative' => 'перевозчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
-                   'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
+                    'vehicle_set' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
                    'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
@@ -8294,7 +8319,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
                     'contractor' => ['label' => 'Перевозчик', 'labelDative' => 'перевозчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
-                   'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
+                    'vehicle_set' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
                    'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 
@@ -8463,7 +8488,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
                     'contractor' => ['label' => 'Перевозчик', 'labelDative' => 'перевозчикам', 'table' => 'contractors', 'backRoute' => '/company/contractors'],
                    'driver' => ['label' => 'Водитель', 'labelDative' => 'водителям', 'table' => 'drivers', 'backRoute' => '/company/drivers'],
                    'vehicle_unit' => ['label' => 'Транспортная единица', 'labelDative' => 'транспортным единицам', 'table' => 'vehicle_units', 'backRoute' => '/company/vehicles'],
-                   'vehicle_set' => ['label' => 'Транспортный комплект', 'labelDative' => 'комплектам', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
+                    'vehicle_set' => ['label' => 'Транспорт', 'labelDative' => 'транспорту', 'table' => 'vehicle_sets', 'backRoute' => '/company/vehicle-sets'],
                    'driver_vehicle_block' => ['label' => 'Блок Водитель+ТС', 'labelDative' => 'блокам', 'table' => 'driver_vehicle_blocks', 'backRoute' => '/company/driver-vehicle-blocks'],
                    'crew' => ['label' => 'Экипаж', 'labelDative' => 'экипажам', 'table' => 'crews', 'backRoute' => '/company/crews']];
 

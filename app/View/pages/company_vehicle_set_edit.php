@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать комплект</h1>
+        <h1>Редактировать транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -24,7 +24,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать комплект</h1>
+        <h1>Редактировать транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -40,7 +40,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Комплект не найден</h1>
+        <h1>Транспорт не найден</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -49,14 +49,14 @@
 </div>
 
 <div class="notice warn">
-    Транспортный комплект с указанным ID не найден.
+    Транспорт с указанным ID не найден.
 </div>
 
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div>
-        <h1>Комплект обновлён</h1>
+        <h1>Транспорт обновлён</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -67,7 +67,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Транспортный комплект успешно обновлён.
+            Транспорт успешно обновлён.
         </div>
         <div class="form-actions mt-4">
             <a href="/company/vehicle-sets/<?= $vehicleSet['id'] ?>" class="btn btn-primary">← К просмотру</a>
@@ -80,7 +80,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Редактировать комплект #<?= $vehicleSet['id'] ?></h1>
+        <h1>Редактировать транспорт #<?= $vehicleSet['id'] ?></h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -96,7 +96,7 @@
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Транспортный комплект</h3>
+            <h3 class="panel-head-title">Транспорт</h3>
 
             <div class="field">
                 <label class="field-label">Тип комплекта</label>

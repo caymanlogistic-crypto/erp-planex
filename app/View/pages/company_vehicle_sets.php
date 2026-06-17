@@ -8,20 +8,20 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспортные комплекты</h1>
+        <h1>Транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Работа с транспортными комплектами недоступна.
+    Компания находится в статусе «<?= e($company['status']) ?>». Работа с транспортом недоступна.
 </div>
 
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
     <div>
-        <h1>Транспортные комплекты</h1>
+        <h1>Транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
@@ -35,12 +35,12 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспортные комплекты</h1>
+        <h1>Транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <?php if (!$isLogist): ?>
     <div class="page-head-actions">
-        <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать комплект</a>
+        <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать транспорт</a>
     </div>
     <?php endif; ?>
 </div>
@@ -51,13 +51,13 @@
         <div class="empty-state">
             <div class="empty-icon">🔒</div>
             <p class="empty-title">Нет доступа</p>
-            <p class="empty-desc">У вас нет доступа к транспортным комплектам. Обратитесь к руководителю для получения доступа.</p>
+            <p class="empty-desc">У вас нет доступа к транспорту. Обратитесь к руководителю для получения доступа.</p>
         </div>
         <?php else: ?>
         <div class="empty-state">
-            <p class="empty-title">Транспортные комплекты ещё не созданы.</p>
-            <p class="empty-desc">Создайте транспортный комплект, чтобы объединить тягач и полуприцеп для экипажа.</p>
-            <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать первый комплект</a>
+            <p class="empty-title">Транспорт ещё не создан.</p>
+            <p class="empty-desc">Создайте транспорт, чтобы объединить тягач и полуприцеп для экипажа.</p>
+            <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать первый транспорт</a>
         </div>
         <?php endif; ?>
     </div>
@@ -67,11 +67,11 @@
 
 <div class="page-head">
     <div>
-        <h1>Транспортные комплекты</h1>
+        <h1>Транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать комплект</a>
+        <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать транспорт</a>
     </div>
 </div>
 
@@ -81,7 +81,7 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>Комплект</th>
+                        <th>Транспорт</th>
                         <th>Состав</th>
                         <th>Статус</th>
                         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
@@ -94,7 +94,7 @@
                     <?php foreach ($vehicleSets as $vs): ?>
                     <tr>
                         <td class="cell-double">
-                            <span class="cell-main"><?= e($vs['set_type'] ?? 'Комплект') ?></span>
+                            <span class="cell-main"><?= e($vs['set_type'] ?? 'Транспорт') ?></span>
                         </td>
                         <td class="cell-double">
                             <span class="cell-main col-mono"><?= e($vs['primary_plate'] ?? '—') ?><?= !empty($vs['secondary_plate']) ? ' + ' . e($vs['secondary_plate']) : '' ?></span>

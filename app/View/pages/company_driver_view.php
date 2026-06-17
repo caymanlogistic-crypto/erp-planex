@@ -231,29 +231,27 @@ require_once __DIR__ . '/../components/status_badge.php';
         </div>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Связанные блоки "Водитель+ТС"</h3>
+            <h3 class="panel-head-title">Водители+ТС</h3>
             <?php if (empty($driverBlocks)): ?>
-                <p class="text-muted">Нет связанных блоков.</p>
+                <p class="text-muted">Водитель не состоит в связках Водитель+ТС.</p>
             <?php else: ?>
             <div class="tbl-wrap">
                 <table class="tbl">
                     <thead>
                         <tr>
-                            <th>ID блока</th>
-                            <th>Тип комплекта</th>
-                            <th>Основная ед.</th>
-                            <th>Доп. ед.</th>
-                            <th>Статус</th>
+                            <th>Транспорт</th>
+                            <th>Статус связки</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($driverBlocks as $db): ?>
                     <tr>
-                        <td class="col-mono"><?= $db['id'] ?></td>
-                        <td><?= e(ui_set_type($db['set_type'] ?? null)) ?></td>
-                        <td class="col-mono"><?= e($db['primary_plate'] ?? '—') ?></td>
-                        <td class="col-mono"><?= e($db['secondary_plate'] ?? '—') ?></td>
+                        <td class="cell-double">
+                            <a href="/company/vehicle-sets/<?= $db['vehicle_set_id'] ?>">
+                                <?= e($db['primary_plate'] ?? '—') ?><?= !empty($db['secondary_plate']) ? ' + ' . e($db['secondary_plate']) : '' ?>
+                            </a>
+                        </td>
                         <td><?= renderStatusBadge($db['status']) ?></td>
                         <td class="col-actions">
                             <a href="/company/driver-vehicle-blocks/<?= $db['id'] ?>" class="btn btn-toolbar">Просмотр</a>
@@ -264,6 +262,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 </table>
             </div>
             <?php endif; ?>
+            <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary mt-4">Создать связку</a>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>

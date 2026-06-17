@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать транспортный комплект</h1>
+        <h1>Создать транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -17,14 +17,14 @@
 </div>
 
 <div class="notice warn">
-    Компания находится в статусе «<?= e($company['status']) ?>». Создание комплектов недоступно.
+    Компания находится в статусе «<?= e($company['status']) ?>». Создание транспорта недоступно.
 </div>
 
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div>
-        <h1>Комплект создан</h1>
+        <h1>Транспорт создан</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -35,7 +35,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Транспортный комплект успешно создан.
+            Транспорт успешно создан.
         </div>
         <div class="kv mt-4">
             <div class="kv-row">
@@ -68,7 +68,7 @@
 
 <div class="page-head">
     <div>
-        <h1>Создать транспортный комплект</h1>
+        <h1>Создать транспорт</h1>
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
@@ -84,7 +84,7 @@
     <div class="panel-body">
 
         <div class="form-section">
-            <h3 class="panel-head-title">Транспортный комплект</h3>
+            <h3 class="panel-head-title">Транспорт</h3>
 
             <div class="field">
                 <label class="field-label">Тип комплекта</label>
@@ -156,7 +156,7 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Создать комплект</button>
+            <button type="submit" class="btn btn-primary">Создать транспорт</button>
         </div>
 
     </div>
