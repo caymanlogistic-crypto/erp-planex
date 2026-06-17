@@ -59,82 +59,35 @@ docs/ui/DESIGN_STANDARD.md
 
 ```text
 SUPERADMIN — ЗАКРЫТ на текущем этапе.
-Последний стабильный commit: da1cc90
+CONTRACTORS_MENU_REWORK — ЗАКРЫТ.
+Последний стабильный commit: 140c318
 ```
 
-## Текущий блок
+## Следующий блок
 
 ```text
-FINAL_VISUAL_POLISH — ЗАВЕРШЁН
-STATUS: FINAL_VISUAL_POLISH_DONE
-Финальная визуальная полировка интерфейса выполнена.
-Все 6 пакетов дизайн-аудита закрыты + финальная полировка.
-Следующий шаг: владелец + ChatGPT финальная визуальная приёмка.
-```
-
-## Последнее принятое исправление
-
-```text
-DESIGN_AUDIT_PACKAGES_3_6 (2026-06-17):
-
-Package 3 (fd927ae): logist grant states
-- TASK-020: unified empty states for logist without access (6 lists)
-- TASK-021: special message for logist with archived grants
-- TASK-025: improved 403 Forbidden page (error_403.php + navigation)
-- TASK-006+TASK-026: tech info hidden from all logists (6 view pages)
-
-Package 4 (fea1730): cards, danger actions, forms
-- TASK-010: danger zone separated from documents on all view cards
-- TASK-015: SNILS moved to main data, service dates hidden from logist
-- TASK-017: password masking with show/hide/copy on create user forms
-- TASK-022: Block/Archive removed from SA users table
-- TASK-024: passport fields added to driver edit form
-- TASK-014: empty select fallback with links on create forms
-- TASK-027: confirmation before owner password reset
-
-Package 5 (d75dfe6): tables, headings, contractor card, login
-- TASK-011+UX-019: logists list improved (@login format, removed role column)
-- TASK-012: ID removed from superadmin companies cell-sub
-- TASK-023: real FIO via ui_actor() in "Created by" columns
-- UX-009: contractor card restructured (contacts above bank, bank collapsed)
-- UX-014: vehicle set heading with plate numbers
-- UX-016: DVB heading with driver name and plate
-- UX-008: contractors table compacted (5 columns, INN in cell-sub)
-- UX-001: login page shows "ERP PLANEX" brand
-- UX-038: VIN removed from vehicle set card
-- UX-040: quotes removed from DVB empty state
-
-Package 6 (3aca7a1): operational dashboards
-- TASK-008: company dashboard with role-based metrics (owner/logist)
-- UX-002: superadmin dashboard with company stats + recent companies table
-- Forbidden text removed: "Среда: local", "В разработке", "Статус БД"
+Ожидает решения владельца.
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (COMPANY_USERS_AND_RUNTIME_ACCEPTED):
-
-Исправление пользователей компании и полный runtime-сценарий:
-- SUPERADMIN создание пользователя компании исправлено (CREATE DATABASE + поле пароля + детальная ошибка)
-- /company/logists исправлен (автосоздание локальной БД во всех 7 обработчиках)
-- PDO unbuffered query fix (MYSQL_ATTR_USE_BUFFERED_QUERY)
-- applyLocalMigrations расширен до 001-030
-- Проверки прав для archive/edit экипажей
-- Grant update (view → edit без ошибки "уже выдан")
-- HTML required убран с бизнес-полей (ИНН, телефон, тип документа)
-- Полный runtime-сценарий на новом экспедиторе пройден:
-  - Подрядчик + контакт + налоговая запись + документ
-  - Водитель + телефон + документ
-  - Тягач + полуприцеп + документы
-  - Сцепка + документ
-  - Блок Водитель+ТС + документ
-  - Экипаж + документ
-  - Role-based visibility: logist_runtime_2 не видит записи logist_runtime_1
-  - view-grant + edit-grant проверены
-  - Удаление чужих/своих документов проверено
-  - /company/vehicles работает, pts_number скрыт
-  - Бизнес-поля не обязательны (серверно + HTML)
+Принято erp-architect (commit 140c318):
+- Переработка меню: Подрядчики — раскрываемая группа, внутри Перевозчики/Водители+ТС/Водители/Транспорт
+- contractors в UI → Перевозчики
+- vehicle_sets в UI → Транспорт
+- driver_vehicle_blocks в UI → Водители+ТС, immutable edit (нельзя менять состав связки)
+- Сценарий быстрого создания Перевозчик+Водитель+Транспорт одной формой
+- Навигационные связи между сущностями в карточках
+- vehicle_units и crews убраны из меню (остались в БД)
+- Форма создания экспедитора: убраны контакты, убраны логин/телефон/email руководителя,
+  оставлены только Должность и ФИО руководителя как реквизиты
+- Форма редактирования экспедитора: аналогично убраны контакты и ERP-поля руководителя
+- POST /superadmin/companies/create: сохраняет director_position/director_full_name в companies
+- POST /superadmin/companies/{id}/edit: обновляет director_position/director_full_name в companies,
+  убрано автосоздание company_owner, убрана генерация пароля
+- Карточка компании: показывает реквизиты руководителя из companies + статус ERP-доступа
+- Маршрут /superadmin/companies/{id}/create-owner сохранён для будущего создания ERP-пользователя
 ```
 
 ## Правило обновления
@@ -148,3 +101,24 @@ Package 6 (3aca7a1): operational dashboards
 - следующего блока.
 
 Не добавлять длинные отчёты.
+
+
+## Семантика меню компании — новая модель подрядчиков
+
+```text
+Подрядчики — раскрываемая группа меню, а не отдельный справочник.
+Перевозчики — пользовательское название сущности contractors; это бывшие Подрядчики.
+Водители+ТС — пользовательское название driver_vehicle_blocks; неизменяемая по составу связка Водитель + Транспорт.
+Водители — справочник drivers; здесь редактируются данные водителя.
+Транспорт — пользовательское название vehicle_sets; бывшие Транспортные комплекты; здесь редактируются данные транспорта.
+Транспортные единицы — vehicle_units; техническая внутренняя сущность, из меню убрать, из БД не удалять.
+Экипажи / crews — техническая связь Перевозчик + Водители+ТС; не показывать как главный пользовательский раздел.
+```
+
+Правило неизменяемости связки `Водители+ТС`:
+
+```text
+Нельзя заменить водителя или транспорт внутри существующей связки.
+Если нужен другой водитель или другой транспорт — создаётся новая связка.
+В разделе Водители+ТС разрешены просмотр, документы и переход к редактированию исходных карточек водителя/транспорта.
+```

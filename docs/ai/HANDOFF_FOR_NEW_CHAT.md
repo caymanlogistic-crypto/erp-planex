@@ -40,139 +40,21 @@ CODEX-дизайнер не меняет функциональную логик
 
 ```text
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
-
-FINAL_VISUAL_POLISH — ВЫПОЛНЕН.
-Дизайн-аудит (пакеты 1-6) закрыт + финальная визуальная полировка.
-Статус: FINAL_VISUAL_POLISH_DONE
-Следующий шаг: владелец + ChatGPT финальная визуальная приёмка.
 ```
 
 ### Стабильный commit
 
 ```text
-a7cc70f — fix(ui): apply final visual polish after design audit
+da1cc90 — fix(superadmin): separate company director requisites from ERP user
 ```
 
 ### Важные последние commits
 
 ```text
-a7cc70f — fix(ui): apply final visual polish after design audit
-3aca7a1 — feat(ui): add operational dashboards package 6
-d75dfe6 — fix(ui): improve tables and entity headings package 5
-fea1730 — fix(ui): polish cards and forms package 4
-fd927ae — fix(ui): improve logist grant states package 3
-4d2a74b — fix(ui): add missing formatter functions for package 2 runtime
-0a19d13 — fix(ui): close critical design audit issues package 2
-ebdf072 — fix(ui): close critical design audit issues package 1
-65eaf8e — feat(reference): implement CRUD UX for drivers vehicles crews
+488a88b — test(superadmin): verify post-design functionality
+49e7218 — fix(superadmin): restore company create handler
+da1cc90 — fix(superadmin): separate company director requisites from ERP user
 ```
-
-## Реализованные маршруты (Этап 2)
-
-### Contractors
-```text
-GET|POST /company/contractors[/create]
-GET /company/contractors/{id}
-GET|POST /company/contractors/{id}/edit
-POST /company/contractors/{id}/archive
-POST /company/contractors/{contractor_id}/contacts/create
-POST /company/contractors/{contractor_id}/tax-history/create
-```
-
-### Drivers
-```text
-GET|POST /company/drivers[/create]
-GET /company/drivers/{id}
-GET|POST /company/drivers/{id}/edit
-POST /company/drivers/{id}/archive
-POST /company/drivers/{driver_id}/phones/create
-```
-
-### Vehicle Units (Транспортные единицы, URL /company/vehicles)
-```text
-GET|POST /company/vehicles[/create]
-GET /company/vehicles/{id}
-GET|POST /company/vehicles/{id}/edit
-POST /company/vehicles/{id}/archive
-```
-
-### Vehicle Sets (Транспортные комплекты) — NEW
-```text
-GET|POST /company/vehicle-sets[/create]
-GET /company/vehicle-sets/{id}
-GET|POST /company/vehicle-sets/{id}/edit
-POST /company/vehicle-sets/{id}/archive
-```
-
-### Driver-Vehicle Blocks (Блоки «Водитель+ТС») — NEW
-```text
-GET|POST /company/driver-vehicle-blocks[/create]
-GET /company/driver-vehicle-blocks/{id}
-GET|POST /company/driver-vehicle-blocks/{id}/edit
-POST /company/driver-vehicle-blocks/{id}/archive
-```
-
-### Crews (Экипажи) — REWRITTEN
-```text
-GET|POST /company/crews[/create]
-GET /company/crews/{id}
-GET|POST /company/crews/{id}/edit
-POST /company/crews/{id}/archive
-```
-
-### Documents
-```text
-GET /company/documents
-GET|POST /company/documents/upload
-GET /company/documents/download
-POST /company/documents/delete
-POST /company/documents/replace
-```
-
-### Access Grants
-```text
-POST /company/access-grants/grant
-POST /company/access-grants/{id}/revoke
-```
-
-### Entity types supported
-```text
-client, contractor, driver, vehicle_unit, vehicle_set, driver_vehicle_block, crew
-```
-
-## Архитектура блока «Водители / Машины / Экипажи»
-
-```text
-Подрядчик + (Водитель + ТС) = Экипаж
-driver_vehicle_blocks = Водитель + ТС
-crews = contractor_id + driver_vehicle_block_id
-```
-
-Таблицы в локальной БД компании (`erp_company_{id}`):
-
-| Таблица | Назначение |
-|---|---|
-| contractors | Подрядчики (ИНН не unique, bank-реквизиты) |
-| contractor_contacts | Множественные контакты подрядчика |
-| contractor_tax_history | История систем налогообложения |
-| drivers | Водители (паспорт, СНИЛС, права — legacy) |
-| driver_phones | Телефоны водителей |
-| vehicle_units | Транспортные единицы (бывшие vehicles) |
-| vehicle_sets | Транспортные комплекты (single/coupling/road_train) |
-| driver_vehicle_blocks | Блоки водитель+ТС |
-| crews | Экипажи (contractor + driver_vehicle_block) |
-| documents | Документы (soft delete через deleted_at) |
-| entity_access_grants | Гранты доступа |
-
-Ключевые правила:
-- `vehicles` → `vehicle_units` (переименование), URL /company/vehicles сохранён
-- `inn` в contractors — не unique (idx_inn)
-- `plate_number` в vehicle_units — не unique (idx_plate)
-- `documents.deleted_at IS NULL` = активный документ
-- `documents.status` — legacy, не используется в новом коде
-- `crews`: безопасная миграция, блокировка если есть старые записи
-- `pts_number`, `license_category`, `license_expire_date` сохранены как legacy
-- Все миграции (011-023) идемпотентны, auto-run через applyLocalMigrations()
 
 ## Ключевое архитектурное решение: руководитель компании
 
@@ -245,19 +127,40 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 ## Следующий блок в работе
 
 ```text
-Ожидание: владелец + ChatGPT финальная визуальная приёмка после FINAL_VISUAL_POLISH.
+Ожидает решения владельца.
 ```
 
-Все 6 пакетов дизайн-аудита + финальная полировка выполнены:
-- Package 1 (ebdf072): critical UX fixes (drivers list, documents, crew edit, vehicle type)
-- Package 2 (0a19d13): enum translation, backend terms, grants, disabled menu, ID cleanup
-- Package 3 (fd927ae): logist grant states, empty states, 403 page, tech info hidden
-- Package 4 (fea1730): danger zones, password masking, passport in edit form, empty selects
-- Package 5 (d75dfe6): compact tables, entity headings, contractor card restructure, login brand
-- Package 6 (3aca7a1): operational dashboards (company owner, logist, superadmin)
-- FINAL POLISH: visual hierarchy, density, panels, tables, buttons, sidebar, login card, dashboard metrics
+Переработка меню и UX блока Подрядчики/Перевозчики/Водители/Транспорт — ЗАВЕРШЕНА (6 блоков, commit 140c318).
 
-Screenshots: docs/design-audit/final-visual-polish/screenshots/ (12 files)
+## Правила финальной визуальной приёмки в новом чате
+
+Новый ChatGPT-чат должен сначала восстановить контекст по этому файлу и не писать промты агентам без прямой команды владельца.
+
+Текущая задача нового чата:
+
+```text
+Проверить финальные screenshots после FINAL_VISUAL_POLISH и дать вердикт:
+COMPLIANT / PARTIALLY_COMPLIANT / NON_COMPLIANT
+```
+
+Проверять не “красиво/некрасиво”, а соответствие дизайн-системе ERP PLANEX:
+- единый промышленный UI;
+- нет backend/dev-слов в интерфейсе;
+- нет случайного UI-kit;
+- нет больших пустот и хаоса;
+- sidebar/topbar читаемые;
+- таблицы и карточки иерархичны;
+- действия понятны;
+- опасные действия отделены;
+- роли owner/logist/superadmin не теряют нужные функции.
+
+Screenshots лежат:
+
+```text
+docs/design-audit/final-visual-polish/screenshots/
+```
+
+Если screenshots неполные, обрезанные, пустые, 404 или без CSS — запросить новый screenshot set.
 
 ## Что нельзя нарушать
 
@@ -279,3 +182,25 @@ C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\app\View\pages\      — view-файл
 C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\database\migrations\  — миграции
 C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\public\assets\css\erp-ui.css — главный CSS
 ```
+
+
+## Семантика меню компании — новая модель подрядчиков
+
+```text
+Подрядчики — раскрываемая группа меню, а не отдельный справочник.
+Перевозчики — пользовательское название сущности contractors; это бывшие Подрядчики.
+Водители+ТС — пользовательское название driver_vehicle_blocks; неизменяемая по составу связка Водитель + Транспорт.
+Водители — справочник drivers; здесь редактируются данные водителя.
+Транспорт — пользовательское название vehicle_sets; бывшие Транспортные комплекты; здесь редактируются данные транспорта.
+Транспортные единицы — vehicle_units; техническая внутренняя сущность, из меню убрать, из БД не удалять.
+Экипажи / crews — техническая связь Перевозчик + Водители+ТС; не показывать как главный пользовательский раздел.
+```
+
+Правило неизменяемости связки `Водители+ТС`:
+
+```text
+Нельзя заменить водителя или транспорт внутри существующей связки.
+Если нужен другой водитель или другой транспорт — создаётся новая связка.
+В разделе Водители+ТС разрешены просмотр, документы и переход к редактированию исходных карточек водителя/транспорта.
+```
+
