@@ -501,7 +501,7 @@ a.nav-item {
     height: calc(100vh - var(--topbar-h));
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 10px;
+    padding: 0;
 }
 
 /* === TOPBAR BRAND === */
@@ -1931,6 +1931,17 @@ tr:last-child td {
     }
 
     .content {
-        padding: var(--space-4);
+        padding: 0;
     }
+}
+
+/* ============================================================
+   ERP PLANEX HARD EDGE NORMALIZATION
+   Owner decision: no rounded corners in production ERP UI
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+    border-radius: 0 !important;
 }
