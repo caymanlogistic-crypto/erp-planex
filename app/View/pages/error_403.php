@@ -1,13 +1,13 @@
 <div class="page-head">
-    <div>
-        <h1>Доступ запрещён</h1>
+    <div class="page-head-left">
+        <span class="page-eyebrow">ОШИБКА ДОСТУПА</span>
+        <span class="page-title">Доступ запрещён</span>
     </div>
 </div>
 
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
-            <div class="empty-icon">🔒</div>
             <p class="empty-title">У вас нет доступа к этому разделу</p>
             <p class="empty-desc">Для получения доступа обратитесь к руководителю компании.</p>
             <div class="form-actions">

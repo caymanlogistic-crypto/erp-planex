@@ -674,3 +674,44 @@ UI RESULT:
 
 ISSUES / TODO:
 - Verify remaining company_* pages not tested in runtime (vehicle_set_edit, vehicle_edit, driver_edit, etc.) — deferred to Package 3 audit.
+
+## 2026-06-17 — Final visual polish after design audit backlog
+
+STATUS: DONE
+
+FILES TOUCHED:
+- public/assets/css/app.css (+85/-28 lines)
+- app/View/pages/company_dashboard.php
+- app/View/pages/error_403.php
+- docs/ai/CURRENT_TASK.md
+- docs/ai/PROJECT_STATE.md
+- docs/ai/HANDOFF_FOR_NEW_CHAT.md
+
+WHAT CHANGED:
+- page-head: height 56→60px, border-bottom, box-shadow for separation
+- panels: border strengthened, subtle shadow for depth
+- tables: font-size 12→13px, border-bottom on td, improved hover
+- buttons: btn-secondary font-weight 600→500 (clearer hierarchy)
+- sidebar: label padding, group spacing, active indicator widened
+- topbar: subtle shadow, brand-name sizing
+- login card: bigger, deeper shadow, brand classes added
+- dashboard: all 46 inline-style removed, replaced with CSS classes
+- error_403: standardised to page-head pattern
+
+UX RESULT:
+- Login page feels more anchored and confident
+- Dashboard metric cards properly styled through CSS, not inline
+- Visual hierarchy sharper: page-head separates from content, panels have depth
+
+UI RESULT:
+- COMPLIANT: all CSS changes within existing design tokens
+- COMPLIANT: no new colors, radii ≤2px, no font changes
+- COMPLIANT: erp-ui.css NOT modified
+- COMPLIANT: no inline-style in changed PHP files
+
+SCREENSHOTS:
+- docs/design-audit/final-visual-polish/screenshots/ (12 files)
+
+KNOWN ISSUE:
+- main.php was corrupted by coder (UTF-8 mojibake) — restored from git by architect
+- Superadmin screenshots (010-012) show login page (no auth session captured)

@@ -223,6 +223,24 @@ Layout `app/View/layouts/main.php` подключает сначала `/assets/
   PNG dimensions 1440x900.
 ```
 
+## Final visual polish state (2026-06-17)
+
+```text
+✓ Финальная визуальная полировка после design audit backlog (пакеты 1-6).
+✓ page-head: усилен визуально (height 60px, border-bottom, box-shadow).
+✓ panels: border усилен, тонкая тень для глубины.
+✓ tables: font-size 13px, border-bottom на td, улучшен hover.
+✓ buttons: btn-secondary font-weight 500 (иерархия primary/secondary чётче).
+✓ sidebar: spacing улучшен, active indicator widened.
+✓ topbar: box-shadow, brand-name sizing.
+✓ login card: шире, глубже, brand классы добавлены.
+✓ dashboard: 46 inline-style → CSS-классы (.metric-grid, .metric-card, .metric-value, .metric-label).
+✓ error_403: стандартный page-head паттерн.
+✓ app.css +85/-28 lines; erp-ui.css не тронут.
+✓ Все изменения в рамках существующих дизайн-токенов (цвета, радиусы, шрифты не менялись).
+✓ Screenshots: docs/design-audit/final-visual-polish/screenshots/ (12 PNG)
+```
+
 ## Critical UX fix package 1 state (2026-06-17)
 
 ```text

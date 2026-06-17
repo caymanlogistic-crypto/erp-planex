@@ -1,5 +1,38 @@
 # ERP PLANEX — текущая задача
 
+## DONE: FINAL_VISUAL_POLISH
+
+STATUS: FINAL_VISUAL_POLISH_DONE
+
+Финальная визуальная полировка интерфейса после закрытия design audit backlog (пакеты 1-6).
+
+COMMIT: a7cc70f — fix(ui): apply final visual polish after design audit
+
+WHAT WAS POLISHED:
+- page-head: height 56→60px, border-bottom, box-shadow для визуального отделения
+- page-content: padding 8→10px сверху, 14→16px снизу
+- panels: border усилен до line-strong, box-shadow для глубины
+- tables: font-size 12→13px, border-bottom на td, улучшен hover
+- buttons: btn-secondary font-weight 600→500 (иерархия primary/secondary)
+- sidebar: nav-section-label padding-top 0→2px, nav-group spacing 8→10px, active indicator 2→3px
+- topbar: box-shadow снизу, brand-name font-size 13→13.5px
+- login: card width 392→420px, head padding увеличен, добавлены .login-brand/.login-brand-sub стили, card box-shadow
+- dashboard: все 46 inline-style убраны, заменены на .metric-grid/.metric-card/.metric-value/.metric-label CSS-классы
+- error_403: приведён к стандартному page-head паттерну (page-eyebrow + page-title)
+
+FILES CHANGED:
+- public/assets/css/app.css (+85/-28 lines)
+- app/View/pages/company_dashboard.php (inline-style → CSS classes)
+- app/View/pages/error_403.php (page-head pattern)
+
+MAIN.PHP: восстановлен из git после повреждения кодировки кодером (UTF-8 corruption Cyrillic). NULL-байты в конце файла — предсуществующие, безвредны.
+
+SCREENSHOTS: docs/design-audit/final-visual-polish/screenshots/ (12 files)
+
+NEXT: владелец + ChatGPT визуальная приёмка.
+
+---
+
 ## DONE: DESIGN_AUDIT_BACKLOG
 
 STATUS: DESIGN_AUDIT_BACKLOG_IMPLEMENTED

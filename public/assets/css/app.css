@@ -432,7 +432,7 @@ a.nav-item {
     left: 0;
     top: 7px;
     bottom: 7px;
-    width: 2px;
+    width: 3px;
     background: var(--nav-gold);
     border-radius: 0 1px 1px 0;
 }
@@ -450,7 +450,7 @@ a.nav-item {
 }
 
 .nav-section-label {
-    padding: 0 13px 5px;
+    padding: 2px 13px 5px;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: .12em;
@@ -474,6 +474,7 @@ a.nav-item {
     height: 38px;
     background: var(--surface-strong);
     border-bottom: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
     z-index: 100;
 }
 
@@ -531,7 +532,7 @@ a.nav-item {
 }
 
 .brand-name {
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 700;
     letter-spacing: -.02em;
     color: rgba(240,238,232,.9);
@@ -603,7 +604,7 @@ a.nav-item {
 
 .nav-group + .nav-group {
     border-top: 1px solid var(--nav-divider);
-    padding-top: 8px;
+    padding-top: 10px;
 }
 
 .nav-icon {
@@ -661,11 +662,13 @@ a.nav-item {
     justify-content: space-between;
     align-items: center;
     padding: 0 14px;
-    height: 56px;
+    height: 60px;
     background: linear-gradient(180deg, var(--surface-strong) 0%, #ece8de 100%);
     border: 1px solid var(--line);
+    border-bottom: 1px solid var(--line-soft);
     margin-bottom: 0;
     flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
 }
 
 /* Left column: eyebrow + title stack */
@@ -710,11 +713,12 @@ a.nav-item {
 
 .panel {
     background: var(--surface-strong);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     border-radius: 0;
     padding: 0;
     overflow: hidden;
     margin-bottom: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
 }
 
 .empty-state {
@@ -745,7 +749,7 @@ a.nav-item {
 /* Page content area (below page-head) */
 /* NOTE: .content already provides 14px left/right — no extra horizontal padding here */
 .page-content {
-    padding: 8px 0 14px;
+    padding: 10px 0 16px;
     display: flex;
     flex-direction: column;
 }
@@ -834,6 +838,7 @@ button:focus {
     background: var(--surface-strong);
     border-color: var(--line-soft);
     color: var(--text-main);
+    font-weight: 500;
 }
 
 .btn-danger {
@@ -1277,7 +1282,7 @@ tr:last-child td {
 .tbl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .tbl th,
@@ -1310,11 +1315,13 @@ tr:last-child td {
     background: #fafaf6;
     color: var(--text-main);
     border-right: 1px solid rgba(216,212,204,.35);
+    border-bottom: 1px solid var(--line-hair);
 }
 .tbl td:last-child { border-right: none; }
 
 .tbl tbody tr:hover td {
-    background: #ece9e2;
+    background: #e8e4db;
+    border-bottom-color: var(--line-soft);
 }
 
 .col-mono {
@@ -1527,14 +1534,33 @@ tr:last-child td {
     background: var(--surface-strong);
     border: 1px solid var(--line);
     border-radius: 2px;
-    width: 392px;
+    width: 420px;
     max-width: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
 }
 
 .login-card-head {
-    padding: 10px 14px;
+    padding: 14px 18px;
     background: var(--surface-muted);
     border-bottom: 1px solid var(--line-hair);
+}
+
+.login-brand {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.025em;
+    color: var(--text-main);
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.login-brand-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-faint);
+    letter-spacing: .02em;
+    margin-bottom: 10px;
+    line-height: 1.3;
 }
 
 .login-card-head h1 {
@@ -1679,6 +1705,43 @@ tr:last-child td {
     font-weight: 400;
     font-size: 12px;
     text-align: right;
+}
+
+/* === DASHBOARD METRIC CARDS === */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.metric-card {
+    background: var(--surface-strong);
+    padding: 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.02);
+    transition: box-shadow 120ms, border-color 120ms;
+}
+
+.metric-card:hover {
+    border-color: var(--line);
+    box-shadow: 0 2px 4px rgba(0,0,0,.05);
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.1;
+}
+
+.metric-label {
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: .04em;
+    margin-top: 4px;
 }
 
 /* === TOPBAR LOGOUT BUTTON === */

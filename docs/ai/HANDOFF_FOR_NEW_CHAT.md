@@ -41,21 +41,22 @@ CODEX-дизайнер не меняет функциональную логик
 ```text
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 
-DESIGN_AUDIT_BACKLOG — ВЫПОЛНЕН.
-Все 6 пакетов дизайн-аудита закоммичены.
-Статус: DESIGN_AUDIT_BACKLOG_IMPLEMENTED
-Следующий шаг: владелец + ChatGPT визуальная приёмка.
+FINAL_VISUAL_POLISH — ВЫПОЛНЕН.
+Дизайн-аудит (пакеты 1-6) закрыт + финальная визуальная полировка.
+Статус: FINAL_VISUAL_POLISH_DONE
+Следующий шаг: владелец + ChatGPT финальная визуальная приёмка.
 ```
 
 ### Стабильный commit
 
 ```text
-3aca7a1 — feat(ui): add operational dashboards package 6
+a7cc70f — fix(ui): apply final visual polish after design audit
 ```
 
 ### Важные последние commits
 
 ```text
+a7cc70f — fix(ui): apply final visual polish after design audit
 3aca7a1 — feat(ui): add operational dashboards package 6
 d75dfe6 — fix(ui): improve tables and entity headings package 5
 fea1730 — fix(ui): polish cards and forms package 4
@@ -244,18 +245,19 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 ## Следующий блок в работе
 
 ```text
-Ожидание: владелец + ChatGPT визуальная приёмка DESIGN_AUDIT_BACKLOG.
+Ожидание: владелец + ChatGPT финальная визуальная приёмка после FINAL_VISUAL_POLISH.
 ```
 
-Все 6 пакетов дизайн-аудита выполнены:
+Все 6 пакетов дизайн-аудита + финальная полировка выполнены:
 - Package 1 (ebdf072): critical UX fixes (drivers list, documents, crew edit, vehicle type)
 - Package 2 (0a19d13): enum translation, backend terms, grants, disabled menu, ID cleanup
 - Package 3 (fd927ae): logist grant states, empty states, 403 page, tech info hidden
 - Package 4 (fea1730): danger zones, password masking, passport in edit form, empty selects
 - Package 5 (d75dfe6): compact tables, entity headings, contractor card restructure, login brand
 - Package 6 (3aca7a1): operational dashboards (company owner, logist, superadmin)
+- FINAL POLISH: visual hierarchy, density, panels, tables, buttons, sidebar, login card, dashboard metrics
 
-Screenshots ожидают финального контрольного прогона.
+Screenshots: docs/design-audit/final-visual-polish/screenshots/ (12 files)
 
 ## Что нельзя нарушать
 
