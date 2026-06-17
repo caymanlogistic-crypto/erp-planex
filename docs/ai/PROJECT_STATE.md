@@ -65,27 +65,48 @@ SUPERADMIN — ЗАКРЫТ на текущем этапе.
 ## Текущий блок
 
 ```text
-CRITICAL_UX_FIX_PACKAGE_2 ЗАВЕРШЁН
-STATUS: CRITICAL_UX_FIX_PACKAGE_2_DONE
-Следующий шаг: владелец принимает → Package 3 или иная задача
+DESIGN_AUDIT_BACKLOG — ЗАВЕРШЁН
+STATUS: DESIGN_AUDIT_BACKLOG_IMPLEMENTED
+Пакеты 3-6 выполнены и закоммичены.
+Следующий шаг: владелец + ChatGPT принимают результат визуально.
 ```
 
 ## Последнее принятое исправление
 
 ```text
-CRITICAL_UX_FIX_PACKAGE_2 (2026-06-17):
-- Enum formatter: ui_set_type, ui_unit_type, ui_entity_type, ui_role, ui_document_status — применены везде
-- superadmin grants: entity_type и access_level переведены
-- superadmin documents: entity_type, роль, статус «uploaded» переведены
-- superadmin vehicles: заголовок «Транспортные единицы», vehicle_type переведены
-- ID X убраны из всех cell-sub таблиц company_*
-- «Пользователи» → «Логисты» везде во фронтенде
-- Disabled «Рейсы» и «Настройки» убраны из меню для всех ролей
-- Logist nav-block восстановлен (был случайно удалён в процессе)
-- docStatusBadge расширена (added: uploaded, pending, approved, rejected)
-- runtime проверен: company_owner, logist (новый logist_test_1), superadmin
-- screenshots: docs/design-audit/fix-package-2/screenshots/
-- commit: fix(ui): close critical design audit issues package 2
+DESIGN_AUDIT_PACKAGES_3_6 (2026-06-17):
+
+Package 3 (fd927ae): logist grant states
+- TASK-020: unified empty states for logist without access (6 lists)
+- TASK-021: special message for logist with archived grants
+- TASK-025: improved 403 Forbidden page (error_403.php + navigation)
+- TASK-006+TASK-026: tech info hidden from all logists (6 view pages)
+
+Package 4 (fea1730): cards, danger actions, forms
+- TASK-010: danger zone separated from documents on all view cards
+- TASK-015: SNILS moved to main data, service dates hidden from logist
+- TASK-017: password masking with show/hide/copy on create user forms
+- TASK-022: Block/Archive removed from SA users table
+- TASK-024: passport fields added to driver edit form
+- TASK-014: empty select fallback with links on create forms
+- TASK-027: confirmation before owner password reset
+
+Package 5 (d75dfe6): tables, headings, contractor card, login
+- TASK-011+UX-019: logists list improved (@login format, removed role column)
+- TASK-012: ID removed from superadmin companies cell-sub
+- TASK-023: real FIO via ui_actor() in "Created by" columns
+- UX-009: contractor card restructured (contacts above bank, bank collapsed)
+- UX-014: vehicle set heading with plate numbers
+- UX-016: DVB heading with driver name and plate
+- UX-008: contractors table compacted (5 columns, INN in cell-sub)
+- UX-001: login page shows "ERP PLANEX" brand
+- UX-038: VIN removed from vehicle set card
+- UX-040: quotes removed from DVB empty state
+
+Package 6 (3aca7a1): operational dashboards
+- TASK-008: company dashboard with role-based metrics (owner/logist)
+- UX-002: superadmin dashboard with company stats + recent companies table
+- Forbidden text removed: "Среда: local", "В разработке", "Статус БД"
 ```
 
 ## Последний принятый этап

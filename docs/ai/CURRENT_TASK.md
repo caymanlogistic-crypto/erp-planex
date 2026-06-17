@@ -1,5 +1,41 @@
 # ERP PLANEX — текущая задача
 
+## DONE: DESIGN_AUDIT_BACKLOG
+
+STATUS: DESIGN_AUDIT_BACKLOG_IMPLEMENTED
+
+Пакеты 3-6 выполнены через erp-coder, приняты erp-architect, закоммичены.
+
+PACKAGE 3 (fd927ae) — logist grants, empty states, access denied:
+- TASK-020, TASK-021, TASK-025, TASK-006+TASK-026
+- 16 files: все company_* list/view pages + error_403.php + public/index.php
+
+PACKAGE 4 (fea1730) — cards, danger actions, forms:
+- TASK-010, TASK-015, TASK-017, TASK-022, TASK-024, TASK-014, TASK-027
+- 17 files: все company_* view pages + superadmin_company_* pages + public/index.php
+
+PACKAGE 5 (d75dfe6) — tables, headings, contractor card, login:
+- TASK-011, TASK-012, TASK-023, UX-009, UX-014, UX-016, UX-008, UX-001, UX-019, UX-038, UX-040
+- 12 files: company_* list/view + superadmin_companies + login_form + view_formatters
+
+PACKAGE 6 (3aca7a1) — operational dashboards:
+- TASK-008, UX-002
+- 3 files: company_dashboard + superadmin_dashboard + public/index.php
+
+HOTFIX (4d2a74b) — missing formatter functions for Package 2 runtime.
+
+CHECKS:
+- php -l: все изменённые файлы PASS
+- git diff --check: PASS
+- runtime: coder проверял logist1, logist2; архитектор перепроверил код
+- unrelated dirty files: package*.json, capture*, tmp_*, .fuse_hidden* не тронуты
+
+SCREENSHOTS: ожидают финального контрольного прогона архитектором.
+
+NEXT: владелец + ChatGPT визуальная приёмка.
+
+---
+
 ## DONE: CRITICAL_UX_FIX_PACKAGE_2
 
 STATUS: CRITICAL_UX_FIX_PACKAGE_2_DONE

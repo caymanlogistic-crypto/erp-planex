@@ -41,30 +41,27 @@ CODEX-дизайнер не меняет функциональную логик
 ```text
 SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 
-Водители / Машины / Экипажи — CRITICAL UX FIX PACKAGE 2 ЗАВЕРШЁН.
-Статус: CRITICAL_UX_FIX_PACKAGE_2_DONE
-Следующий шаг: владелец принимает → Package 3 или иная задача.
-
-Package 2 закрыл:
-- Enum formatter — все raw enum-значения переведены (set_type, unit_type, entity_type, role, doc_status)
-- superadmin grants: entity_type, access_level переведены, убран #id гранта
-- superadmin documents: entity_type, роль, статус 'uploaded' переведены
-- superadmin vehicles: «Транспортные единицы», unit_type переведены
-- ID X убраны из всех cell-sub таблиц
-- «Пользователи» → «Логисты» везде во фронтенде
-- Disabled Рейсы и Настройки убраны из меню для всех ролей
+DESIGN_AUDIT_BACKLOG — ВЫПОЛНЕН.
+Все 6 пакетов дизайн-аудита закоммичены.
+Статус: DESIGN_AUDIT_BACKLOG_IMPLEMENTED
+Следующий шаг: владелец + ChatGPT визуальная приёмка.
 ```
 
 ### Стабильный commit
 
 ```text
-fix(ui): close critical design audit issues package 2
+3aca7a1 — feat(ui): add operational dashboards package 6
 ```
 
 ### Важные последние commits
 
 ```text
-8a19d13 — fix(ui): close critical design audit issues package 2
+3aca7a1 — feat(ui): add operational dashboards package 6
+d75dfe6 — fix(ui): improve tables and entity headings package 5
+fea1730 — fix(ui): polish cards and forms package 4
+fd927ae — fix(ui): improve logist grant states package 3
+4d2a74b — fix(ui): add missing formatter functions for package 2 runtime
+0a19d13 — fix(ui): close critical design audit issues package 2
 ebdf072 — fix(ui): close critical design audit issues package 1
 65eaf8e — feat(reference): implement CRUD UX for drivers vehicles crews
 ```
@@ -247,18 +244,18 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 ## Следующий блок в работе
 
 ```text
-Водители / Машины / Экипажи — Package 2 из дизайн-аудита
+Ожидание: владелец + ChatGPT визуальная приёмка DESIGN_AUDIT_BACKLOG.
 ```
 
-Этап 2 (CRUD + функциональный UX) завершён. CRITICAL_UX_FIX_PACKAGE_1 принят:
-- `/company/drivers` не показывает паспорт и СНИЛС в списке;
-- прямые `/company/documents` и `/company/documents/upload` показывают controlled UX-state;
-- `/company/crews/{id}/edit` сохраняет текущий `driver_vehicle_block_id`;
-- тип транспортной единицы обязателен в create/edit UI и серверной валидации;
-- архивный `/company/crews/{id}` не показывает «Архивировать»;
-- screenshots лежат в `docs/design-audit/fix-package-1/screenshots`.
+Все 6 пакетов дизайн-аудита выполнены:
+- Package 1 (ebdf072): critical UX fixes (drivers list, documents, crew edit, vehicle type)
+- Package 2 (0a19d13): enum translation, backend terms, grants, disabled menu, ID cleanup
+- Package 3 (fd927ae): logist grant states, empty states, 403 page, tech info hidden
+- Package 4 (fea1730): danger zones, password masking, passport in edit form, empty selects
+- Package 5 (d75dfe6): compact tables, entity headings, contractor card restructure, login brand
+- Package 6 (3aca7a1): operational dashboards (company owner, logist, superadmin)
 
-Следующий пакет: enum translation, backend terms, grants, disabled menu, ID cleanup.
+Screenshots ожидают финального контрольного прогона.
 
 ## Что нельзя нарушать
 
