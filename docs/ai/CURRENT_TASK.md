@@ -68,6 +68,16 @@ COMMIT: 8161b5a — fix: make page-head flush to edges with full border matching
 - page-head margin: -10px -10px 0 -10px (отрицательные margin'ы компенсируют content padding, шапка flush к краям)
 - Устранён визуальный эффект «скругления» — шапка получила острый индустриальный контур
 
+COMMIT: e2a1da9 — fix: remove negative margins from page-head, restore content padding spacing
+
+Откат отрицательных margin'ов:
+- page-head margin: -10px -10px 0 -10px → 0 (шапка больше не вылезает за padding .content)
+- border: 1px solid var(--line) сохранён (полная рамка из FINAL3)
+- height: 56px сохранён
+- .content padding: 10px сохранён
+
+Аудит CSS: проблемных negative margin / large border-radius / box-shadow на shell/page/table/panel блоках не найдено.
+
 ---
 
 ## NEXT TASK
