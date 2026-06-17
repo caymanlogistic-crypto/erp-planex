@@ -501,7 +501,7 @@ a.nav-item {
     height: calc(100vh - var(--topbar-h));
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 12px 14px 28px;
+    padding: 10px;
 }
 
 /* === TOPBAR BRAND === */
@@ -661,7 +661,7 @@ a.nav-item {
     justify-content: space-between;
     align-items: center;
     padding: 0 14px;
-    height: 60px;
+    height: 56px;
     background: linear-gradient(180deg, var(--surface-strong) 0%, #ece8de 100%);
     border: none;
     border-bottom: 1px solid var(--line-soft);
@@ -1201,7 +1201,7 @@ tr:last-child td {
     align-items: center;
     min-height: 34px;
     padding: 4px;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     background: var(--surface-muted);
     border: 1px solid var(--line-hair);
 }
