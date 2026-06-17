@@ -58,12 +58,14 @@
             <p class="empty-title">Перевозчики ещё не созданы.</p>
             <p class="empty-desc">Добавьте первого перевозчика, чтобы вести контакты, документы, налоговую историю и экипажи.</p>
             <a href="/company/contractors/create" class="btn btn-primary">Создать первого перевозчика</a>
+            <a href="/company/contractors/create-full" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
         </div>
         <?php endif; ?>
     </div>
 </div>
 
 <?php else: ?>
+<?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
     <div class="page-head-left">
@@ -72,6 +74,9 @@
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/create" class="btn btn-primary">Создать перевозчика</a>
+        <?php if (!$isLogist): ?>
+        <a href="/company/contractors/create-full" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
+        <?php endif; ?>
     </div>
 </div>
 

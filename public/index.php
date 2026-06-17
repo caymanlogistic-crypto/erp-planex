@@ -3121,6 +3121,67 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
     require base_path('app/View/layouts/main.php');
 });
 
+$router->get('/company/contractors/create-full', function () use ($config, $db) {
+    requireRole(['company_owner']);
+    $pageTitle = 'Создать перевозчика + Водителя + Транспорт';
+    $pageContext = 'Перевозчики — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+
+    if ($companyId <= 0) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+
+        ob_start();
+        require base_path('app/View/pages/company_contractors_create_full.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $success = false;
+            $errors = [];
+            $old = [];
+            $formError = null;
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create_full.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = null;
+    } catch (\Exception $e) {
+        $company = null;
+        $success = false;
+        $errors = [];
+        $old = [];
+        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_contractors_create_full.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
 $router->post('/company/contractors/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать перевозчика';
@@ -3260,6 +3321,297 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
 
     ob_start();
     require base_path('app/View/pages/company_contractors_create.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/contractors/create-full', function () use ($config, $db) {
+    requireRole(['company_owner']);
+    $pageTitle = 'Создать перевозчика + Водителя + Транспорт';
+    $pageContext = 'Перевозчики — Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $createdContractor = null;
+    $createdDriver = null;
+    $createdVehicleSet = null;
+    $createdBlock = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        $formError = 'Компания не найдена';
+
+        ob_start();
+        require base_path('app/View/pages/company_contractors_create_full.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            $company = null;
+            $formError = 'Компания не найдена';
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create_full.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Перевозчики — Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            $formError = 'Создание недоступно';
+
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create_full.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        // Ensure all required tables exist
+        $requiredTables = [
+            'contractors' => 'database/migrations-local/003_create_company_contractors.sql',
+            'drivers'     => 'database/migrations-local/004_create_company_drivers.sql',
+            'vehicle_units' => 'database/migrations-local/005_create_company_vehicles.sql',
+            'vehicle_sets' => 'database/migrations-local/017_create_vehicle_sets.sql',
+            'driver_vehicle_blocks' => 'database/migrations-local/018_create_driver_vehicle_blocks.sql',
+            'crews'       => 'database/migrations-local/006_create_company_crews.sql',
+        ];
+
+        foreach ($requiredTables as $table => $migrationFile) {
+            try {
+                $localPdo->query("SELECT 1 FROM `$table` LIMIT 1")->fetch();
+            } catch (\Exception $e) {
+                $migrationSql = file_get_contents(base_path($migrationFile));
+                if ($migrationSql !== false && trim($migrationSql) !== '') {
+                    $localPdo->exec($migrationSql);
+                }
+            }
+        }
+
+        // Handle vehicles -> vehicle_units rename if needed
+        try {
+            $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            try {
+                $localPdo->exec("RENAME TABLE vehicles TO vehicle_units");
+            } catch (\Exception $renameEx) {
+                // Table may already be vehicle_units or vehicles may not exist
+            }
+        }
+
+        // --- Validation ---
+        $name = trim($_POST['name'] ?? '');
+        $inn = trim($_POST['inn'] ?? '');
+        $kpp = trim($_POST['kpp'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $driverFullName = trim($_POST['driver_full_name'] ?? '');
+        $driverPhone = trim($_POST['driver_phone'] ?? '');
+        $plateNumber = trim($_POST['plate_number'] ?? '');
+        $brand = trim($_POST['brand'] ?? '');
+        $model = trim($_POST['model'] ?? '');
+        $setType = trim($_POST['set_type'] ?? 'single');
+        $secondaryPlateNumber = trim($_POST['secondary_plate_number'] ?? '');
+
+        if ($name === '') {
+            $errors['name'] = 'Обязательное поле';
+        }
+        if ($inn === '') {
+            $errors['inn'] = 'Обязательное поле';
+        } else {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM contractors WHERE inn = ?');
+            $checkStmt->execute([$inn]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['inn'] = 'ИНН уже используется в этой компании';
+            }
+        }
+        if ($driverFullName === '') {
+            $errors['driver_full_name'] = 'Обязательное поле';
+        }
+        if ($plateNumber === '') {
+            $errors['plate_number'] = 'Обязательное поле';
+        } else {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ?');
+            $checkStmt->execute([$plateNumber]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['plate_number'] = 'Госномер уже используется в этой компании';
+            }
+        }
+        if (($setType === 'coupling' || $setType === 'road_train') && $secondaryPlateNumber === '') {
+            $errors['secondary_plate_number'] = 'Обязательно для сцепки и автопоезда';
+        }
+        if ($secondaryPlateNumber !== '' && empty($errors['plate_number'])) {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ?');
+            $checkStmt->execute([$secondaryPlateNumber]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['secondary_plate_number'] = 'Госномер уже используется в этой компании';
+            }
+        }
+
+        if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create_full.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        // --- Transactional creation ---
+        $localPdo->beginTransaction();
+        try {
+            // 1. Create contractor
+            $insertContractor = $localPdo->prepare(
+                'INSERT INTO contractors (name, inn, kpp, contact_phone, status, created_by_user_id, created_by_role)
+                 VALUES (:name, :inn, :kpp, :contact_phone, :status, :uid, :role)'
+            );
+            $insertContractor->execute([
+                ':name'          => $name,
+                ':inn'           => $inn,
+                ':kpp'           => $kpp !== '' ? $kpp : null,
+                ':contact_phone' => $phone !== '' ? $phone : null,
+                ':status'        => 'active',
+                ':uid'           => (int)$_SESSION['user_id'],
+                ':role'          => $_SESSION['role_code'],
+            ]);
+            $contractorId = (int)$localPdo->lastInsertId();
+
+            // 2. Create driver
+            $insertDriver = $localPdo->prepare(
+                'INSERT INTO drivers (full_name, phone, status, created_by_user_id, created_by_role)
+                 VALUES (:full_name, :phone, :status, :uid, :role)'
+            );
+            $insertDriver->execute([
+                ':full_name' => $driverFullName,
+                ':phone'     => $driverPhone !== '' ? $driverPhone : '',
+                ':status'    => 'active',
+                ':uid'       => (int)$_SESSION['user_id'],
+                ':role'      => $_SESSION['role_code'],
+            ]);
+            $driverId = (int)$localPdo->lastInsertId();
+
+            // 3. Create primary vehicle_unit
+            $insertPrimaryUnit = $localPdo->prepare(
+                'INSERT INTO vehicle_units (plate_number, brand, model, unit_type, status, created_by_user_id, created_by_role)
+                 VALUES (:plate_number, :brand, :model, :unit_type, :status, :uid, :role)'
+            );
+            $insertPrimaryUnit->execute([
+                ':plate_number' => $plateNumber,
+                ':brand'        => $brand !== '' ? $brand : null,
+                ':model'        => $model !== '' ? $model : null,
+                ':unit_type'    => 'tractor',
+                ':status'       => 'active',
+                ':uid'          => (int)$_SESSION['user_id'],
+                ':role'         => $_SESSION['role_code'],
+            ]);
+            $primaryUnitId = (int)$localPdo->lastInsertId();
+
+            // 4. Create secondary vehicle_unit if needed
+            $secondaryUnitId = null;
+            if ($secondaryPlateNumber !== '') {
+                $insertSecondaryUnit = $localPdo->prepare(
+                    'INSERT INTO vehicle_units (plate_number, unit_type, status, created_by_user_id, created_by_role)
+                     VALUES (:plate_number, :unit_type, :status, :uid, :role)'
+                );
+                $insertSecondaryUnit->execute([
+                    ':plate_number' => $secondaryPlateNumber,
+                    ':unit_type'    => 'trailer',
+                    ':status'       => 'active',
+                    ':uid'          => (int)$_SESSION['user_id'],
+                    ':role'         => $_SESSION['role_code'],
+                ]);
+                $secondaryUnitId = (int)$localPdo->lastInsertId();
+            }
+
+            // 5. Create vehicle_set
+            $insertVehicleSet = $localPdo->prepare(
+                'INSERT INTO vehicle_sets (set_type, primary_vehicle_unit_id, secondary_vehicle_unit_id, status, created_by_user_id, created_by_role)
+                 VALUES (:set_type, :primary_id, :secondary_id, :status, :uid, :role)'
+            );
+            $insertVehicleSet->execute([
+                ':set_type'     => $setType,
+                ':primary_id'   => $primaryUnitId,
+                ':secondary_id' => $secondaryUnitId,
+                ':status'       => 'active',
+                ':uid'          => (int)$_SESSION['user_id'],
+                ':role'         => $_SESSION['role_code'],
+            ]);
+            $vehicleSetId = (int)$localPdo->lastInsertId();
+
+            // 6. Check for existing driver_vehicle_block
+            $existingBlock = $localPdo->prepare('SELECT id FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ?');
+            $existingBlock->execute([$driverId, $vehicleSetId]);
+            $blockRow = $existingBlock->fetch(PDO::FETCH_ASSOC);
+            if ($blockRow) {
+                $blockId = (int)$blockRow['id'];
+            } else {
+                $insertBlock = $localPdo->prepare(
+                    'INSERT INTO driver_vehicle_blocks (driver_id, vehicle_set_id, status, created_by_user_id, created_by_role)
+                     VALUES (:driver_id, :vehicle_set_id, :status, :uid, :role)'
+                );
+                $insertBlock->execute([
+                    ':driver_id'       => $driverId,
+                    ':vehicle_set_id'  => $vehicleSetId,
+                    ':status'          => 'active',
+                    ':uid'             => (int)$_SESSION['user_id'],
+                    ':role'            => $_SESSION['role_code'],
+                ]);
+                $blockId = (int)$localPdo->lastInsertId();
+            }
+
+            // 7. Create crew (link contractor with driver_vehicle_block)
+            $insertCrew = $localPdo->prepare(
+                'INSERT INTO crews (contractor_id, driver_vehicle_block_id, status, created_by_user_id, created_by_role)
+                 VALUES (:contractor_id, :driver_vehicle_block_id, :status, :uid, :role)'
+            );
+            $insertCrew->execute([
+                ':contractor_id'           => $contractorId,
+                ':driver_vehicle_block_id' => $blockId,
+                ':status'                  => 'active',
+                ':uid'                     => (int)$_SESSION['user_id'],
+                ':role'                    => $_SESSION['role_code'],
+            ]);
+
+            $localPdo->commit();
+
+            $createdContractor = ['id' => $contractorId, 'name' => $name, 'inn' => $inn];
+            $createdDriver = ['id' => $driverId, 'full_name' => $driverFullName];
+            $createdVehicleSet = [
+                'id' => $vehicleSetId,
+                'primary_plate' => $plateNumber,
+                'secondary_plate' => $secondaryPlateNumber !== '' ? $secondaryPlateNumber : null,
+            ];
+            $createdBlock = ['id' => $blockId];
+            $success = true;
+        } catch (\Exception $e) {
+            $localPdo->rollBack();
+            throw $e;
+        }
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка создания: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_contractors_create_full.php');
     $content = ob_get_clean();
     require base_path('app/View/layouts/main.php');
 });
