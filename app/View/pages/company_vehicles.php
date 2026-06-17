@@ -47,19 +47,13 @@
 
 <div class="panel">
     <div class="panel-body">
-        <?php if ($isLogist): ?>
         <div class="empty-state">
-            <div class="empty-icon">🔒</div>
-            <p class="empty-title">Нет доступа</p>
-            <p class="empty-desc">У вас нет доступа к транспортным единицам. Обратитесь к руководителю для получения доступа.</p>
-        </div>
-        <?php else: ?>
-        <div class="empty-state">
-            <p class="empty-title">Транспортные единицы ещё не добавлены.</p>
-            <p class="empty-desc">Добавьте тягач или полуприцеп, чтобы собрать транспортный комплект и экипаж.</p>
+            <p class="empty-title">Нет доступных транспортных единиц</p>
+            <p class="empty-desc">У вас пока нет созданных транспортных единиц, либо руководитель ещё не выдал вам доступ к существующим.</p>
+            <?php if (!$isLogist): ?>
             <a href="/company/vehicles/create" class="btn btn-primary">Добавить первую единицу</a>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 

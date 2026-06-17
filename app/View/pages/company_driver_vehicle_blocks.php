@@ -47,19 +47,13 @@
 
 <div class="panel">
     <div class="panel-body">
-        <?php if ($isLogist): ?>
         <div class="empty-state">
-            <div class="empty-icon">🔒</div>
-            <p class="empty-title">Нет доступа</p>
-            <p class="empty-desc">У вас нет доступа к связкам Водители+ТС. Обратитесь к руководителю для получения доступа.</p>
-        </div>
-        <?php else: ?>
-        <div class="empty-state">
-            <p class="empty-title">Водители+ТС ещё не созданы.</p>
-            <p class="empty-desc">Создайте связку, чтобы связать водителя с транспортом для экипажа.</p>
+            <p class="empty-title">Нет доступных связок</p>
+            <p class="empty-desc">У вас пока нет созданных связок Водители+ТС, либо руководитель ещё не выдал вам доступ к существующим.</p>
+            <?php if (!$isLogist): ?>
             <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать первую связку</a>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 

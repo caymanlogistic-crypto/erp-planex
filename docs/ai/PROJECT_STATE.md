@@ -59,8 +59,8 @@ docs/ui/DESIGN_STANDARD.md
 
 ```text
 SUPERADMIN — ЗАКРЫТ на текущем этапе.
-CONTRACTORS_MENU_REWORK — ЗАКРЫТ.
-Последний стабильный commit: 140c318
+CONTRACTORS_MENU_REWORK — ЗАКРЫТ (с исправленной регрессией доступа логиста).
+Последний стабильный commit: 140c318 (ждёт коммита фикса регрессии)
 ```
 
 ## Следующий блок

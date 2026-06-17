@@ -47,20 +47,14 @@
 
 <div class="panel">
     <div class="panel-body">
-        <?php if ($isLogist): ?>
         <div class="empty-state">
-            <div class="empty-icon">🔒</div>
-            <p class="empty-title">Нет доступа</p>
-            <p class="empty-desc">У вас нет доступа к перевозчикам. Обратитесь к руководителю для получения доступа.</p>
-        </div>
-        <?php else: ?>
-        <div class="empty-state">
-            <p class="empty-title">Перевозчики ещё не созданы.</p>
-            <p class="empty-desc">Добавьте первого перевозчика, чтобы вести контакты, документы, налоговую историю и экипажи.</p>
+            <p class="empty-title">Нет доступных перевозчиков</p>
+            <p class="empty-desc">У вас пока нет созданных перевозчиков, либо руководитель ещё не выдал вам доступ к существующим.</p>
+            <?php if (!$isLogist): ?>
             <a href="/company/contractors/create" class="btn btn-primary">Создать первого перевозчика</a>
             <a href="/company/contractors/create-full" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 

@@ -47,19 +47,13 @@
 
 <div class="panel">
     <div class="panel-body">
-        <?php if ($isLogist): ?>
         <div class="empty-state">
-            <div class="empty-icon">🔒</div>
-            <p class="empty-title">Нет доступа</p>
-            <p class="empty-desc">У вас нет доступа к водителям. Обратитесь к руководителю для получения доступа.</p>
-        </div>
-        <?php else: ?>
-        <div class="empty-state">
-            <p class="empty-title">Водители ещё не созданы.</p>
-            <p class="empty-desc">Добавьте водителя, затем привяжите телефоны, документы и блоки «Водитель + ТС».</p>
+            <p class="empty-title">Нет доступных водителей</p>
+            <p class="empty-desc">У вас пока нет созданных водителей, либо руководитель ещё не выдал вам доступ к существующим.</p>
+            <?php if (!$isLogist): ?>
             <a href="/company/drivers/create" class="btn btn-primary">Создать первого водителя</a>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 
