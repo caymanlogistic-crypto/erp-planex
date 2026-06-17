@@ -474,7 +474,6 @@ a.nav-item {
     height: 38px;
     background: var(--surface-strong);
     border-bottom: 1px solid var(--line);
-    box-shadow: 0 1px 2px rgba(0,0,0,.05);
     z-index: 100;
 }
 
@@ -664,11 +663,10 @@ a.nav-item {
     padding: 0 14px;
     height: 60px;
     background: linear-gradient(180deg, var(--surface-strong) 0%, #ece8de 100%);
-    border: 1px solid var(--line);
+    border: none;
     border-bottom: 1px solid var(--line-soft);
     margin-bottom: 0;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
 }
 
 /* Left column: eyebrow + title stack */
@@ -713,12 +711,11 @@ a.nav-item {
 
 .panel {
     background: var(--surface-strong);
-    border: 1px solid var(--line-strong);
+    border: 1px solid var(--line);
     border-radius: 0;
     padding: 0;
     overflow: hidden;
     margin-bottom: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,.03);
 }
 
 .empty-state {

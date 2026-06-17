@@ -412,7 +412,6 @@ a.nav-item{text-decoration:none;outline:none;}
 .content {
   grid-row: 2;
   overflow-y: auto;
-  background: var(--app-bg);
 }
 
 
