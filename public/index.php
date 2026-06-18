@@ -3111,6 +3111,26 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
         $old = [];
         $formError = null;
         $createdContractor = null;
+        $docTypes = [];
+
+        if ($company['status'] === 'active') {
+            try {
+                $dbIdentifier = $company['db_identifier'];
+                $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+                $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
+
+                try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+                catch (\Exception $e) {
+                    $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+                    $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+                }
+
+                $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'contractor' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {
+                $docTypes = [];
+            }
+        }
     } catch (\Exception $e) {
         $company = null;
         $success = false;
@@ -3198,6 +3218,8 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
     $formError = null;
     $success = false;
     $createdContractor = null;
+    $docErrors = [];
+    $uploadedDocs = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -3313,12 +3335,60 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             ':created_by_role'    => $_SESSION['role_code'],
         ]);
 
+        $newContractorId = (int)$localPdo->lastInsertId();
         $createdContractor = [
-            'id'              => $localPdo->lastInsertId(),
+            'id'              => $newContractorId,
             'name'            => $name,
             'inn'             => $inn,
             'contractor_type' => ($_POST['contractor_type'] ?? '') !== '' ? $_POST['contractor_type'] : null,
         ];
+
+        // ── Process document uploads during creation ──
+        $docErrors = []; $uploadedDocs = []; $entityType = 'contractor';
+        try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
+        if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
+            foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
+                $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['predef_doc']['size'][$code];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимое имя'; continue; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newContractorId; $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
+                    if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
+                    $docTypeName = $_POST['predef_doc_type'][$code] ?? ''; $mime = $_FILES['predef_doc']['type'][$code]; $dtId = null;
+                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newContractorId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения'; }
+            }
+        }
+        if (!empty($_FILES['custom_doc_file']['name']) && is_array($_FILES['custom_doc_file']['name'])) {
+            foreach ($_FILES['custom_doc_file']['name'] as $idx => $origName) {
+                $fe = $_FILES['custom_doc_file']['error'][$idx] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['custom_doc_file']['size'][$idx];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимое имя'; continue; }
+                $customTypeNew = trim($_POST['custom_doc_type_new'][$idx] ?? ''); $customTypeSelect = trim($_POST['custom_doc_type'][$idx] ?? ''); $docTypeName = $customTypeNew !== '' ? $customTypeNew : $customTypeSelect; $dtId = null;
+                if ($customTypeNew !== '') { try { $idts = $localPdo->prepare("INSERT IGNORE INTO document_types (name, entity_type, category, created_by_user_id, created_by_role) VALUES (:name, :et, 'custom', :uid, :role)"); $idts->execute([':name' => $customTypeNew, ':et' => $entityType, ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]); $dtId = $localPdo->lastInsertId(); if (!$dtId) { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeNew]); $dtId = $g->fetchColumn() ?: null; } } catch (\Exception $ex) {} }
+                elseif ($customTypeSelect !== '') { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeSelect]); $dtId = $g->fetchColumn() ?: null; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newContractorId; $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
+                    if (!move_uploaded_file($_FILES['custom_doc_file']['tmp_name'][$idx], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': не удалось сохранить'; continue; }
+                    $mime = $_FILES['custom_doc_file']['type'][$idx];
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newContractorId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка сохранения'; }
+            }
+        }
+
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
@@ -4772,6 +4842,26 @@ $router->get('/company/drivers/create', function () use ($config, $db) {
         $old = [];
         $formError = null;
         $createdDriver = null;
+        $docTypes = [];
+
+        if ($company['status'] === 'active') {
+            try {
+                $dbIdentifier = $company['db_identifier'];
+                $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+                $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
+
+                try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+                catch (\Exception $e) {
+                    $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+                    $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+                }
+
+                $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'driver' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {
+                $docTypes = [];
+            }
+        }
     } catch (\Exception $e) {
         $company = null;
         $success = false;
@@ -4798,6 +4888,8 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
     $formError = null;
     $success = false;
     $createdDriver = null;
+    $docErrors = [];
+    $uploadedDocs = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -4919,6 +5011,84 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             'license_number'         => $licenseNumber !== '' ? $licenseNumber : null,
             'license_category'       => $licenseCategory !== '' ? $licenseCategory : null,
         ];
+        $newDriverId = (int)$localPdo->lastInsertId();
+        $entityType = 'driver';
+
+        // ── Process document uploads during creation ──
+        $docErrors = [];
+        $uploadedDocs = [];
+
+        try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+        }
+
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+        $maxSize = 20 * 1024 * 1024;
+
+        // Predefined docs
+        if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
+            foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
+                $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE;
+                if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+                $fs = $_FILES['predef_doc']['size'][$code];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимое имя'; continue; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext;
+                    $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newDriverId;
+                    $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) { mkdir($absoluteDir, 0755, true); }
+                    $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
+                    if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $destPath)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
+                    $docTypeName = $_POST['predef_doc_type'][$code] ?? '';
+                    $mime = $_FILES['predef_doc']['type'][$code];
+                    $dtId = null;
+                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newDriverId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения'; }
+            }
+        }
+
+        // Custom docs
+        if (!empty($_FILES['custom_doc_file']['name']) && is_array($_FILES['custom_doc_file']['name'])) {
+            foreach ($_FILES['custom_doc_file']['name'] as $idx => $origName) {
+                $fe = $_FILES['custom_doc_file']['error'][$idx] ?? UPLOAD_ERR_NO_FILE;
+                if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+                $fs = $_FILES['custom_doc_file']['size'][$idx];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимое имя'; continue; }
+                $customTypeNew = trim($_POST['custom_doc_type_new'][$idx] ?? '');
+                $customTypeSelect = trim($_POST['custom_doc_type'][$idx] ?? '');
+                $docTypeName = $customTypeNew !== '' ? $customTypeNew : $customTypeSelect;
+                $dtId = null;
+                if ($customTypeNew !== '') {
+                    try { $idts = $localPdo->prepare("INSERT IGNORE INTO document_types (name, entity_type, category, created_by_user_id, created_by_role) VALUES (:name, :et, 'custom', :uid, :role)"); $idts->execute([':name' => $customTypeNew, ':et' => $entityType, ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]); $dtId = $localPdo->lastInsertId(); if (!$dtId) { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeNew]); $dtId = $g->fetchColumn() ?: null; } } catch (\Exception $ex) {}
+                } elseif ($customTypeSelect !== '') { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeSelect]); $dtId = $g->fetchColumn() ?: null; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext;
+                    $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newDriverId;
+                    $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) { mkdir($absoluteDir, 0755, true); }
+                    $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
+                    if (!move_uploaded_file($_FILES['custom_doc_file']['tmp_name'][$idx], $destPath)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': не удалось сохранить'; continue; }
+                    $mime = $_FILES['custom_doc_file']['type'][$idx];
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newDriverId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка сохранения'; }
+            }
+        }
+
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
@@ -7734,6 +7904,15 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
         }
 
         $vehicleUnits = $localPdo->query("SELECT * FROM vehicle_units WHERE status = 'active' ORDER BY plate_number")->fetchAll(PDO::FETCH_ASSOC);
+
+        $docTypes = [];
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+        }
+        $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'vehicle_set' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+
         $success = false; $errors = []; $old = []; $formError = null; $createdVehicleSet = null;
     } catch (\Exception $e) {
         $company = null; $success = false; $errors = []; $old = []; $formError = 'Ошибка: ' . $e->getMessage(); $createdVehicleSet = null; $vehicleUnits = [];
@@ -7749,7 +7928,7 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
     $pageContext = 'Транспорт › Компания';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
-    $errors = []; $old = $_POST; $formError = null; $success = false; $createdVehicleSet = null; $vehicleUnits = [];
+    $errors = []; $old = $_POST; $formError = null; $success = false; $createdVehicleSet = null; $vehicleUnits = []; $docErrors = []; $uploadedDocs = [];
 
     if ($companyId <= 0) {
         $company = null; $formError = 'Компания не найдена';
@@ -7815,6 +7994,53 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
             'primary_plate' => $vehicleUnits[array_search((int)$primaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '',
             'secondary_plate' => $secondaryId ? ($vehicleUnits[array_search((int)$secondaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '') : null,
         ];
+
+        // ── Process document uploads during creation ──
+        $docErrors = []; $uploadedDocs = []; $entityType = 'vehicle_set';
+        try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
+        if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
+            foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
+                $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['predef_doc']['size'][$code];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимое имя'; continue; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newId; $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
+                    if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
+                    $docTypeName = $_POST['predef_doc_type'][$code] ?? ''; $mime = $_FILES['predef_doc']['type'][$code]; $dtId = null;
+                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения'; }
+            }
+        }
+        if (!empty($_FILES['custom_doc_file']['name']) && is_array($_FILES['custom_doc_file']['name'])) {
+            foreach ($_FILES['custom_doc_file']['name'] as $idx => $origName) {
+                $fe = $_FILES['custom_doc_file']['error'][$idx] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['custom_doc_file']['size'][$idx];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимое имя'; continue; }
+                $customTypeNew = trim($_POST['custom_doc_type_new'][$idx] ?? ''); $customTypeSelect = trim($_POST['custom_doc_type'][$idx] ?? ''); $docTypeName = $customTypeNew !== '' ? $customTypeNew : $customTypeSelect; $dtId = null;
+                if ($customTypeNew !== '') { try { $idts = $localPdo->prepare("INSERT IGNORE INTO document_types (name, entity_type, category, created_by_user_id, created_by_role) VALUES (:name, :et, 'custom', :uid, :role)"); $idts->execute([':name' => $customTypeNew, ':et' => $entityType, ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]); $dtId = $localPdo->lastInsertId(); if (!$dtId) { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeNew]); $dtId = $g->fetchColumn() ?: null; } } catch (\Exception $ex) {} }
+                elseif ($customTypeSelect !== '') { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeSelect]); $dtId = $g->fetchColumn() ?: null; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newId; $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
+                    if (!move_uploaded_file($_FILES['custom_doc_file']['tmp_name'][$idx], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': не удалось сохранить'; continue; }
+                    $mime = $_FILES['custom_doc_file']['type'][$idx];
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка сохранения'; }
+            }
+        }
+
         $success = true;
         ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
         $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
@@ -8767,6 +8993,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
     $old = [];
     $createdDoc = null;
     $dbError = null;
+    $docTypes = [];
 
     if (!isset($whitelist[$entityType])) {
         $entityTypeError = !$missingEntityContext;
@@ -8883,6 +9110,18 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
             default:
                 $entityName = '';
         }
+
+        // Fetch document types for dropdown
+        try {
+            try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+            catch (\Exception $e) {
+                $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+                $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+            }
+            $docTypes = $localPdo->query("SELECT id, name, code, entity_type, category FROM document_types WHERE entity_type = '{$entityType}' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $docTypes = [];
+        }
     } catch (\Exception $e) {
         $company = $company ?? null;
         $entityName = '';
@@ -8933,6 +9172,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
     $old = $_POST;
     $createdDoc = null;
     $dbError = null;
+    $docTypes = [];
 
     if (!isset($whitelist[$entityType])) {
         $entityTypeError = true;
@@ -9034,6 +9274,18 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
                 break;
             default:
                 $entityName = '';
+        }
+
+        // Fetch document types for dropdown (re-render on error)
+        try {
+            try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+            catch (\Exception $e) {
+                $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+                $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+            }
+            $docTypes = $localPdo->query("SELECT id, name, code, entity_type, category FROM document_types WHERE entity_type = '{$entityType}' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $docTypes = [];
         }
 
         // File handling
@@ -9439,6 +9691,432 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
         header('Location: ' . $redirect);
         exit;
     }
+});
+
+// ── Document Types (catalog/directory) ──
+
+$router->get('/company/document-types', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Типы документов';
+    $pageContext = 'Типы документов › Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $filterEntity = $_GET['entity_type'] ?? '';
+    $deleteError = null;
+    $deleteSuccess = false;
+    $types = [];
+    $entityTypes = [];
+    $dbError = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        ob_start(); require base_path('app/View/pages/company_document_types.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            ob_start(); require base_path('app/View/pages/company_document_types.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Типы документов › Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            ob_start(); require base_path('app/View/pages/company_document_types.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try {
+            $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'));
+            $localPdo->exec($migrationSql);
+            $migrationSql25 = file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'));
+            $localPdo->exec($migrationSql25);
+        }
+
+        if ($filterEntity !== '') {
+            $typeStmt = $localPdo->prepare('SELECT * FROM document_types WHERE entity_type = ? OR entity_type IS NULL ORDER BY sort_order, name');
+            $typeStmt->execute([$filterEntity]);
+        } else {
+            $typeStmt = $localPdo->query('SELECT * FROM document_types ORDER BY entity_type, sort_order, name');
+        }
+        $types = $typeStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $etStmt = $localPdo->query("SELECT DISTINCT entity_type FROM document_types WHERE entity_type IS NOT NULL ORDER BY entity_type");
+        $entityTypes = array_column($etStmt->fetchAll(PDO::FETCH_ASSOC), 'entity_type');
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $types = [];
+        $entityTypes = [];
+        $dbError = 'Не удалось загрузить типы документов: ' . $e->getMessage();
+    }
+
+    ob_start(); require base_path('app/View/pages/company_document_types.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/document-types/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Создать тип документа';
+    $pageContext = 'Типы документов › Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $isEdit = false;
+    $editId = 0;
+    $existingType = null;
+    $success = false;
+    $errors = []; $old = []; $formError = null; $createdType = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Типы документов › Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+    } catch (\Exception $e) {
+        $company = null;
+        $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/document-types/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Создать тип документа';
+    $pageContext = 'Типы документов › Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $isEdit = false;
+    $editId = 0;
+    $existingType = null;
+    $success = false;
+    $errors = []; $old = $_POST; $formError = null; $createdType = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderDTForm; }
+        $pageContext = 'Типы документов › Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') { $formError = 'Создание недоступно'; goto renderDTForm; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $code = trim($_POST['code'] ?? '');
+        $entityType = trim($_POST['entity_type'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+
+        if ($name === '') { $errors['name'] = 'Обязательное поле'; }
+        if (!empty($errors)) { goto renderDTForm; }
+
+        $insert = $localPdo->prepare(
+            'INSERT INTO document_types (name, code, entity_type, category, sort_order, created_by_user_id, created_by_role)
+             VALUES (:name, :code, :entity_type, :category, :sort_order, :uid, :role)'
+        );
+        $insert->execute([
+            ':name' => $name,
+            ':code' => $code !== '' ? $code : null,
+            ':entity_type' => $entityType !== '' ? $entityType : null,
+            ':category' => 'custom',
+            ':sort_order' => $sortOrder,
+            ':uid' => (int)$_SESSION['user_id'],
+            ':role' => $_SESSION['role_code'],
+        ]);
+
+        $newId = $localPdo->lastInsertId();
+        $createdType = ['id' => $newId, 'name' => $name, 'code' => $code, 'entity_type' => $entityType, 'category' => 'custom'];
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка создания: ' . $e->getMessage();
+    }
+
+    renderDTForm:
+    ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->get('/company/document-types/{id}/edit', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Редактировать тип документа';
+    $pageContext = 'Типы документов › Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $isEdit = true;
+    $editId = (int)$id;
+    $existingType = null;
+    $success = false;
+    $errors = []; $old = []; $formError = null; $createdType = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Типы документов › Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+        }
+
+        $typeStmt = $localPdo->prepare('SELECT * FROM document_types WHERE id = ?');
+        $typeStmt->execute([$editId]);
+        $existingType = $typeStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existingType) {
+            $formError = 'Тип документа не найден';
+        }
+    } catch (\Exception $e) {
+        $company = null;
+        $formError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/document-types/{id}/edit', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Редактировать тип документа';
+    $pageContext = 'Типы документов › Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $isEdit = true;
+    $editId = (int)$id;
+    $existingType = null;
+    $success = false;
+    $errors = []; $old = $_POST; $formError = null; $createdType = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderDTEditForm; }
+        $pageContext = 'Типы документов › Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') { $formError = 'Редактирование недоступно'; goto renderDTEditForm; }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+        }
+
+        $typeStmt = $localPdo->prepare('SELECT * FROM document_types WHERE id = ?');
+        $typeStmt->execute([$editId]);
+        $existingType = $typeStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existingType) { $formError = 'Тип документа не найден'; goto renderDTEditForm; }
+
+        $name = trim($_POST['name'] ?? '');
+        $code = trim($_POST['code'] ?? '');
+        $entityType = trim($_POST['entity_type'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+
+        if ($name === '') { $errors['name'] = 'Обязательное поле'; }
+        if (!empty($errors)) { goto renderDTEditForm; }
+
+        $update = $localPdo->prepare(
+            'UPDATE document_types SET name = :name, code = :code, entity_type = :entity_type, sort_order = :sort_order, updated_at = NOW()
+             WHERE id = :id'
+        );
+        $update->execute([
+            ':name' => $name,
+            ':code' => $code !== '' ? $code : null,
+            ':entity_type' => $entityType !== '' ? $entityType : null,
+            ':sort_order' => $sortOrder,
+            ':id' => $editId,
+        ]);
+
+        $createdType = ['id' => $editId, 'name' => $name, 'code' => $code, 'entity_type' => $entityType, 'category' => $existingType['category']];
+        $success = true;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $formError = 'Ошибка обновления: ' . $e->getMessage();
+    }
+
+    renderDTEditForm:
+    ob_start(); require base_path('app/View/pages/company_document_types_form.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/document-types/{id}/delete', function ($id) use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+    $pageTitle = 'Типы документов';
+    $pageContext = 'Типы документов › Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $editId = (int)$id;
+    $deleteError = null;
+    $deleteSuccess = false;
+    $types = [];
+    $entityTypes = [];
+    $dbError = null;
+    $filterEntity = '';
+
+    if ($companyId <= 0) {
+        $company = null;
+        ob_start(); require base_path('app/View/pages/company_document_types.php');
+        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company) {
+            ob_start(); require base_path('app/View/pages/company_document_types.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Типы документов › Компания: ' . $company['name'];
+
+        if ($company['status'] !== 'active') {
+            ob_start(); require base_path('app/View/pages/company_document_types.php');
+            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+        }
+
+        $typeStmt = $localPdo->prepare('SELECT * FROM document_types WHERE id = ?');
+        $typeStmt->execute([$editId]);
+        $docType = $typeStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$docType) {
+            $deleteError = 'Тип документа не найден';
+        } elseif ($docType['category'] === 'predefined') {
+            $deleteError = 'Нельзя удалить системный тип документа';
+        } else {
+            $delStmt = $localPdo->prepare('DELETE FROM document_types WHERE id = ?');
+            $delStmt->execute([$editId]);
+            $deleteSuccess = true;
+        }
+
+        $typeStmt = $localPdo->query('SELECT * FROM document_types ORDER BY entity_type, sort_order, name');
+        $types = $typeStmt->fetchAll(PDO::FETCH_ASSOC);
+        $etStmt = $localPdo->query("SELECT DISTINCT entity_type FROM document_types WHERE entity_type IS NOT NULL ORDER BY entity_type");
+        $entityTypes = array_column($etStmt->fetchAll(PDO::FETCH_ASSOC), 'entity_type');
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $types = [];
+        $entityTypes = [];
+        $dbError = 'Ошибка: ' . $e->getMessage();
+    }
+
+    ob_start(); require base_path('app/View/pages/company_document_types.php');
+    $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
 });
 
 $router->get('/login', function () use ($config, $db) {

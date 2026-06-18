@@ -36,7 +36,20 @@
     <div class="panel-body">
         <div class="notice success">
             Транспорт успешно создан.
+            <?php if (!empty($uploadedDocs)): ?>
+                <br>Загружено документов: <?= count($uploadedDocs) ?>.
+            <?php endif; ?>
         </div>
+        <?php if (!empty($docErrors)): ?>
+            <div class="notice warn mt-4">
+                <strong>Некоторые документы не были загружены:</strong>
+                <ul style="margin:0.5rem 0 0 1.2rem;">
+                    <?php foreach ($docErrors as $de): ?>
+                        <li><?= e($de) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
         <div class="kv mt-4">
             <div class="kv-row">
                 <span class="kv-key">Тип комплекта</span>
@@ -80,7 +93,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/vehicle-sets/create" class="panel">
+<form method="post" action="/company/vehicle-sets/create" class="panel" enctype="multipart/form-data">
     <div class="panel-body">
 
         <div class="form-section">
@@ -155,6 +168,39 @@
             </div>
         </div>
 
+        <?php
+        // Predefined documents for vehicle set
+        $predefDocs = [
+            ['name' => 'СТС', 'code' => 'sts'],
+            ['name' => 'ПТС', 'code' => 'pts'],
+            ['name' => 'Страховка ОСАГО', 'code' => 'osago'],
+        ];
+        if (!empty($predefDocs)):
+        ?>
+        <div class="form-section">
+            <h3 class="panel-head-title">Предопределённые документы</h3>
+            <p class="field-hint">Загрузите ожидаемые документы. Можно загрузить сейчас или позже в карточке транспорта.</p>
+
+            <?php foreach ($predefDocs as $pdoc): ?>
+            <div class="doc-upload-row" style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem;">
+                <span style="min-width:200px; font-size:13px;"><?= e($pdoc['name']) ?></span>
+                <input type="file" name="predef_doc[<?= $pdoc['code'] ?>]" accept=".pdf,.jpg,.jpeg,.png" class="field-input" style="flex:1;">
+                <input type="hidden" name="predef_doc_type[<?= $pdoc['code'] ?>]" value="<?= e($pdoc['name']) ?>">
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Custom documents block -->
+        <div class="form-section">
+            <h3 class="panel-head-title">Произвольные документы</h3>
+            <p class="field-hint">Добавьте дополнительные документы с указанием типа. <a href="/company/document-types/create" target="_blank">Создать новый тип</a></p>
+
+            <div id="custom-docs-container"></div>
+
+            <button type="button" class="btn btn-ghost btn-sm" id="add-custom-doc-btn">+ Добавить документ</button>
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать транспорт</button>
         </div>
@@ -162,9 +208,46 @@
     </div>
 </form>
 
-<!-- DESIGN_TODO: JS-переключение видимости secondary_field -->
+<!-- DOC_JS: custom document rows -->
 <script>
 (function() {
+    var container = document.getElementById('custom-docs-container');
+    var addBtn = document.getElementById('add-custom-doc-btn');
+    if (!container || !addBtn) return;
+
+    var docTypes = <?= json_encode($docTypes ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
+
+    function buildSelect(name) {
+        var s = '<select name="' + name + '" class="field-input" style="flex:1;"><option value="">— Выберите тип —</option>';
+        for (var i = 0; i < docTypes.length; i++) {
+            s += '<option value="' + docTypes[i].name.replace(/"/g, '&quot;') + '" data-id="' + docTypes[i].id + '">' + docTypes[i].name.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>';
+        }
+        s += '</select>';
+        return s;
+    }
+
+    function buildRow() {
+        var div = document.createElement('div');
+        div.className = 'custom-doc-row';
+        div.style.cssText = 'display:flex; gap:0.75rem; align-items:flex-start; margin-bottom:0.75rem;';
+        div.innerHTML =
+            buildSelect('custom_doc_type[]') +
+            '<input type="text" name="custom_doc_type_new[]" class="field-input" style="flex:1;" placeholder="Или новый тип...">' +
+            '<input type="file" name="custom_doc_file[]" class="field-input" style="flex:2;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">' +
+            '<button type="button" class="btn btn-ghost btn-sm remove-custom-doc" title="Удалить строку">&times;</button>';
+        container.appendChild(div);
+
+        div.querySelector('.remove-custom-doc').addEventListener('click', function() {
+            div.parentNode.removeChild(div);
+        });
+    }
+
+    addBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        buildRow();
+    });
+
+    // Preserve existing set_type toggle
     var setType = document.getElementById('set_type_select');
     var secondary = document.getElementById('secondary_field');
     if (setType && secondary) {

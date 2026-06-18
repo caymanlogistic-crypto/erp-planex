@@ -174,11 +174,27 @@
             <h3 class="panel-head-title">Документ</h3>
 
             <div class="field">
-                <label class="field-label">Тип документа <span class="req">*</span></label>
+                <label class="field-label">Тип документа</label>
+                <?php if (!empty($docTypes)): ?>
+                <select class="field-input" id="document_type_select" onchange="document.getElementById('document_type_text').value = this.value;">
+                    <option value="">— Выберите тип или введите свой —</option>
+                    <?php foreach ($docTypes as $dt): ?>
+                    <option value="<?= e($dt['name']) ?>" <?= ($old['document_type'] ?? $replacedDoc['document_type'] ?? '') === $dt['name'] ? 'selected' : '' ?>>
+                        <?= e($dt['name']) ?>
+                        <?php if (($dt['category'] ?? '') === 'predefined'): ?> (системный)<?php endif; ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <input type="text" name="document_type" id="document_type_text" class="field-input" style="margin-top:0.5rem;"
+                       value="<?= e($old['document_type'] ?? $replacedDoc['document_type'] ?? '') ?>"
+                       placeholder="Или введите название типа вручную">
+                <div class="field-msg">Выберите тип из списка или введите свой. <a href="/company/document-types/create" target="_blank">Создать новый тип</a></div>
+                <?php else: ?>
                 <input type="text" name="document_type" class="field-input"
                        value="<?= e($old['document_type'] ?? $replacedDoc['document_type'] ?? '') ?>"
                        placeholder="Например: Договор, Паспорт, СТС, Свидетельство">
                 <div class="field-msg">Укажите тип документа (договор, паспорт, доверенность и т.д.)</div>
+                <?php endif; ?>
                 <?php if (!empty($errors['document_type'])): ?>
                     <div class="field-msg is-error"><?= e($errors['document_type']) ?></div>
                 <?php endif; ?>
