@@ -38,7 +38,23 @@ CREATE TABLE IF NOT EXISTS `document_types` (
     INDEX `idx_category` (`category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Seed predefined document types (INSERT IGNORE to avoid duplicates on re-run)
+-- Clean up duplicates caused by previous runs without UNIQUE constraint
+-- Keep only the row with the lowest id for each (name, COALESCE(entity_type, '')) combination
+DELETE t1 FROM `document_types` t1
+INNER JOIN `document_types` t2
+WHERE t1.id > t2.id AND t1.name = t2.name AND COALESCE(t1.entity_type, '') = COALESCE(t2.entity_type, '');
+
+-- Add UNIQUE constraint on (name, entity_type) to prevent future duplicates
+SET @preparedStatement = (SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = 'document_types' AND INDEX_NAME = 'uk_name_entity_type') > 0,
+    'SELECT 1 AS already_exists',
+    'ALTER TABLE `document_types` ADD UNIQUE INDEX `uk_name_entity_type` (`name`, `entity_type`)'
+));
+PREPARE addUniqueIfNotExists FROM @preparedStatement;
+EXECUTE addUniqueIfNotExists;
+DEALLOCATE PREPARE addUniqueIfNotExists;
+
+-- Seed predefined document types (INSERT IGNORE now effective with UNIQUE constraint)
 INSERT IGNORE INTO `document_types` (`name`, `code`, `entity_type`, `category`, `sort_order`) VALUES
 -- Driver documents
 ('Паспорт', 'passport', 'driver', 'predefined', 1),
