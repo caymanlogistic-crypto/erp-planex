@@ -5025,6 +5025,8 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
             $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
         }
+        try { $localPdo->query("SELECT created_by_user_id FROM documents LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec("ALTER TABLE documents ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL"); }
 
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
         $maxSize = 20 * 1024 * 1024;
@@ -5043,7 +5045,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
                     $storedName = uniqid('doc_', true) . '.' . $ext;
                     $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newDriverId;
                     $absoluteDir = storage_path($relativeDir);
-                    if (!is_dir($absoluteDir)) { mkdir($absoluteDir, 0755, true); }
+                    if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось создать директорию'; continue; }
                     $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
                     if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $destPath)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
                     $docTypeName = $_POST['predef_doc_type'][$code] ?? '';
@@ -5053,7 +5055,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
                     $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
                     $ins->execute([':et' => $entityType, ':eid' => $newDriverId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
                     $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
-                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения'; }
+                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения (' . $ex->getMessage() . ')'; }
             }
         }
 
@@ -5078,14 +5080,14 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
                     $storedName = uniqid('doc_', true) . '.' . $ext;
                     $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newDriverId;
                     $absoluteDir = storage_path($relativeDir);
-                    if (!is_dir($absoluteDir)) { mkdir($absoluteDir, 0755, true); }
+                    if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': не удалось создать директорию'; continue; }
                     $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
                     if (!move_uploaded_file($_FILES['custom_doc_file']['tmp_name'][$idx], $destPath)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': не удалось сохранить'; continue; }
                     $mime = $_FILES['custom_doc_file']['type'][$idx];
                     $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
                     $ins->execute([':et' => $entityType, ':eid' => $newDriverId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
                     $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
-                } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка сохранения'; }
+                } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка сохранения (' . $ex->getMessage() . ')'; }
             }
         }
 
