@@ -187,9 +187,9 @@
             <div class="field">
                 <label class="field-label">Файл <span class="req">*</span></label>
                 <input type="file" name="document_file" class="field-input" required
-                       accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
+                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
                 <div class="field-msg">
-                    Допустимые форматы: PDF, JPG, PNG, WEBP, DOC, DOCX, XLS, XLSX. Максимальный размер: 10 МБ.
+                    Допустимые форматы: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX. Максимальный размер: 10 МБ.
                 </div>
                 <?php if (!empty($errors['document_file'])): ?>
                     <div class="field-msg is-error"><?= e($errors['document_file']) ?></div>
