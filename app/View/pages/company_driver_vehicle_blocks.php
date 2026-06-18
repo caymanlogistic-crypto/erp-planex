@@ -1,4 +1,4 @@
-﻿<?php if ($company === null): ?>
+<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Водители+ТС</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водители и транспортное средство</h1>
+        <div class="page-summary"><span>Связки водителя и транспортного средства · Экипажи для рейсов</span></div>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Водители+ТС</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водители и транспортное средство</h1>
+        <div class="page-summary"><span>Связки водителя и транспортного средства · Экипажи для рейсов</span></div>
     </div>
 </div>
 
@@ -34,15 +34,13 @@
 <?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
-    <div>
-        <h1>Водители+ТС</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водители и транспортное средство</h1>
+        <div class="page-summary"><span>Связки водителя и транспортного средства · Экипажи для рейсов</span></div>
     </div>
-    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку</a>
     </div>
-    <?php endif; ?>
 </div>
 
 <div class="panel">
@@ -50,9 +48,6 @@
         <div class="empty-state">
             <p class="empty-title">Нет доступных связок</p>
             <p class="empty-desc">У вас пока нет созданных связок Водители+ТС, либо руководитель ещё не выдал вам доступ к существующим.</p>
-            <?php if (!$isLogist): ?>
-            <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать первую связку</a>
-            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -60,9 +55,9 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Водители+ТС</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водители и транспортное средство</h1>
+        <div class="page-summary"><span>Связки водителя и транспортного средства · Экипажи для рейсов</span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку</a>

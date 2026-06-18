@@ -12,11 +12,12 @@
  */
 ?>
 <div class="login-card">
-    <div class="login-card-head">
+    <div class="login-card-brand">
         <div class="login-brand">ERP PLANEX</div>
-        <p class="login-brand-sub">Система управления транспортной логистикой</p>
+        <div class="login-brand-sub">Система управления транспортной логистикой</div>
+    </div>
+    <div class="login-card-head">
         <h1>Вход в систему</h1>
-        <p>Введите логин и пароль для доступа к рабочей среде.</p>
     </div>
     <div class="login-card-body">
 
@@ -36,7 +37,7 @@
 
         <?php if (!empty($errors)): ?>
         <div class="form-alert alert-error auth-alert">
-            <div class="alert-mark">!</div>
+            <div class="alert-mark"><svg width="11" height="11" viewBox="0 0 18 18" fill="none"><path d="M9 2L16.5 15H1.5L9 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8V11M9 13V13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
             <div class="alert-body">
                 <div class="alert-body-title">Заполните все поля</div>
                 <div class="alert-body-sub">Логин и пароль обязательны для входа.</div>
@@ -46,7 +47,7 @@
 
         <?php if ($authError !== null): ?>
         <div class="form-alert alert-error auth-alert">
-            <div class="alert-mark">!</div>
+            <div class="alert-mark"><svg width="11" height="11" viewBox="0 0 18 18" fill="none"><path d="M9 2L16.5 15H1.5L9 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8V11M9 13V13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
             <div class="alert-body">
                 <div class="alert-body-title">Вход не выполнен</div>
                 <div class="alert-body-sub"><?= e($authError) ?></div>
@@ -56,7 +57,7 @@
 
         <?php if ($multiLogistError !== null): ?>
         <div class="form-alert alert-error auth-alert">
-            <div class="alert-mark">!</div>
+            <div class="alert-mark"><svg width="11" height="11" viewBox="0 0 18 18" fill="none"><path d="M9 2L16.5 15H1.5L9 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8V11M9 13V13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
             <div class="alert-body">
                 <div class="alert-body-title">Требуется помощь администратора</div>
                 <div class="alert-body-sub"><?= e($multiLogistError) ?></div>
@@ -93,6 +94,6 @@
             </div>
         </form>
 
-        <div class="auth-footer">Защищённый доступ к рабочей среде компании.</div>
+        <div class="auth-footer">© 2026 PLANEX</div>
     </div>
 </div>

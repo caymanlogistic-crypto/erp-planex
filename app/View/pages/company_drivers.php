@@ -8,8 +8,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Водители</span>
+        <h1 class="page-title">Список водителей</h1>
+        <div class="page-summary"><span>Реестр водителей транспортных средств · Управление доступами и документами</span></div>
     </div>
 </div>
 
@@ -21,8 +21,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Водители</span>
+        <h1 class="page-title">Список водителей</h1>
+        <div class="page-summary"><span>Реестр водителей транспортных средств · Управление доступами и документами</span></div>
     </div>
 </div>
 
@@ -35,14 +35,12 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Водители</span>
+        <h1 class="page-title">Список водителей</h1>
+        <div class="page-summary"><span>Реестр водителей транспортных средств · Управление доступами и документами</span></div>
     </div>
-    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/drivers/create" class="btn btn-primary">Создать водителя</a>
     </div>
-    <?php endif; ?>
 </div>
 
 <div class="panel">
@@ -50,9 +48,6 @@
         <div class="empty-state">
             <p class="empty-title">Нет доступных водителей</p>
             <p class="empty-desc">У вас пока нет созданных водителей, либо руководитель ещё не выдал вам доступ к существующим.</p>
-            <?php if (!$isLogist): ?>
-            <a href="/company/drivers/create" class="btn btn-primary">Создать первого водителя</a>
-            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -61,8 +56,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Водители</span>
+        <h1 class="page-title">Список водителей</h1>
+        <div class="page-summary"><span>Реестр водителей транспортных средств · Управление доступами и документами</span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/drivers/create" class="btn btn-primary">Создать водителя</a>

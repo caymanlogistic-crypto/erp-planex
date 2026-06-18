@@ -8,8 +8,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Перевозчики</span>
+        <h1 class="page-title">Список перевозчиков</h1>
+        <div class="page-summary"><span>Компании-перевозчики и ИП · Управление договорами и документами</span></div>
     </div>
 </div>
 
@@ -21,8 +21,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Перевозчики</span>
+        <h1 class="page-title">Список перевозчиков</h1>
+        <div class="page-summary"><span>Компании-перевозчики и ИП · Управление договорами и документами</span></div>
     </div>
 </div>
 
@@ -35,14 +35,12 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Перевозчики</span>
+        <h1 class="page-title">Список перевозчиков</h1>
+        <div class="page-summary"><span>Компании-перевозчики и ИП · Управление договорами и документами</span></div>
     </div>
-    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/contractors/create" class="btn btn-primary">Создать перевозчика</a>
     </div>
-    <?php endif; ?>
 </div>
 
 <div class="panel">
@@ -50,10 +48,6 @@
         <div class="empty-state">
             <p class="empty-title">Нет доступных перевозчиков</p>
             <p class="empty-desc">У вас пока нет созданных перевозчиков, либо руководитель ещё не выдал вам доступ к существующим.</p>
-            <?php if (!$isLogist): ?>
-            <a href="/company/contractors/create" class="btn btn-primary">Создать первого перевозчика</a>
-            <a href="/company/contractors/create-full" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
-            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -63,14 +57,12 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Перевозчики</span>
+        <h1 class="page-title">Список перевозчиков</h1>
+        <div class="page-summary"><span>Компании-перевозчики и ИП · Управление договорами и документами</span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/create" class="btn btn-primary">Создать перевозчика</a>
-        <?php if (!$isLogist): ?>
         <a href="/company/contractors/create-full" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
-        <?php endif; ?>
     </div>
 </div>
 

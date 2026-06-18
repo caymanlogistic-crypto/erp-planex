@@ -1,4 +1,4 @@
-﻿<?php if ($company === null): ?>
+<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспорт</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список транспорта</h1>
+        <div class="page-summary"><span>Тягачи и полуприцепы · Транспортные средства перевозчиков</span></div>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспорт</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список транспорта</h1>
+        <div class="page-summary"><span>Тягачи и полуприцепы · Транспортные средства перевозчиков</span></div>
     </div>
 </div>
 
@@ -34,41 +34,30 @@
 <?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспорт</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список транспорта</h1>
+        <div class="page-summary"><span>Тягачи и полуприцепы · Транспортные средства перевозчиков</span></div>
     </div>
-    <?php if (!$isLogist): ?>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать транспорт</a>
     </div>
-    <?php endif; ?>
 </div>
 
 <div class="panel">
     <div class="panel-body">
-        <?php if ($isLogist): ?>
-        <div class="empty-state">
-            <div class="empty-icon">🔒</div>
-            <p class="empty-title">Нет доступа</p>
-            <p class="empty-desc">У вас нет доступа к транспорту. Обратитесь к руководителю для получения доступа.</p>
-        </div>
-        <?php else: ?>
         <div class="empty-state">
             <p class="empty-title">Транспорт ещё не создан.</p>
             <p class="empty-desc">Создайте транспорт, чтобы объединить тягач и полуприцеп для экипажа.</p>
-            <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать первый транспорт</a>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспорт</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список транспорта</h1>
+        <div class="page-summary"><span>Тягачи и полуприцепы · Транспортные средства перевозчиков</span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicle-sets/create" class="btn btn-primary">Создать транспорт</a>

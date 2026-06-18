@@ -1,3 +1,36 @@
+/* ============================================================
+   ШРИФТЫ — IBM Plex Sans, самохостинг
+   font-display: swap — браузер не подменяет шрифт после первого рендера
+   ============================================================ */
+@font-face {
+    font-family: "IBM Plex Sans";
+    src: url("/assets/fonts/IBMPlexSans-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "IBM Plex Sans";
+    src: url("/assets/fonts/IBMPlexSans-Medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "IBM Plex Sans";
+    src: url("/assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "IBM Plex Sans";
+    src: url("/assets/fonts/IBMPlexSans-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     --color-bg: #e2dfd8;
     --color-surface: #f5f3ee;
@@ -62,6 +95,14 @@
     --warning-bg: #fdf0d5;
     --danger: #992e26;
     --danger-bg: #fcecea;
+    --alert-error: #B84C3A;
+    --alert-error-field: #fff7f6;
+    --alert-warning: #7a5210;
+    --alert-warning-field: #fdf0d5;
+    --alert-success: #1f6b43;
+    --alert-success-field: #ddeee5;
+    --alert-info: #2c5282;
+    --alert-info-field: #ebf4ff;
     --surface-form: #f0ede6;
     --surface-inspector: #f3f1eb;
     --surface: #f5f3ee;
@@ -501,7 +542,8 @@ a.nav-item {
     height: calc(100vh - var(--topbar-h));
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0;
+    background: var(--app-bg);
+    padding: 8px 0 0;
 }
 
 /* === TOPBAR BRAND === */
@@ -556,6 +598,15 @@ a.nav-item {
 
 .topbar-crumbs .sep {
     color: #b0a898;
+}
+
+.topbar-crumbs a {
+    color: var(--text-faint);
+    text-decoration: none;
+}
+
+.topbar-crumbs a:hover {
+    color: var(--text-muted);
 }
 
 /* === TOPBAR RIGHT / USER === */
@@ -1141,6 +1192,38 @@ tr:last-child td {
     cursor: default;
 }
 
+/* Шрифт жёстко на всех полях */
+input,
+textarea,
+select,
+button {
+    font-family: "IBM Plex Sans", Arial, sans-serif;
+}
+
+.field-input,
+.field-select,
+.field-textarea {
+    font-family: "IBM Plex Sans", Arial, sans-serif;
+}
+
+/* Автозаполнение браузера */
+input.field-input:-webkit-autofill,
+input.field-input:-webkit-autofill:hover,
+input.field-input:-webkit-autofill:focus,
+input.field-input:-webkit-autofill:active {
+    font-family: "IBM Plex Sans", Arial, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 28px !important;
+    -webkit-text-fill-color: var(--text-main) !important;
+    caret-color: var(--text-main) !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-field) inset !important;
+    box-shadow: 0 0 0 1000px var(--surface-field) inset !important;
+    transition: background-color 9999s ease-in-out 0s;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
 .field-textarea {
     min-height: 72px;
     line-height: 1.5;
@@ -1535,17 +1618,17 @@ tr:last-child td {
     box-shadow: 0 2px 8px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
 }
 
-.login-card-head {
+.login-card-brand {
     padding: 14px 18px;
-    background: var(--surface-muted);
-    border-bottom: 1px solid var(--line-hair);
+    background: #191816;
+    border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
 .login-brand {
     font-size: 18px;
     font-weight: 700;
     letter-spacing: -.025em;
-    color: var(--text-main);
+    color: #f0ece4;
     line-height: 1.2;
     margin-bottom: 2px;
 }
@@ -1553,15 +1636,20 @@ tr:last-child td {
 .login-brand-sub {
     font-size: 11px;
     font-weight: 500;
-    color: var(--text-faint);
+    color: rgba(240,238,232,.45);
     letter-spacing: .02em;
-    margin-bottom: 10px;
     line-height: 1.3;
+}
+
+.login-card-head {
+    padding: 12px 18px;
+    background: var(--surface-strong);
+    border-bottom: 1px solid var(--line-hair);
 }
 
 .login-card-head h1 {
     margin: 0;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1.2;
     color: var(--text-main);
@@ -1627,14 +1715,19 @@ tr:last-child td {
     flex-shrink: 0;
 }
 
+.form-alert.alert-error  { background: var(--alert-error-field);  border-color: #f5c6c0; }
+.form-alert.alert-warning { background: var(--alert-warning-field); border-color: #f0d9a0; }
+.form-alert.alert-success { background: var(--alert-success-field); border-color: #a8d5bc; }
+.form-alert.alert-info    { background: var(--alert-info-field);    border-color: #bee3f8; }
+
 .alert-error .alert-mark {
-    background: var(--danger);
-    color: var(--danger-bg);
+    background: var(--alert-error);
+    color: #fff;
 }
 
 .alert-success .alert-mark {
-    background: var(--success);
-    color: var(--success-bg);
+    background: var(--alert-success);
+    color: #fff;
 }
 
 .alert-body-title {
@@ -1841,107 +1934,48 @@ tr:last-child td {
     display: inline-block;
     width: 1px;
     height: 12px;
-    background: var(--line);
-    vertical-align: middle;
-    flex-shrink: 0;
+  
+/* === HARD FIX: browser autofill / saved credentials === */
+input,
+textarea,
+select,
+button,
+.field-input,
+.field-select,
+.field-textarea {
+    font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif !important;
 }
 
-/* field-hint: neutral helper text below a form field */
-.field-hint {
-    margin-top: 3px;
-    color: var(--text-faint);
-    font-size: 11px;
-}
-.mb-2 { margin-bottom: 8px; }
-
-/* Typography utilities */
-.text-strong { font-weight: 700; }
-.label-block { display: block; }
-
-/* Field width constraint for confirm inputs */
-.field-confirm { max-width: 360px; }
-
-/* Inline field group: textarea/input side-by-side with a button */
-.field-inline-group { display: flex; gap: 8px; align-items: flex-start; }
-.field-inline-grow { flex: 1; }
-.btn-nowrap { white-space: nowrap; margin-top: 0; }
-
-/* One-time password / sensitive value highlight */
-.code-hi {
-    font-family: "SFMono-Regular", Consolas, monospace;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--accent-deep);
-    background: var(--accent-bg);
-    border: 1px solid var(--accent-line);
-    border-radius: 2px;
-    padding: 2px 6px;
-    letter-spacing: .02em;
+/* Chrome / Edge autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+.field-input:-webkit-autofill,
+.field-input:-webkit-autofill:hover,
+.field-input:-webkit-autofill:focus,
+.field-input:-webkit-autofill:active {
+    font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 28px !important;
+    color: var(--text-main) !important;
+    -webkit-text-fill-color: var(--text-main) !important;
+    caret-color: var(--text-main) !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-field) inset !important;
+    box-shadow: 0 0 0 1000px var(--surface-field) inset !important;
+    background-color: var(--surface-field) !important;
+    background-image: none !important;
+    transition:
+        background-color 999999s ease-in-out 0s,
+        color 999999s ease-in-out 0s;
 }
 
-/* SUPERADMIN production normalization */
-.notice + .panel,
-.notice + form.panel,
-.filters-bar + .panel,
-.page-content > .panel + .panel,
-.page-content > .view-grid + .panel {
-    margin-top: 10px;
-}
-
-.page-content > .notice {
-    margin-bottom: 10px;
-}
-
-.panel-head .badge {
-    flex-shrink: 0;
-}
-
-.tbl .btn:not(.btn-sm) {
-    height: 24px;
-    padding: 0 8px;
-    font-size: 11px;
-}
-
-.tbl th.col-actions,
-.tbl td.col-actions {
-    text-align: right;
-}
-
-.kv code {
-    font-family: "SFMono-Regular", Consolas, monospace;
-}
-
-@media (max-width: 860px) {
-    .app-shell {
-        grid-template-columns: 1fr;
-    }
-
-    .app-sidebar {
-        position: static;
-    }
-
-    .two-columns {
-        grid-template-columns: 1fr;
-    }
-
-    .topbar,
-    .page-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .content {
-        padding: 0;
-    }
-}
-
-/* ============================================================
-   ERP PLANEX HARD EDGE NORMALIZATION
-   Owner decision: no rounded corners in production ERP UI
-   ============================================================ */
-
-*,
-*::before,
-*::after {
-    border-radius: 0 !important;
+/* Standard autofill selector */
+input:autofill,
+.field-input:autofill {
+    font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--text-main) !important;
 }
