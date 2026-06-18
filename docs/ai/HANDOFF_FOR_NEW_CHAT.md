@@ -127,28 +127,22 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 ## Следующий блок в работе
 
 ```text
-Ожидает решения владельца по bugs документов (BUG-1..BUG-4).
+TBD (ожидает владельца).
 ```
 
 Переработка меню и UX блока Подрядчики/Перевозчики/Водители/Транспорт — ЗАВЕРШЕНА (6 блоков + fix регрессии доступа логиста, commit 140c318).
 
-Загрузка документов при создании + поддержка WEBP — ЗАВЕРШЕНА (commit 8b38dd0).
-
-Аудит document lifecycle — ЗАВЕРШЁН (обнаружено 4 pre-existing bugs, см. docs/ai/CURRENT_TASK.md).
+Загрузка документов при создании + поддержка WEBP — ЗАВЕРШЕНА (commit см. ниже).
 
 ### Последние важные commits
 
 ```text
-8b38dd0 — feat: add document upload to create forms + WEBP support
 140c318 — меню: Подрядчики как группа, + fix регрессии доступа логиста
 ```
 
-### Pre-existing bugs (не блокируют CREATE_WITH_DOCUMENTS)
+### CREATE_WITH_DOCUMENTS + WEBP
 
-- BUG-1: Replace оставляет orphan physical files (старый stored_name не удаляется).
-- BUG-2: Delete (soft) не удаляет физический файл.
-- BUG-3: Document routes не проверяют entity_access_grants для logist.
-- BUG-4: Replace сбрасывает uploaded_by_user_id, давая заменившему права на delete.
+При создании водителя/транспорта/перевозчика можно сразу загрузить документы (multiple files). Формат WEBP разрешён во всех точках валидации. Документы привязываются к созданной сущности сразу после сохранения.
 
 ## Правила финальной визуальной приёмки в новом чате
 

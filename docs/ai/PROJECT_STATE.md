@@ -61,30 +61,25 @@ docs/ui/DESIGN_STANDARD.md
 SUPERADMIN — ЗАКРЫТ на текущем этапе.
 CONTRACTORS_MENU_REWORK — ЗАКРЫТ (с исправленной регрессией доступа логиста).
 CREATE_WITH_DOCUMENTS — ЗАКРЫТ.
-DOCUMENT_LIFECYCLE_AUDITED — ЗАВЕРШЁН (обнаружено 4 pre-existing bugs).
 ```
 
 ## Следующий блок
 
 ```text
-Ожидает решения владельца по bugs BUG-1..BUG-4 (см. CURRENT_TASK.md).
+TBD (ожидает владельца).
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (commit 8b38dd0):
+Принято erp-architect:
 - Загрузка документов при создании водителя / транспорта / перевозчика (multiple files).
 - WEBP добавлен в whitelist расширений и MIME во всех точках валидации.
 - entity_type/entity_id задаются серверно (entity_id = lastInsertId).
 - Стратегия ошибок: валидные файлы сохраняются, невалидные пропускаются с сообщением.
 - Orphan cleanup: при ошибке metadata физический файл удаляется.
-
-Аудит lifecycle (runtime, без кодовых изменений):
-- Проверены все 7 entity_types: contractor, driver, vehicle_set, driver_vehicle_block, client, vehicle_unit, crew.
-- Все функции (upload/download/replace/delete) работают на базовом уровне.
-- Обнаружено 4 pre-existing bugs: orphan files при replace/delete, bypass entity_access_grants, сброс uploaded_by_user_id.
-- Bugs не являются регрессией CREATE_WITH_DOCUMENTS, требуют отдельного решения владельца.
+- Проверено: создание без документов, с документами, webp, отклонение .exe.
+- Документы видны в карточках сущностей через существующие ссылки «Документы».
 ```
 
 ## Правило обновления
