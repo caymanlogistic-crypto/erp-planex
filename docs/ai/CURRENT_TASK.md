@@ -1,30 +1,18 @@
 # ERP PLANEX — текущая задача
 
-## STATUS: ROLLED_BACK_TO_PRE_CREATE_WITH_DOCUMENTS
+## STATUS: CREATE_FORMS_WITH_DOCUMENT_TYPES_ACCEPTED
 
-Задача «CREATE_WITH_DOCUMENTS + WEBP» откатана по решению владельца.
+Задача реализована: inline-загрузка документов в формы создания + справочник типов документов.
 
-Откатанные commits:
-- 8b38dd0 feat: add document upload to create forms + WEBP support → reverted by 19c3f32
-- 80e57eb docs: document lifecycle audit report → reverted by 4b71463
+Реализованные commits:
+- af2c319 — feat: add passport SNILS fields to driver form and bank type fields to contractor form
+- d17cc22 — feat: document types directory, predefined and custom docs blocks in create forms
+- 48ede00 — fix: add unique constraint on document_types to prevent duplicate seeds
 
-Текущее состояние:
-- Формы создания водителя/транспорта/перевозчика — без inline-загрузки документов.
-- WEBP не в whitelist (возвращён к состоянию до задачи).
-- Отдельный documents module (/company/documents/*) сохранён.
-- Исправление доступа логиста (commit 10cc204) сохранено.
-- Меню Подрядчики/Перевозчики/Водители+ТС/Водители/Транспорт сохранено.
-- БД и storage не очищались.
+WEBP: не в whitelist (решение владельца — откат).
 
 ## UI LOCK: ACTIVE
 
-CRITICAL UI LOCK RULE активен (см. `docs/ai/AGENT_RULES.md` раздел 9).
-
-ЗАПРЕЩЕНО менять без прямого подтверждения владельца:
-- основную шапку ERP;
-- шапку контентного блока (page-head / page-header);
-- основное меню (структура, внешний вид, поведение).
-
-Разрешено только добавлять новые кнопки/пункты/действия без изменения существующей структуры.
+CRITICAL UI LOCK RULE активен. Основная шапка, page-head и меню НЕ изменялись.
 
 ## NEXT: TBD (ожидает владельца)

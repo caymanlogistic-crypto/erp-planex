@@ -45,15 +45,15 @@ SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 ### Стабильный commit
 
 ```text
-da1cc90 — fix(superadmin): separate company director requisites from ERP user
+48ede00 — fix: add unique constraint on document_types to prevent duplicate seeds
 ```
 
 ### Важные последние commits
 
 ```text
-488a88b — test(superadmin): verify post-design functionality
-49e7218 — fix(superadmin): restore company create handler
-da1cc90 — fix(superadmin): separate company director requisites from ERP user
+af2c319 — feat: add passport SNILS fields to driver form and bank type fields to contractor form
+d17cc22 — feat: document types directory, predefined and custom docs blocks in create forms
+48ede00 — fix: add unique constraint on document_types to prevent duplicate seeds
 ```
 
 ## Ключевое архитектурное решение: руководитель компании
@@ -132,7 +132,14 @@ docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
 
 Переработка меню и UX блока Подрядчики/Перевозчики/Водители/Транспорт — ЗАВЕРШЕНА (6 блоков + fix регрессии доступа логиста, commit 140c318).
 
-CREATE_WITH_DOCUMENTS + WEBP — ОТКАТАНА (reverts 4b71463, 19c3f32).
+CREATE_FORMS_WITH_DOCUMENT_TYPES — РЕАЛИЗОВАНА:
+- Формы создания водителя, транспорта, перевозчика с inline-загрузкой документов
+- Справочник типов документов (/company/document-types)
+- Предопределённые документы (10 типов)
+- Произвольные документы с выбором/созданием типа
+- document_type_id FK в таблице documents
+- Миграции 024, 025
+- WEBP не в whitelist (решение владельца)
 
 ## Правила финальной визуальной приёмки в новом чате
 
