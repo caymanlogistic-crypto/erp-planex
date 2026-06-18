@@ -5031,31 +5031,48 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
         $maxSize = 20 * 1024 * 1024;
 
-        // Predefined docs
+        // Predefined docs (supports multiple files per type via multiple attribute)
         if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
-            foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
-                $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE;
-                if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
-                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
-                $fs = $_FILES['predef_doc']['size'][$code];
-                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимый формат'; continue; }
-                if ($fs > $maxSize) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: размер > 20 МБ'; continue; }
-                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимое имя'; continue; }
-                try {
-                    $storedName = uniqid('doc_', true) . '.' . $ext;
-                    $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newDriverId;
-                    $absoluteDir = storage_path($relativeDir);
-                    if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось создать директорию'; continue; }
-                    $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
-                    if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $destPath)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
-                    $docTypeName = $_POST['predef_doc_type'][$code] ?? '';
-                    $mime = $_FILES['predef_doc']['type'][$code];
-                    $dtId = null;
-                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
-                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
-                    $ins->execute([':et' => $entityType, ':eid' => $newDriverId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
-                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
-                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения (' . $ex->getMessage() . ')'; }
+            foreach ($_FILES['predef_doc']['name'] as $code => $nameValue) {
+                $docTypeName = $_POST['predef_doc_type'][$code] ?? '';
+                // Normalize to array of files (single or multiple)
+                if (is_array($nameValue)) {
+                    $names = $nameValue;
+                    $tmpNames = $_FILES['predef_doc']['tmp_name'][$code] ?? [];
+                    $errors = $_FILES['predef_doc']['error'][$code] ?? [];
+                    $sizes = $_FILES['predef_doc']['size'][$code] ?? [];
+                    $types = $_FILES['predef_doc']['type'][$code] ?? [];
+                } else {
+                    $names = [$nameValue];
+                    $tmpNames = [$_FILES['predef_doc']['tmp_name'][$code] ?? ''];
+                    $errors = [$_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE];
+                    $sizes = [$_FILES['predef_doc']['size'][$code] ?? 0];
+                    $types = [$_FILES['predef_doc']['type'][$code] ?? ''];
+                }
+                foreach ($names as $fileIdx => $origName) {
+                    $fe = $errors[$fileIdx] ?? UPLOAD_ERR_NO_FILE;
+                    if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                    $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+                    $fs = $sizes[$fileIdx] ?? 0;
+                    if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Предопределённый документ «' . $docTypeName . '»: недопустимый формат'; continue; }
+                    if ($fs > $maxSize) { $docErrors[] = 'Предопределённый документ «' . $docTypeName . '»: размер > 20 МБ'; continue; }
+                    if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Предопределённый документ «' . $docTypeName . '»: недопустимое имя'; continue; }
+                    try {
+                        $storedName = uniqid('doc_', true) . '.' . $ext;
+                        $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newDriverId;
+                        $absoluteDir = storage_path($relativeDir);
+                        if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true)) { $docErrors[] = 'Предопределённый документ «' . $docTypeName . '»: не удалось создать директорию'; continue; }
+                        $destPath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
+                        $tmpSrc = $tmpNames[$fileIdx] ?? '';
+                        if ($tmpSrc === '' || !move_uploaded_file($tmpSrc, $destPath)) { $docErrors[] = 'Предопределённый документ «' . $docTypeName . '»: не удалось сохранить'; continue; }
+                        $mime = $types[$fileIdx] ?? '';
+                        $dtId = null;
+                        if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
+                        $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :uid, :role)');
+                        $ins->execute([':et' => $entityType, ':eid' => $newDriverId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]);
+                        $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                    } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . $docTypeName . '»: ошибка сохранения (' . $ex->getMessage() . ')'; }
+                }
             }
         }
 
