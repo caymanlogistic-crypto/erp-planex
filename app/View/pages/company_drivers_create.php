@@ -76,6 +76,14 @@
                     <dd><?= e($createdDriver['full_name']) ?></dd>
                     <dt>Телефон</dt>
                     <dd class="mono"><?= e($createdDriver['phone']) ?></dd>
+                    <?php if (!empty($createdDriver['extra_phones'] ?? [])): ?>
+                    <dt>Доп. телефоны</dt>
+                    <dd>
+                        <?php foreach ($createdDriver['extra_phones'] as $ep): ?>
+                            <div class="mono"><?= e($ep['phone']) ?><?= !empty($ep['comment']) ? ' (' . e($ep['comment']) . ')' : '' ?></div>
+                        <?php endforeach; ?>
+                    </dd>
+                    <?php endif; ?>
                     <?php if (!empty($createdDriver['passport_number'])): ?>
                     <dt>Паспорт</dt>
                     <dd><?= e($createdDriver['passport_number']) ?><?= !empty($createdDriver['passport_issued_by']) ? ' · ' . e($createdDriver['passport_issued_by']) : '' ?><?= !empty($createdDriver['passport_issue_date']) ? ' · ' . e($createdDriver['passport_issue_date']) : '' ?></dd>
@@ -145,6 +153,16 @@
                        value="<?= e($old['phone'] ?? '') ?>">
                 <div class="field-msg"><?= !empty($errors['phone']) ? e($errors['phone']) : '' ?></div>
             </div>
+        </div>
+
+        <!-- ─── Дополнительные телефоны ─── -->
+        <div class="form-section">
+            <div class="section-title">Дополнительные телефоны</div>
+            <div class="field-msg" style="margin-bottom:6px;">Добавьте дополнительные контактные номера водителя</div>
+
+            <div id="extra-phones-container"></div>
+
+            <button type="button" class="btn btn-ghost" id="add-extra-phone-btn">+ Добавить телефон</button>
         </div>
 
         <!-- ─── Паспортные данные ─── -->
@@ -377,6 +395,30 @@
         e.preventDefault();
         buildRow();
     });
+
+    /* Дополнительные телефоны */
+    var phonesContainer = document.getElementById('extra-phones-container');
+    var addPhoneBtn    = document.getElementById('add-extra-phone-btn');
+    if (phonesContainer && addPhoneBtn) {
+        function buildPhoneRow() {
+            var row = document.createElement('div');
+            row.className = 'form-grid-2';
+            row.style.cssText = 'align-items:center;gap:var(--gap);margin-bottom:8px;';
+            var idx = phonesContainer.children.length;
+            row.innerHTML =
+                '<div class="field" style="margin-bottom:0;"><input type="text" name="extra_phones[]" class="field-input" placeholder="+7 900 000-00-00"></div>' +
+                '<div style="display:flex;align-items:center;gap:var(--gap);"><div class="field" style="margin-bottom:0;flex:1;"><input type="text" name="extra_phone_comments[]" class="field-input" placeholder="Комментарий"></div>' +
+                '<button type="button" class="btn btn-ghost" title="Удалить" style="width:30px;padding:0;flex-shrink:0;">✕</button></div>';
+            row.querySelector('[title="Удалить"]').addEventListener('click', function () {
+                phonesContainer.removeChild(row);
+            });
+            phonesContainer.appendChild(row);
+        }
+        addPhoneBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            buildPhoneRow();
+        });
+    }
 
 })();
 </script>

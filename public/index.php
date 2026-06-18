@@ -5014,6 +5014,32 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         $newDriverId = (int)$localPdo->lastInsertId();
         $entityType = 'driver';
 
+        // ── Process extra phones during creation ──
+        $extraPhones = $_POST['extra_phones'] ?? [];
+        if (is_array($extraPhones)) {
+            try { $localPdo->query("SELECT 1 FROM driver_phones LIMIT 1")->fetch(); }
+            catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/015_create_driver_phones.sql'))); }
+            $phoneComments = $_POST['extra_phone_comments'] ?? [];
+            $phoneIns = $localPdo->prepare('INSERT INTO driver_phones (driver_id, phone, is_main, comment, created_by_user_id, created_by_role) VALUES (:did, :phone, 0, :comment, :uid, :role)');
+            foreach ($extraPhones as $pIdx => $extraPhone) {
+                $extraPhone = trim($extraPhone);
+                if ($extraPhone === '') continue;
+                $phoneIns->execute([
+                    ':did'     => $newDriverId,
+                    ':phone'   => $extraPhone,
+                    ':comment' => isset($phoneComments[$pIdx]) ? trim($phoneComments[$pIdx]) : null,
+                    ':uid'     => (int)$_SESSION['user_id'],
+                    ':role'    => $_SESSION['role_code'],
+                ]);
+            }
+            // Load back for success display
+            $extraPhonesSaved = $localPdo->prepare("SELECT phone, comment FROM driver_phones WHERE driver_id = ? AND is_main = 0 ORDER BY id ASC");
+            $extraPhonesSaved->execute([$newDriverId]);
+            $createdDriver['extra_phones'] = $extraPhonesSaved->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $createdDriver['extra_phones'] = [];
+        }
+
         // ── Process document uploads during creation ──
         $docErrors = [];
         $uploadedDocs = [];
