@@ -3314,9 +3314,10 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         ]);
 
         $createdContractor = [
-            'id'   => $localPdo->lastInsertId(),
-            'name' => $name,
-            'inn'  => $inn,
+            'id'              => $localPdo->lastInsertId(),
+            'name'            => $name,
+            'inn'             => $inn,
+            'contractor_type' => ($_POST['contractor_type'] ?? '') !== '' ? $_POST['contractor_type'] : null,
         ];
         $success = true;
     } catch (\Exception $e) {
@@ -4908,11 +4909,15 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         ]);
 
         $createdDriver = [
-            'id'                => $localPdo->lastInsertId(),
-            'full_name'         => $fullName,
-            'phone'             => $phone,
-            'license_number'    => $licenseNumber !== '' ? $licenseNumber : null,
-            'license_category'  => $licenseCategory !== '' ? $licenseCategory : null,
+            'id'                     => $localPdo->lastInsertId(),
+            'full_name'              => $fullName,
+            'phone'                  => $phone,
+            'passport_number'        => ($_POST['passport_number'] ?? '') !== '' ? $_POST['passport_number'] : null,
+            'passport_issued_by'     => ($_POST['passport_issued_by'] ?? '') !== '' ? $_POST['passport_issued_by'] : null,
+            'passport_issue_date'    => ($_POST['passport_issue_date'] ?? '') !== '' ? $_POST['passport_issue_date'] : null,
+            'snils'                  => ($_POST['snils'] ?? '') !== '' ? $_POST['snils'] : null,
+            'license_number'         => $licenseNumber !== '' ? $licenseNumber : null,
+            'license_category'       => $licenseCategory !== '' ? $licenseCategory : null,
         ];
         $success = true;
     } catch (\Exception $e) {

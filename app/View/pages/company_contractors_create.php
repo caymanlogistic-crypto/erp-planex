@@ -47,6 +47,12 @@
                 <span class="kv-key">ИНН</span>
                 <span class="kv-value"><code><?= e($createdContractor['inn']) ?></code></span>
             </div>
+            <?php if (!empty($createdContractor['contractor_type'])): ?>
+            <div class="kv-row">
+                <span class="kv-key">Тип</span>
+                <span class="kv-value"><?= e(ui_contractor_type($createdContractor['contractor_type'])) ?></span>
+            </div>
+            <?php endif; ?>
             <div class="kv-row">
                 <span class="kv-key">Статус</span>
                 <span class="kv-value">Активен</span>
@@ -113,6 +119,17 @@
                 <input type="text" name="ogrn" class="field-input"
                        value="<?= e($old['ogrn'] ?? '') ?>">
             </div>
+
+            <div class="field">
+                <label class="field-label">Тип перевозчика</label>
+                <select name="contractor_type" class="field-input">
+                    <option value="">— Не указан —</option>
+                    <option value="legal_entity" <?= ($old['contractor_type'] ?? '') === 'legal_entity' ? 'selected' : '' ?>>Юридическое лицо</option>
+                    <option value="individual" <?= ($old['contractor_type'] ?? '') === 'individual' ? 'selected' : '' ?>>Индивидуальный предприниматель</option>
+                    <option value="self_employed" <?= ($old['contractor_type'] ?? '') === 'self_employed' ? 'selected' : '' ?>>Самозанятый</option>
+                    <option value="private_person" <?= ($old['contractor_type'] ?? '') === 'private_person' ? 'selected' : '' ?>>Физическое лицо</option>
+                </select>
+            </div>
         </div>
 
         <div class="form-section">
@@ -148,6 +165,36 @@
                 <label class="field-label">Email</label>
                 <input type="email" name="contact_email" class="field-input"
                        value="<?= e($old['contact_email'] ?? '') ?>">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Банковские реквизиты</h3>
+
+            <div class="field">
+                <label class="field-label">Расчётный счёт</label>
+                <input type="text" name="bank_account" class="field-input"
+                       value="<?= e($old['bank_account'] ?? '') ?>">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Банк</label>
+                <input type="text" name="bank_name" class="field-input"
+                       value="<?= e($old['bank_name'] ?? '') ?>">
+            </div>
+
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">БИК</label>
+                    <input type="text" name="bank_bik" class="field-input"
+                           value="<?= e($old['bank_bik'] ?? '') ?>">
+                </div>
+
+                <div class="field">
+                    <label class="field-label">Корр. счёт</label>
+                    <input type="text" name="bank_corr_account" class="field-input"
+                           value="<?= e($old['bank_corr_account'] ?? '') ?>">
+                </div>
             </div>
         </div>
 

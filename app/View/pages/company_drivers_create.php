@@ -47,6 +47,18 @@
                 <span class="kv-key">Телефон</span>
                 <span class="kv-value"><code><?= e($createdDriver['phone']) ?></code></span>
             </div>
+            <?php if (!empty($createdDriver['passport_number'])): ?>
+            <div class="kv-row">
+                <span class="kv-key">Паспорт</span>
+                <span class="kv-value"><?= e($createdDriver['passport_number']) ?> / <?= e($createdDriver['passport_issued_by'] ?? '—') ?> / <?= e($createdDriver['passport_issue_date'] ?? '—') ?></span>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($createdDriver['snils'])): ?>
+            <div class="kv-row">
+                <span class="kv-key">СНИЛС</span>
+                <span class="kv-value"><?= e($createdDriver['snils']) ?></span>
+            </div>
+            <?php endif; ?>
             <div class="kv-row">
                 <span class="kv-key">Номер ВУ</span>
                 <span class="kv-value"><?= e($createdDriver['license_number'] ?? '—') ?></span>
@@ -106,6 +118,42 @@
                 <?php if (!empty($errors['phone'])): ?>
                     <div class="field-msg is-error"><?= e($errors['phone']) ?></div>
                 <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Паспортные данные</h3>
+
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">Серия и номер</label>
+                    <input type="text" name="passport_number" class="field-input"
+                           value="<?= e($old['passport_number'] ?? '') ?>">
+                </div>
+
+                <div class="field">
+                    <label class="field-label">Код подразделения</label>
+                    <input type="text" name="passport_department_code" class="field-input"
+                           value="<?= e($old['passport_department_code'] ?? '') ?>">
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="field-label">Кем выдан</label>
+                <input type="text" name="passport_issued_by" class="field-input"
+                       value="<?= e($old['passport_issued_by'] ?? '') ?>">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Дата выдачи</label>
+                <input type="date" name="passport_issue_date" class="field-input"
+                       value="<?= e($old['passport_issue_date'] ?? '') ?>">
+            </div>
+
+            <div class="field">
+                <label class="field-label">СНИЛС</label>
+                <input type="text" name="snils" class="field-input"
+                       value="<?= e($old['snils'] ?? '') ?>">
             </div>
         </div>
 
