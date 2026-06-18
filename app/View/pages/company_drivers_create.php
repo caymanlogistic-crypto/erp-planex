@@ -94,8 +94,6 @@
                     <?php endif; ?>
                     <dt>Номер ВУ</dt>
                     <dd class="mono"><?= e($createdDriver['license_number'] ?? '—') ?></dd>
-                    <dt>Категория</dt>
-                    <dd><?= e($createdDriver['license_category'] ?? '—') ?></dd>
                     <dt>Статус</dt>
                     <dd><span class="badge badge-ok">Активен</span></dd>
                 </dl>
@@ -227,27 +225,10 @@
                 </div>
 
                 <div class="field">
-                    <label class="field-label">Категория</label>
-                    <input type="text" name="license_category" class="field-input"
-                           placeholder="CE, C, B..."
-                           value="<?= e($old['license_category'] ?? '') ?>">
-                    <div class="field-msg"></div>
-                </div>
-            </div>
-
-            <div class="form-grid-2">
-                <div class="field">
                     <label class="field-label">Дата выдачи</label>
                     <input type="date" name="license_issue_date" class="field-input"
                            value="<?= e($old['license_issue_date'] ?? '') ?>">
                     <div class="field-msg"></div>
-                </div>
-
-                <div class="field<?= !empty($errors['license_expire_date']) ? ' is-error' : '' ?>">
-                    <label class="field-label">Действует до</label>
-                    <input type="date" name="license_expire_date" class="field-input"
-                           value="<?= e($old['license_expire_date'] ?? '') ?>">
-                    <div class="field-msg"><?= !empty($errors['license_expire_date']) ? e($errors['license_expire_date']) : 'Укажите дату — система предупредит об истечении' ?></div>
                 </div>
             </div>
         </div>
@@ -274,7 +255,7 @@
         ?>
         <div class="form-section">
             <div class="section-title">Документы</div>
-            <div class="field-msg" style="margin-bottom:6px;">Загрузите сейчас или позже в карточке водителя · PDF, JPG, PNG</div>
+            <div class="field-msg" style="margin-bottom:6px;">Загрузите сейчас или позже в карточке водителя · PDF, JPG, PNG, WEBP</div>
 
             <div class="file-list">
                 <?php foreach ($predefDocs as $pdoc): ?>
@@ -290,7 +271,7 @@
                                class="file-input-hidden"
                                name="predef_doc[<?= $pdoc['code'] ?>][]"
                                multiple
-                               accept=".pdf,.jpg,.jpeg,.png"
+                               accept=".pdf,.jpg,.jpeg,.png,.webp"
                                data-label="fname-<?= $pdoc['code'] ?>"
                                onchange="erpFileMultiSelect(this)">
                     </label>
@@ -380,7 +361,7 @@
             '<select name="custom_doc_type[]" class="field-select" style="height:var(--control-h);border:none;box-shadow:none;background:transparent;padding:0 26px 0 0;">' + buildTypeOptions() + '</select>' +
             '<div class="file-info"><div class="file-name" id="' + fnId + '">Файл не выбран</div></div>' +
             '<label class="btn btn-secondary" style="cursor:default;">Выбрать файл' +
-                '<input type="file" class="file-input-hidden" name="custom_doc_file[]" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" data-label="' + fnId + '" onchange="erpFileSelect(this)">' +
+                '<input type="file" class="file-input-hidden" name="custom_doc_file[]" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx" data-label="' + fnId + '" onchange="erpFileSelect(this)">' +
             '</label>' +
             '<button type="button" class="btn btn-ghost" title="Удалить строку" style="width:30px;padding:0;flex-shrink:0;">✕</button>';
 

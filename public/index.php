@@ -3347,7 +3347,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         $docErrors = []; $uploadedDocs = []; $entityType = 'contractor';
         try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
         try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
-        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
         if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
             foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
                 $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
@@ -5054,7 +5054,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         try { $localPdo->query("SELECT created_by_user_id FROM documents LIMIT 1")->fetch(); }
         catch (\Exception $e) { $localPdo->exec("ALTER TABLE documents ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL"); }
 
-        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
         $maxSize = 20 * 1024 * 1024;
 
         // Predefined docs (supports multiple files per type via multiple attribute)
@@ -8044,7 +8044,7 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
         $docErrors = []; $uploadedDocs = []; $entityType = 'vehicle_set';
         try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
         try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
-        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
         if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
             foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
                 $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
@@ -9357,7 +9357,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
         } else {
             $originalName = $_FILES['document_file']['name'];
             $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
 
             if (!in_array($ext, $allowedExt, true)) {
                 $errors['document_file'] = 'Недопустимый формат файла. Разрешены: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX';
@@ -9676,7 +9676,7 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
 
         $originalName = $_FILES['document_file']['name'];
         $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
         if (!in_array($ext, $allowedExt, true)) {
             header('Location: ' . $redirect);
             exit;
