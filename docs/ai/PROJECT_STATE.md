@@ -61,6 +61,7 @@ docs/ui/DESIGN_STANDARD.md
 SUPERADMIN — ЗАКРЫТ на текущем этапе.
 CONTRACTORS_MENU_REWORK — ЗАКРЫТ (с исправленной регрессией доступа логиста).
 CREATE_FORMS_WITH_DOCUMENT_TYPES — ПРИНЯТ (commits af2c319, d17cc22, 48ede00).
+DRIVER_CREATE_DOCS_AND_PHONES — ПРИНЯТ (commits de190ab, b457557, b1d665c, b105424).
 ```
 
 ## Следующий блок
@@ -72,17 +73,13 @@ CREATE_FORMS_WITH_DOCUMENT_TYPES — ПРИНЯТ (commits af2c319, d17cc22, 48e
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (commits af2c319, d17cc22, 48ede00):
-- Inline-загрузка документов в формы создания водителя, транспорта, перевозчика
-- Справочник типов документов (document_types) с CRUD
-- Предопределённые типы (10 шт.): паспорт/ВУ/СНИЛС для водителя, СТС/ПТС/ОСАГО для транспорта, карточка/ИНН/ОГРН/договор для перевозчика
-- Произвольные документы с выбором/созданием типа в формах создания
-- Добавлены отсутствующие поля: паспорт/СНИЛС для водителя, банковские реквизиты/тип для перевозчика
-- document_type_id FK в таблице documents, привязка к document_types
-- UNIQUE constraint на document_types(name, entity_type)
-- Миграции: 024_create_document_types.sql, 025_add_document_type_id.sql
-- Views: company_document_types.php, company_document_types_form.php
-- Все формы создания обновлены (drivers, vehicle-sets, contractors)
+Принято erp-architect (commits de190ab, b457557, b1d665c, b105424):
+- Исправлена ошибка сохранения документов: добавлен inline-ALTER для created_by_user_id/created_by_role в POST /company/drivers/create
+- Предопределённые документы (Паспорт, ВУ, СНИЛС) поддерживают multiple upload
+- Блок дополнительных телефонов в форме создания водителя (driver_phones)
+- WEBP добавлен в whitelist (расширение) и UI-подсказки
+- Из формы создания водителя убраны поля «ВУ: категория» и «ВУ: дата окончания»
+- Улучшена диагностика ошибок загрузки документов
 - UI LOCK соблюдён: шапка, page-head, меню не изменены
 ```
 

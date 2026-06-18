@@ -45,15 +45,16 @@ SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
 ### Стабильный commit
 
 ```text
-48ede00 — fix: add unique constraint on document_types to prevent duplicate seeds
+b105424 — feat: add WEBP support; remove license_category and license_expire_date from driver create form
 ```
 
 ### Важные последние commits
 
 ```text
-af2c319 — feat: add passport SNILS fields to driver form and bank type fields to contractor form
-d17cc22 — feat: document types directory, predefined and custom docs blocks in create forms
-48ede00 — fix: add unique constraint on document_types to prevent duplicate seeds
+de190ab — fix: add created_by_user_id and created_by_role column check in driver create document handler
+b457557 — feat: multiple file upload support for predefined driver documents
+b1d665c — feat: add extra phones block to driver create form
+b105424 — feat: add WEBP support; remove license_category and license_expire_date from driver create form
 ```
 
 ## Ключевое архитектурное решение: руководитель компании
@@ -139,7 +140,14 @@ CREATE_FORMS_WITH_DOCUMENT_TYPES — РЕАЛИЗОВАНА:
 - Произвольные документы с выбором/созданием типа
 - document_type_id FK в таблице documents
 - Миграции 024, 025
-- WEBP не в whitelist (решение владельца)
+- WEBP добавлен в whitelist
+
+DRIVER_CREATE_DOCS_AND_PHONES — РЕАЛИЗОВАНА:
+- Исправлена ошибка сохранения документов (отсутствовали колонки created_by_user_id/created_by_role)
+- Предопределённые документы поддерживают multiple upload
+- Добавлен блок дополнительных телефонов в форму создания водителя
+- Из формы создания убраны поля «ВУ: категория» и «ВУ: дата окончания»
+- WEBP разрешён во всех обработчиках загрузки документов
 
 ## Правила финальной визуальной приёмки в новом чате
 
