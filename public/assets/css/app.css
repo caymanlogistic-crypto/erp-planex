@@ -768,6 +768,78 @@ a.nav-item {
     margin-bottom: 6px;
 }
 
+/* Форма создания/редактирования — компактный рабочий блок */
+form.panel {
+    max-width: 1200px;
+}
+
+/* ─── Двухколоночная форма: данные + документы ─── */
+.driver-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 0;
+    align-items: stretch;
+}
+
+.driver-layout-main {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* Кнопка сохранения — компактный отступ без линии */
+.driver-layout-main > .form-actions {
+    margin-top: 0;
+    border-top: none;
+    padding-top: 8px;
+}
+
+.driver-layout-docs {
+    padding: 12px 14px;
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--surface-inspector);
+    min-width: 0;
+    align-self: stretch;
+}
+
+/* Убираем двойной margin-top у file-list в docs-колонке */
+.driver-layout-docs .file-list {
+    margin-top: 0;
+}
+
+/* Заголовок блока доп. телефонов (устаревший, оставлен для совместимости) */
+.phone-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0;
+}
+.phone-section-head .field-label {
+    margin-bottom: 0;
+}
+/* Кнопка "+ Доп. телефон" */
+.phone-add-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    height: var(--btn-h);
+    font-size: 11px;
+    padding: 0 8px;
+    color: var(--accent);
+}
+/* Убираем focus-обводку после клика мышью, сохраняем keyboard :focus-visible */
+.phone-add-btn:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Заголовок "ДАННЫЕ ВОДИТЕЛЯ" — без нижнего margin, gap берёт на себя .driver-layout-main */
+.driver-layout-main > .section-title { margin-bottom: 0; }
+
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -915,6 +987,12 @@ button:focus {
     gap: 8px;
     align-items: center;
     justify-content: flex-start;
+}
+
+.form-actions {
+    padding-top: 12px;
+    margin-top: 4px;
+    border-top: 1px solid var(--line-soft);
 }
 
 .alert {
@@ -1127,8 +1205,8 @@ tr:last-child td {
 .form-section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding-bottom: 14px;
+    gap: 8px;
+    padding-bottom: 10px;
     border-bottom: 1px solid var(--line-hair);
 }
 .form-section:last-of-type {
@@ -1268,13 +1346,41 @@ input.field-input:-webkit-autofill:active {
     letter-spacing: .08em;
     text-transform: uppercase;
     color: var(--text-faint);
-    margin: 0 0 2px;
+    margin: 0 0 6px;
     line-height: 1;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line-hair);
+}
+/* В flex-секциях gap управляет отступом — убираем margin у section-title */
+.form-section .section-title,
+.driver-layout-docs .section-title {
+    margin-bottom: 0;
 }
 
 /* form-grid: side-by-side field layout */
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 10px; }
+
+/* Утилита для растягивания поля на 2 колонки в form-grid-3 */
+.span-2 { grid-column: span 2; }
+
+/* ─── Горизонтальный ряд полей внутри form-section ─── */
+.field-row { display: flex; flex-wrap: nowrap; gap: 10px; align-items: flex-end; }
+
+/* ─── Ширины полей по реальной длине вводимых данных ─────────────────────
+   Класс ставится на .field; .field-input внутри растягивается на 100%.
+   flex-shrink: 0 — поле не сжимается ниже заданной ширины.         ─── */
+.field-w-name      { width: 400px; flex-shrink: 0; }   /* Фамилия Имя Отчество */
+.field-w-phone     { width: 160px; flex-shrink: 0; }   /* +7 916 444-44-88 */
+.field-w-date      { width: 130px; flex-shrink: 0; }   /* дд.мм.гггг */
+.field-w-code      { width: 120px; flex-shrink: 0; }   /* 000-000 */
+.field-w-passport  { width: 160px; flex-shrink: 0; }   /* 00 00 000000 */
+.field-w-snils     { width: 150px; flex-shrink: 0; }   /* 000-000-000 00 */
+.field-w-license   { width: 160px; flex-shrink: 0; }   /* 00 00 000000 */
+.field-w-email     { flex: 1 1 auto; min-width: 150px; }   /* driver@example.ru */
+.field-w-issued-by { flex: 1 1 auto; min-width: 260px; }  /* орган выдачи */
+.field-w-comment   { width: 100%; max-width: none; }  /* Комментарий */
+.field-grow        { flex: 1 1 auto; min-width: 0; }
 
 /* === filters bar === */
 .filters-bar {
@@ -1934,7 +2040,8 @@ input.field-input:-webkit-autofill:active {
     display: inline-block;
     width: 1px;
     height: 12px;
-  
+}
+
 /* === HARD FIX: browser autofill / saved credentials === */
 input,
 textarea,
@@ -1969,6 +2076,631 @@ input:-webkit-autofill:active,
     transition:
         background-color 999999s ease-in-out 0s,
         color 999999s ease-in-out 0s;
+}
+
+/* ─── Верхняя строка: ФИО | Телефон | Кнопка (плоская сетка, 3 колонки) ─── */
+.driver-contact-top-row {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    column-gap: 8px;
+    align-items: start;
+    width: 100%;
+}
+.driver-contact-top-row .field-w-name {
+    width: 100%;
+}
+.driver-contact-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.driver-contact-main-row {
+    display: grid;
+    grid-template-columns: 170px max-content;
+    column-gap: 8px;
+    align-items: start;
+}
+.driver-contact-main-row .field-w-phone {
+    width: 100%;
+}
+.driver-contact-main-row .phone-add-btn {
+    align-self: start;
+    height: var(--btn-h);
+    margin-top: 17px;
+    white-space: nowrap;
+}
+
+/* ─── Обёртка доп. телефонов: отступ = ширина ФИО ─── */
+.driver-extra-phones-wrap {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    column-gap: 8px;
+    margin-top: 4px;
+    width: 100%;
+}
+.driver-extra-phones-offset {
+    /* пустой блок для отступа, равен ширине ФИО */
+}
+
+/* Контейнер доп. телефонов: стек строк */
+.driver-extra-phones {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.driver-extra-phones:empty { display: none; }
+
+/* Строка дополнительного телефона: поле + комментарий (крестик внутри) */
+.driver-extra-phone-row {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 6px;
+    align-items: start;
+    width: 100%;
+}
+.driver-extra-phone-field {
+    margin-bottom: 0;
+    grid-template-rows: auto minmax(var(--control-h), auto) 12px;
+    align-self: start;
+}
+
+/* Обёртка комментария — relative для absolute-крестика */
+.driver-extra-phone-comment-wrap {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    min-width: 0;
+    width: 100%;
+    align-self: start;
+}
+.driver-extra-phone-comment-wrap .field-input {
+    width: 100%;
+    min-height: var(--control-h);
+    line-height: var(--control-h);
+    padding-right: 30px;
+}
+
+/* Кнопка удаления доп. телефона — внутри комментария справа */
+.driver-extra-phone-remove {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+}
+.driver-extra-phone-remove:hover {
+    color: var(--danger);
+    background: var(--surface-muted);
+    border-color: var(--line-soft);
+}
+
+/* ─── Driver form: плоский контейнер полей ─── */
+.driver-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+/* Минимальный разрыв между логическими группами (паспорт, ВУ, комментарий) */
+.field-row-group { margin-top: 2px; }
+
+/* Тесный gap label → input в форме водителя, убираем margin-bottom */
+.driver-layout-main .field {
+    gap: 3px;
+    margin-bottom: 0;
+    min-width: 0;
+    grid-template-rows: auto minmax(var(--control-h), auto) 12px;
+    align-content: start;
+}
+
+.driver-layout-main .driver-extra-phones {
+    gap: 12px;
+}
+
+.driver-layout-main .driver-extra-phone-field {
+    gap: 0;
+    grid-template-rows: minmax(var(--control-h), auto);
+}
+
+.driver-layout-main .driver-extra-phone-field .field-msg {
+    min-height: 0;
+    margin-top: -1px;
+    height: 0;
+    overflow: hidden;
+}
+
+.driver-layout-main .driver-extra-phone-row:has(.driver-extra-phone-field.is-error) .driver-extra-phone-field {
+    gap: 1px;
+    grid-template-rows: minmax(var(--control-h), auto) auto;
+}
+
+.driver-layout-main .driver-extra-phone-row:has(.driver-extra-phone-field.is-error) .driver-extra-phone-field .field-msg {
+    height: auto;
+    overflow: visible;
+}
+
+.driver-layout-main .driver-extra-phone-field:not(.is-error) .field-msg,
+.driver-layout-main .driver-extra-phone-field .field-msg:empty {
+    display: none;
+}
+
+/* Строки полей — на всю ширину левой колонки */
+.driver-layout-main .field-row {
+    width: 100%;
+    align-items: start;
+}
+
+.driver-layout-main .driver-contact-main-row,
+.driver-layout-main .driver-extra-phone-row {
+    margin: 0;
+}
+
+.driver-layout-main .driver-extra-phones {
+    gap: 12px;
+    min-width: 0;
+}
+
+.driver-layout-main .driver-fields {
+    gap: 4px;
+}
+
+.driver-layout-main .field-row-group {
+    margin-top: 0;
+}
+
+/* Компактная textarea комментария */
+.driver-textarea { width: 100%; min-height: 52px; height: 52px; }
+
+/* Скрыть пустой field-msg — не занимает пространство */
+.field-msg:empty { display: none; }
+
+.driver-layout-main .field-msg {
+    display: block;
+    min-height: 12px;
+    margin-top: -1px;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.driver-layout-main .field-msg:empty {
+    display: block;
+    visibility: hidden;
+}
+
+
+/* ─── ERP date-picker для страницы создания водителя ─── */
+.erp-date-field {
+    position: relative;
+    width: 100%;
+}
+.erp-date-field .field-input {
+    padding-right: 30px;
+}
+.erp-date-trigger {
+    position: absolute;
+    right: 1px;
+    top: 1px;
+    width: 28px;
+    height: calc(var(--control-h) - 2px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    border-left: 1px solid var(--line-hair);
+    color: var(--text-faint);
+    cursor: pointer;
+}
+.erp-date-trigger:hover,
+.erp-date-trigger:focus-visible {
+    background: var(--surface-muted);
+    color: var(--text-main);
+    outline: none;
+}
+.erp-date-popover {
+    position: absolute;
+    z-index: 300;
+    display: none;
+    width: 228px;
+    padding: 8px;
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 12px rgba(19,18,16,.14);
+    color: var(--text-main);
+}
+.erp-date-popover.is-open {
+    display: block;
+}
+.erp-date-head {
+    display: grid;
+    grid-template-columns: 26px 1fr 26px;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.erp-date-title {
+    color: var(--text-main);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+.erp-date-nav {
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-field);
+    border: 1px solid var(--line-hair);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+.erp-date-nav:hover,
+.erp-date-nav:focus-visible {
+    background: var(--surface-muted);
+    border-color: var(--line-soft);
+    color: var(--text-main);
+    outline: none;
+}
+.erp-date-weekdays,
+.erp-date-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.erp-date-weekdays {
+    margin-bottom: 3px;
+    color: var(--text-faint);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+}
+.erp-date-day,
+.erp-date-empty {
+    width: 28px;
+    height: 24px;
+}
+.erp-date-day {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 12px;
+}
+.erp-date-day:hover,
+.erp-date-day:focus-visible {
+    background: var(--surface-muted);
+    border-color: var(--line-hair);
+    outline: none;
+}
+.erp-date-day.is-today {
+    border-color: var(--accent-line);
+    color: var(--accent-deep);
+    font-weight: 700;
+}
+.erp-date-day.is-selected {
+    background: var(--accent);
+    border-color: var(--accent-deep);
+    color: var(--inverse);
+    font-weight: 700;
+}
+.erp-date-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-hair);
+}
+
+/* ─── Custom doc row (произвольные документы) ─── */
+.file-item.custom-doc-row {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 108px 30px;
+    column-gap: 10px;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--surface-strong);
+    border: 1px solid var(--line-soft);
+}
+.file-item.custom-doc-row.is-empty {
+    background: var(--surface);
+}
+.custom-doc-row .file-info {
+    min-width: 0;
+    position: relative;
+}
+.custom-doc-row .custom-doc-type-input {
+    height: var(--control-h);
+    line-height: var(--control-h);
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main);
+    background: var(--surface-field);
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    box-shadow: none;
+}
+.custom-doc-row .custom-doc-type-input:hover {
+    border-color: var(--line);
+}
+.custom-doc-row .custom-doc-type-input:focus {
+    outline: none;
+    background: var(--surface-strong);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,71,24,.1);
+}
+.custom-doc-row .custom-doc-type-input::placeholder {
+    color: var(--text-faint);
+    font-weight: 400;
+}
+.custom-doc-row.is-error .custom-doc-type-input {
+    background: #fff8f7;
+    border-color: #ca8880;
+}
+/* ── Подсказки типов документов ── */
+.custom-doc-suggestions {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin-top: 2px;
+    border: 1px solid var(--line-soft);
+    background: var(--surface-strong);
+    border-radius: 2px;
+    box-shadow: 0 2px 6px rgba(19,18,16,.10);
+    overflow: hidden;
+}
+.custom-doc-suggestion {
+    height: 28px;
+    padding: 0 9px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main);
+    cursor: default;
+    transition: background 70ms;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.custom-doc-suggestion:hover {
+    background: var(--surface-muted);
+}
+.custom-doc-meta {
+    font-size: 11px;
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 3px;
+}
+.custom-doc-row.is-error .custom-doc-meta,
+.custom-doc-meta.is-error {
+    color: var(--danger);
+}
+.custom-doc-row .file-remove {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 2px;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 80ms, color 80ms, border-color 80ms;
+}
+.custom-doc-row .file-remove:hover {
+    background: var(--surface-muted);
+    border-color: var(--line);
+    color: var(--text-main);
+}
+/* ── Кнопка добавления документа ── */
+#add-custom-doc-btn {
+    align-self: flex-start;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+/* label-обёртки и кнопки выбора файла — курсор как у кнопки */
+label.btn,
+.js-file-pick-btn,
+.js-custom-file-pick-btn { cursor: pointer; }
+
+/* Кнопки выбора файла — единая ширина */
+.file-action-btn {
+    min-width: 108px;
+    justify-content: center;
+}
+
+/* ─── Predef file item — 4 колонки с кнопкой очистки ─── */
+.file-item.file-item-predef {
+    grid-template-columns: 38px minmax(0, 1fr) 108px 30px;
+    column-gap: 10px;
+}
+
+.file-item.file-item-predef .predef-file-clear {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line-soft);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    line-height: 1;
+    transition: background 80ms, color 80ms, border-color 80ms;
+}
+.file-item.file-item-predef .predef-file-clear:hover {
+    background: var(--surface-muted);
+    border-color: var(--line);
+    color: var(--text-main);
+}
+
+/* Ссылка создания типа документа в правой колонке */
+.doc-type-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.file-item {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 11px;
+    background: var(--surface-strong);
+    border: 1px solid var(--line-soft);
+}
+
+.file-item.is-empty {
+    background: var(--surface);
+}
+
+.file-info {
+    min-width: 0;
+}
+
+.file-name {
+    color: var(--text-main);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-meta {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-item.is-empty .file-name,
+.file-item.is-empty .file-meta {
+    color: var(--text-muted);
+}
+
+.file-item.is-error .file-meta {
+    color: var(--danger);
+}
+
+.file-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
+    height: 23px;
+    padding: 0 4px;
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    background: var(--accent-bg);
+    color: var(--accent);
+    position: relative;
+    box-sizing: border-box;
+}
+
+.file-type-badge-empty {
+    background: var(--surface-muted);
+    color: var(--text-faint);
+}
+
+.file-type-badge.is-pdf {
+    background: color-mix(in srgb, var(--chart-4) 18%, var(--surface-strong));
+    color: var(--chart-4);
+    border-color: color-mix(in srgb, var(--chart-4) 35%, var(--line-soft));
+}
+
+.file-type-badge.is-doc {
+    background: color-mix(in srgb, var(--chart-2) 18%, var(--surface-strong));
+    color: var(--chart-2);
+    border-color: color-mix(in srgb, var(--chart-2) 35%, var(--line-soft));
+}
+
+.file-type-badge.is-xls {
+    background: color-mix(in srgb, var(--chart-3) 18%, var(--surface-strong));
+    color: var(--chart-3);
+    border-color: color-mix(in srgb, var(--chart-3) 35%, var(--line-soft));
+}
+
+.file-type-badge.is-img {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--line-soft));
+}
+
+.file-type-badge.is-other {
+    background: var(--surface-muted);
+    color: var(--text-faint);
+    border-color: var(--line-soft);
+}
+
+.file-type-badge.is-loading {
+    background: var(--surface-muted);
+    color: transparent;
+    border-color: var(--line-soft);
+}
+
+.file-type-badge.is-loading::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border: 2px solid color-mix(in srgb, var(--text-faint) 35%, transparent);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: file-badge-spin 0.7s linear infinite;
+}
+
+@keyframes file-badge-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Standard autofill selector */
