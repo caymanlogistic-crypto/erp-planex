@@ -1,0 +1,18 @@
+Таблица пользователей:
+Логин	Пароль	Компания	Роль
+admin@planex.local	test1234	CENTRAL	superadmin
+spugov	test1234	COMPANY_EDITED_VIA_RUNTIME	company_owner
+Ivan	test1234	ООО "МГ Логистик"	company_owner
+owner_test_runtime	test1234	ООО Тест Этап 2 Runtime	company_owner
+Gladkih	test1234	COMPANY_EDITED_VIA_RUNTIME	logist
+logist_runtime_1	test1234	ООО Тест Этап 2 Runtime	logist
+logist_runtime_2	test1234	ООО Тест Этап 2 Runtime	logist
+logist_sa_test	test1234	ООО Тест Этап 2 Runtime	logist
+logist_test_1	test1234	ООО Тест Этап 2 Runtime	logist
+
+Проверка:
+обновлено 1 запись в superadmin_users
+обновлено 3 записи в company_users
+обновлено 5 записей в локальных таблицах users
+для всех 9 учёток password_verify('test1234', password_hash) вернул YES
+код проекта не менялся

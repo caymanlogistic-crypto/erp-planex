@@ -1,0 +1,449 @@
+# ERP PLANEX cleanup report
+
+Source: erp.zip
+
+## Что оставлено
+- Рабочий PHP-код ERP: `app/`, `bootstrap/`, `config/`, `public/index.php`.
+- Основные CSS/JS/fonts: `public/assets/`.
+- Миграции: `database/migrations/`, `database/migrations-local/`.
+- Основные MD-документы: `AGENTS.md`, `docs/ai/`, `docs/ui/`.
+- Основной дизайн-референс и контекст: `agent-main-design/FINAL3.html` и MD-файлы рядом.
+- Пустые рабочие папки `logs/` и `storage/` с `.gitkeep`.
+
+## Что удалено
+- design-audit screenshots directory: 153 файлов, 10.57 MB
+- non-runtime storage/screenshots/archive directory: 235 файлов, 20.11 MB
+- temporary/cache/cookie artifact: 14 файлов, 0.04 MB
+- temporary/helper/local-secret artifact: 22 файлов, 0.21 MB
+
+## Важно
+- `.env` удалён из очищенного архива как локальный/секретный файл. Используйте `.env.example` и создайте `.env` локально.
+- Тестовые загруженные документы и backup/delete reports из `storage/` удалены. Это не код ERP.
+- Скриншоты аудитов удалены, чтобы не раздувать архив. MD-отчёты сохранены.
+- Если нужны исторические скриншоты для дизайнера, берите их из исходного архива, не из очищенного.
+
+## Removed files manifest
+- `.env` — 157 bytes — temporary/helper/local-secret artifact
+- `CLEANUP_NOTES.txt` — 676 bytes — temporary/helper/local-secret artifact
+- `README_APPLY.md` — 1962 bytes — temporary/helper/local-secret artifact
+- `agent-main-design/screenshots/company-reference-1440x900/logist_01_contractors.png` — 48740 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_02_drivers.png` — 53370 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_03_vehicles.png` — 61269 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_04_vehicle_sets.png` — 46476 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_05_driver_vehicle_blocks.png` — 48850 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_06_crews.png` — 50004 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_07_contractor_view.png` — 99678 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_08_driver_view.png` — 75269 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_09_vehicle_view.png` — 75069 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_10_vehicle_set_view.png` — 57177 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_11_driver_vehicle_block_view.png` — 53816 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_12_crew_view.png` — 66207 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_manifest.json` — 10268 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/logist_runtime_2_vehicles_access.png` — 40283 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/manifest.json` — 26508 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_01_logists.png` — 58613 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_02_logists_create.png` — 66379 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_03_contractors.png` — 50896 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_04_contractors_create.png` — 70812 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_05_drivers.png` — 55992 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_06_drivers_create.png` — 66701 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_07_vehicles.png` — 62363 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_08_vehicles_create.png` — 77951 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_09_vehicle_sets.png` — 48647 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_10_vehicle_sets_create.png` — 60497 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_11_driver_vehicle_blocks.png` — 51015 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_12_driver_vehicle_blocks_create.png` — 57784 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_13_crews.png` — 51106 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_14_crews_create.png` — 53043 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_15_contractor_view.png` — 100708 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_16_driver_view.png` — 75058 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_17_vehicle_view.png` — 82841 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_18_vehicle_set_view.png` — 63504 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_19_driver_vehicle_block_view.png` — 61405 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_20_crew_view.png` — 78170 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-1440x900/owner_manifest.json` — 16242 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_01_contractors.png` — 37828 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_02_drivers.png` — 43954 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_03_vehicles.png` — 50118 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_03_vehicles_final.png` — 50469 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_03_vehicles_final2.png` — 50906 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_03_vehicles_reshoot.png` — 50469 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_04_vehicle_sets.png` — 36679 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_05_driver_vehicle_blocks.png` — 39115 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_06_crews.png` — 39787 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_07_contractor_view.png` — 71727 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_07_contractor_view_final.png` — 71580 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_08_driver_view.png` — 56608 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_09_vehicle_view.png` — 63314 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_09_vehicle_view_reshoot.png` — 63314 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_10_vehicle_set_view.png` — 46408 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_11_driver_vehicle_block_view.png` — 44147 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_12_crew_view.png` — 58070 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_manifest.json` — 4092 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_runtime_2_vehicles_access.png` — 37802 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/logist_vehicles_create_reshoot.png` — 55975 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_01_logists.png` — 48407 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_01_logists_reshoot.png` — 46453 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_02_logists_create.png` — 55758 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_03_contractors.png` — 40845 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_03_contractors_reshoot.png` — 39286 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_04_contractors_create.png` — 49418 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_05_drivers.png` — 48663 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_05_drivers_reshoot.png` — 45934 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_06_drivers_create.png` — 53178 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_07_vehicles.png` — 50760 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_08_vehicles_create.png` — 54868 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_09_vehicle_sets.png` — 39539 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_09_vehicle_sets_reshoot.png` — 38247 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_10_vehicle_sets_create.png` — 51049 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_11_driver_vehicle_blocks.png` — 42127 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_11_driver_vehicle_blocks_reshoot.png` — 40813 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_12_driver_vehicle_blocks_create.png` — 49211 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_13_crews.png` — 40450 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_14_crews_create.png` — 43434 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_15_contractor_view.png` — 72345 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_16_driver_view.png` — 57169 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_17_vehicle_view.png` — 63186 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_18_vehicle_set_view.png` — 52255 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_19_driver_vehicle_block_view.png` — 50022 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_20_crew_view.png` — 67246 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_manifest.json` — 6688 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/owner_reshoot_manifest.json` — 1479 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/vehicle_final_manifest.json` — 236 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/company-reference-production/vehicle_reshoot_manifest.json` — 949 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-8016-fixed.png` — 17846 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-8016.png` — 15144 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/00_superadmin.png` — 41048 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/01_companies.png` — 44682 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/02_companies_create.png` — 49603 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/03_company2_view.png` — 83594 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/04_company2_edit.png` — 57334 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/05_company2_owner.png` — 54281 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/06_company2_owner_edit.png` — 46344 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/07_company2_users.png` — 57913 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/08_company2_user_create.png` — 18561 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/09_company2_user1_view.png` — 20819 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/10_company2_user1_edit.png` — 43550 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/11_company2_directories.png` — 36529 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/12_company2_clients.png` — 27683 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/13_company2_contractors.png` — 29292 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/14_company2_drivers.png` — 37534 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/15_company2_vehicles.png` — 28261 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/16_company2_crews.png` — 28072 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/17_company2_documents.png` — 29540 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/18_company2_access_grants.png` — 22023 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/19_company2_delete.png` — 60420 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/20_company4_view_no_owner.png` — 77296 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/21_company4_create_owner.png` — 48247 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/22_company4_owner_missing.png` — 19956 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/contact_1.png` — 117497 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/contact_2.png` — 72243 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/contact_3.png` — 52047 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/contact_4.png` — 84098 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-full/manifest.json` — 7939 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/00_superadmin.png` — 41697 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/01_companies.png` — 45332 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/02_companies_create.png` — 55023 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/03_company2_view.png` — 126044 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/04_company2_edit.png` — 65026 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/05_company2_owner.png` — 54981 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/06_company2_owner_edit.png` — 47009 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/07_company2_users.png` — 68528 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/08_company2_user_create.png` — 43627 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/09_company2_user1_view.png` — 70910 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/10_company2_user1_edit.png` — 44227 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/11_company2_directories.png` — 47064 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/12_company2_clients.png` — 36001 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/13_company2_contractors.png` — 37105 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/14_company2_drivers.png` — 38172 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/15_company2_vehicles.png` — 35143 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/16_company2_crews.png` — 35716 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/17_company2_documents.png` — 39332 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/18_company2_access_grants.png` — 22661 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/19_company2_delete.png` — 77301 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/20_company4_view_no_owner.png` — 23658 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/21_company4_create_owner.png` — 55689 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/22_company4_owner_missing.png` — 46178 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/contact_1.png` — 215804 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/contact_2.png` — 197236 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/contact_3.png` — 133554 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/contact_4.png` — 204659 bytes — non-runtime storage/screenshots/archive directory
+- `agent-main-design/screenshots/superadmin-production/manifest.json` — 9791 bytes — non-runtime storage/screenshots/archive directory
+- `app/View/pages/.fuse_hidden0000001600000001` — 5838 bytes — temporary/cache/cookie artifact
+- `app/View/pages/.fuse_hidden0000001600000002` — 6477 bytes — temporary/cache/cookie artifact
+- `app/View/pages/.fuse_hidden0000001600000003` — 5491 bytes — temporary/cache/cookie artifact
+- `app/View/pages/.fuse_hidden0000001600000004` — 5375 bytes — temporary/cache/cookie artifact
+- `app/View/pages/.fuse_hidden0000001800000001` — 4168 bytes — temporary/cache/cookie artifact
+- `app/View/pages/.fuse_hidden0000001800000004` — 4945 bytes — temporary/cache/cookie artifact
+- `app/View/pages/.fuse_hidden0000001a00000005` — 4846 bytes — temporary/cache/cookie artifact
+- `capture_all.ps1` — 13875 bytes — temporary/helper/local-secret artifact
+- `capture_audit.mjs` — 43235 bytes — temporary/helper/local-secret artifact
+- `capture_cdp.ps1` — 6312 bytes — temporary/helper/local-secret artifact
+- `capture_final_polish.ps1` — 6263 bytes — temporary/helper/local-secret artifact
+- `capture_login.mjs` — 6569 bytes — temporary/helper/local-secret artifact
+- `capture_packages_3_6.mjs` — 13704 bytes — temporary/helper/local-secret artifact
+- `capture_remaining.mjs` — 3870 bytes — temporary/helper/local-secret artifact
+- `capture_screens.ps1` — 12619 bytes — temporary/helper/local-secret artifact
+- `capture_supplemental.mjs` — 9131 bytes — temporary/helper/local-secret artifact
+- `cookies.txt` — 205 bytes — temporary/cache/cookie artifact
+- `cookies2.txt` — 205 bytes — temporary/cache/cookie artifact
+- `cookies_logist.txt` — 205 bytes — temporary/cache/cookie artifact
+- `cookies_owner.txt` — 205 bytes — temporary/cache/cookie artifact
+- `cookies_owner2.txt` — 205 bytes — temporary/cache/cookie artifact
+- `cookies_sa.txt` — 205 bytes — temporary/cache/cookie artifact
+- `cookies_sa2.txt` — 205 bytes — temporary/cache/cookie artifact
+- `do_commit_p2.bat` — 2564 bytes — temporary/helper/local-secret artifact
+- `docs/archive/legacy_md_before_rework_md.zip` — 474533 bytes — non-runtime storage/screenshots/archive directory
+- `docs/archive/legacy_ui_reference/ERP_UI_KIT_CORE.html` — 78463 bytes — non-runtime storage/screenshots/archive directory
+- `docs/archive/legacy_ui_reference/ERP_UI_MODULE_CATALOG.html` — 44498 bytes — non-runtime storage/screenshots/archive directory
+- `docs/archive/legacy_ui_reference/screenshots/login-redesign-final3-alert-screenshot.png` — 16781 bytes — non-runtime storage/screenshots/archive directory
+- `docs/archive/legacy_ui_reference/screenshots/login-redesign-final3-screenshot.png` — 12717 bytes — non-runtime storage/screenshots/archive directory
+- `docs/archive/legacy_ui_reference/screenshots/login-redesign-screenshot.png` — 19633 bytes — non-runtime storage/screenshots/archive directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/001_login_page.png` — 23029 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/002_superadmin_dashboard.png` — 47544 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/003_superadmin_companies.png` — 57951 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/004_superadmin_company_view.png` — 101448 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/005_superadmin_company_users.png` — 95121 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/006_superadmin_company_owner.png` — 55314 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/007_superadmin_logist_create.png` — 56989 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/008_owner_dashboard.png` — 47017 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/009_owner_logists.png` — 58941 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/010_owner_logist_create.png` — 61945 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/011_owner_contractors.png` — 47780 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/012_owner_contractor_view.png` — 102419 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/013_owner_drivers.png` — 66250 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/014_owner_driver_view.png` — 80079 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/015_owner_driver_edit.png` — 79400 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/016_owner_vehicles.png` — 62495 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/017_owner_vehicle_view.png` — 74044 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/018_owner_vehicle_sets.png` — 47754 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/019_owner_vehicle_set_view.png` — 65213 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/020_owner_vehicle_set_create.png` — 57479 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/021_owner_dvb.png` — 49248 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/022_owner_dvb_view.png` — 65119 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/023_owner_dvb_create.png` — 56146 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/024_owner_crews.png` — 50644 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/025_owner_crew_view.png` — 70010 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/026_owner_crew_create.png` — 51544 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/027_logist1_dashboard.png` — 35517 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/028_logist1_crew_view.png` — 55526 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/029_logist1_driver_view.png` — 63789 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/030_logist1_driver_edit.png` — 71544 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/031_logist2_dashboard.png` — 35802 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/032_logist2_contractors_empty.png` — 37707 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/033_logist2_drivers_empty.png` — 36972 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/034_logist2_vehicles_empty.png` — 39655 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/035_logist2_vehicle_sets_empty.png` — 40050 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/036_logist2_dvb_empty.png` — 39898 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/037_logist2_crews_empty.png` — 41618 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/038_logist2_crew_access.png` — 55564 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/039_superadmin_company_vehicles.png` — 47307 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/040_superadmin_company_documents.png` — 82629 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/041_superadmin_company_access_grants.png` — 36849 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/042_superadmin_create_owner.png` — 34791 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/043_superadmin_company_directories.png` — 53646 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/044_superadmin_company_edit.png` — 70356 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/045_owner_contractor_edit.png` — 72764 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/046_owner_vehicle_edit.png` — 70859 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/047_owner_vehicle_set_edit.png` — 66126 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/048_owner_dvb_edit.png` — 59526 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/049_owner_crew_edit.png` — 61845 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/050_owner_logist_view.png` — 61762 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/051_logist1_vehicle_set_view.png` — 56791 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/052_logist1_dvb_view.png` — 56814 bytes — design-audit screenshots directory
+- `docs/design-audit/final-ui-review-after-fixes/screenshots/screenshots.zip` — 2525688 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/001_login_form.png` — 15665 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/002_owner_dashboard.png` — 17975 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/003_owner_contractors_list.png` — 18791 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/004_owner_drivers_list.png` — 18875 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/005_owner_vehicles_list.png` — 19570 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/006_owner_crews_list.png` — 18969 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/007_logist1_dashboard.png` — 17975 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/008_logist2_empty_state.png` — 18791 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/009_logist2_403.png` — 18804 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/010_superadmin_dashboard.png` — 17692 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/011_superadmin_companies.png` — 17692 bytes — design-audit screenshots directory
+- `docs/design-audit/final-visual-polish/screenshots/012_superadmin_company_view.png` — 17692 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/logist2__crew_view__archived_no_archive_button.png` — 78599 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__crew_edit__selected_values.png` — 74461 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__crew_view__archived_no_archive_button.png` — 92387 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__crews__list.png` — 60680 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__documents__empty_state.png` — 53091 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__documents_upload__empty_state.png` — 59363 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__drivers__list__no_passport_snils.png` — 65971 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__vehicles_create__type_required.png` — 95071 bytes — design-audit screenshots directory
+- `docs/design-audit/fix-package-1/screenshots/owner__vehicles_edit__type_required.png` — 102978 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/auth__login__form__empty.png` — 19705 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__contractors__edit__own_record.png` — 73454 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__contractors__list.png` — 49279 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__contractors__view__own_record.png` — 101209 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__crews__list.png` — 50985 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__crews__view__own_record.png` — 61656 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__dashboard__dashboard__filled.png` — 50745 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__drivers__edit__own_record.png` — 65636 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__drivers__list.png` — 56542 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__drivers__view__own_record.png` — 89565 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__dvb__list.png` — 49466 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__dvb__view__own_record.png` — 51958 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__vehicle_sets__list.png` — 47309 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__vehicle_sets__view__own_record.png` — 55938 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__vehicles__edit__own_record.png` — 72646 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__vehicles__list.png` — 64602 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist1__vehicles__view__own_record.png` — 74310 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__contractors__list.png` — 47707 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__crews__list.png` — 41427 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__crews__view__grant_access.png` — 61708 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__dashboard__dashboard__filled.png` — 50789 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__drivers__list.png` — 46480 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__drivers__view__grant_or_denied.png` — 38697 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__dvb__list.png` — 42897 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__dvb__view__grant_or_denied.png` — 39094 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__vehicle_sets__list.png` — 43511 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__vehicle_sets__view__grant_or_denied.png` — 39790 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__vehicles__list.png` — 41878 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/logist2__vehicles__view__grant_or_denied.png` — 40315 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__clients__list__filled.png` — 43255 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__contractors__create__form.png` — 66180 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__contractors__edit__form.png` — 75431 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__contractors__list__filled.png` — 52722 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__contractors__view__runtime_contractor.png` — 103356 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__crews__create__form.png` — 54042 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__crews__edit__form.png` — 64822 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__crews__list__filled.png` — 53265 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__crews__view__runtime_crew.png` — 72455 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__dashboard__dashboard__filled.png` — 55567 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__documents__list__filled.png` — 34791 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__documents__upload__form.png` — 40205 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__drivers__create__form.png` — 60864 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__drivers__edit__form.png` — 67787 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__drivers__list__filled.png` — 60109 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__drivers__view__runtime_driver.png` — 92620 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__dvb__create__form.png` — 58573 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__dvb__edit__form.png` — 62133 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__dvb__list__filled.png` — 52389 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__dvb__view__runtime_block.png` — 60871 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__logists__create__form.png` — 63051 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__logists__list__filled.png` — 62473 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicle_sets__create__form.png` — 59984 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicle_sets__edit__form.png` — 68793 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicle_sets__list__filled.png` — 50503 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicle_sets__view__runtime_coupling.png` — 64605 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicles__create__form.png` — 66823 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicles__edit__form.png` — 74730 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicles__list__filled.png` — 66833 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicles__view__runtime_tractor.png` — 82770 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/owner__vehicles__view__runtime_trailer.png` — 84366 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__companies__create__form.png` — 56838 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__companies__list__filled.png` — 60019 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__access_grants__list.png` — 37595 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__clients__list.png` — 37489 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__contractors__list.png` — 39923 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__create_owner__form.png` — 36172 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__crews__list.png` — 39823 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__delete__confirm.png` — 74667 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__directories__stats.png` — 54921 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__documents__list.png` — 80208 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__drivers__list.png` — 44681 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__edit__form.png` — 71683 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__logist_create__form.png` — 56151 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__owner__view.png` — 56484 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__owner_edit__form.png` — 52363 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__users__list.png` — 96361 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__vehicles__list.png` — 48378 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__company__view__runtime_company.png` — 102779 bytes — design-audit screenshots directory
+- `docs/design-audit/full-ui-revision/screenshots/superadmin__dashboard__dashboard__filled.png` — 45678 bytes — design-audit screenshots directory
+- `doctypes.html` — 28404 bytes — temporary/helper/local-secret artifact
+- `driver_create.html` — 14926 bytes — temporary/helper/local-secret artifact
+- `fix_lock_and_commit.bat` — 2718 bytes — temporary/helper/local-secret artifact
+- `gen_manifest.mjs` — 34225 bytes — temporary/helper/local-secret artifact
+- `git-commit-phase3.ps1` — 1042 bytes — temporary/helper/local-secret artifact
+- `package-lock.json` — 14204 bytes — temporary/helper/local-secret artifact
+- `package.json` — 66 bytes — temporary/helper/local-secret artifact
+- `public/tmp_capture.php` — 1547 bytes — temporary/helper/local-secret artifact
+- `query` — 9 bytes — temporary/helper/local-secret artifact
+- `storage/_recovered_from_flat_archive/central_snapshot_1.json` — 1383 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/central_snapshot_2.json` — 848 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/central_snapshot_3.json` — 777 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/central_snapshot_4.json` — 1263 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/delete_report_1.json` — 627 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/delete_report_2.json` — 625 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/delete_report_3.json` — 613 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/delete_report_4.json` — 613 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/doc_6a2d9dfee85341.56642030.pdf` — 18 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/doc_6a2d9e1fa453d5.60018841.jpg` — 14 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/doc_6a2d9e1fafbf97.67425394.png` — 17 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/doc_6a2d9f25c9d09.jpg` — 14 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/local_db_dump_1.sql` — 17022 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/local_db_dump_2.sql` — 1395 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/local_db_dump_3.sql` — 1395 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/local_db_dump_4.sql` — 16492 bytes — non-runtime storage/screenshots/archive directory
+- `storage/_recovered_from_flat_archive/storage_backup.zip` — 769 bytes — non-runtime storage/screenshots/archive directory
+- `storage/backups/deleted-companies/company_4_20260616_160711/central_snapshot.json` — 752 bytes — non-runtime storage/screenshots/archive directory
+- `storage/backups/deleted-companies/company_4_20260616_160711/delete_report.json` — 572 bytes — non-runtime storage/screenshots/archive directory
+- `storage/backups/deleted-companies/company_4_20260616_160711/local_db_dump.sql` — 1395 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/1/doc_6a35324c660849.16636242.docx` — 14077 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/1/doc_6a35324c671bc6.19288977.docx` — 14077 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/1/doc_6a35324c680c43.12839703.docx` — 14077 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/2/doc_6a3573ea1abc40.10071683.png` — 647834 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/2/doc_6a3573ea1b8860.87682659.png` — 1118964 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/2/doc_6a3573ea1c2190.19437388.jpeg` — 120521 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/2/doc_6a3573ea1cfc18.26060015.jpeg` — 139377 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/7/documents/driver/2/doc_6a3573ea1d95b5.64739325.webp` — 137678 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/1/doc_6a31b49cc061b4.11804069.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/1/doc_6a31b7af3ddec7.65111085.pdf` — 13 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/4/doc_6a3316bb56b284.39337637.pdf` — 53 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/5/doc_6a3316c8972b36.91711403.pdf` — 53 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/6/doc_6a331790b0caa8.51977109.pdf` — 17 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/8/doc_6a33b1b683bec8.07348926.pdf` — 20 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/8/doc_6a33b1b6846797.02309933.pdf` — 20 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/8/doc_6a33b1b6960b01.59758155.webp` — 16 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/8/doc_6a33b1b6c44df.pdf` — 13 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/contractor/8/doc_6a33b5664b5367.41289427.pdf` — 17 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/crew/1/doc_6a31b4f63e0ad7.45330646.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/crew/1/doc_6a31b5d2f0c5c0.14396709.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/1/doc_6a31b4b2e7ea22.86698032.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/11/doc_6a33b1b8e1f2b6.16135078.pdf` — 7 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/13/doc_6a33f2aeaeeec3.94313005.pdf` — 13 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/14/doc_6a34217bc5cc40.81091307.xlsx` — 9301 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/14/doc_6a34217bc60ae9.37756185.jpg` — 1076702 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/14/doc_6a34217bc631a7.52303411.jpg` — 1550321 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/14/doc_6a34217bc65732.69840760.docx` — 12238 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/17/doc_6a3428945e2d24.04524773.pdf` — 27 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/18/doc_6a3428d13c7c16.91817224.pdf` — 27 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/19/doc_6a3428e046e867.88212375.pdf` — 27 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/19/doc_6a3428e0479f92.41327273.pdf` — 21 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/20/doc_6a3428ea760421.82075653.webp` — 19 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/23/doc_6a3429044907f6.18988492.pdf` — 27 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/23/doc_6a34290449f710.74469349.webp` — 19 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/23/doc_6a3429044ad2f8.30936276.pdf` — 21 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/24/doc_6a342ae0c84075.78330773.jpg` — 1469476 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/24/doc_6a342ae0c90f07.99844828.jpg` — 1076702 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/24/doc_6a342ae0c9cf16.09268627.jpg` — 1228443 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/24/doc_6a342ae0cad841.94056187.jpg` — 1550321 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/24/doc_6a342ae0cbe1e8.04400044.jpg` — 636080 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/24/doc_6a342ae0cc8ab9.21463813.jpg` — 1573319 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/24/doc_6a342ae0cd8094.83499793.jpg` — 324479 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/30/doc_6a352c1d79e893.84183290.jpg` — 58947 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/30/doc_6a352c1d7aea64.03746386.xlsx` — 12934 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/30/doc_6a352c1d7c03e9.23781464.docx` — 15230 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/7/doc_6a33169e533190.83797185.webp` — 30 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/9/doc_6a33b1b72093f1.19741025.pdf` — 13 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/9/doc_6a33b1b73238d7.79763930.webp` — 16 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/9/doc_6a33b1b760405.pdf` — 8 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/9/doc_6a33b20e2030e.pdf` — 16 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/9/doc_6a33b566416276.21110881.pdf` — 9 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver/9/doc_6a33b566581a53.63370316.webp` — 16 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver_vehicle_block/1/doc_6a31b4d989d505.70480288.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver_vehicle_block/2/doc_6a33b1b7e79fb2.17709472.pdf` — 8 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver_vehicle_block/2/doc_6a33b1b8068f54.89051189.webp` — 12 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/driver_vehicle_block/2/doc_6a33b1b837ff4.pdf` — 13 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_set/1/doc_6a31b4d00c0eb7.56280672.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_set/3/doc_6a331790c009c3.33681360.pdf` — 9 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_set/3/doc_6a331790c0ad37.72397435.pdf` — 9 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_set/4/doc_6a33b1b7bcbf10.77399478.pdf` — 8 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_unit/1/doc_6a31b4c3706d79.98481213.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_unit/10/doc_6a3683f51ecab9.88593077.pdf` — 13 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_unit/10/doc_6a3683f5209fb7.19789783.xlsx` — 14 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_unit/10/doc_6a3683f52116a0.47747669.jpg` — 13 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_unit/2/doc_6a31b4c47b4e26.70743354.pdf` — 316 bytes — non-runtime storage/screenshots/archive directory
+- `storage/companies/9/documents/vehicle_unit/4/doc_6a33b1b892a172.64573056.pdf` — 7 bytes — non-runtime storage/screenshots/archive directory
