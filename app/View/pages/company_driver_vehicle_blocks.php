@@ -39,7 +39,7 @@
         <div class="page-summary"><span>Связки водителя и транспортного средства · Экипажи для рейсов</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку</a>
+        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку Водитель + Машина</a>
     </div>
 </div>
 
@@ -60,7 +60,7 @@
         <div class="page-summary"><span>Связки водителя и транспортного средства · Экипажи для рейсов</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку</a>
+        <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary">Создать связку Водитель + Машина</a>
     </div>
 </div>
 

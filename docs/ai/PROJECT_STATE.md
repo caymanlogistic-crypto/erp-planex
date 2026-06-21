@@ -27,6 +27,8 @@ erp-uiux-designer
 erp-qa-tester
 ```
 
+QA встроен в работу кодера, архитектора и финальную приёмку владельцем + ChatGPT.
+
 ## Дизайн-база
 
 Главный исторический дизайн-источник:
@@ -47,12 +49,18 @@ public/assets/css/erp-ui.css
 docs/ui/DESIGN_STANDARD.md
 ```
 
+Page-specific CSS допускается в:
+
+```text
+public/assets/css/app.css
+```
+
 ## Текущее правило разработки
 
 Кодер обязан:
 
 ```text
-реализовать функционал → протестировать → применить erp-ui.css → повторно проверить
+понять задачу → продумать пользовательский сценарий → реализовать функционал → выполнить runtime → применить дизайн-систему → повторно проверить → коротко отчитаться
 ```
 
 ## Статус блоков
@@ -60,14 +68,28 @@ docs/ui/DESIGN_STANDARD.md
 ```text
 SUPERADMIN — ЗАКРЫТ на текущем этапе.
 CONTRACTORS_MENU_REWORK — ЗАКРЫТ (с исправленной регрессией доступа логиста).
-CREATE_FORMS_WITH_DOCUMENT_TYPES — ПРИНЯТ (commits af2c319, d17cc22, 48ede00).
-DRIVER_CREATE_DOCS_AND_PHONES — ПРИНЯТ (commits de190ab, b457557, b1d665c, b105424).
+CREATE_FORMS_WITH_DOCUMENT_TYPES — ПРИНЯТ.
+DRIVER_CREATE_DOCS_AND_PHONES — ПРИНЯТ.
+CONTRACTOR_CREATE_LEGAL_ENTITY_STANDARD — ПРИНЯТ.
+UPLOAD_LIMITS_20_80 — ПРИНЯТ.
+CLIENT_CREATE_LEGAL_ENTITY_STANDARD — ПРИНЯТ (commit 67b5454).
+STEPPER_CONTRACTOR_DRIVER_VEHICLE — ГОТОВ (ожидает commit после проверки владельцем).
 ```
 
-## Следующий блок
+## Последний стабильный commit
 
 ```text
-Ожидает решения владельца.
+67b5454 — feat(clients): align client create flow with legal entity standard
+```
+
+## Важные последние commits
+
+```text
+67b5454 — feat(clients): align client create flow with legal entity standard
+0f37c35 — fix(upload): enforce document upload size limits
+663ab6e — fix(forms): finalize create forms production checks
+6c729a2 — checkpoint: save contractor create form before tech parity rework
+03427f9 — chore: save cleaned ERP project after restore
 ```
 
 ## Contractor contacts
@@ -77,30 +99,38 @@ contractor_contacts — основная модель контактов пер�
 У одного перевозчика может быть несколько контактов.
 is_primary — один главный контакт, по умолчанию первый непустой.
 is_document_email — необязательный флаг email для официальной рассылки, может быть у нескольких контактов.
-Legacy-поля contractors.contact_person / contact_phone / contact_email переведены в статус удаления через локальную миграцию.
-Клиентов эта миграция пока не затрагивает.
+Legacy-поля contractors.contact_person / contact_phone / contact_email удаляются локальной миграцией.
+```
+
+## Client contacts
+
+```text
+client_contacts — основная модель контактов клиента.
+У клиента может быть несколько контактов.
+is_primary — один главный контакт, по умолчанию первый непустой.
+is_document_email — необязательный флаг email для документов, может быть у нескольких контактов.
+Legacy-поля clients.contact_person / contact_phone / contact_email удалены локальной миграцией 033.
 ```
 
 ## Последний принятый этап
 
 ```text
-Принято erp-architect (commits de190ab, b457557, b1d665c, b105424):
-- Исправлена ошибка сохранения документов: добавлен inline-ALTER для created_by_user_id/created_by_role в POST /company/drivers/create
-- Предопределённые документы (Паспорт, ВУ, СНИЛС) поддерживают multiple upload
-- Блок дополнительных телефонов в форме создания водителя (driver_phones)
-- WEBP добавлен в whitelist (расширение) и UI-подсказки
-- Из формы создания водителя убраны поля «ВУ: категория» и «ВУ: дата окончания»
-- Улучшена диагностика ошибок загрузки документов
-- UI LOCK соблюдён: шапка, page-head, меню не изменены
+ГОТОВО (не закоммичено): STEPPER_CONTRACTOR_DRIVER_VEHICLE
 ```
 
-Предыдущий этап (commit 140c318):
+Сделано:
+
+- Логист получил доступ к `/company/contractors/create-full` (GET/POST);
+- `/company/driver-vehicle-blocks/create` переделана на 3-шаговый stepper FINAL3;
+- `/company/contractors/create-full` переделана на 4-шаговый stepper FINAL3 с поддержкой выбора существующих ИЛИ создания новых сущностей;
+- Backend create-full расширен: режимы existing/new, проверка дублей driver_vehicle_block и crew, created_by_user_id/created_by_role;
+- JS-валидация без alert(), через inline-сообщения `.field-msg.is-error`;
+- Предыдущий commit: 67b5454 — feat(clients): align client create flow with legal entity standard.
+
+## Следующий блок
+
 ```text
-- Переработка меню: Подрядчики — раскрываемая группа
-- contractors → Перевозчики, vehicle_sets → Транспорт
-- driver_vehicle_blocks → Водители+ТС (immutable edit)
-- Сценарий быстрого создания Перевозчик+Водитель+Транспорт
-- Формы экспедитора: убраны контакты и ERP-поля руководителя, оставлены реквизиты
+Ожидает проверки владельцем и commit.
 ```
 
 ## CRITICAL UI LOCK RULE (активен)
@@ -114,19 +144,6 @@ Legacy-поля contractors.contact_person / contact_phone / contact_email пе�
 Разрешено только: добавлять новые кнопки, пункты меню, действия без изменения существующей структуры.
 
 Если задача требует изменить заблокированные зоны — агент обязан остановиться и запросить подтверждение владельца.
-
-## Правило обновления
-
-Файл обновляется только при изменении:
-
-- текущего статуса проекта;
-- активной задачи;
-- агентской схемы;
-- последнего принятого этапа;
-- следующего блока.
-
-Не добавлять длинные отчёты.
-
 
 ## Семантика меню компании — новая модель подрядчиков
 
@@ -147,3 +164,15 @@ Legacy-поля contractors.contact_person / contact_phone / contact_email пе�
 Если нужен другой водитель или другой транспорт — создаётся новая связка.
 В разделе Водители+ТС разрешены просмотр, документы и переход к редактированию исходных карточек водителя/транспорта.
 ```
+
+## Правило обновления
+
+Файл обновляется только при изменении:
+
+- текущего статуса проекта;
+- активной задачи;
+- агентской схемы;
+- последнего принятого этапа;
+- следующего блока.
+
+Не добавлять длинные отчёты.
