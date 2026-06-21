@@ -27,6 +27,7 @@ require_once base_path('app/Core/Database.php');
 require_once base_path('app/Http/Router.php');
 require_once base_path('app/Service/CompanyInnLookupService.php');
 require_once base_path('app/Service/ContractorContactService.php');
+require_once base_path('app/Service/ClientContactService.php');
 
 require_once base_path('app/View/components/alert.php');
 require_once base_path('app/View/components/button.php');
@@ -103,6 +104,7 @@ use App\Core\Database;
 use App\Http\Router;
 use App\Service\CompanyInnLookupService;
 use App\Service\ContractorContactService;
+use App\Service\ClientContactService;
 
 $db     = new Database($config['database']);
 $router = new Router();
@@ -380,7 +382,7 @@ function ensureDocumentTypeRecord(PDO $localPdo, string $name, string $code, str
 
 function applyLocalMigrations(\PDO $localPdo): void
 {
-    for ($i = 1; $i <= 30; $i++) {
+    for ($i = 1; $i <= 35; $i++) {
         $pattern = base_path('database/migrations-local/' . sprintf('%03d', $i) . '_*.sql');
         $files = glob($pattern);
         if (!$files) {
@@ -2217,6 +2219,26 @@ $router->get('/company/clients/create', function () use ($config, $db) {
         $old = [];
         $formError = null;
         $createdClient = null;
+        $docTypes = [];
+
+        if ($company['status'] === 'active') {
+            try {
+                $dbIdentifier = $company['db_identifier'];
+                $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+                $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+                applyLocalMigrations($localPdo);
+
+                try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+                catch (\Exception $e) {
+                    $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+                    $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+                }
+
+                $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'client' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {
+                $docTypes = [];
+            }
+        }
     } catch (\Exception $e) {
         $company = null;
         $success = false;
@@ -2243,6 +2265,8 @@ $router->post('/company/clients/create', function () use ($config, $db) {
     $formError = null;
     $success = false;
     $createdClient = null;
+    $docErrors = [];
+    $uploadedDocs = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -2298,6 +2322,15 @@ $router->post('/company/clients/create', function () use ($config, $db) {
             $localPdo->exec($migrationSql);
         }
 
+        if (isPostTruncated()) {
+            $formError = 'Общий размер отправки превышает серверный лимит. Для ERP требуется настройка post_max_size не менее 100M. Уменьшите количество файлов или обратитесь к администратору.';
+            ob_start();
+            require base_path('app/View/pages/company_clients_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
         $name = trim($_POST['name'] ?? '');
         $inn = trim($_POST['inn'] ?? '');
         $kpp = trim($_POST['kpp'] ?? '');
@@ -2305,7 +2338,10 @@ $router->post('/company/clients/create', function () use ($config, $db) {
         $legalAddress = trim($_POST['legal_address'] ?? '');
         $physicalAddress = trim($_POST['physical_address'] ?? '');
         $comments = trim($_POST['comments'] ?? '');
-        $contactPayload = ContractorContactService::normalizeSubmittedContacts($_POST['contacts'] ?? []);
+        $directorFullName = trim($_POST['director_full_name'] ?? '');
+        $directorPosition = trim($_POST['director_position'] ?? '');
+
+        $contactPayload = ClientContactService::normalizeSubmittedContacts($_POST['contacts'] ?? []);
         $submittedContacts = $contactPayload['contacts'];
         if (!empty($contactPayload['errors'])) {
             $errors['contacts'] = $contactPayload['errors'];
@@ -2315,11 +2351,35 @@ $router->post('/company/clients/create', function () use ($config, $db) {
             $errors['name'] = 'Обязательное поле';
         }
 
+        // Валидация ИНН
         if ($inn === '') {
-            $errors['inn'] = 'Обязательное поле';
+            $errors['inn'] = 'Укажите ИНН';
+        } elseif (!preg_match('/^\d+$/', $inn) || (strlen($inn) !== 10 && strlen($inn) !== 12)) {
+            $errors['inn'] = 'ИНН должен содержать 10 или 12 цифр';
         }
 
-        if (empty($errors['inn'])) {
+        // Валидация КПП (если заполнен)
+        if ($kpp !== '' && !preg_match('/^\d{9}$/', $kpp)) {
+            $errors['kpp'] = 'КПП должен содержать 9 цифр';
+        }
+
+        // Валидация ОГРН (если заполнен)
+        if ($ogrn !== '' && (!preg_match('/^\d+$/', $ogrn) || (strlen($ogrn) !== 13 && strlen($ogrn) !== 15))) {
+            $errors['ogrn'] = 'ОГРН/ОГРНИП должен содержать 13 или 15 цифр';
+        }
+
+        // Валидация банковских полей (если заполнены)
+        if (($_POST['bank_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_account'])) {
+            $errors['bank_account'] = 'Расчётный счёт должен содержать 20 цифр';
+        }
+        if (($_POST['bank_bik'] ?? '') !== '' && !preg_match('/^\d{9}$/', $_POST['bank_bik'])) {
+            $errors['bank_bik'] = 'БИК должен содержать 9 цифр';
+        }
+        if (($_POST['bank_corr_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_corr_account'])) {
+            $errors['bank_corr_account'] = 'Корр. счёт должен содержать 20 цифр';
+        }
+
+        if ($inn !== '') {
             $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM clients WHERE inn = ?');
             $checkStmt->execute([$inn]);
             if ($checkStmt->fetchColumn() > 0) {
@@ -2335,33 +2395,134 @@ $router->post('/company/clients/create', function () use ($config, $db) {
             return;
         }
 
+        // Check total upload size before INSERT
+        $totalSizeError = validateTotalUploadSize();
+        if ($totalSizeError !== '') {
+            $formError = $totalSizeError;
+            ob_start();
+            require base_path('app/View/pages/company_clients_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        // Pre-validate custom document titles (before INSERT)
+        if (!empty($_FILES['custom_doc_file']['name']) && is_array($_FILES['custom_doc_file']['name'])) {
+            foreach ($_FILES['custom_doc_file']['name'] as $idx => $origName) {
+                $fe = $_FILES['custom_doc_file']['error'][$idx] ?? UPLOAD_ERR_NO_FILE;
+                if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') {
+                    continue;
+                }
+                $customTypeNew = trim($_POST['custom_doc_type_new'][$idx] ?? '');
+                $customTypeSelect = trim($_POST['custom_doc_type'][$idx] ?? '');
+                if ($customTypeNew === '' && $customTypeSelect === '') {
+                    $formError = 'Введите название документа';
+                    ob_start();
+                    require base_path('app/View/pages/company_clients_create.php');
+                    $content = ob_get_clean();
+                    require base_path('app/View/layouts/main.php');
+                    return;
+                }
+            }
+        }
+
         $insert = $localPdo->prepare(
-            'INSERT INTO clients (name, inn, kpp, ogrn, legal_address, physical_address,
-             contact_person, contact_phone, contact_email, status, comments, created_by_user_id, created_by_role)
-             VALUES (:name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
-             :contact_person, :contact_phone, :contact_email, :status, :comments, :created_by_user_id, :created_by_role)'
+            'INSERT INTO clients (name, inn, kpp, ogrn, entity_type, legal_address, physical_address,
+             bank_account, bank_name, bank_bik, bank_corr_account,
+             director_full_name, director_position,
+             status, comments, created_by_user_id, created_by_role,
+             updated_by_user_id, updated_by_role)
+             VALUES (:name, :inn, :kpp, :ogrn, :entity_type, :legal_address, :physical_address,
+             :bank_account, :bank_name, :bank_bik, :bank_corr_account,
+             :director_full_name, :director_position,
+             :status, :comments, :created_by_user_id, :created_by_role,
+             :updated_by_user_id, :updated_by_role)'
         );
         $insert->execute([
             ':name'               => $name,
             ':inn'                => $inn,
             ':kpp'                => $kpp !== '' ? $kpp : null,
             ':ogrn'               => $ogrn !== '' ? $ogrn : null,
+            ':entity_type'        => ($_POST['entity_type'] ?? '') !== '' ? $_POST['entity_type'] : null,
             ':legal_address'      => $legalAddress !== '' ? $legalAddress : null,
             ':physical_address'   => $physicalAddress !== '' ? $physicalAddress : null,
-            ':contact_person'     => $contactPerson !== '' ? $contactPerson : null,
-            ':contact_phone'      => $contactPhone !== '' ? $contactPhone : null,
-            ':contact_email'      => $contactEmail !== '' ? $contactEmail : null,
+            ':bank_account'       => ($_POST['bank_account'] ?? '') !== '' ? $_POST['bank_account'] : null,
+            ':bank_name'          => ($_POST['bank_name'] ?? '') !== '' ? $_POST['bank_name'] : null,
+            ':bank_bik'           => ($_POST['bank_bik'] ?? '') !== '' ? $_POST['bank_bik'] : null,
+            ':bank_corr_account'  => ($_POST['bank_corr_account'] ?? '') !== '' ? $_POST['bank_corr_account'] : null,
+            ':director_full_name' => $directorFullName !== '' ? $directorFullName : null,
+            ':director_position'  => $directorPosition !== '' ? $directorPosition : null,
             ':status'             => 'active',
             ':comments'           => $comments !== '' ? $comments : null,
             ':created_by_user_id' => (int)$_SESSION['user_id'],
             ':created_by_role'    => $_SESSION['role_code'],
+            ':updated_by_user_id' => (int)$_SESSION['user_id'],
+            ':updated_by_role'    => $_SESSION['role_code'],
         ]);
 
+        $newClientId = (int)$localPdo->lastInsertId();
+        ClientContactService::replaceForClient(
+            $localPdo,
+            $newClientId,
+            $submittedContacts,
+            (int) $_SESSION['user_id'],
+            (string) ($_SESSION['role_code'] ?? '')
+        );
+
         $createdClient = [
-            'id'   => $localPdo->lastInsertId(),
-            'name' => $name,
-            'inn'  => $inn,
+            'id'          => $newClientId,
+            'name'        => $name,
+            'inn'         => $inn,
+            'entity_type' => ($_POST['entity_type'] ?? '') !== '' ? $_POST['entity_type'] : null,
         ];
+
+        // -- Process document uploads during creation --
+        $docErrors = []; $uploadedDocs = []; $entityType = 'client';
+        try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
+        if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
+            foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
+                $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['predef_doc']['size'][$code];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимое имя'; continue; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/client/' . $newClientId; $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
+                    if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
+                    $docTypeName = $_POST['predef_doc_type'][$code] ?? ''; $mime = $_FILES['predef_doc']['type'][$code]; $dtId = null;
+                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? AND entity_type = ? LIMIT 1"); $dts->execute([$docTypeName, $entityType]); $dtId = $dts->fetchColumn() ?: null; }
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :cuid, :crole)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newClientId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения'; }
+            }
+        }
+        if (!empty($_FILES['custom_doc_file']['name']) && is_array($_FILES['custom_doc_file']['name'])) {
+            foreach ($_FILES['custom_doc_file']['name'] as $idx => $origName) {
+                $fe = $_FILES['custom_doc_file']['error'][$idx] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['custom_doc_file']['size'][$idx];
+                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимый формат'; continue; }
+                if ($fs > $maxSize) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': размер > 20 МБ'; continue; }
+                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимое имя'; continue; }
+                $customTypeNew = trim($_POST['custom_doc_type_new'][$idx] ?? ''); $customTypeSelect = trim($_POST['custom_doc_type'][$idx] ?? ''); $docTypeName = $customTypeNew !== '' ? $customTypeNew : $customTypeSelect; $dtId = null;
+                if ($docTypeName === '') { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': введите название документа'; continue; }
+                if ($customTypeNew !== '') { try { $idts = $localPdo->prepare("INSERT IGNORE INTO document_types (name, entity_type, category, created_by_user_id, created_by_role) VALUES (:name, :et, 'custom', :uid, :role)"); $idts->execute([':name' => $customTypeNew, ':et' => $entityType, ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]); $dtId = $localPdo->lastInsertId(); if (!$dtId) { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? AND entity_type = ? LIMIT 1"); $g->execute([$customTypeNew, $entityType]); $dtId = $g->fetchColumn() ?: null; } } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка создания типа документа'; } }
+                elseif ($customTypeSelect !== '') { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? AND entity_type = ? LIMIT 1"); $g->execute([$customTypeSelect, $entityType]); $dtId = $g->fetchColumn() ?: null; }
+                try {
+                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/client/' . $newClientId; $absoluteDir = storage_path($relativeDir);
+                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
+                    if (!move_uploaded_file($_FILES['custom_doc_file']['tmp_name'][$idx], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': не удалось сохранить'; continue; }
+                    $mime = $_FILES['custom_doc_file']['type'][$idx];
+                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :cuid, :crole)');
+                    $ins->execute([':et' => $entityType, ':eid' => $newClientId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]);
+                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
+                } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка сохранения'; }
+            }
+        }
+
         $success = true;
     } catch (\Exception $e) {
         $company = $company ?? null;
@@ -2455,6 +2616,15 @@ $router->get('/company/clients/{id}', function ($id) use ($config, $db) {
         $clientStmt = $localPdo->prepare('SELECT * FROM clients WHERE id = ?');
         $clientStmt->execute([(int) $id]);
         $client = $clientStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        $contacts = [];
+        if ($client) {
+            try {
+                $contacts = ClientContactService::loadByClientId($localPdo, (int) $client['id']);
+            } catch (\Exception $e) {
+                $contacts = [];
+            }
+        }
 
         $pageTitle = $client ? 'Клиент: ' . $client['name'] : 'Клиент';
 
@@ -2565,6 +2735,15 @@ $router->get('/company/clients/{id}/edit', function ($id) use ($config, $db) {
         $clientStmt = $localPdo->prepare('SELECT * FROM clients WHERE id = ?');
         $clientStmt->execute([(int) $id]);
         $client = $clientStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        $contacts = [];
+        if ($client) {
+            try {
+                $contacts = ClientContactService::loadByClientId($localPdo, (int) $client['id']);
+            } catch (\Exception $e) {
+                $contacts = [];
+            }
+        }
 
         $errors = [];
         $old = $client ?: [];
@@ -2716,11 +2895,10 @@ $router->post('/company/clients/{id}/edit', function ($id) use ($config, $db) {
                 ogrn = :ogrn,
                 legal_address = :legal_address,
                 physical_address = :physical_address,
-                contact_person = :contact_person,
-                contact_phone = :contact_phone,
-                contact_email = :contact_email,
                 status = :status,
-                comments = :comments
+                comments = :comments,
+                updated_by_user_id = :updated_by_user_id,
+                updated_by_role = :updated_by_role
              WHERE id = :id'
         );
 
@@ -2731,11 +2909,10 @@ $router->post('/company/clients/{id}/edit', function ($id) use ($config, $db) {
             ':ogrn'             => $ogrn !== '' ? $ogrn : null,
             ':legal_address'    => $legalAddress !== '' ? $legalAddress : null,
             ':physical_address' => $physicalAddress !== '' ? $physicalAddress : null,
-            ':contact_person'   => $contactPerson !== '' ? $contactPerson : null,
-            ':contact_phone'    => $contactPhone !== '' ? $contactPhone : null,
-            ':contact_email'    => $contactEmail !== '' ? $contactEmail : null,
             ':status'           => $_POST['status'] ?? $client['status'],
             ':comments'         => $comments !== '' ? $comments : null,
+            ':updated_by_user_id' => (int)$_SESSION['user_id'],
+            ':updated_by_role'   => $_SESSION['role_code'],
             ':id'               => (int) $id,
         ]);
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 require_once __DIR__ . '/../components/status_badge.php';
 
@@ -82,10 +82,16 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= e($client['name']) ?></dd>
                 <dt>ИНН</dt>
                 <dd><code><?= e($client['inn']) ?></code></dd>
+                <dt>Тип</dt>
+                <dd><?= e(ui_contractor_type($client['entity_type'] ?? null)) ?></dd>
                 <dt>КПП</dt>
                 <dd><?= e($client['kpp'] ?? '') ?: '—' ?></dd>
                 <dt>ОГРН</dt>
                 <dd><?= e($client['ogrn'] ?? '') ?: '—' ?></dd>
+                <dt>Руководитель</dt>
+                <dd><?= e($client['director_full_name'] ?? '') ?: '—' ?></dd>
+                <dt>Должность руководителя</dt>
+                <dd><?= e($client['director_position'] ?? '') ?: '—' ?></dd>
                 <dt>Статус</dt>
                 <dd><?= renderStatusBadge($client['status']) ?></dd>
                 <dt>Комментарий</dt>
@@ -103,16 +109,62 @@ require_once __DIR__ . '/../components/status_badge.php';
             </dl>
         </div>
 
+        <?php if (!empty($client['bank_account']) || !empty($client['bank_name']) || !empty($client['bank_bik']) || !empty($client['bank_corr_account'])): ?>
+        <div class="form-section">
+            <h3 class="panel-head-title">Банковские реквизиты</h3>
+            <dl class="kv">
+                <?php if (!empty($client['bank_account'])): ?>
+                <dt>Расчётный счёт</dt>
+                <dd class="mono"><?= e($client['bank_account']) ?></dd>
+                <?php endif; ?>
+                <?php if (!empty($client['bank_name'])): ?>
+                <dt>Банк</dt>
+                <dd><?= e($client['bank_name']) ?></dd>
+                <?php endif; ?>
+                <?php if (!empty($client['bank_bik'])): ?>
+                <dt>БИК</dt>
+                <dd class="mono"><?= e($client['bank_bik']) ?></dd>
+                <?php endif; ?>
+                <?php if (!empty($client['bank_corr_account'])): ?>
+                <dt>Корр. счёт</dt>
+                <dd class="mono"><?= e($client['bank_corr_account']) ?></dd>
+                <?php endif; ?>
+            </dl>
+        </div>
+        <?php endif; ?>
+
         <div class="form-section">
             <h3 class="panel-head-title">Контакты</h3>
-            <dl class="kv">
-                <dt>Контактное лицо</dt>
-                <dd><?= e($client['contact_person'] ?? '') ?: '—' ?></dd>
-                <dt>Телефон</dt>
-                <dd><?= e($client['contact_phone'] ?? '') ?: '—' ?></dd>
-                <dt>Email</dt>
-                <dd><?= e($client['contact_email'] ?? '') ?: '—' ?></dd>
-            </dl>
+            <?php if (!empty($contacts)): ?>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Контактное лицо</th>
+                            <th>Телефон</th>
+                            <th>Email</th>
+                            <th>Комментарий</th>
+                            <th>Осн.</th>
+                            <th>Док.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($contacts as $ct): ?>
+                        <tr>
+                            <td><?= e($ct['contact_person'] ?? '—') ?></td>
+                            <td><?= e($ct['phone'] ?? '—') ?></td>
+                            <td><?= e($ct['email'] ?? '—') ?></td>
+                            <td class="col-muted"><?= e($ct['comment'] ?? '') ?: '—' ?></td>
+                            <td><?= !empty($ct['is_primary']) ? '✓' : '' ?></td>
+                            <td><?= !empty($ct['is_document_email']) ? '✓' : '' ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php else: ?>
+            <p class="text-muted">Контакты не указаны.</p>
+            <?php endif; ?>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
@@ -169,7 +221,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <div class="form-section">
             <h3 class="panel-head-title">Опасная зона</h3>
             <?php if ($client['status'] !== 'archived'): ?>
-                <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
+                <p class="text-muted hint-before-action">Архивирование скроет запись из основных списков.</p>
                 <form method="post" action="/company/clients/<?= $client['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
                     <button type="submit" class="btn btn-danger">Архивировать</button>
                 </form>

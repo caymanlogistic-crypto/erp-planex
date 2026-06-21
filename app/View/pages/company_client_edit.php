@@ -1,4 +1,4 @@
-﻿<?php if ($company === null): ?>
+<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -142,24 +142,37 @@
 
         <div class="form-section">
             <h3 class="panel-head-title">Контакты</h3>
-
-            <div class="field">
-                <label class="field-label">Контактное лицо</label>
-                <input type="text" name="contact_person" class="field-input"
-                       value="<?= e($old['contact_person'] ?? $client['contact_person'] ?? '') ?>">
+            <?php if (!empty($contacts)): ?>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Контактное лицо</th>
+                            <th>Телефон</th>
+                            <th>Email</th>
+                            <th>Комментарий</th>
+                            <th>Осн.</th>
+                            <th>Док.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($contacts as $ct): ?>
+                        <tr>
+                            <td><?= e($ct['contact_person'] ?? '—') ?></td>
+                            <td><?= e($ct['phone'] ?? '—') ?></td>
+                            <td><?= e($ct['email'] ?? '—') ?></td>
+                            <td class="col-muted"><?= e($ct['comment'] ?? '') ?: '—' ?></td>
+                            <td><?= !empty($ct['is_primary']) ? '✓' : '' ?></td>
+                            <td><?= !empty($ct['is_document_email']) ? '✓' : '' ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-
-            <div class="field">
-                <label class="field-label">Телефон</label>
-                <input type="text" name="contact_phone" class="field-input"
-                       value="<?= e($old['contact_phone'] ?? $client['contact_phone'] ?? '') ?>">
-            </div>
-
-            <div class="field">
-                <label class="field-label">Email</label>
-                <input type="email" name="contact_email" class="field-input"
-                       value="<?= e($old['contact_email'] ?? $client['contact_email'] ?? '') ?>">
-            </div>
+            <?php else: ?>
+            <p class="text-muted">Контакты не указаны.</p>
+            <?php endif; ?>
+            <p class="text-muted hint-before-action">Редактирование контактов клиента будет реализовано отдельно.</p>
         </div>
 
         <div class="form-actions">

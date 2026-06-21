@@ -3097,6 +3097,69 @@ input:autofill,
   }
 }
 
+/* ============================================================
+   Client contacts, grids (same pattern as contractor)
+   ============================================================ */
+.client-contacts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.client-contact-row {
+  display: grid;
+  grid-template-columns:
+    minmax(210px, 1.2fr)
+    128px
+    minmax(190px, .95fr)
+    minmax(140px, .7fr)
+    28px;
+  align-items: start;
+  column-gap: 6px;
+  row-gap: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.client-contact-remove {
+  width: 24px;
+  height: 24px;
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+.client-contact-remove:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+.client-autofill-grid > [data-field="inn"]{order:1;}
+.client-autofill-grid > .client-autofill-action{order:2;}
+.client-autofill-grid > [data-field="name"]{order:3;grid-column:1 / -1;}
+.client-address-grid{align-items:start;}
+.client-bank-grid{grid-template-columns:minmax(0,1.2fr) minmax(180px,.7fr) minmax(240px,1fr) minmax(0,1fr);align-items:start;}
+
+@media (max-width: 1200px){
+  .client-bank-grid{grid-template-columns:1fr 1fr;}
+}
+@media (max-width: 860px){
+  .client-autofill-grid > [data-field="name"]{grid-column:auto;}
+  .client-bank-grid{grid-template-columns:1fr;}
+  .client-contact-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .client-contact-row .client-contact-remove {
+    grid-column: 2;
+    justify-self: end;
+  }
+}
+
 /* Автозаполнение DaData — спокойная системная подсветка */
 .field-input.is-autofilled,
 .field-select.is-autofilled,
@@ -3106,6 +3169,11 @@ input:autofill,
   box-shadow:
     inset 0 1px 2px rgba(0,0,0,.04),
     0 0 0 1px rgba(31,107,67,.12);
+}
+
+/* Utility: hint text before a destructive action */
+.hint-before-action {
+  margin-bottom: 8px;
 }
 
 /* ============================================================
