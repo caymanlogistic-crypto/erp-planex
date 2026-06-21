@@ -22,6 +22,8 @@ $config = require_once __DIR__ . '/../bootstrap/app.php';
 
 require_once base_path('app/Core/Database.php');
 require_once base_path('app/Http/Router.php');
+require_once base_path('app/Service/CompanyInnLookupService.php');
+require_once base_path('app/Service/ContractorContactService.php');
 
 require_once base_path('app/View/components/alert.php');
 require_once base_path('app/View/components/button.php');
@@ -62,8 +64,42 @@ function getSessionCompanyId(): ?int
     return isset($_SESSION['company_id']) ? (int)$_SESSION['company_id'] : null;
 }
 
+function jsonResponse(array $payload, int $statusCode = 200): void
+{
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+function requestJsonBody(): array
+{
+    $rawBody = file_get_contents('php://input');
+
+    if (!is_string($rawBody) || trim($rawBody) === '') {
+        return [];
+    }
+
+    $decoded = json_decode($rawBody, true);
+
+    return is_array($decoded) ? $decoded : [];
+}
+
+function contractorFormDefaultContacts(): array
+{
+    return [[
+        'contact_person' => '',
+        'phone' => '',
+        'email' => '',
+        'comment' => '',
+        'is_primary' => '1',
+        'is_document_email' => '0',
+    ]];
+}
+
 use App\Core\Database;
 use App\Http\Router;
+use App\Service\CompanyInnLookupService;
+use App\Service\ContractorContactService;
 
 $db     = new Database($config['database']);
 $router = new Router();
@@ -570,8 +606,9 @@ $router->get('/superadmin/companies/{id}/edit', function ($id) use ($config, $db
         require base_path('app/View/layouts/main.php');
     } catch (\Exception $e) {
         $company = null;
+        $contacts = [];
         $errors = [];
-        $old = [];
+        $old = ['contacts' => contractorFormDefaultContacts()];
         $formError = 'Не удалось загрузить компанию: ' . $e->getMessage();
 
         ob_start();
@@ -610,6 +647,11 @@ $router->post('/superadmin/companies/{id}/edit', function ($id) use ($config, $d
         $errors = [];
         $old = $_POST;
         $formError = null;
+        $contactPayload = ContractorContactService::normalizeSubmittedContacts($_POST['contacts'] ?? []);
+        $submittedContacts = $contactPayload['contacts'];
+        if (!empty($contactPayload['errors'])) {
+            $errors['contacts'] = $contactPayload['errors'];
+        }
 
         $owner = null;
 
@@ -1151,7 +1193,7 @@ $router->get('/company/logists/create', function () use ($config, $db) {
         $company = null;
         $success = false;
         $errors = [];
-        $old = [];
+        $old = ['contacts' => contractorFormDefaultContacts()];
         $formError = null;
         $generatedPassword = null;
         $createdLogist = null;
@@ -1200,7 +1242,7 @@ $router->get('/company/logists/create', function () use ($config, $db) {
         $company = null;
         $success = false;
         $errors = [];
-        $old = [];
+        $old = ['contacts' => contractorFormDefaultContacts()];
         $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
         $generatedPassword = null;
         $createdLogist = null;
@@ -2212,10 +2254,12 @@ $router->post('/company/clients/create', function () use ($config, $db) {
         $ogrn = trim($_POST['ogrn'] ?? '');
         $legalAddress = trim($_POST['legal_address'] ?? '');
         $physicalAddress = trim($_POST['physical_address'] ?? '');
-        $contactPerson = trim($_POST['contact_person'] ?? '');
-        $contactPhone = trim($_POST['contact_phone'] ?? '');
-        $contactEmail = trim($_POST['contact_email'] ?? '');
         $comments = trim($_POST['comments'] ?? '');
+        $contactPayload = ContractorContactService::normalizeSubmittedContacts($_POST['contacts'] ?? []);
+        $submittedContacts = $contactPayload['contacts'];
+        if (!empty($contactPayload['errors'])) {
+            $errors['contacts'] = $contactPayload['errors'];
+        }
 
         if ($name === '') {
             $errors['name'] = 'Обязательное поле';
@@ -2612,9 +2656,6 @@ $router->post('/company/clients/{id}/edit', function ($id) use ($config, $db) {
         $ogrn = trim($_POST['ogrn'] ?? '');
         $legalAddress = trim($_POST['legal_address'] ?? '');
         $physicalAddress = trim($_POST['physical_address'] ?? '');
-        $contactPerson = trim($_POST['contact_person'] ?? '');
-        $contactPhone = trim($_POST['contact_phone'] ?? '');
-        $contactEmail = trim($_POST['contact_email'] ?? '');
         $comments = trim($_POST['comments'] ?? '');
 
         $update = $localPdo->prepare(
@@ -2797,11 +2838,10 @@ $router->get('/company/contractors', function () use ($config, $db) {
             $userId = (int)$_SESSION['user_id'];
             $contractorStmt = $localPdo->prepare(
                 "SELECT c.*,
-                        cc.contact_person AS primary_contact_person, cc.phone AS primary_contact_phone,
-                        cce.email AS doc_email
+                        " . ContractorContactService::buildPrimaryContactSubquery('contact_person') . " AS primary_contact_person,
+                        " . ContractorContactService::buildPrimaryContactSubquery('phone') . " AS primary_contact_phone,
+                        " . ContractorContactService::buildDocumentEmailSubquery() . " AS doc_email
                  FROM contractors c
-                 LEFT JOIN contractor_contacts cc ON c.id = cc.contractor_id AND cc.is_primary = 1
-                 LEFT JOIN contractor_contacts cce ON c.id = cce.contractor_id AND cce.is_document_email = 1
                  WHERE (c.created_by_user_id = ? OR c.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'contractor' AND granted_to_user_id = ? AND access_level = 'view'))
                  ORDER BY c.created_at DESC"
             );
@@ -2810,11 +2850,10 @@ $router->get('/company/contractors', function () use ($config, $db) {
         } else {
             $contractorStmt = $localPdo->query(
                 "SELECT c.*,
-                        cc.contact_person AS primary_contact_person, cc.phone AS primary_contact_phone,
-                        cce.email AS doc_email
+                        " . ContractorContactService::buildPrimaryContactSubquery('contact_person') . " AS primary_contact_person,
+                        " . ContractorContactService::buildPrimaryContactSubquery('phone') . " AS primary_contact_phone,
+                        " . ContractorContactService::buildDocumentEmailSubquery() . " AS doc_email
                  FROM contractors c
-                 LEFT JOIN contractor_contacts cc ON c.id = cc.contractor_id AND cc.is_primary = 1
-                 LEFT JOIN contractor_contacts cce ON c.id = cce.contractor_id AND cce.is_document_email = 1
                  ORDER BY c.created_at DESC"
             );
             $contractors = $contractorStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -2915,6 +2954,52 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
     require base_path('app/View/pages/company_contractors_create.php');
     $content = ob_get_clean();
     require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/requisites/lookup-by-inn', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    if ($companyId <= 0) {
+        jsonResponse([
+            'ok' => false,
+            'message' => 'Не удалось получить данные. Заполните реквизиты вручную.',
+        ], 200);
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || ($company['status'] ?? '') !== 'active') {
+            jsonResponse([
+                'ok' => false,
+                'message' => 'Не удалось получить данные. Заполните реквизиты вручную.',
+            ], 200);
+            return;
+        }
+
+        $payload = requestJsonBody();
+        $inn = (string)($payload['inn'] ?? $_POST['inn'] ?? '');
+
+        $lookupService = new CompanyInnLookupService(
+            (string)env('DADATA_API_KEY', ''),
+            (string)env('DADATA_API_URL', 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party'),
+            (int)env('DADATA_API_TIMEOUT', 5),
+            (string)env('DADATA_CAINFO', '')
+        );
+
+        $result = $lookupService->lookup($inn);
+        jsonResponse($result, 200);
+    } catch (\Throwable $e) {
+        jsonResponse([
+            'ok' => false,
+            'message' => 'Не удалось получить данные. Заполните реквизиты вручную.',
+        ], 200);
+    }
 });
 
 $router->get('/company/contractors/create-full', function () use ($config, $db) {
@@ -3052,13 +3137,35 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         $ogrn = trim($_POST['ogrn'] ?? '');
         $legalAddress = trim($_POST['legal_address'] ?? '');
         $physicalAddress = trim($_POST['physical_address'] ?? '');
-        $contactPerson = trim($_POST['contact_person'] ?? '');
-        $contactPhone = trim($_POST['contact_phone'] ?? '');
-        $contactEmail = trim($_POST['contact_email'] ?? '');
         $comments = trim($_POST['comments'] ?? '');
+        $directorFullName = trim($_POST['director_full_name'] ?? '');
+        $directorPosition = trim($_POST['director_position'] ?? '');
+
+        $contactPayload = ContractorContactService::normalizeSubmittedContacts($_POST['contacts'] ?? []);
+        $submittedContacts = $contactPayload['contacts'];
+        if (!empty($contactPayload['errors'])) {
+            $errors['contacts'] = $contactPayload['errors'];
+        }
 
         if ($name === '') {
             $errors['name'] = 'Обязательное поле';
+        }
+
+        // Валидация ИНН
+        if ($inn === '') {
+            $errors['inn'] = 'Укажите ИНН';
+        } elseif (!preg_match('/^\d+$/', $inn) || (strlen($inn) !== 10 && strlen($inn) !== 12)) {
+            $errors['inn'] = 'ИНН должен содержать 10 или 12 цифр';
+        }
+
+        // Валидация КПП (если заполнен)
+        if ($kpp !== '' && !preg_match('/^\d{9}$/', $kpp)) {
+            $errors['kpp'] = 'КПП должен содержать 9 цифр';
+        }
+
+        // Валидация ОГРН (если заполнен)
+        if ($ogrn !== '' && (!preg_match('/^\d+$/', $ogrn) || (strlen($ogrn) !== 13 && strlen($ogrn) !== 15))) {
+            $errors['ogrn'] = 'ОГРН/ОГРНИП должен содержать 13 или 15 цифр';
         }
 
         if ($inn !== '') {
@@ -3080,10 +3187,12 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         $insert = $localPdo->prepare(
             'INSERT INTO contractors (name, inn, kpp, ogrn, contractor_type, legal_address, physical_address,
              bank_account, bank_name, bank_bik, bank_corr_account,
-             contact_person, contact_phone, contact_email, status, comments, created_by_user_id, created_by_role)
+             director_full_name, director_position,
+             status, comments, created_by_user_id, created_by_role)
              VALUES (:name, :inn, :kpp, :ogrn, :contractor_type, :legal_address, :physical_address,
              :bank_account, :bank_name, :bank_bik, :bank_corr_account,
-             :contact_person, :contact_phone, :contact_email, :status, :comments, :created_by_user_id, :created_by_role)'
+             :director_full_name, :director_position,
+             :status, :comments, :created_by_user_id, :created_by_role)'
         );
         $insert->execute([
             ':name'               => $name,
@@ -3097,9 +3206,8 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             ':bank_name'          => ($_POST['bank_name'] ?? '') !== '' ? $_POST['bank_name'] : null,
             ':bank_bik'           => ($_POST['bank_bik'] ?? '') !== '' ? $_POST['bank_bik'] : null,
             ':bank_corr_account'  => ($_POST['bank_corr_account'] ?? '') !== '' ? $_POST['bank_corr_account'] : null,
-            ':contact_person'     => $contactPerson !== '' ? $contactPerson : null,
-            ':contact_phone'      => $contactPhone !== '' ? $contactPhone : null,
-            ':contact_email'      => $contactEmail !== '' ? $contactEmail : null,
+            ':director_full_name' => $directorFullName !== '' ? $directorFullName : null,
+            ':director_position'  => $directorPosition !== '' ? $directorPosition : null,
             ':status'             => 'active',
             ':comments'           => $comments !== '' ? $comments : null,
             ':created_by_user_id' => (int)$_SESSION['user_id'],
@@ -3107,6 +3215,14 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         ]);
 
         $newContractorId = (int)$localPdo->lastInsertId();
+        ContractorContactService::replaceForContractor(
+            $localPdo,
+            $newContractorId,
+            $submittedContacts,
+            (int) $_SESSION['user_id'],
+            (string) ($_SESSION['role_code'] ?? '')
+        );
+
         $createdContractor = [
             'id'              => $newContractorId,
             'name'            => $name,
@@ -3327,19 +3443,32 @@ $router->post('/company/contractors/create-full', function () use ($config, $db)
         try {
             // 1. Create contractor
             $insertContractor = $localPdo->prepare(
-                'INSERT INTO contractors (name, inn, kpp, contact_phone, status, created_by_user_id, created_by_role)
-                 VALUES (:name, :inn, :kpp, :contact_phone, :status, :uid, :role)'
+                'INSERT INTO contractors (name, inn, kpp, status, created_by_user_id, created_by_role)
+                 VALUES (:name, :inn, :kpp, :status, :uid, :role)'
             );
             $insertContractor->execute([
                 ':name'          => $name,
                 ':inn'           => $inn,
                 ':kpp'           => $kpp !== '' ? $kpp : null,
-                ':contact_phone' => $phone !== '' ? $phone : null,
                 ':status'        => 'active',
                 ':uid'           => (int)$_SESSION['user_id'],
                 ':role'          => $_SESSION['role_code'],
             ]);
             $contractorId = (int)$localPdo->lastInsertId();
+            ContractorContactService::replaceForContractor(
+                $localPdo,
+                $contractorId,
+                $phone !== '' ? [[
+                    'contact_person' => null,
+                    'phone' => $phone,
+                    'email' => null,
+                    'comment' => null,
+                    'is_primary' => 1,
+                    'is_document_email' => 0,
+                ]] : [],
+                (int) $_SESSION['user_id'],
+                (string) ($_SESSION['role_code'] ?? '')
+            );
 
             // 2. Create driver
             $insertDriver = $localPdo->prepare(
@@ -3580,12 +3709,9 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
             $pageTitle = 'Перевозчик: ' . $contractor['name'];
         }
 
-        // Load contacts
         $contacts = [];
         if ($contractor && !$accessDenied) {
-            $contacts = $localPdo->prepare("SELECT * FROM contractor_contacts WHERE contractor_id = ? ORDER BY is_primary DESC, id ASC");
-            $contacts->execute([(int)$id]);
-            $contacts = $contacts->fetchAll(PDO::FETCH_ASSOC);
+            $contacts = ContractorContactService::loadByContractorId($localPdo, (int) $id);
         }
 
         // Load tax history
@@ -3696,8 +3822,9 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
     if ($companyId <= 0) {
         $company = null;
         $contractor = null;
+        $contacts = [];
         $errors = [];
-        $old = [];
+        $old = ['contacts' => contractorFormDefaultContacts()];
         $formError = null;
 
         ob_start();
@@ -3716,8 +3843,9 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
         if (!$company) {
             $company = null;
             $contractor = null;
+            $contacts = [];
             $errors = [];
-            $old = [];
+            $old = ['contacts' => contractorFormDefaultContacts()];
             $formError = null;
 
             ob_start();
@@ -3731,8 +3859,9 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
 
         if ($company['status'] !== 'active') {
             $contractor = null;
+            $contacts = [];
             $errors = [];
-            $old = [];
+            $old = ['contacts' => contractorFormDefaultContacts()];
             $formError = null;
 
             ob_start();
@@ -3762,8 +3891,9 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
 
         if (!$contractor) {
             $contractor = null;
+            $contacts = [];
             $errors = [];
-            $old = [];
+            $old = ['contacts' => contractorFormDefaultContacts()];
             $formError = null;
 
             ob_start();
@@ -3773,8 +3903,10 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
             return;
         }
 
+        $contacts = ContractorContactService::loadByContractorId($localPdo, (int) $id);
         $errors = [];
         $old = $contractor;
+        $old['contacts'] = $contacts !== [] ? $contacts : contractorFormDefaultContacts();
         $formError = null;
 
         ob_start();
@@ -3944,9 +4076,6 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
                 bank_name = :bank_name,
                 bank_bik = :bank_bik,
                 bank_corr_account = :bank_corr_account,
-                contact_person = :contact_person,
-                contact_phone = :contact_phone,
-                contact_email = :contact_email,
                 status = :status,
                 comments = :comments,
                 updated_by_user_id = :updated_by_user_id,
@@ -3966,15 +4095,20 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
             ':bank_name'        => $_POST['bank_name'] ?? null,
             ':bank_bik'         => $_POST['bank_bik'] ?? null,
             ':bank_corr_account'=> $_POST['bank_corr_account'] ?? null,
-            ':contact_person'   => $_POST['contact_person'] ?? null,
-            ':contact_phone'    => $_POST['contact_phone'] ?? null,
-            ':contact_email'    => $_POST['contact_email'] ?? null,
             ':status'           => $_POST['status'] ?? $contractor['status'],
             ':comments'         => $_POST['comments'] ?? null,
             ':updated_by_user_id' => (int)$_SESSION['user_id'],
             ':updated_by_role'  => $_SESSION['role_code'] ?? null,
             ':id'               => (int) $id,
         ]);
+
+        ContractorContactService::replaceForContractor(
+            $localPdo,
+            (int) $id,
+            $submittedContacts,
+            (int) $_SESSION['user_id'],
+            (string) ($_SESSION['role_code'] ?? '')
+        );
 
         header('Location: /company/contractors/' . $id);
         exit;
@@ -4384,7 +4518,6 @@ $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/set-do
             if ((int)$contractor['created_by_user_id'] !== $userId && !$hasGrant) { header('Location: ' . $redirect); exit; }
         }
 
-        $localPdo->prepare('UPDATE contractor_contacts SET is_document_email = 0 WHERE contractor_id = ?')->execute([$contractor_id]);
         $localPdo->prepare('UPDATE contractor_contacts SET is_document_email = 1 WHERE id = ? AND contractor_id = ?')->execute([$contact_id, $contractor_id]);
     } catch (\Exception $e) {}
 

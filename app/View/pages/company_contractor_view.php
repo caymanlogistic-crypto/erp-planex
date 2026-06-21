@@ -155,12 +155,14 @@ require_once __DIR__ . '/../components/status_badge.php';
                         </td>
                         <td>
                             <div class="cell-main"><?= $ct['is_primary'] ? 'Главный контакт' : '—' ?></div>
-                            <div class="cell-sub"><?= $ct['is_document_email'] ? 'Email для документов' : '—' ?></div>
+                            <div class="cell-sub"><?= $ct['is_document_email'] ? 'Официальная рассылка' : '—' ?></div>
                         </td>
                         <td class="col-muted col-truncate"><?= e($ct['comment'] ?? '') ?></td>
                         <td class="col-actions">
                             <div class="row-actions">
-                                <button type="button" class="btn btn-toolbar" onclick="editContact(<?= $ct['id'] ?>)">Редактировать</button>
+                                <button type="button"
+                                        class="btn btn-toolbar"
+                                        onclick="editContact(<?= (int) $ct['id'] ?>, <?= json_encode($ct['contact_person'] ?? '', JSON_UNESCAPED_UNICODE) ?>, <?= json_encode($ct['phone'] ?? '', JSON_UNESCAPED_UNICODE) ?>, <?= json_encode($ct['email'] ?? '', JSON_UNESCAPED_UNICODE) ?>, <?= json_encode($ct['comment'] ?? '', JSON_UNESCAPED_UNICODE) ?>)">Редактировать</button>
                                 <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/delete" class="inline-form" onsubmit="return confirm('Контакт будет удалён. Подтвердить удаление?')">
                                     <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
                                 </form>
@@ -174,7 +176,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                                 <?php endif; ?>
                                 <?php if (!$ct['is_document_email'] && !empty($ct['email'])): ?>
                                 <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/contacts/<?= $ct['id'] ?>/set-document-email">
-                                    <button type="submit" class="btn btn-toolbar">Email для документов</button>
+                                    <button type="submit" class="btn btn-toolbar">Отметить для рассылки</button>
                                 </form>
                                 <?php endif; ?>
                             </div>
@@ -468,18 +470,15 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <script>
 // Inline contact edit toggle
-function editContact(contactId) {
-    // Find the contact row data (stored in data attributes or via AJAX)
-    // For simplicity, we show a form that submits to the edit route
+function editContact(contactId, contactPerson, phone, email, comment) {
     var form = document.getElementById('contact-edit-form');
     var frm = document.getElementById('contact-edit-frm');
     document.getElementById('contact-edit-id').value = contactId;
     frm.action = '/company/contractors/<?= $contractor['id'] ?>/contacts/' + contactId + '/edit';
-    // Clear fields - user fills in values
-    document.getElementById('contact-edit-person').value = '';
-    document.getElementById('contact-edit-phone').value = '';
-    document.getElementById('contact-edit-email').value = '';
-    document.getElementById('contact-edit-comment').value = '';
+    document.getElementById('contact-edit-person').value = contactPerson || '';
+    document.getElementById('contact-edit-phone').value = phone || '';
+    document.getElementById('contact-edit-email').value = email || '';
+    document.getElementById('contact-edit-comment').value = comment || '';
     form.style.display = 'block';
     form.scrollIntoView({behavior: 'smooth'});
 }

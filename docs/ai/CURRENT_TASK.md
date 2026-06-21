@@ -1,27 +1,27 @@
 # ERP PLANEX — текущая задача
 
-## STATUS: DRIVER_CREATE_DOCS_AND_PHONES_ACCEPTED
+## STATUS: CONTRACTOR_CONTACTS_MODEL_DONE
 
-Задача реализована: исправление ошибки сохранения документов, мультизагрузка, доп. телефоны, WEBP, чистка формы создания водителя.
-
-Реализованные commits:
-- de190ab — fix: add created_by_user_id and created_by_role column check in driver create document handler
-- b457557 — feat: multiple file upload support for predefined driver documents
-- b1d665c — feat: add extra phones block to driver create form
-- b105424 — feat: add WEBP support; remove license_category and license_expire_date from driver create form
+Перевозчики переведены на основную модель контактов через `contractor_contacts`.
 
 ## Что сделано
 
-1. Исправлена ошибка сохранения документов: добавлен inline-ALTER для колонок created_by_user_id и created_by_role в таблице documents при создании водителя.
-2. Предопределённые документы (Паспорт, ВУ, СНИЛС) поддерживают multiple upload.
-3. В форму создания водителя добавлен блок дополнительных телефонов (driver_phones).
-4. WEBP добавлен в whitelist и UI-подсказки.
-5. Из формы создания водителя убраны поля «ВУ: категория» и «ВУ: дата окончания».
-6. Улучшена диагностика ошибок: catch-блоки выводят реальное сообщение исключения.
-7. Добавлена проверка возврата mkdir.
+1. Создание и редактирование перевозчика теперь принимают массив `contacts[...]` вместо legacy-полей `contractors.contact_*`.
+2. Backend нормализует список контактов, отбрасывает пустые строки, гарантирует один `is_primary` и допускает несколько `is_document_email`.
+3. Карточка и список перевозчиков читают контакты из `contractor_contacts`.
+4. Сценарий `create-full` больше не зависит от `contractors.contact_phone` и создаёт первичный контакт в `contractor_contacts`.
+5. Добавлена миграция `028_drop_legacy_contractor_contact_fields.sql` для удаления legacy-колонок `contact_person`, `contact_phone`, `contact_email` из `contractors`.
 
-## UI LOCK: ACTIVE
+## Что проверить
 
-CRITICAL UI LOCK RULE активен. Основная шапка, page-head и меню НЕ изменялись.
+- создание перевозчика без контактов;
+- создание с одним и несколькими контактами;
+- автоприсвоение главного контакта, если чекбокс не выбран;
+- сохранение нескольких email для официальной рассылки;
+- редактирование, добавление и удаление контактов через форму редактирования;
+- отображение контактов в карточке и списке перевозчиков.
 
-## NEXT: TBD (ожидает владельца)
+## Что нужно владельцу
+
+- прогнать локальную runtime-проверку после применения миграции `028`;
+- вернуть задачу `erp-architect` на приёмку без коммита в этом чате.

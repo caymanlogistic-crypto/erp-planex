@@ -1,3 +1,9 @@
+<?php
+require_once __DIR__ . '/../components/contractor_contact_fields.php';
+$contactValues = $old['contacts'] ?? [];
+$contactErrors = $errors['contacts'] ?? [];
+?>
+
 <?php if ($company === null): ?>
 
 <div class="notice warn">
@@ -119,8 +125,14 @@ $predefDocs = [
                 </div>
                 <?php endif; ?>
 
+                <div class="form-alert alert-warning is-hidden" data-inn-autofill-message>
+                    <div class="alert-body">
+                        <div class="alert-body-title" data-inn-autofill-title></div>
+                        <div class="alert-body-sub" data-inn-autofill-sub></div>
+                    </div>
+                </div>
                 <div class="form-section">
-                    <div class="form-grid-2">
+                    <div class="form-grid-2 contractor-autofill-grid">
                         <div class="field<?= !empty($errors['name']) ? ' is-error' : '' ?>" data-field="name">
                             <label class="field-label">Наименование <span class="req">*</span></label>
                             <input type="text"
@@ -140,6 +152,12 @@ $predefDocs = [
                                    placeholder="7701234567"
                                    value="<?= e($old['inn'] ?? '') ?>">
                             <div class="field-msg"><?= !empty($errors['inn']) ? e($errors['inn']) : '' ?></div>
+                        </div>
+
+                        <div class="field contractor-autofill-action">
+                            <label class="field-label">Автозаполнение</label>
+                            <button type="button" class="btn btn-secondary" data-inn-autofill-btn>Заполнить автоматически</button>
+                            <div class="field-msg"></div>
                         </div>
                     </div>
 
@@ -178,16 +196,39 @@ $predefDocs = [
                             <div class="field-msg"><?= !empty($errors['ogrn']) ? e($errors['ogrn']) : '' ?></div>
                         </div>
                     </div>
+
+                    <div class="form-grid-2">
+                        <div class="field" data-field="director_full_name">
+                            <label class="field-label">Руководитель</label>
+                            <input type="text"
+                                   name="director_full_name"
+                                   class="field-input"
+                                   placeholder="ФИО руководителя"
+                                   value="<?= e($old['director_full_name'] ?? '') ?>">
+                            <div class="field-msg"></div>
+                        </div>
+
+                        <div class="field" data-field="director_position">
+                            <label class="field-label">Должность руководителя</label>
+                            <input type="text"
+                                   name="director_position"
+                                   class="field-input"
+                                   placeholder="Должность"
+                                   value="<?= e($old['director_position'] ?? '') ?>">
+                            <div class="field-msg"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-section">
                     <div class="section-title">РЕКВИЗИТЫ</div>
 
+                    <div class="form-grid-2 contractor-address-grid">
                     <div class="field" data-field="legal_address">
                         <label class="field-label">Юридический адрес</label>
                         <textarea name="legal_address"
                                   class="field-textarea"
-                                  rows="2"
+                                  rows="3"
                                   placeholder="Юридический адрес перевозчика"><?= e($old['legal_address'] ?? '') ?></textarea>
                         <div class="field-msg"></div>
                     </div>
@@ -196,53 +237,19 @@ $predefDocs = [
                         <label class="field-label">Фактический адрес</label>
                         <textarea name="physical_address"
                                   class="field-textarea"
-                                  rows="2"
+                                  rows="3"
                                   placeholder="Фактический адрес перевозчика"><?= e($old['physical_address'] ?? '') ?></textarea>
                         <div class="field-msg"></div>
                     </div>
                 </div>
-
-                <div class="form-section">
-                    <div class="section-title">КОНТАКТЫ</div>
-
-                    <div class="form-grid-3">
-                        <div class="field" data-field="contact_person">
-                            <label class="field-label">Контактное лицо</label>
-                            <input type="text"
-                                   name="contact_person"
-                                   class="field-input"
-                                   placeholder="Иванов Иван Иванович"
-                                   value="<?= e($old['contact_person'] ?? '') ?>">
-                            <div class="field-msg"></div>
-                        </div>
-
-                        <div class="field<?= !empty($errors['contact_phone']) ? ' is-error' : '' ?>" data-field="contact_phone">
-                            <label class="field-label">Телефон</label>
-                            <input type="text"
-                                   name="contact_phone"
-                                   class="field-input"
-                                   inputmode="tel"
-                                   placeholder="+7 900 000-00-00"
-                                   value="<?= e($old['contact_phone'] ?? '') ?>">
-                            <div class="field-msg"><?= !empty($errors['contact_phone']) ? e($errors['contact_phone']) : '' ?></div>
-                        </div>
-
-                        <div class="field<?= !empty($errors['contact_email']) ? ' is-error' : '' ?>" data-field="contact_email">
-                            <label class="field-label">Email</label>
-                            <input type="text"
-                                   name="contact_email"
-                                   class="field-input"
-                                   placeholder="contractor@example.ru"
-                                   value="<?= e($old['contact_email'] ?? '') ?>">
-                            <div class="field-msg"><?= !empty($errors['contact_email']) ? e($errors['contact_email']) : '' ?></div>
-                        </div>
-                    </div>
                 </div>
+
+                <?php renderContractorContactFields($contactValues, $contactErrors); ?>
 
                 <div class="form-section">
                     <div class="section-title">БАНКОВСКИЕ РЕКВИЗИТЫ</div>
 
-                    <div class="form-grid-2">
+                    <div class="form-grid-4 contractor-bank-grid">
                         <div class="field<?= !empty($errors['bank_account']) ? ' is-error' : '' ?>" data-field="bank_account">
                             <label class="field-label">Расчётный счёт</label>
                             <input type="text"
@@ -264,19 +271,17 @@ $predefDocs = [
                                    value="<?= e($old['bank_bik'] ?? '') ?>">
                             <div class="field-msg"><?= !empty($errors['bank_bik']) ? e($errors['bank_bik']) : '' ?></div>
                         </div>
-                    </div>
-
-                    <div class="field" data-field="bank_name">
+                        <div class="field" data-field="bank_name">
                         <label class="field-label">Банк</label>
                         <input type="text"
                                name="bank_name"
                                class="field-input"
                                placeholder="АО &quot;БАНК&quot;"
                                value="<?= e($old['bank_name'] ?? '') ?>">
-                        <div class="field-msg"></div>
-                    </div>
+                            <div class="field-msg"></div>
+                        </div>
 
-                    <div class="field<?= !empty($errors['bank_corr_account']) ? ' is-error' : '' ?>" data-field="bank_corr_account">
+                        <div class="field<?= !empty($errors['bank_corr_account']) ? ' is-error' : '' ?>" data-field="bank_corr_account">
                         <label class="field-label">Корр. счёт</label>
                         <input type="text"
                                name="bank_corr_account"
@@ -284,20 +289,18 @@ $predefDocs = [
                                inputmode="numeric"
                                placeholder="30101810400000000225"
                                value="<?= e($old['bank_corr_account'] ?? '') ?>">
-                        <div class="field-msg"><?= !empty($errors['bank_corr_account']) ? e($errors['bank_corr_account']) : '' ?></div>
+                            <div class="field-msg"><?= !empty($errors['bank_corr_account']) ? e($errors['bank_corr_account']) : '' ?></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <div class="section-title">КОММЕНТАРИЙ</div>
-                    <div class="field" data-field="comments">
-                        <label class="field-label">Комментарий</label>
-                        <textarea name="comments"
-                                  class="field-textarea driver-textarea"
-                                  rows="3"
-                                  placeholder="Примечания по перевозчику"><?= e($old['comments'] ?? '') ?></textarea>
-                        <div class="field-msg"></div>
-                    </div>
+                <div class="field" data-field="comments">
+                    <label class="field-label">Комментарий</label>
+                    <textarea name="comments"
+                              class="field-textarea driver-textarea"
+                              rows="3"
+                              placeholder="Примечания по перевозчику"><?= e($old['comments'] ?? '') ?></textarea>
+                    <div class="field-msg"></div>
                 </div>
 
                 <div class="form-actions">
@@ -308,7 +311,6 @@ $predefDocs = [
             <div class="entity-form-docs driver-layout-docs">
                 <div>
                     <div class="section-title">ДОКУМЕНТЫ</div>
-                    <div class="field-msg">Документы можно загрузить сейчас или позже в карточке перевозчика</div>
                 </div>
 
                 <div class="file-list">
@@ -332,7 +334,7 @@ $predefDocs = [
                                id="predef-file-<?= $pdoc['code'] ?>"
                                class="file-input-hidden js-predef-file-input"
                                name="predef_doc[<?= $pdoc['code'] ?>]"
-                               accept=".pdf,.jpg,.jpeg,.png"
+                               accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
                                data-label="fname-<?= $pdoc['code'] ?>"
                                data-badge="fbadge-<?= $pdoc['code'] ?>"
                                data-button-label="fbtn-<?= $pdoc['code'] ?>"
@@ -342,12 +344,8 @@ $predefDocs = [
                     <?php endforeach; ?>
                 </div>
 
-                <div class="form-section">
-                    <div class="section-title">ПРОИЗВОЛЬНЫЕ ДОКУМЕНТЫ</div>
-                    <div class="field-msg">Введите название документа и выберите файл</div>
-                    <div id="custom-docs-container" class="file-list"></div>
-                    <button type="button" class="btn btn-ghost" id="add-custom-doc-btn">+ Добавить документ</button>
-                </div>
+                <div id="custom-docs-container" class="file-list"></div>
+                <button type="button" class="btn btn-ghost" id="add-custom-doc-btn">+ Добавить документ</button>
             </div>
         </div>
     </form>
@@ -359,8 +357,15 @@ $predefDocs = [
     var customContainer = document.getElementById('custom-docs-container');
     var addDocBtn = document.getElementById('add-custom-doc-btn');
     var docTypes = <?= json_encode($docTypes ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
-    var allowedPredefExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
-    var allowedCustomExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+    var allowedPredefExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
+    var allowedCustomExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
+    var innAutofillBtn = createForm ? createForm.querySelector('[data-inn-autofill-btn]') : null;
+    var innAutofillBox = createForm ? createForm.querySelector('[data-inn-autofill-message]') : null;
+    var innAutofillTitle = createForm ? createForm.querySelector('[data-inn-autofill-title]') : null;
+    var innAutofillSub = createForm ? createForm.querySelector('[data-inn-autofill-sub]') : null;
+    var contactList = createForm ? createForm.querySelector('[data-contractor-contacts-list]') : null;
+    var contactTemplate = createForm ? createForm.querySelector('[data-contact-template]') : null;
+    var addContactBtn = createForm ? createForm.querySelector('[data-add-contact]') : null;
 
     if (!createForm) {
         return;
@@ -392,7 +397,266 @@ $predefDocs = [
         }
     }
 
+    function getContactRows() {
+        return contactList ? contactList.querySelectorAll('[data-contact-row]') : [];
+    }
+
+    function clearFieldError(field) {
+        if (!field) {
+            return;
+        }
+        field.classList.remove('is-error');
+        var msg = field.querySelector('.field-msg');
+        if (msg) {
+            msg.textContent = '';
+        }
+    }
+
+    function setContactFieldError(input, message) {
+        if (!input) {
+            return;
+        }
+        var suffix = input.closest('.contact-input-suffix');
+        if (suffix) {
+            suffix.classList.add('is-error');
+        } else {
+            input.classList.add('is-error');
+        }
+    }
+
+    function renameContactRows() {
+        Array.prototype.forEach.call(getContactRows(), function (row, index) {
+            var map = {
+                '[data-contact-person]': 'contact_person',
+                '[data-contact-phone]': 'phone',
+                '[data-contact-email]': 'email',
+                '[data-contact-comment]': 'comment',
+                '[data-contact-primary]': 'is_primary',
+                '[data-contact-document-email]': 'is_document_email'
+            };
+
+            Object.keys(map).forEach(function (selector) {
+                var input = row.querySelector(selector);
+                if (input) {
+                    input.name = 'contacts[' + index + '][' + map[selector] + ']';
+                }
+            });
+        });
+    }
+
+    function ensureSinglePrimary(current) {
+        if (!current || !current.checked) {
+            return;
+        }
+        Array.prototype.forEach.call(createForm.querySelectorAll('[data-contact-primary]'), function (checkbox) {
+            if (checkbox !== current) {
+                checkbox.checked = false;
+            }
+        });
+    }
+
+    function bindContactRow(row) {
+        if (!row) {
+            return;
+        }
+
+        var removeBtn = row.querySelector('[data-remove-contact]');
+        var primaryCheckbox = row.querySelector('[data-contact-primary]');
+        var emailField = row.querySelector('[data-contact-email]');
+        var phoneField = row.querySelector('[data-contact-phone]');
+        var personField = row.querySelector('[data-contact-person]');
+        var commentField = row.querySelector('[data-contact-comment]');
+
+        if (removeBtn && removeBtn.dataset.bound !== '1') {
+            removeBtn.dataset.bound = '1';
+            removeBtn.addEventListener('click', function () {
+                var rows = getContactRows();
+                if (rows.length <= 1) {
+                    Array.prototype.forEach.call(row.querySelectorAll('input[type="text"], textarea'), function (input) {
+                        input.value = '';
+                    });
+                    Array.prototype.forEach.call(row.querySelectorAll('input[type="checkbox"]'), function (input, index) {
+                        input.checked = index === 0;
+                    });
+            Array.prototype.forEach.call(row.querySelectorAll('.contact-input-suffix'), function(w) { w.classList.remove('is-error'); });
+            Array.prototype.forEach.call(row.querySelectorAll('.field-input.is-error'), function(i) { i.classList.remove('is-error'); });
+                    return;
+                }
+                row.remove();
+                renameContactRows();
+            });
+        }
+
+        if (primaryCheckbox && primaryCheckbox.dataset.bound !== '1') {
+            primaryCheckbox.dataset.bound = '1';
+            primaryCheckbox.addEventListener('change', function () {
+                ensureSinglePrimary(primaryCheckbox);
+            });
+        }
+
+        if (personField && personField.dataset.bound !== '1') {
+            personField.dataset.bound = '1';
+            personField.addEventListener('blur', function () {
+                personField.value = normalizeSpaces(personField.value);
+            });
+        }
+
+        if (commentField && commentField.dataset.bound !== '1') {
+            commentField.dataset.bound = '1';
+            commentField.addEventListener('blur', function () {
+                commentField.value = String(commentField.value || '').trim();
+            });
+        }
+
+        if (emailField && emailField.dataset.bound !== '1') {
+            emailField.dataset.bound = '1';
+            emailField.addEventListener('blur', function () {
+                emailField.value = String(emailField.value || '').trim();
+            });
+        }
+
+        if (phoneField && phoneField.dataset.bound !== '1') {
+            phoneField.dataset.bound = '1';
+            phoneField.addEventListener('blur', function () {
+                var normalized = normalizePhone(phoneField.value);
+                phoneField.value = normalized.value;
+                if (normalized.error) {
+                    setContactFieldError(phoneField, normalized.error);
+                } else {
+                    clearFieldError(phoneField.closest('.field'));
+                }
+            });
+        }
+    }
+
+    function addContactRow() {
+        if (!contactTemplate || !contactTemplate.content || !contactList) {
+            return;
+        }
+        var fragment = contactTemplate.content.cloneNode(true);
+        var row = fragment.querySelector('[data-contact-row]');
+        contactList.appendChild(fragment);
+        if (row) {
+            bindContactRow(row);
+        }
+        renameContactRows();
+    }
+
+    function setAutofillMessage(type, title, message) {
+        if (!innAutofillBox || !innAutofillTitle || !innAutofillSub) {
+            return;
+        }
+
+        innAutofillBox.hidden = false;
+        innAutofillBox.classList.remove('is-hidden');
+        innAutofillBox.classList.remove('alert-success', 'alert-warning', 'alert-error');
+        innAutofillBox.classList.add(type === 'success' ? 'alert-success' : (type === 'error' ? 'alert-error' : 'alert-warning'));
+        innAutofillTitle.textContent = title || '';
+        innAutofillSub.textContent = message || '';
+    }
+
+    function clearAutofillMessage() {
+        if (!innAutofillBox || !innAutofillTitle || !innAutofillSub) {
+            return;
+        }
+
+        innAutofillBox.hidden = true;
+        innAutofillBox.classList.add('is-hidden');
+        innAutofillBox.classList.remove('alert-success', 'alert-warning', 'alert-error');
+        innAutofillBox.classList.add('alert-warning');
+        innAutofillTitle.textContent = '';
+        innAutofillSub.textContent = '';
+    }
+
+    function isAutofilledField(input) {
+        return !!(input && input.dataset && input.dataset.autofilled === '1');
+    }
+
+    function markAutofilledField(input, value) {
+        if (!input || !input.dataset) {
+            return;
+        }
+
+        input.dataset.autofilled = '1';
+        input.dataset.autofillValue = String(value || '');
+        input.classList.add('is-autofilled');
+    }
+
+    function clearAutofilledField(input) {
+        if (!input || !input.dataset) {
+            return;
+        }
+
+        delete input.dataset.autofilled;
+        delete input.dataset.autofillValue;
+        input.classList.remove('is-autofilled');
+    }
+
+    function setFieldValue(name, value, options) {
+        var input = byName(name);
+        var opts = options || {};
+        if (!input || !value) {
+            return false;
+        }
+
+        if (input.tagName === 'SELECT') {
+            if (!opts.overwrite && String(input.value || '').trim() !== '') {
+                return false;
+            }
+            input.value = value;
+            if (input.value === value) {
+                markAutofilledField(input, value);
+                return true;
+            }
+            return false;
+        }
+
+        if (!opts.overwrite && String(input.value || '').trim() !== '') {
+            return false;
+        }
+
+        input.value = value;
+        markAutofilledField(input, value);
+
+        if (input.tagName === 'TEXTAREA') {
+            input.style.height = 'auto';
+            input.style.height = input.scrollHeight + 'px';
+        }
+
+        return true;
+    }
+
+    function applyInnLookupData(payload) {
+        var data = payload && payload.data ? payload.data : {};
+        var filledCount = 0;
+
+        if (byName('inn')) {
+            byName('inn').value = stripSpacesAndHyphens(data.inn || byName('inn').value);
+        }
+
+        var overwriteIfAutofilled = function (name) {
+            return isAutofilledField(byName(name));
+        };
+
+        [
+            ['name', data.name, overwriteIfAutofilled('name')],
+            ['contractor_type', data.contractor_type, overwriteIfAutofilled('contractor_type')],
+            ['kpp', data.kpp, true],
+            ['ogrn', data.ogrn, true],
+            ['legal_address', data.legal_address, true],
+            ['director_full_name', data.director_full_name, true],
+            ['director_position', data.director_position, true]
+        ].forEach(function (pair) {
+            if (setFieldValue(pair[0], pair[1], { overwrite: !!pair[2] })) {
+                filledCount += 1;
+            }
+        });
+
+        return filledCount;
+    }
+
     function clearClientErrors() {
+        clearAutofillMessage();
         Array.prototype.forEach.call(createForm.querySelectorAll('[data-field]'), function (field) {
             field.classList.remove('is-error');
         });
@@ -438,7 +702,7 @@ $predefDocs = [
         if (ext === 'pdf') return 'pdf';
         if (['doc', 'docx'].indexOf(ext) !== -1) return 'word';
         if (['xls', 'xlsx'].indexOf(ext) !== -1) return 'excel';
-        if (['jpg', 'jpeg', 'png'].indexOf(ext) !== -1) return 'photo';
+        if (['jpg', 'jpeg', 'png', 'webp'].indexOf(ext) !== -1) return 'photo';
         return 'other';
     }
 
@@ -542,9 +806,6 @@ $predefDocs = [
         var ogrnField = byName('ogrn');
         var legalAddressField = byName('legal_address');
         var physicalAddressField = byName('physical_address');
-        var contactPersonField = byName('contact_person');
-        var contactPhoneField = byName('contact_phone');
-        var contactEmailField = byName('contact_email');
         var bankAccountField = byName('bank_account');
         var bankNameField = byName('bank_name');
         var bankBikField = byName('bank_bik');
@@ -557,16 +818,11 @@ $predefDocs = [
         ogrnField.value = stripSpacesAndHyphens(ogrnField.value);
         legalAddressField.value = String(legalAddressField.value || '').trim();
         physicalAddressField.value = String(physicalAddressField.value || '').trim();
-        contactPersonField.value = normalizeSpaces(contactPersonField.value);
         bankAccountField.value = stripSpacesAndHyphens(bankAccountField.value);
         bankBikField.value = stripSpacesAndHyphens(bankBikField.value);
         bankCorrAccountField.value = stripSpacesAndHyphens(bankCorrAccountField.value);
         bankNameField.value = String(bankNameField.value || '').trim();
         commentsField.value = String(commentsField.value || '').trim();
-        contactEmailField.value = String(contactEmailField.value || '').trim();
-
-        var normalizedPhone = normalizePhone(contactPhoneField.value);
-        contactPhoneField.value = normalizedPhone.value;
 
         if (nameField.value === '') {
             setFieldState('name', 'Укажите наименование');
@@ -591,14 +847,63 @@ $predefDocs = [
             ok = false;
         }
 
-        if (normalizedPhone.error) {
-            setFieldState('contact_phone', normalizedPhone.error);
-            ok = false;
-        }
+        var meaningfulContactRows = [];
+        Array.prototype.forEach.call(getContactRows(), function (row) {
+            Array.prototype.forEach.call(row.querySelectorAll('.contact-input-suffix'), function(w) { w.classList.remove('is-error'); });
+            Array.prototype.forEach.call(row.querySelectorAll('.field-input.is-error'), function(i) { i.classList.remove('is-error'); });
 
-        if (contactEmailField.value !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmailField.value)) {
-            setFieldState('contact_email', 'Некорректный email');
-            ok = false;
+            var personField = row.querySelector('[data-contact-person]');
+            var phoneField = row.querySelector('[data-contact-phone]');
+            var emailField = row.querySelector('[data-contact-email]');
+            var commentField = row.querySelector('[data-contact-comment]');
+            var primaryField = row.querySelector('[data-contact-primary]');
+            var documentEmailField = row.querySelector('[data-contact-document-email]');
+
+            personField.value = normalizeSpaces(personField.value);
+            phoneField.value = normalizeSpaces(phoneField.value);
+            emailField.value = String(emailField.value || '').trim();
+            commentField.value = String(commentField.value || '').trim();
+
+            var meaningful = personField.value !== '' || phoneField.value !== '' || emailField.value !== '' || commentField.value !== '';
+            if (!meaningful) {
+                primaryField.checked = false;
+                documentEmailField.checked = false;
+                return;
+            }
+
+            meaningfulContactRows.push(row);
+
+            var normalizedPhone = normalizePhone(phoneField.value);
+            phoneField.value = normalizedPhone.value;
+            if (normalizedPhone.error) {
+                setContactFieldError(phoneField, normalizedPhone.error);
+                ok = false;
+            }
+
+            if (emailField.value !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailField.value)) {
+                setContactFieldError(emailField, 'Некорректный email');
+                ok = false;
+            }
+
+            if (documentEmailField.checked && emailField.value === '') {
+                documentEmailField.checked = false;
+            }
+        });
+
+        var primaryRow = null;
+        Array.prototype.forEach.call(meaningfulContactRows, function (row) {
+            if (primaryRow) {
+                return;
+            }
+            var checkbox = row.querySelector('[data-contact-primary]');
+            if (checkbox && checkbox.checked) {
+                primaryRow = row;
+            }
+        });
+        if (!primaryRow && meaningfulContactRows.length > 0) {
+            meaningfulContactRows[0].querySelector('[data-contact-primary]').checked = true;
+        } else if (primaryRow) {
+            ensureSinglePrimary(primaryRow.querySelector('[data-contact-primary]'));
         }
 
         if (bankAccountField.value !== '' && !/^\d{20}$/.test(bankAccountField.value)) {
@@ -683,21 +988,32 @@ $predefDocs = [
 
     function bindBlurNormalization() {
         var nameField = byName('name');
-        var contactPersonField = byName('contact_person');
+        var contractorTypeField = byName('contractor_type');
+        var kppField = byName('kpp');
+        var ogrnField = byName('ogrn');
         var legalAddressField = byName('legal_address');
         var physicalAddressField = byName('physical_address');
-        var contactPhoneField = byName('contact_phone');
         var bankNameField = byName('bank_name');
+        var directorFullNameField = byName('director_full_name');
+        var directorPositionField = byName('director_position');
         var commentsField = byName('comments');
 
         nameField.addEventListener('blur', function () {
             nameField.value = normalizeSpaces(nameField.value);
         });
-        contactPersonField.addEventListener('blur', function () {
-            contactPersonField.value = normalizeSpaces(contactPersonField.value);
+        nameField.addEventListener('input', function () {
+            clearAutofilledField(nameField);
+        });
+        contractorTypeField.addEventListener('change', function () {
+            clearAutofilledField(contractorTypeField);
         });
         legalAddressField.addEventListener('blur', function () {
             legalAddressField.value = String(legalAddressField.value || '').trim();
+        });
+        legalAddressField.addEventListener('input', function () {
+            clearAutofilledField(legalAddressField);
+            legalAddressField.style.height = 'auto';
+            legalAddressField.style.height = legalAddressField.scrollHeight + 'px';
         });
         physicalAddressField.addEventListener('blur', function () {
             physicalAddressField.value = String(physicalAddressField.value || '').trim();
@@ -708,16 +1024,25 @@ $predefDocs = [
         commentsField.addEventListener('blur', function () {
             commentsField.value = String(commentsField.value || '').trim();
         });
-        contactPhoneField.addEventListener('blur', function () {
-            var normalized = normalizePhone(contactPhoneField.value);
-            contactPhoneField.value = normalized.value;
-            setFieldState('contact_phone', normalized.error);
+
+        directorFullNameField.addEventListener('blur', function () {
+            directorFullNameField.value = String(directorFullNameField.value || '').trim();
+        });
+        directorFullNameField.addEventListener('input', function () {
+            clearAutofilledField(directorFullNameField);
+        });
+
+        directorPositionField.addEventListener('blur', function () {
+            directorPositionField.value = String(directorPositionField.value || '').trim();
+        });
+        directorPositionField.addEventListener('input', function () {
+            clearAutofilledField(directorPositionField);
         });
 
         Array.prototype.forEach.call([
             byName('inn'),
-            byName('kpp'),
-            byName('ogrn'),
+            kppField,
+            ogrnField,
             byName('bank_account'),
             byName('bank_bik'),
             byName('bank_corr_account')
@@ -726,9 +1051,11 @@ $predefDocs = [
                 input.value = stripSpacesAndHyphens(input.value);
             });
         });
-
-        byName('contact_email').addEventListener('blur', function () {
-            byName('contact_email').value = String(byName('contact_email').value || '').trim();
+        kppField.addEventListener('input', function () {
+            clearAutofilledField(kppField);
+        });
+        ogrnField.addEventListener('input', function () {
+            clearAutofilledField(ogrnField);
         });
     }
 
@@ -759,7 +1086,7 @@ $predefDocs = [
                 '<span id="' + btnLabelId + '">Выбрать</span>' +
             '</button>' +
             '<button type="button" class="file-remove" title="Удалить документ">×</button>' +
-            '<input type="file" id="' + inputId + '" class="file-input-hidden js-custom-file-input" name="custom_doc_file[]" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" data-label="' + metaId + '" data-badge="' + badgeId + '" data-button-label="' + btnLabelId + '">';
+            '<input type="file" id="' + inputId + '" class="file-input-hidden js-custom-file-input" name="custom_doc_file[]" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx" data-label="' + metaId + '" data-badge="' + badgeId + '" data-button-label="' + btnLabelId + '">';
 
         customContainer.appendChild(row);
         bindFileRow(row);
@@ -796,6 +1123,75 @@ $predefDocs = [
         });
     }
 
+    function runInnLookup() {
+        var innField = byName('inn');
+        var rawInn = stripSpacesAndHyphens(innField ? innField.value : '');
+
+        clearAutofillMessage();
+        setFieldState('inn', '');
+
+        if (innField) {
+            innField.value = rawInn;
+        }
+
+        if (rawInn === '') {
+            setFieldState('inn', 'Укажите ИНН');
+            setAutofillMessage('warning', 'Автозаполнение недоступно', 'Сначала введите ИНН.');
+            if (innField && typeof innField.focus === 'function') {
+                innField.focus();
+            }
+            return;
+        }
+
+        if (!/^\d+$/.test(rawInn) || (rawInn.length !== 10 && rawInn.length !== 12)) {
+            setFieldState('inn', 'ИНН: 10 или 12 цифр');
+            setAutofillMessage('warning', 'Некорректный ИНН', 'Укажите ИНН длиной 10 или 12 цифр.');
+            if (innField && typeof innField.focus === 'function') {
+                innField.focus();
+            }
+            return;
+        }
+
+        if (!innAutofillBtn) {
+            return;
+        }
+
+        innAutofillBtn.disabled = true;
+        innAutofillBtn.textContent = 'Поиск...';
+
+        fetch('/company/requisites/lookup-by-inn', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ inn: rawInn })
+        })
+            .then(function (response) {
+                return response.json().catch(function () {
+                    return {
+                        ok: false,
+                        message: 'Не удалось получить данные. Заполните реквизиты вручную.'
+                    };
+                });
+            })
+            .then(function (payload) {
+                if (!payload || payload.ok !== true) {
+                    setAutofillMessage('warning', 'Автозаполнение не выполнено', payload && payload.message ? payload.message : 'Не удалось получить данные. Заполните реквизиты вручную.');
+                    return;
+                }
+
+                applyInnLookupData(payload);
+            })
+            .catch(function () {
+                setAutofillMessage('error', 'Сервис временно недоступен', 'Не удалось получить данные. Заполните реквизиты вручную.');
+            })
+            .finally(function () {
+                innAutofillBtn.disabled = false;
+                innAutofillBtn.textContent = 'Заполнить автоматически';
+            });
+    }
+
     Array.prototype.forEach.call(createForm.querySelectorAll('.predef-file-clear'), function (btn) {
         if (btn.dataset.bound === '1') {
             return;
@@ -813,6 +1209,22 @@ $predefDocs = [
 
     bindFileRow(createForm);
     bindBlurNormalization();
+    Array.prototype.forEach.call(getContactRows(), bindContactRow);
+    renameContactRows();
+
+    if (innAutofillBtn) {
+        innAutofillBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            runInnLookup();
+        });
+    }
+
+    if (addContactBtn) {
+        addContactBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            addContactRow();
+        });
+    }
 
     if (addDocBtn) {
         addDocBtn.addEventListener('click', function (event) {
