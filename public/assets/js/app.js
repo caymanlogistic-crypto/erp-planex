@@ -444,9 +444,6 @@ document.documentElement.classList.add('js-ready');
 
     form.addEventListener('focusout', function (event) {
         if (event.target && event.target.matches('input:not([type="file"]), textarea')) {
-            if (console.time && event.target.name) {
-                console.log('[focusout] normalizeByName on', event.target.name, 'tagName=' + event.target.tagName);
-            }
             normalizeByName(event.target);
         }
     });
@@ -459,13 +456,10 @@ document.documentElement.classList.add('js-ready');
 
     form.addEventListener('submit', function (event) {
         var ok = true;
-        console.time('[form] submit normalizeByName loop');
         var textInputs = form.querySelectorAll('input[name]:not([type="file"]), textarea[name]');
-        console.log('[form] submit text inputs count:', textInputs.length);
         Array.prototype.forEach.call(textInputs, function (input) {
             if (!normalizeByName(input)) ok = false;
         });
-        console.timeEnd('[form] submit normalizeByName loop');
         if (typeof window.erpDriverCreateValidateFiles === 'function') {
             if (!window.erpDriverCreateValidateFiles(form)) ok = false;
         }

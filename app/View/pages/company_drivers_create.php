@@ -129,10 +129,10 @@ $predefDocs = [
 ];
 ?>
 <form method="post" action="/company/drivers/create" class="panel" enctype="multipart/form-data">
-<div class="driver-layout">
+<div class="entity-form-layout driver-layout">
 
     <!-- ════ Левая колонка: данные водителя ════ -->
-    <div class="driver-layout-main">
+    <div class="entity-form-main driver-layout-main">
 
         <div class="section-title">Данные водителя</div>
 
@@ -288,7 +288,7 @@ $predefDocs = [
     </div><!-- /.driver-layout-main -->
 
     <!-- ════ Правая колонка: документы ════ -->
-    <div class="driver-layout-docs">
+    <div class="entity-form-docs driver-layout-docs">
 
         <div>
             <div class="section-title">Документы</div>
@@ -297,7 +297,7 @@ $predefDocs = [
 
         <div class="file-list">
             <?php foreach ($predefDocs as $pdoc): ?>
-            <div class="file-item file-item-predef is-empty" id="frow-<?= $pdoc['code'] ?>">
+            <div class="file-item file-item-predef document-file-row is-empty" id="frow-<?= $pdoc['code'] ?>">
                 <div class="file-type-badge file-type-badge-empty" id="fbadge-<?= $pdoc['code'] ?>">—</div>
                 <div class="file-info">
                     <div class="file-name"><?= e($pdoc['name']) ?></div>
@@ -309,10 +309,9 @@ $predefDocs = [
                     <span id="fbtn-<?= $pdoc['code'] ?>">Выбрать</span>
                 </button>
                 <button type="button"
-                        class="predef-file-clear"
+                        class="predef-file-clear is-hidden"
                         id="fclear-<?= $pdoc['code'] ?>"
-                        title="Убрать файлы"
-                        style="display:none">×</button>
+                        title="Очистить файл">×</button>
                 <input type="file"
                        id="predef-file-<?= $pdoc['code'] ?>"
                        class="file-input-hidden js-predef-file-input"
@@ -329,8 +328,8 @@ $predefDocs = [
 
         <div class="form-section">
             <div class="section-title">Произвольные документы</div>
-            <div class="field-msg" style="margin-bottom:6px;">
-                Укажите тип документа и выберите файл
+            <div class="field-msg docs-section-hint">
+                Введите название документа и выберите файл
             </div>
             <div id="custom-docs-container" class="file-list"></div>
             <button type="button" class="btn btn-ghost" id="add-custom-doc-btn">+ Добавить документ</button>
@@ -374,31 +373,56 @@ $predefDocs = [
 
     function clearPredefRowError(input) {
         var row = input.closest('.file-item');
-        if (row) row.classList.remove('is-error');
+        if (row) row.classList.remove('is-error', 'has-error');
     }
 
     function setPredefRowError(input, message) {
         var row = input.closest('.file-item');
         var meta = input.getAttribute('data-label') ? document.getElementById(input.getAttribute('data-label')) : null;
-        if (row) row.classList.add('is-error');
+        if (row) row.classList.add('is-error', 'has-error');
         if (meta) meta.textContent = message;
     }
 
     function clearCustomFileError(input) {
         var row = input.closest('.custom-doc-row');
         var meta = input.getAttribute('data-label') ? document.getElementById(input.getAttribute('data-label')) : null;
-        if (row) row.classList.remove('is-error');
+        if (row) row.classList.remove('is-error', 'has-error');
         if (meta) meta.classList.remove('is-error');
     }
 
     function setCustomFileError(input, message) {
         var row = input.closest('.custom-doc-row');
         var meta = input.getAttribute('data-label') ? document.getElementById(input.getAttribute('data-label')) : null;
-        if (row) row.classList.add('is-error');
+        if (row) row.classList.add('is-error', 'has-error');
         if (meta) {
             meta.textContent = message;
             meta.classList.add('is-error');
+            meta.classList.remove('is-hidden');
         }
+    }
+
+    function clearCustomTitleError(row) {
+        var field = row ? row.querySelector('.custom-doc-title-field') : null;
+        var msg = field ? field.querySelector('.field-msg') : null;
+        if (field) field.classList.remove('is-error');
+        if (msg) msg.textContent = '';
+        if (row) row.classList.remove('has-error');
+    }
+
+    function setCustomTitleError(row, message) {
+        var field = row ? row.querySelector('.custom-doc-title-field') : null;
+        var msg = field ? field.querySelector('.field-msg') : null;
+        if (row) row.classList.add('has-error');
+        if (field) field.classList.add('is-error');
+        if (msg) msg.textContent = message;
+    }
+
+    function clearDocumentRowError(input) {
+        if (input.closest('.custom-doc-row')) {
+            clearCustomFileError(input);
+            return;
+        }
+        clearPredefRowError(input);
     }
 
     function setPredefLoading(input, message) {
@@ -411,6 +435,7 @@ $predefDocs = [
         }
         if (meta) meta.textContent = message || 'Обработка файла...';
         if (row) row.classList.remove('is-empty');
+        if (row) row.classList.add('is-loading', 'has-file');
     }
 
     /* Один файл */
@@ -438,9 +463,7 @@ $predefDocs = [
     }
 
     function summarizeFiles(files) {
-        console.time('  └ summarizeFiles');
         if (!files || files.length === 0) {
-            console.timeEnd('  └ summarizeFiles');
             return neutralSummary();
         }
 
@@ -453,12 +476,10 @@ $predefDocs = [
                 badge: badge,
                 filled: true
             };
-            console.timeEnd('  └ summarizeFiles');
             return result;
         }
 
         /* 2+ файла — не перебираем, показываем только количество */
-        console.timeEnd('  └ summarizeFiles');
         return {
             text: 'Выбрано файлов: ' + files.length,
             badge: getBadgeMeta('other'),
@@ -466,39 +487,38 @@ $predefDocs = [
         };
     }
 
-    function paintPredefFileState(input, summary) {
-        console.time('  └ paintPredefFileState');
+    function paintDocumentFileState(input, summary) {
         var row = input.closest('.file-item');
         var badge = input.getAttribute('data-badge') ? document.getElementById(input.getAttribute('data-badge')) : null;
         var meta = input.getAttribute('data-label') ? document.getElementById(input.getAttribute('data-label')) : null;
         var buttonLabel = input.getAttribute('data-button-label') ? document.getElementById(input.getAttribute('data-button-label')) : null;
         var clearBtn = input.getAttribute('data-clear') ? document.getElementById(input.getAttribute('data-clear')) : null;
-        clearPredefRowError(input);
+        clearDocumentRowError(input);
         if (meta) {
             meta.textContent = summary.text;
-            meta.style.display = summary.text ? '' : 'none';
+            meta.classList.toggle('is-hidden', !summary.text);
         }
         if (buttonLabel) buttonLabel.textContent = summary.filled ? 'Заменить' : 'Выбрать';
         if (badge) {
             badge.className = 'file-type-badge ' + (summary.filled ? summary.badge.cls : 'file-type-badge-empty');
             badge.textContent = summary.badge.text;
         }
-        if (clearBtn) clearBtn.style.display = summary.filled ? '' : 'none';
-        if (row) row.classList.toggle('is-empty', !summary.filled);
-        console.timeEnd('  └ paintPredefFileState');
+        if (clearBtn) clearBtn.classList.toggle('is-hidden', !summary.filled);
+        if (row) {
+            row.classList.toggle('is-empty', !summary.filled);
+            row.classList.toggle('has-file', summary.filled);
+            row.classList.remove('is-loading');
+        }
     }
 
     /* Несколько файлов */
     window.erpFileMultiSelect = function (input) {
-        console.time('[file] erpFileMultiSelect (total)');
         if (!input.files || input.files.length === 0) {
-            paintPredefFileState(input, neutralSummary());
-            console.timeEnd('[file] erpFileMultiSelect (total)');
+            paintDocumentFileState(input, neutralSummary());
             return;
         }
         var summary = summarizeFiles(input.files);
-        paintPredefFileState(input, summary);
-        console.timeEnd('[file] erpFileMultiSelect (total)');
+        paintDocumentFileState(input, summary);
     };
 
     /* ── Дополнительные телефоны ── */
@@ -558,7 +578,7 @@ $predefDocs = [
 
     function buildDocRow() {
         var row = document.createElement('div');
-        row.className = 'file-item custom-doc-row is-empty';
+        row.className = 'file-item custom-doc-row document-file-row is-empty';
         var idx = customContainer.children.length;
 
         var badgeId   = 'cbadge-' + idx;
@@ -569,15 +589,18 @@ $predefDocs = [
         row.innerHTML =
             '<div class="file-type-badge file-type-badge-empty" id="' + badgeId + '">—</div>' +
             '<div class="file-info">' +
-                '<input type="text" name="custom_doc_type[]" class="field-input custom-doc-type-input" placeholder="Тип документа" autocomplete="off">' +
-                '<div class="custom-doc-suggestions"></div>' +
-                '<div class="file-meta" id="' + metaId + '" style="display:none"></div>' +
+                '<div class="field custom-doc-title-field">' +
+                    '<input type="text" name="custom_doc_type[]" class="field-input custom-doc-type-input" placeholder="Введите название" autocomplete="off">' +
+                    '<div class="custom-doc-suggestions"></div>' +
+                    '<div class="field-msg"></div>' +
+                '</div>' +
+                '<div class="file-meta is-hidden" id="' + metaId + '"></div>' +
             '</div>' +
             '<button type="button" class="btn btn-secondary file-action-btn js-custom-file-pick-btn" data-file-input="' + inputId + '">' +
                 '<span id="' + btnLabelId + '">Выбрать</span>' +
             '</button>' +
             '<input type="file" id="' + inputId + '" class="file-input-hidden js-custom-file-input" name="custom_doc_file[]" data-label="' + metaId + '" data-badge="' + badgeId + '" data-button-label="' + btnLabelId + '">' +
-            '<button type="button" class="file-remove" title="Удалить строку">×</button>';
+            '<button type="button" class="file-remove" title="Удалить документ">×</button>';
 
         row.querySelector('.file-remove').addEventListener('click', function () {
             customContainer.removeChild(row);
@@ -588,10 +611,11 @@ $predefDocs = [
         var suggestionsDiv = row.querySelector('.custom-doc-suggestions');
 
         typeInput.addEventListener('input', function () {
+            if (typeInput.value.trim() !== '') clearCustomTitleError(row);
             var filtered = filterDocTypes(typeInput.value.trim());
             if (filtered.length === 0) {
                 suggestionsDiv.innerHTML = '';
-                suggestionsDiv.style.display = 'none';
+                suggestionsDiv.classList.remove('is-open');
                 return;
             }
             var html = '';
@@ -599,20 +623,21 @@ $predefDocs = [
                 html += '<div class="custom-doc-suggestion">' + filtered[i].name.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') + '</div>';
             }
             suggestionsDiv.innerHTML = html;
-            suggestionsDiv.style.display = 'block';
+            suggestionsDiv.classList.add('is-open');
         });
 
         suggestionsDiv.addEventListener('mousedown', function (e) {
             if (e.target.classList.contains('custom-doc-suggestion')) {
                 typeInput.value = e.target.textContent;
+                clearCustomTitleError(row);
                 suggestionsDiv.innerHTML = '';
-                suggestionsDiv.style.display = 'none';
+                suggestionsDiv.classList.remove('is-open');
             }
         });
 
         typeInput.addEventListener('blur', function () {
             window.setTimeout(function () {
-                suggestionsDiv.style.display = 'none';
+                suggestionsDiv.classList.remove('is-open');
             }, 120);
         });
 
@@ -645,7 +670,7 @@ $predefDocs = [
                 var saved = preClickState[fileInput.id];
                 if (fileInput.files && fileInput.files.length > 0) {
                     var summary = summarizeFiles(fileInput.files);
-                    paintPredefFileState(fileInput, summary);
+                    paintDocumentFileState(fileInput, summary);
                     delete preClickState[fileInput.id];
                 } else if (saved) {
                     var rowEl = fileInput.closest('.file-item');
@@ -655,7 +680,7 @@ $predefDocs = [
                     if (badge) { badge.className = saved.badgeClassName; badge.textContent = saved.badgeText; }
                     if (meta) {
                         meta.textContent = saved.metaText;
-                        meta.style.display = saved.metaText ? '' : 'none';
+                        meta.classList.toggle('is-hidden', !saved.metaText);
                     }
                     if (buttonLabel) buttonLabel.textContent = saved.buttonText;
                     if (rowEl) { if (saved.isEmpty) rowEl.classList.add('is-empty'); else rowEl.classList.remove('is-empty'); }
@@ -724,6 +749,14 @@ $predefDocs = [
             function (input) {
                 clearCustomFileError(input);
                 if (!input.files || input.files.length === 0) return;
+                var row = input.closest('.custom-doc-row');
+                var typeInput = row ? row.querySelector('input[name="custom_doc_type[]"]') : null;
+                if (typeInput && typeInput.value.trim() === '') {
+                    setCustomTitleError(row, 'Введите название документа');
+                    typeInput.focus();
+                    ok = false;
+                    return;
+                }
                 for (var i = 0; i < input.files.length; i++) {
                     var message = validateSelectedFile(input.files[i]);
                     if (message) {
@@ -747,7 +780,6 @@ $predefDocs = [
             if (btn.dataset.filePickReady === '1') return;
             btn.dataset.filePickReady = '1';
             btn.addEventListener('click', function () {
-                console.time('[file] TOTAL from button click to UI done');
                 var inputId = btn.getAttribute('data-file-input');
                 var input = inputId ? document.getElementById(inputId) : null;
                 if (!input) return;
@@ -772,7 +804,6 @@ $predefDocs = [
                     badge.textContent = '';
                 }
 
-                console.log('[file] → spinner set, calling input.click()...');
                 input.click();
             });
         }
@@ -785,7 +816,6 @@ $predefDocs = [
             if (input.dataset.filePickReady === '1') return;
             input.dataset.filePickReady = '1';
             input.addEventListener('change', function () {
-                console.log('[file] ← change event fired (dialog closed)');
                 var inputId = input.id;
                 var saved = preClickState[inputId];
 
@@ -811,10 +841,7 @@ $predefDocs = [
                         else row.classList.remove('is-empty');
                     }
                     delete preClickState[inputId];
-                    console.log('[file] ← cancelled, state restored');
                 }
-
-                console.timeEnd('[file] TOTAL from button click to UI done');
             });
         }
     );
@@ -829,12 +856,9 @@ $predefDocs = [
                 var row = btn.closest('.file-item');
                 var fileInput = row ? row.querySelector('input[type="file"][name^="predef_doc["]') : null;
                 if (!fileInput) return;
-                // Clear the file input
                 fileInput.value = '';
-                // Reset UI
-                paintPredefFileState(fileInput, neutralSummary());
-                // Reset row error if any
-                if (row) row.classList.remove('is-error');
+                paintDocumentFileState(fileInput, neutralSummary());
+                if (row) row.classList.remove('is-error', 'has-error');
             });
         }
     );

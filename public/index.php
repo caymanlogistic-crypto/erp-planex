@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 /**
  * ERP PLANEX — Entry Point
@@ -99,23 +99,244 @@ function buildPassportNumber(?string $series, ?string $number): ?string
     return $number;
 }
 
-function applyCentralMigrations(\App\Core\Database $db): void
+function vehicleSetTypeRules(): array
 {
-    try {
-        $pdo = $db->connection();
-        // Migration 007: Add position column to company_users
-        $migrationSql = file_get_contents(base_path('database/migrations/007_add_position_to_company_users.sql'));
-        if ($migrationSql !== false) {
-            $pdo->exec($migrationSql);
-        }
-        // Migration 008: Add director requisites to companies
-        $migrationSql = file_get_contents(base_path('database/migrations/008_add_director_requisites_to_companies.sql'));
-        if ($migrationSql !== false) {
-            $pdo->exec($migrationSql);
-        }
-    } catch (\Exception $e) {
-        // Silently ignore migration errors in production
+    return [
+        'single' => [
+            'label' => 'Одиночка',
+            'primary_label' => 'Транспортная единица',
+            'secondary_label' => null,
+            'primary_unit_types' => ['single', 'truck'],
+            'secondary_unit_types' => [],
+            'secondary_required' => false,
+            'primary_docs_title' => 'Документы транспортной единицы',
+            'secondary_docs_title' => '',
+            'units' => [
+                'primary' => [
+                    'label' => 'Транспортная единица',
+                    'unit_type' => 'single',
+                    'docs_title' => 'Документы транспортной единицы',
+                    'show_capacity' => true,
+                    'show_volume' => true,
+                ],
+            ],
+        ],
+        'coupling' => [
+            'label' => 'Сцепка',
+            'primary_label' => 'Тягач',
+            'secondary_label' => 'Полуприцеп',
+            'primary_unit_types' => ['tractor'],
+            'secondary_unit_types' => ['semi_trailer'],
+            'secondary_required' => true,
+            'primary_docs_title' => 'Документы тягача',
+            'secondary_docs_title' => 'Документы полуприцепа',
+            'units' => [
+                'primary' => [
+                    'label' => 'Тягач',
+                    'unit_type' => 'tractor',
+                    'docs_title' => 'Документы тягача',
+                    'show_capacity' => false,
+                    'show_volume' => false,
+                ],
+                'secondary' => [
+                    'label' => 'Полуприцеп',
+                    'unit_type' => 'semi_trailer',
+                    'docs_title' => 'Документы полуприцепа',
+                    'show_capacity' => true,
+                    'show_volume' => true,
+                ],
+            ],
+        ],
+        'road_train' => [
+            'label' => 'Автопоезд',
+            'primary_label' => 'Первая часть',
+            'secondary_label' => 'Прицеп',
+            'primary_unit_types' => ['truck'],
+            'secondary_unit_types' => ['trailer'],
+            'secondary_required' => true,
+            'primary_docs_title' => 'Документы первой части',
+            'secondary_docs_title' => 'Документы прицепа',
+            'units' => [
+                'primary' => [
+                    'label' => 'Первая часть',
+                    'unit_type' => 'truck',
+                    'docs_title' => 'Документы первой части',
+                    'show_capacity' => true,
+                    'show_volume' => true,
+                ],
+                'secondary' => [
+                    'label' => 'Прицеп',
+                    'unit_type' => 'trailer',
+                    'docs_title' => 'Документы прицепа',
+                    'show_capacity' => true,
+                    'show_volume' => true,
+                ],
+            ],
+        ],
+    ];
+}
+
+function vehicleSetPredefinedDocumentSections(): array
+{
+    return [
+        'primary' => [
+            ['input_code' => 'primary_sts', 'doc_code' => 'sts', 'badge' => '-', 'name' => 'СТС'],
+            ['input_code' => 'primary_diagnostic_card', 'doc_code' => 'diagnostic_card', 'badge' => '-', 'name' => 'Диагностическая карта'],
+            ['input_code' => 'primary_photo', 'doc_code' => 'photo', 'badge' => '-', 'name' => 'Фотография'],
+        ],
+        'secondary' => [
+            ['input_code' => 'secondary_sts', 'doc_code' => 'sts', 'badge' => '-', 'name' => 'СТС'],
+            ['input_code' => 'secondary_diagnostic_card', 'doc_code' => 'diagnostic_card', 'badge' => '-', 'name' => 'Диагностическая карта'],
+            ['input_code' => 'secondary_photo', 'doc_code' => 'photo', 'badge' => '-', 'name' => 'Фотография'],
+        ],
+    ];
+}
+
+function vehicleSetDocumentUploadMap(string $setType): array
+{
+    $sections = vehicleSetPredefinedDocumentSections();
+    $map = [];
+
+    foreach ($sections['primary'] as $doc) {
+        $map[$doc['input_code']] = $doc + ['entity_role' => 'primary'];
     }
+
+    if (in_array($setType, ['coupling', 'road_train'], true)) {
+        foreach ($sections['secondary'] as $doc) {
+            $map[$doc['input_code']] = $doc + ['entity_role' => 'secondary'];
+        }
+    }
+
+    return $map;
+}
+
+function vehicleSetUnitTypeLabelList(array $unitTypes): string
+{
+    $labels = array_values(array_filter(array_map(static function ($type) {
+        return ui_unit_type((string) $type);
+    }, $unitTypes)));
+
+    return implode(', ', $labels);
+}
+
+function vehicleSetVisibleUnitRoles(string $setType): array
+{
+    $rules = vehicleSetTypeRules();
+    if (!isset($rules[$setType]['units']) || !is_array($rules[$setType]['units'])) {
+        return [];
+    }
+
+    return array_keys($rules[$setType]['units']);
+}
+
+function validateVehicleSetSelection(PDO $localPdo, string $setType, string $primaryId, string $secondaryId): array
+{
+    $rules = vehicleSetTypeRules();
+    $errors = [];
+    $units = [];
+
+    if ($setType === '' || !isset($rules[$setType])) {
+        $errors['set_type'] = 'Выберите тип комплекта';
+        return ['errors' => $errors, 'units' => $units];
+    }
+
+    $rule = $rules[$setType];
+
+    if ($primaryId === '') {
+        $errors['primary_vehicle_unit_id'] = 'Выберите основную транспортную единицу';
+    }
+
+    if (!empty($rule['secondary_required']) && $secondaryId === '') {
+        $errors['secondary_vehicle_unit_id'] = 'Выберите дополнительную транспортную единицу';
+    }
+
+    $ids = [];
+    if ($primaryId !== '' && ctype_digit($primaryId)) {
+        $ids[] = (int) $primaryId;
+    }
+    if ($secondaryId !== '' && ctype_digit($secondaryId)) {
+        $ids[] = (int) $secondaryId;
+    }
+
+    if (!empty($ids)) {
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $localPdo->prepare("SELECT * FROM vehicle_units WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $unit) {
+            $units[(int) $unit['id']] = $unit;
+        }
+    }
+
+    if ($primaryId !== '') {
+        $primaryInt = ctype_digit($primaryId) ? (int) $primaryId : 0;
+        $primaryUnit = $units[$primaryInt] ?? null;
+        if (!$primaryUnit) {
+            $errors['primary_vehicle_unit_id'] = 'Основная транспортная единица не найдена';
+        } elseif (($primaryUnit['status'] ?? '') !== 'active') {
+            $errors['primary_vehicle_unit_id'] = 'Основная транспортная единица неактивна';
+        } elseif (!in_array((string) ($primaryUnit['unit_type'] ?? ''), $rule['primary_unit_types'], true)) {
+            $errors['primary_vehicle_unit_id'] = 'Для выбранного типа комплекта допустимы только: ' . vehicleSetUnitTypeLabelList($rule['primary_unit_types']);
+        }
+    }
+
+    if ($secondaryId !== '') {
+        $secondaryInt = ctype_digit($secondaryId) ? (int) $secondaryId : 0;
+        $secondaryUnit = $units[$secondaryInt] ?? null;
+        if (!$secondaryUnit) {
+            $errors['secondary_vehicle_unit_id'] = 'Дополнительная транспортная единица не найдена';
+        } elseif (($secondaryUnit['status'] ?? '') !== 'active') {
+            $errors['secondary_vehicle_unit_id'] = 'Дополнительная транспортная единица неактивна';
+        } elseif (!in_array((string) ($secondaryUnit['unit_type'] ?? ''), $rule['secondary_unit_types'], true)) {
+            $errors['secondary_vehicle_unit_id'] = 'Для выбранного типа комплекта допустимы только: ' . vehicleSetUnitTypeLabelList($rule['secondary_unit_types']);
+        }
+    }
+
+    if ($primaryId !== '' && $secondaryId !== '' && ctype_digit($primaryId) && ctype_digit($secondaryId) && (int) $primaryId === (int) $secondaryId) {
+        $errors['secondary_vehicle_unit_id'] = 'Основная и дополнительная единицы должны отличаться';
+    }
+
+    return ['errors' => $errors, 'units' => $units];
+}
+
+function ensureDocumentTypeRecord(PDO $localPdo, string $name, string $code, string $entityType, string $category = 'predefined'): ?int
+{
+    $name = trim($name);
+    if ($name === '') {
+        return null;
+    }
+
+    try {
+        $insert = $localPdo->prepare(
+            'INSERT IGNORE INTO document_types (name, code, entity_type, category, created_by_user_id, created_by_role)
+             VALUES (:name, :code, :entity_type, :category, :user_id, :role)'
+        );
+        $insert->execute([
+            ':name' => $name,
+            ':code' => $code !== '' ? $code : null,
+            ':entity_type' => $entityType !== '' ? $entityType : null,
+            ':category' => $category,
+            ':user_id' => (int) ($_SESSION['user_id'] ?? 0),
+            ':role' => (string) ($_SESSION['role_code'] ?? 'system'),
+        ]);
+    } catch (\Throwable $e) {
+    }
+
+    $lookup = $localPdo->prepare(
+        'SELECT id
+           FROM document_types
+          WHERE name = :name
+            AND ((entity_type = :entity_type_value) OR (entity_type IS NULL AND :entity_type_null IS NULL))
+          ORDER BY id DESC
+          LIMIT 1'
+    );
+    $lookup->execute([
+        ':name' => $name,
+        ':entity_type_value' => $entityType !== '' ? $entityType : null,
+        ':entity_type_null' => $entityType !== '' ? $entityType : null,
+    ]);
+
+    $id = $lookup->fetchColumn();
+    return $id !== false ? (int) $id : null;
 }
 
 function applyLocalMigrations(\PDO $localPdo): void
@@ -134,7 +355,6 @@ function applyLocalMigrations(\PDO $localPdo): void
                 $localPdo->exec($sql);
             }
         } catch (\Exception $e) {
-            // Log warning but don't fail
             error_log('Local migration ' . $fileName . ': ' . $e->getMessage());
         }
     }
@@ -174,455 +394,6 @@ $router->get('/test-db', function () use ($db) {
     } catch (\Exception $e) {
         echo 'DB connection FAILED';
     }
-});
-
-$router->get('/superadmin', function () use ($config, $db) {
-    requireRole('superadmin');
-    applyCentralMigrations($db);
-    $pageTitle = 'SUPERADMIN';
-    $pageContext = 'Центральная панель управления';
-
-    $metrics = [
-        'total_companies' => 0,
-        'active_companies' => 0,
-        'blocked_companies' => 0,
-        'archived_companies' => 0,
-        'companies_without_owner' => 0,
-        'companies_without_users' => 0,
-    ];
-    $recentCompanies = [];
-
-    try {
-        $pdo = $db->connection();
-
-        $stmt = $pdo->query(
-            "SELECT COUNT(*) as total,
-                    SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
-                    SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked,
-                    SUM(CASE WHEN status = 'archived' THEN 1 ELSE 0 END) as archived
-             FROM companies"
-        );
-        $row = $stmt->fetch();
-        if ($row) {
-            $metrics['total_companies'] = (int)$row['total'];
-            $metrics['active_companies'] = (int)$row['active'];
-            $metrics['blocked_companies'] = (int)($row['blocked'] ?? 0);
-            $metrics['archived_companies'] = (int)($row['archived'] ?? 0);
-        }
-
-        $stmt = $pdo->query(
-            "SELECT COUNT(*) FROM companies c
-             WHERE NOT EXISTS (
-                 SELECT 1 FROM company_users cu WHERE cu.company_id = c.id AND cu.role = 'company_owner'
-             )"
-        );
-        $metrics['companies_without_owner'] = (int)$stmt->fetchColumn();
-
-        $stmt = $pdo->query(
-            "SELECT COUNT(*) FROM companies c
-             WHERE NOT EXISTS (
-                 SELECT 1 FROM company_users cu WHERE cu.company_id = c.id
-             )"
-        );
-        $metrics['companies_without_users'] = (int)$stmt->fetchColumn();
-
-        $recentCompanies = $pdo->query(
-            "SELECT c.id, c.name, c.inn, c.status, c.created_at
-             FROM companies c
-             ORDER BY c.created_at DESC
-             LIMIT 5"
-        )->fetchAll(\PDO::FETCH_ASSOC);
-    } catch (\Exception $e) {
-        // metrics remain at zero defaults
-    }
-
-    ob_start();
-    require base_path('app/View/pages/superadmin_dashboard.php');
-    $content = ob_get_clean();
-
-    require base_path('app/View/layouts/main.php');
-});
-
-$router->get('/superadmin/companies', function () use ($config, $db) {
-    requireRole('superadmin');
-    $pageTitle = 'Реестр компаний';
-    $pageContext = '';
-
-    $search = trim($_GET['search'] ?? '');
-    $filterStatus = trim($_GET['status'] ?? '');
-
-    try {
-        $pdo = $db->connection();
-
-        $sql = 'SELECT * FROM companies WHERE 1=1';
-        $params = [];
-
-        if ($search !== '') {
-            $sql .= ' AND (name LIKE ? OR inn LIKE ?)';
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-        }
-        if ($filterStatus !== '') {
-            $sql .= ' AND status = ?';
-            $params[] = $filterStatus;
-        }
-        
-        $sql .= ' ORDER BY created_at DESC';
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $ownerMap = [];
-        $companyIds = array_column($companies, 'id');
-        if (!empty($companyIds)) {
-            $placeholders = implode(',', array_fill(0, count($companyIds), '?'));
-            $ownerStmt = $pdo->prepare(
-                "SELECT id, company_id, full_name FROM company_users 
-                 WHERE company_id IN ($placeholders) AND role = 'company_owner' AND status = 'active'"
-            );
-            $ownerStmt->execute($companyIds);
-            foreach ($ownerStmt->fetchAll() as $owner) {
-                $ownerMap[$owner['company_id']] = $owner;
-            }
-        }
-        foreach ($companies as &$c) {
-            $c['owner_name'] = $ownerMap[$c['id']]['full_name'] ?? null;
-            $c['owner_id'] = $ownerMap[$c['id']]['id'] ?? null;
-            $c['user_count'] = !empty($c['owner_id']) ? 1 : 0;
-        }
-        unset($c);
-
-        foreach ($companies as &$c) {
-            if (!empty($c['db_identifier']) && $c['status'] === 'active') {
-    try {
-        $localDbConfig = $config['database'];
-                    $localDbConfig['database'] = $c['db_identifier'];
-                    $localDb = new \App\Core\Database($localDbConfig);
-                    $localPdo = $localDb->connection();
-                applyLocalMigrations($localPdo);
-                    $logistCount = $localPdo->query("SELECT COUNT(*) FROM users WHERE role_code = 'logist'")->fetchColumn();
-                    $c['user_count'] += (int)$logistCount;
-                } catch (\Exception $e) {
-                }
-            }
-        }
-        unset($c);
-
-        $dbError = null;
-    } catch (\Exception $e) {
-        $companies = [];
-        $dbError = 'Не удалось загрузить список компаний. Попробуйте позже.';
-    }
-
-    ob_start();
-    require base_path('app/View/pages/superadmin_companies.php');
-    $content = ob_get_clean();
-
-    require base_path('app/View/layouts/main.php');
-});
-
-$router->get('/superadmin/companies/create', function () use ($config) {
-    requireRole('superadmin');
-    $pageTitle = 'Создать экспедитора';
-    $pageContext = 'Реестр компаний';
-    $errors = [];
-    $old = [];
-    $formError = null;
-
-    ob_start();
-    require base_path('app/View/pages/superadmin_companies_create.php');
-    $content = ob_get_clean();
-
-    require base_path('app/View/layouts/main.php');
-});
-
-$router->post('/superadmin/companies/create', function () use ($config, $db) {
-    requireRole('superadmin');
-    $pageTitle = 'Создать экспедитора';
-    $pageContext = 'Реестр компаний';
-    $errors = [];
-    $old = $_POST;
-    $formError = null;
-
-    $name = trim($_POST['name'] ?? '');
-    $inn  = trim($_POST['inn'] ?? '');
-
-    if ($name === '') {
-        $errors['name'] = 'Обязательное поле';
-    }
-
-    if ($inn === '') {
-        $errors['inn'] = 'Обязательное поле';
-    }
-
-    if (!empty($errors)) {
-        ob_start();
-        require base_path('app/View/pages/superadmin_companies_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
-        return;
-    }
-
-    try {
-        $pdo = $db->connection();
-
-        $key = 'company_' . uniqid();
-
-        $insert = $pdo->prepare(
-            'INSERT INTO companies (`key`, name, inn, kpp, ogrn, legal_address, physical_address,
-                director_position, director_full_name, comments, status)
-             VALUES (:key, :name, :inn, :kpp, :ogrn, :legal_address, :physical_address,
-                :director_position, :director_full_name, :comments, :status)'
-        );
-
-        $insert->execute([
-            ':key'              => $key,
-            ':name'             => $name,
-            ':inn'              => $inn,
-            ':kpp'              => $_POST['kpp'] ?? null,
-            ':ogrn'             => $_POST['ogrn'] ?? null,
-            ':legal_address'   => $_POST['legal_address'] ?? null,
-            ':physical_address' => $_POST['physical_address'] ?? null,
-            ':director_position' => $_POST['director_position'] ?? null,
-            ':director_full_name' => $_POST['director_full_name'] ?? null,
-            ':comments'         => $_POST['comments'] ?? null,
-            ':status'           => 'provisioning',
-        ]);
-
-        $companyId = (int) $pdo->lastInsertId();
-        $dbName = 'erp_company_' . $companyId;
-        $storageDir = storage_path('companies/' . $companyId);
-
-        $newKey = 'company_' . $companyId;
-
-        try {
-            $dbConfig = $config['database'];
-            $dbConfig['database'] = '';
-            $sysDb = new \App\Core\Database($dbConfig);
-            $sysPdo = $sysDb->connection();
-            $sysPdo->exec('CREATE DATABASE IF NOT EXISTS `' . $dbName . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
-        } catch (\Exception $e) {
-            $pdo->prepare('UPDATE companies SET status = :status, error_message = :msg WHERE id = :id')
-                ->execute([
-                    ':status' => 'error',
-                    ':msg'    => 'Не удалось создать базу данных: ' . $e->getMessage(),
-                    ':id'     => $companyId,
-                ]);
-
-            $formError = 'Ошибка создания инфраструктуры. База данных не создана. Запись сохранена со статусом "Ошибка".';
-
-            ob_start();
-            require base_path('app/View/pages/superadmin_companies_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        try {
-            if (!is_dir($storageDir)) {
-                mkdir($storageDir, 0755, true);
-            }
-        } catch (\Exception $e) {
-            $pdo->prepare('UPDATE companies SET status = :status, error_message = :msg, db_identifier = :db WHERE id = :id')
-                ->execute([
-                    ':status' => 'error',
-                    ':msg'    => 'БД создана, но не удалось создать storage-папку: ' . $e->getMessage(),
-                    ':db'     => $dbName,
-                    ':id'     => $companyId,
-                ]);
-
-            $formError = 'База данных создана, но не удалось создать storage-папку. Запись сохранена со статусом "Ошибка".';
-
-            ob_start();
-            require base_path('app/View/pages/superadmin_companies_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $pdo->prepare('UPDATE companies SET status = :status, db_identifier = :db, storage_path = :storage, `key` = :new_key WHERE id = :id')
-            ->execute([
-                ':status'  => 'active',
-                ':db'      => $dbName,
-                ':storage' => 'storage/companies/' . $companyId . '/',
-                ':new_key' => $newKey,
-                ':id'      => $companyId,
-            ]);
-
-        header('Location: /superadmin/companies');
-        exit;
-    } catch (\Exception $e) {
-        $formError = 'Не удалось создать экспедитора: ' . $e->getMessage();
-
-        ob_start();
-        require base_path('app/View/pages/superadmin_companies_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
-    }
-});
-
-$router->get('/superadmin/companies/{id}/create-owner', function ($id) use ($config, $db) {
-    requireRole('superadmin');
-    $pageTitle = 'Создать Руководителя';
-    $pageContext = 'Реестр компаний';
-
-    try {
-        $pdo = $db->connection();
-        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
-        $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-
-        $ownerExists = false;
-        $existingOwner = null;
-        if ($company) {
-            $ownerStmt = $pdo->prepare("SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' LIMIT 1");
-            $ownerStmt->execute([(int) $id]);
-            $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-            $ownerExists = $existingOwner !== null;
-        }
-
-        $success = false;
-        $errors = [];
-        $old = [];
-        $formError = null;
-        $generatedPassword = generatePassword();
-        $createdOwner = null;
-        $tempPassword = null;
-    } catch (\Exception $e) {
-        $company = null;
-        $ownerExists = false;
-        $existingOwner = null;
-        $success = false;
-        $errors = [];
-        $old = [];
-        $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
-        $generatedPassword = null;
-        $createdOwner = null;
-        $tempPassword = null;
-    }
-
-    ob_start();
-    require base_path('app/View/pages/superadmin_company_owner_create.php');
-    $content = ob_get_clean();
-    require base_path('app/View/layouts/main.php');
-});
-
-$router->post('/superadmin/companies/{id}/create-owner', function ($id) use ($config, $db) {
-    requireRole('superadmin');
-    $pageTitle = 'Создать Руководителя';
-    $pageContext = 'Реестр компаний';
-
-    $errors = [];
-    $old = $_POST;
-    $formError = null;
-    $success = false;
-    $generatedPassword = null;
-    $createdOwner = null;
-    $tempPassword = null;
-    $ownerExists = false;
-    $existingOwner = null;
-
-    try {
-        $pdo = $db->connection();
-        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
-        $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-
-        if (!$company) {
-            ob_start();
-            require base_path('app/View/pages/superadmin_company_owner_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $ownerStmt = $pdo->prepare("SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' LIMIT 1");
-        $ownerStmt->execute([(int) $id]);
-        $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-        $ownerExists = $existingOwner !== null;
-
-        if ($ownerExists) {
-            ob_start();
-            require base_path('app/View/pages/superadmin_company_owner_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $fullName = trim($_POST['full_name'] ?? '');
-        $login = trim($_POST['login'] ?? '');
-        $password = trim($_POST['password'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $phone = trim($_POST['phone'] ?? '');
-        $position = trim($_POST['position'] ?? '');
-        $comments = trim($_POST['comments'] ?? '');
-
-        if ($fullName === '') {
-            $errors['full_name'] = 'Обязательное поле';
-        }
-
-        if ($login === '') {
-            $errors['login'] = 'Обязательное поле';
-        } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
-            $errors['login'] = 'Только латинские буквы, цифры и подчёркивание';
-        } else {
-            $dupStmt = $pdo->prepare('SELECT COUNT(*) FROM company_users WHERE login = ?');
-            $dupStmt->execute([$login]);
-            if ((int) $dupStmt->fetchColumn() > 0) {
-                $errors['login'] = 'Такой логин уже используется';
-            }
-        }
-
-        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Некорректный email';
-        }
-
-        if ($password === '') {
-            $password = generatePassword();
-        }
-
-        if (!empty($errors)) {
-            $generatedPassword = generatePassword();
-            ob_start();
-            require base_path('app/View/pages/superadmin_company_owner_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $insert = $pdo->prepare(
-            'INSERT INTO company_users (company_id, full_name, login, email, phone, position, password_hash, role, status, comments)
-             VALUES (:company_id, :full_name, :login, :email, :phone, :position, :password_hash, :role, :status, :comments)'
-        );
-        $insert->execute([
-            ':company_id'    => (int) $id,
-            ':full_name'     => $fullName,
-            ':login'         => $login,
-            ':email'         => $email !== '' ? $email : null,
-            ':phone'         => $phone !== '' ? $phone : null,
-            ':position'      => $position !== '' ? $position : null,
-            ':password_hash' => password_hash($password, PASSWORD_BCRYPT),
-            ':role'          => 'company_owner',
-            ':status'        => 'active',
-            ':comments'      => $comments !== '' ? $comments : null,
-        ]);
-
-        $createdOwner = [
-            'full_name' => $fullName,
-            'login'     => $login,
-        ];
-        $tempPassword = $password;
-        $success = true;
-    } catch (\Exception $e) {
-        $company = $company ?? null;
-        $formError = 'Ошибка создания Руководителя: ' . $e->getMessage();
-    }
-
-    ob_start();
-    require base_path('app/View/pages/superadmin_company_owner_create.php');
-    $content = ob_get_clean();
-    require base_path('app/View/layouts/main.php');
 });
 
 $router->get('/superadmin/companies/{id}', function ($id) use ($config, $db) {
@@ -3343,7 +3114,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             'contractor_type' => ($_POST['contractor_type'] ?? '') !== '' ? $_POST['contractor_type'] : null,
         ];
 
-        // ── Process document uploads during creation ──
+        // -- Process document uploads during creation --
         $docErrors = []; $uploadedDocs = []; $entityType = 'contractor';
         try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
         try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
@@ -5184,7 +4955,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         $newDriverId = (int)$localPdo->lastInsertId();
         $entityType = 'driver';
 
-        // ── Process extra phones during creation ──
+        // -- Process extra phones during creation --
         $extraPhones = $_POST['extra_phones'] ?? [];
         if (is_array($extraPhones)) {
             try { $localPdo->query("SELECT 1 FROM driver_phones LIMIT 1")->fetch(); }
@@ -5210,7 +4981,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             $createdDriver['extra_phones'] = [];
         }
 
-        // ── Process document uploads during creation ──
+        // -- Process document uploads during creation --
         $docErrors = [];
         $uploadedDocs = [];
 
@@ -6981,7 +6752,7 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
             ob_start();
             echo '<div class="page-head"><div><h1>' . e($pageTitle) . '</h1></div></div>';
             echo '<div class="notice warn">' . e($message) . '</div>';
-            echo '<div class="form-actions"><a href="/company/vehicles/' . $vehicleId . '" class="btn btn-ghost">← К просмотру</a></div>';
+            echo '<div class="form-actions"><a href="/company/vehicles/' . $vehicleId . '" class="btn btn-ghost">< К просмотру</a></div>';
             $content = ob_get_clean();
             require base_path('app/View/layouts/main.php');
             return;
@@ -8107,11 +7878,20 @@ $router->get('/company/vehicle-sets', function () use ($config, $db) {
 $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать транспорт';
-    $pageContext = 'Транспорт › Компания';
+    $pageContext = 'Транспорт > Компания';
 
-    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $companyId = (int) (getSessionCompanyId() ?? 0);
+    $company = null;
+    $success = false;
+    $errors = [];
+    $old = [];
+    $formError = null;
+    $createdVehicleSet = null;
+    $docErrors = [];
+    $uploadedDocs = [];
+    $docTypes = [];
+
     if ($companyId <= 0) {
-        $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdVehicleSet = null; $vehicleUnits = [];
         ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
         $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
         return;
@@ -8123,38 +7903,32 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
         $stmt->execute([$companyId]);
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) {
-            $company = null; $success = false; $errors = []; $old = []; $formError = null; $createdVehicleSet = null; $vehicleUnits = [];
-            ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
-            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-            return;
+            $company = null;
+            goto renderCreateVehicleSet;
         }
-        $pageContext = 'Транспорт › Компания: ' . $company['name'];
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
-        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        $pageContext = 'Транспорт > Компания: ' . $company['name'];
+
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $company['db_identifier'];
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 
-        try { $localPdo->query("SELECT 1 FROM vehicle_units LIMIT 1")->fetch(); }
-        catch (\Exception $e) {
-            $localPdo->exec(file_get_contents(base_path('database/migrations-local/005_create_company_vehicles.sql')));
-        }
-
-        $vehicleUnits = $localPdo->query("SELECT * FROM vehicle_units WHERE status = 'active' ORDER BY plate_number")->fetchAll(PDO::FETCH_ASSOC);
-
-        $docTypes = [];
-        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
-        catch (\Exception $e) {
+        try {
+            $localPdo->query('SELECT 1 FROM document_types LIMIT 1')->fetch();
+        } catch (\Exception $e) {
             $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
             $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
         }
-        $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'vehicle_set' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
 
-        $success = false; $errors = []; $old = []; $formError = null; $createdVehicleSet = null;
+        $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'vehicle_unit' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
     } catch (\Exception $e) {
-        $company = null; $success = false; $errors = []; $old = []; $formError = 'Ошибка: ' . $e->getMessage(); $createdVehicleSet = null; $vehicleUnits = [];
+        $company = null;
+        $formError = 'Ошибка: ' . $e->getMessage();
     }
 
+    renderCreateVehicleSet:
     ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
     $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
 });
@@ -8162,13 +7936,21 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
 $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
     $pageTitle = 'Создать транспорт';
-    $pageContext = 'Транспорт › Компания';
+    $pageContext = 'Транспорт > Компания';
 
-    $companyId = (int)(getSessionCompanyId() ?? 0);
-    $errors = []; $old = $_POST; $formError = null; $success = false; $createdVehicleSet = null; $vehicleUnits = []; $docErrors = []; $uploadedDocs = [];
+    $companyId = (int) (getSessionCompanyId() ?? 0);
+    $errors = [];
+    $old = $_POST;
+    $formError = null;
+    $success = false;
+    $createdVehicleSet = null;
+    $docErrors = [];
+    $uploadedDocs = [];
+    $docTypes = [];
+    $company = null;
 
     if ($companyId <= 0) {
-        $company = null; $formError = 'Компания не найдена';
+        $formError = 'Компания не найдена';
         ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
         $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
         return;
@@ -8179,114 +7961,357 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([$companyId]);
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderCreateVS; }
-        $pageContext = 'Транспорт › Компания: ' . $company['name'];
-        if ($company['status'] !== 'active') { $formError = 'Создание недоступно'; goto renderCreateVS; }
+        if (!$company) {
+            $company = null;
+            $formError = 'Компания не найдена';
+            goto renderCreateVehicleSetPost;
+        }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
-        $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
+        $pageContext = 'Транспорт > Компания: ' . $company['name'];
+        if (($company['status'] ?? '') !== 'active') {
+            $formError = 'Компания недоступна';
+            goto renderCreateVehicleSetPost;
+        }
+
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $company['db_identifier'];
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 
-        $vehicleUnits = $localPdo->query("SELECT * FROM vehicle_units WHERE status = 'active' ORDER BY plate_number")->fetchAll(PDO::FETCH_ASSOC);
-
-        $setType = trim($_POST['set_type'] ?? '');
-        $primaryId = trim($_POST['primary_vehicle_unit_id'] ?? '');
-        $secondaryId = trim($_POST['secondary_vehicle_unit_id'] ?? '');
-        $status = trim($_POST['status'] ?? 'active');
-        $comments = trim($_POST['comments'] ?? '');
-
-        if ($primaryId === '') { $errors['primary_vehicle_unit_id'] = 'Обязательное поле'; }
-        if (($setType === 'coupling' || $setType === 'road_train') && $secondaryId === '') {
-            $errors['secondary_vehicle_unit_id'] = 'Обязательно для сцепки и автопоезда';
+        try {
+            $localPdo->query('SELECT 1 FROM document_types LIMIT 1')->fetch();
+        } catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
         }
-        if ($setType === 'single') { $secondaryId = ''; }
+        $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'vehicle_unit' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
 
-        if (!empty($primaryId)) {
-            $vuCheck = $localPdo->prepare("SELECT unit_type FROM vehicle_units WHERE id = ?");
-            $vuCheck->execute([(int)$primaryId]);
-            $vuRow = $vuCheck->fetch(PDO::FETCH_ASSOC);
-            if (!$vuRow) { $errors['primary_vehicle_unit_id'] = 'Единица не найдена'; }
+        $rules = vehicleSetTypeRules();
+        $docSections = vehicleSetPredefinedDocumentSections();
+        $setType = trim((string) ($_POST['set_type'] ?? ''));
+        $status = trim((string) ($_POST['status'] ?? 'active'));
+        $comments = trim((string) ($_POST['comments'] ?? ''));
+        $unitsInput = isset($_POST['units']) && is_array($_POST['units']) ? $_POST['units'] : [];
+        $activeRoles = vehicleSetVisibleUnitRoles($setType);
+        $unitPayload = [];
+        $createdUnits = [];
+        $createdUnitIds = [];
+        $storedPaths = [];
+
+        if ($setType === '' || !isset($rules[$setType])) {
+            $errors['set_type'] = 'Выберите тип комплекта';
+        }
+        if (!in_array($status, ['active', 'inactive'], true)) {
+            $status = 'active';
         }
 
-        if (!empty($errors)) { goto renderCreateVS; }
+        foreach ($activeRoles as $role) {
+            $unitRule = $rules[$setType]['units'][$role] ?? [];
+            $source = isset($unitsInput[$role]) && is_array($unitsInput[$role]) ? $unitsInput[$role] : [];
+            $label = (string) ($unitRule['label'] ?? 'Транспортная единица');
+            $showCapacity = !empty($unitRule['show_capacity']);
+            $showVolume = !empty($unitRule['show_volume']);
+            $diagnosticCardDate = trim((string) ($source['diagnostic_card_date'] ?? ''));
+            $payload = [
+                'label' => $label,
+                'unit_type' => (string) ($unitRule['unit_type'] ?? ''),
+                'plate_number' => trim((string) ($source['plate_number'] ?? '')),
+                'brand' => trim((string) ($source['brand'] ?? '')),
+                'model' => trim((string) ($source['model'] ?? '')),
+                'vin' => trim((string) ($source['vin'] ?? '')),
+                'capacity_tons' => trim((string) ($source['capacity_tons'] ?? '')),
+                'volume_m3' => trim((string) ($source['volume_m3'] ?? '')),
+                'diagnostic_card_number' => trim((string) ($source['diagnostic_card_number'] ?? '')),
+                'diagnostic_card_date' => $diagnosticCardDate,
+                'show_capacity' => $showCapacity,
+                'show_volume' => $showVolume,
+            ];
+            $unitPayload[$role] = $payload;
 
-        $insert = $localPdo->prepare(
-            'INSERT INTO vehicle_sets (set_type, primary_vehicle_unit_id, secondary_vehicle_unit_id, status, comments, created_by_user_id, created_by_role)
-             VALUES (:set_type, :primary_id, :secondary_id, :status, :comments, :uid, :role)'
-        );
-        $insert->execute([
-            ':set_type' => $setType !== '' ? $setType : null,
-            ':primary_id' => (int)$primaryId,
-            ':secondary_id' => $secondaryId !== '' ? (int)$secondaryId : null,
-            ':status' => $status,
-            ':comments' => $comments !== '' ? $comments : null,
-            ':uid' => (int)$_SESSION['user_id'],
-            ':role' => $_SESSION['role_code'],
-        ]);
-
-        $newId = (int)$localPdo->lastInsertId();
-        $createdVehicleSet = [
-            'id' => $newId, 'set_type' => $setType,
-            'primary_plate' => $vehicleUnits[array_search((int)$primaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '',
-            'secondary_plate' => $secondaryId ? ($vehicleUnits[array_search((int)$secondaryId, array_column($vehicleUnits, 'id'))]['plate_number'] ?? '') : null,
-        ];
-
-        // ── Process document uploads during creation ──
-        $docErrors = []; $uploadedDocs = []; $entityType = 'vehicle_set';
-        try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
-        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); } catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
-        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx']; $maxSize = 20 * 1024 * 1024;
-        if (!empty($_FILES['predef_doc']['name']) && is_array($_FILES['predef_doc']['name'])) {
-            foreach ($_FILES['predef_doc']['name'] as $code => $origName) {
-                $fe = $_FILES['predef_doc']['error'][$code] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
-                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['predef_doc']['size'][$code];
-                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимый формат'; continue; }
-                if ($fs > $maxSize) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: размер > 20 МБ'; continue; }
-                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: недопустимое имя'; continue; }
-                try {
-                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newId; $absoluteDir = storage_path($relativeDir);
-                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
-                    if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
-                    $docTypeName = $_POST['predef_doc_type'][$code] ?? ''; $mime = $_FILES['predef_doc']['type'][$code]; $dtId = null;
-                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
-                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :cuid, :crole)');
-                    $ins->execute([':et' => $entityType, ':eid' => $newId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]);
-                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
-                } catch (\Exception $ex) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: ошибка сохранения'; }
+            if ($payload['plate_number'] === '') {
+                $errors['units'][$role]['plate_number'] = 'Укажите госномер';
             }
-        }
-        if (!empty($_FILES['custom_doc_file']['name']) && is_array($_FILES['custom_doc_file']['name'])) {
-            foreach ($_FILES['custom_doc_file']['name'] as $idx => $origName) {
-                $fe = $_FILES['custom_doc_file']['error'][$idx] ?? UPLOAD_ERR_NO_FILE; if ($fe !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
-                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)); $fs = $_FILES['custom_doc_file']['size'][$idx];
-                if (!in_array($ext, $allowedExt, true)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимый формат'; continue; }
-                if ($fs > $maxSize) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': размер > 20 МБ'; continue; }
-                if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимое имя'; continue; }
-                $customTypeNew = trim($_POST['custom_doc_type_new'][$idx] ?? ''); $customTypeSelect = trim($_POST['custom_doc_type'][$idx] ?? ''); $docTypeName = $customTypeNew !== '' ? $customTypeNew : $customTypeSelect; $dtId = null;
-                if ($customTypeNew !== '') { try { $idts = $localPdo->prepare("INSERT IGNORE INTO document_types (name, entity_type, category, created_by_user_id, created_by_role) VALUES (:name, :et, 'custom', :uid, :role)"); $idts->execute([':name' => $customTypeNew, ':et' => $entityType, ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]); $dtId = $localPdo->lastInsertId(); if (!$dtId) { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeNew]); $dtId = $g->fetchColumn() ?: null; } } catch (\Exception $ex) {} }
-                elseif ($customTypeSelect !== '') { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeSelect]); $dtId = $g->fetchColumn() ?: null; }
-                try {
-                    $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newId; $absoluteDir = storage_path($relativeDir);
-                    if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
-                    if (!move_uploaded_file($_FILES['custom_doc_file']['tmp_name'][$idx], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': не удалось сохранить'; continue; }
-                    $mime = $_FILES['custom_doc_file']['type'][$idx];
-                    $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :cuid, :crole)');
-                    $ins->execute([':et' => $entityType, ':eid' => $newId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]);
-                    $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
-                } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка сохранения'; }
+            if ($payload['vin'] !== '' && !preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', strtoupper($payload['vin']))) {
+                $errors['units'][$role]['vin'] = 'Формат VIN: 17 символов';
+            }
+            if ($payload['diagnostic_card_number'] !== '' && !ctype_digit($payload['diagnostic_card_number'])) {
+                $errors['units'][$role]['diagnostic_card_number'] = 'Только цифры';
+            }
+            if ($diagnosticCardDate !== '') {
+                $dateCheck = \DateTime::createFromFormat('Y-m-d', $diagnosticCardDate);
+                if (!$dateCheck || $dateCheck->format('Y-m-d') !== $diagnosticCardDate) {
+                    $errors['units'][$role]['diagnostic_card_date'] = 'Некорректная дата';
+                }
+            }
+            if ($showCapacity) {
+                if ($payload['capacity_tons'] !== '' && (!is_numeric($payload['capacity_tons']) || (float) $payload['capacity_tons'] <= 0)) {
+                    $errors['units'][$role]['capacity_tons'] = 'Введите число';
+                }
+            } else {
+                $payload['capacity_tons'] = '';
+                $unitPayload[$role]['capacity_tons'] = '';
+            }
+            if ($showVolume) {
+                if ($payload['volume_m3'] !== '' && (!is_numeric($payload['volume_m3']) || (float) $payload['volume_m3'] <= 0)) {
+                    $errors['units'][$role]['volume_m3'] = 'Введите число';
+                }
+            } else {
+                $payload['volume_m3'] = '';
+                $unitPayload[$role]['volume_m3'] = '';
             }
         }
 
-        $success = true;
-        ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
-        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-        return;
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'rtf', 'odt', 'xls', 'xlsx', 'csv', 'ods', 'gif', 'bmp', 'tif', 'tiff', 'heic', 'heif'];
+        $maxSize = 20 * 1024 * 1024;
+
+        $normalizeNamedFiles = static function (array $fileBag, string $role, string $docCode): array {
+            $names = $fileBag['name'][$role][$docCode] ?? [];
+            $tmpNames = $fileBag['tmp_name'][$role][$docCode] ?? [];
+            $errors = $fileBag['error'][$role][$docCode] ?? [];
+            $sizes = $fileBag['size'][$role][$docCode] ?? [];
+            $types = $fileBag['type'][$role][$docCode] ?? [];
+            if (!is_array($names)) {
+                $names = [$names];
+                $tmpNames = [$tmpNames];
+                $errors = [$errors];
+                $sizes = [$sizes];
+                $types = [$types];
+            }
+            $items = [];
+            foreach ($names as $idx => $origName) {
+                $items[] = [
+                    'name' => trim((string) $origName),
+                    'tmp_name' => (string) ($tmpNames[$idx] ?? ''),
+                    'error' => (int) ($errors[$idx] ?? UPLOAD_ERR_NO_FILE),
+                    'size' => (int) ($sizes[$idx] ?? 0),
+                    'type' => (string) ($types[$idx] ?? ''),
+                ];
+            }
+            return $items;
+        };
+
+        $normalizeRoleFiles = static function (array $fileBag, string $role): array {
+            $names = $fileBag['name'][$role] ?? [];
+            $tmpNames = $fileBag['tmp_name'][$role] ?? [];
+            $errors = $fileBag['error'][$role] ?? [];
+            $sizes = $fileBag['size'][$role] ?? [];
+            $types = $fileBag['type'][$role] ?? [];
+            if (!is_array($names)) {
+                $names = [$names];
+                $tmpNames = [$tmpNames];
+                $errors = [$errors];
+                $sizes = [$sizes];
+                $types = [$types];
+            }
+            $items = [];
+            foreach ($names as $idx => $origName) {
+                $items[] = [
+                    'name' => trim((string) $origName),
+                    'tmp_name' => (string) ($tmpNames[$idx] ?? ''),
+                    'error' => (int) ($errors[$idx] ?? UPLOAD_ERR_NO_FILE),
+                    'size' => (int) ($sizes[$idx] ?? 0),
+                    'type' => (string) ($types[$idx] ?? ''),
+                ];
+            }
+            return $items;
+        };
+
+        foreach ($activeRoles as $role) {
+            $docs = $docSections[$role] ?? [];
+            $unitLabel = $unitPayload[$role]['label'] ?? 'Транспортная единица';
+            foreach ($docs as $docMeta) {
+                $files = $normalizeNamedFiles($_FILES['predef_doc'] ?? [], $role, $docMeta['doc_code']);
+                foreach ($files as $file) {
+                    if ($file['error'] === UPLOAD_ERR_NO_FILE || $file['name'] === '') {
+                        continue;
+                    }
+                    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowedExt, true)) {
+                        $docErrors[] = $unitLabel . ': Документ <' . $docMeta['name'] . '> имеет недопустимый формат';
+                    }
+                    if ($file['size'] > $maxSize) {
+                        $docErrors[] = $unitLabel . ': Документ <' . $docMeta['name'] . '> превышает 20 МБ';
+                    }
+                    if (strpos($file['name'], '../') !== false || strpos($file['name'], '..\\') !== false || strpos($file['name'], '/') !== false || strpos($file['name'], '\\') !== false) {
+                        $docErrors[] = $unitLabel . ': Документ <' . $docMeta['name'] . '> имеет недопустимое имя';
+                    }
+                }
+            }
+
+            $customSelected = $_POST['custom_doc_type'][$role] ?? [];
+            $customNew = $_POST['custom_doc_type_new'][$role] ?? [];
+            $customFiles = $normalizeRoleFiles($_FILES['custom_doc_file'] ?? [], $role);
+            $rowCount = max(count($customFiles), is_array($customSelected) ? count($customSelected) : 0, is_array($customNew) ? count($customNew) : 0);
+            for ($idx = 0; $idx < $rowCount; $idx++) {
+                $file = $customFiles[$idx] ?? ['name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0, 'tmp_name' => '', 'type' => ''];
+                $selectedType = trim((string) ((is_array($customSelected) ? ($customSelected[$idx] ?? '') : '')));
+                $newType = trim((string) ((is_array($customNew) ? ($customNew[$idx] ?? '') : '')));
+                $hasFile = $file['error'] !== UPLOAD_ERR_NO_FILE && $file['name'] !== '';
+                $hasType = $selectedType !== '' || $newType !== '';
+                if ($hasFile && !$hasType) {
+                    $docErrors[] = $unitLabel . ': Укажите название произвольного документа #' . ($idx + 1);
+                }
+                if ($hasFile) {
+                    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowedExt, true)) {
+                        $docErrors[] = $unitLabel . ': Произвольный документ #' . ($idx + 1) . ' имеет недопустимый формат';
+                    }
+                    if ($file['size'] > $maxSize) {
+                        $docErrors[] = $unitLabel . ': Произвольный документ #' . ($idx + 1) . ' превышает 20 МБ';
+                    }
+                    if (strpos($file['name'], '../') !== false || strpos($file['name'], '..\\') !== false || strpos($file['name'], '/') !== false || strpos($file['name'], '\\') !== false) {
+                        $docErrors[] = $unitLabel . ': Произвольный документ #' . ($idx + 1) . ' имеет недопустимое имя';
+                    }
+                }
+            }
+        }
+
+        if (!empty($errors) || !empty($docErrors)) {
+            goto renderCreateVehicleSetPost;
+        }
+
+        $storeUpload = static function (PDO $localPdo, int $companyId, string $entityType, int $entityId, string $docTypeName, string $docCode, array $file, string $category, array &$storedPaths) {
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $storedName = uniqid('doc_', true) . '.' . $ext;
+            $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $entityId;
+            $absoluteDir = storage_path($relativeDir);
+            if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true)) {
+                throw new RuntimeException('mkdir_failed');
+            }
+            $absolutePath = $absoluteDir . DIRECTORY_SEPARATOR . $storedName;
+            if (!move_uploaded_file($file['tmp_name'], $absolutePath)) {
+                throw new RuntimeException('move_failed');
+            }
+            $storedPaths[] = $absolutePath;
+            $documentTypeId = ensureDocumentTypeRecord($localPdo, $docTypeName, $docCode, $entityType, $category);
+            $insertDocument = $localPdo->prepare(
+                'INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role)
+                 VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :cuid, :crole)'
+            );
+            $insertDocument->execute([
+                ':et' => $entityType,
+                ':eid' => $entityId,
+                ':dtype' => $docTypeName,
+                ':dtid' => $documentTypeId,
+                ':oname' => $file['name'],
+                ':sname' => $storedName,
+                ':rpath' => $relativeDir . '/' . $storedName,
+                ':mime' => $file['type'],
+                ':fsize' => $file['size'],
+                ':status' => 'uploaded',
+                ':uid' => (int) $_SESSION['user_id'],
+                ':role' => $_SESSION['role_code'],
+                ':cuid' => (int) $_SESSION['user_id'],
+                ':crole' => $_SESSION['role_code'],
+            ]);
+        };
+
+        $localPdo->beginTransaction();
+        try {
+            $insertUnit = $localPdo->prepare(
+                'INSERT INTO vehicle_units (plate_number, brand, model, unit_type, vin, capacity_tons, volume_m3, diagnostic_card_number, diagnostic_card_date, status, comments, created_by_user_id, created_by_role)
+                 VALUES (:plate_number, :brand, :model, :unit_type, :vin, :capacity_tons, :volume_m3, :diagnostic_card_number, :diagnostic_card_date, :status, :comments, :created_by_user_id, :created_by_role)'
+            );
+
+            foreach ($activeRoles as $role) {
+                $payload = $unitPayload[$role];
+                $insertUnit->execute([
+                    ':plate_number' => $payload['plate_number'],
+                    ':brand' => $payload['brand'],
+                    ':model' => $payload['model'],
+                    ':unit_type' => $payload['unit_type'],
+                    ':vin' => $payload['vin'],
+                    ':capacity_tons' => ($payload['show_capacity'] && $payload['capacity_tons'] !== '') ? (float) $payload['capacity_tons'] : null,
+                    ':volume_m3' => ($payload['show_volume'] && $payload['volume_m3'] !== '') ? (float) $payload['volume_m3'] : null,
+                    ':diagnostic_card_number' => $payload['diagnostic_card_number'] !== '' ? $payload['diagnostic_card_number'] : null,
+                    ':diagnostic_card_date' => $payload['diagnostic_card_date'] !== '' ? $payload['diagnostic_card_date'] : null,
+                    ':status' => $status,
+                    ':comments' => null,
+                    ':created_by_user_id' => (int) $_SESSION['user_id'],
+                    ':created_by_role' => $_SESSION['role_code'],
+                ]);
+                $unitId = (int) $localPdo->lastInsertId();
+                $createdUnitIds[$role] = $unitId;
+                $createdUnits[$role] = $payload + ['id' => $unitId];
+            }
+
+            $insertSet = $localPdo->prepare(
+                'INSERT INTO vehicle_sets (set_type, primary_vehicle_unit_id, secondary_vehicle_unit_id, status, comments, created_by_user_id, created_by_role)
+                 VALUES (:set_type, :primary_id, :secondary_id, :status, :comments, :uid, :role)'
+            );
+            $insertSet->execute([
+                ':set_type' => $setType,
+                ':primary_id' => (int) ($createdUnitIds['primary'] ?? 0),
+                ':secondary_id' => isset($createdUnitIds['secondary']) ? (int) $createdUnitIds['secondary'] : null,
+                ':status' => $status,
+                ':comments' => $comments !== '' ? $comments : null,
+                ':uid' => (int) $_SESSION['user_id'],
+                ':role' => $_SESSION['role_code'],
+            ]);
+            $newSetId = (int) $localPdo->lastInsertId();
+
+            foreach ($activeRoles as $role) {
+                $docs = $docSections[$role] ?? [];
+                foreach ($docs as $docMeta) {
+                    $files = $normalizeNamedFiles($_FILES['predef_doc'] ?? [], $role, $docMeta['doc_code']);
+                    foreach ($files as $file) {
+                        if ($file['error'] === UPLOAD_ERR_NO_FILE || $file['name'] === '') {
+                            continue;
+                        }
+                        $storeUpload($localPdo, $companyId, 'vehicle_unit', (int) $createdUnitIds[$role], $docMeta['name'], $docMeta['doc_code'], $file, 'predefined', $storedPaths);
+                        $uploadedDocs[] = ($unitPayload[$role]['label'] ?? 'Транспортная единица') . ': ' . $docMeta['name'] . ' (' . $file['name'] . ')';
+                    }
+                }
+
+                $customSelected = $_POST['custom_doc_type'][$role] ?? [];
+                $customNew = $_POST['custom_doc_type_new'][$role] ?? [];
+                $customFiles = $normalizeRoleFiles($_FILES['custom_doc_file'] ?? [], $role);
+                $rowCount = max(count($customFiles), is_array($customSelected) ? count($customSelected) : 0, is_array($customNew) ? count($customNew) : 0);
+                for ($idx = 0; $idx < $rowCount; $idx++) {
+                    $file = $customFiles[$idx] ?? ['name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0, 'tmp_name' => '', 'type' => ''];
+                    if ($file['error'] === UPLOAD_ERR_NO_FILE || $file['name'] === '') {
+                        continue;
+                    }
+                    $selectedType = trim((string) ((is_array($customSelected) ? ($customSelected[$idx] ?? '') : '')));
+                    $newType = trim((string) ((is_array($customNew) ? ($customNew[$idx] ?? '') : '')));
+                    $docTypeName = $newType !== '' ? $newType : $selectedType;
+                    $storeUpload($localPdo, $companyId, 'vehicle_unit', (int) $createdUnitIds[$role], $docTypeName, '', $file, 'custom', $storedPaths);
+                    $uploadedDocs[] = ($unitPayload[$role]['label'] ?? 'Транспортная единица') . ': ' . $docTypeName . ' (' . $file['name'] . ')';
+                }
+            }
+
+            $localPdo->commit();
+
+            $createdVehicleSet = [
+                'id' => $newSetId,
+                'set_type' => $setType,
+                'status' => $status,
+                'comments' => $comments,
+                'units' => $createdUnits,
+                'primary_plate' => $createdUnits['primary']['plate_number'] ?? '',
+                'secondary_plate' => $createdUnits['secondary']['plate_number'] ?? null,
+                'primary_vehicle_unit_id' => $createdUnitIds['primary'] ?? null,
+                'secondary_vehicle_unit_id' => $createdUnitIds['secondary'] ?? null,
+            ];
+            $success = true;
+        } catch (\Throwable $e) {
+            if ($localPdo->inTransaction()) {
+                $localPdo->rollBack();
+            }
+            foreach ($storedPaths as $storedPath) {
+                if (is_string($storedPath) && $storedPath !== '' && is_file($storedPath)) {
+                    @unlink($storedPath);
+                }
+            }
+            throw $e;
+        }
     } catch (\Exception $e) {
-        $company = $company ?? null; $formError = 'Ошибка: ' . $e->getMessage();
+        $company = $company ?? null;
+        $formError = 'Ошибка: ' . $e->getMessage();
     }
 
-    renderCreateVS:
+    renderCreateVehicleSetPost:
     ob_start(); require base_path('app/View/pages/company_vehicle_sets_create.php');
     $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
 });
@@ -9930,7 +9955,7 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
     }
 });
 
-// ── Document Types (catalog/directory) ──
+// -- Document Types (catalog/directory) --
 
 $router->get('/company/document-types', function () use ($config, $db) {
     requireRole(['company_owner', 'logist']);
@@ -12362,7 +12387,7 @@ $router->get('/superadmin/companies/{id}/delete', function ($id) use ($config, $
 
     if (!$company) {
         ob_start();
-        echo '<div class="panel"><div class="panel-body"><div class="notice warn">Компания не найдена. <a href="/superadmin/companies">← К реестру</a></div></div></div>';
+        echo '<div class="panel"><div class="panel-body"><div class="notice warn">Компания не найдена. <a href="/superadmin/companies">< К реестру</a></div></div></div>';
         $content = ob_get_clean();
         require base_path('app/View/layouts/main.php');
         return;

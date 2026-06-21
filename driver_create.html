@@ -1,0 +1,286 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Создать водителя — ERP PLANEX</title>
+    <link rel="preload" href="/assets/fonts/IBMPlexSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/IBMPlexSans-Medium.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/IBMPlexSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/IBMPlexSans-Bold.woff2" as="font" type="font/woff2" crossorigin>
+    <style>
+        @font-face{font-family:"IBM Plex Sans";src:url("/assets/fonts/IBMPlexSans-Regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+        @font-face{font-family:"IBM Plex Sans";src:url("/assets/fonts/IBMPlexSans-Medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+        @font-face{font-family:"IBM Plex Sans";src:url("/assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+        @font-face{font-family:"IBM Plex Sans";src:url("/assets/fonts/IBMPlexSans-Bold.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap}
+    </style>
+    <link rel="stylesheet" href="/assets/css/erp-ui.css">
+    <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+    <div class="app">
+        <header class="topbar">
+            <div class="topbar-brand">
+                <div class="logo-mark"></div>
+                <span class="brand-name">ERP PLANEX</span>
+                <span class="brand-tag">ERP</span>
+            </div>
+            <div class="topbar-crumbs">
+                                                <span>Создать водителя</span>
+                                                                <span class="sep">›</span>
+                                <b>Водители › Компания: ООО Тест Этап 2 Runtime</b>
+                                            </div>
+            <div class="topbar-right">
+                                <div class="avatar">РТ</div>
+                <div class="user-info">
+                    <strong>Руководитель Тест</strong>
+                    <span>Руководитель</span>
+                </div>
+                <a href="/logout" class="btn btn-ghost">Выйти</a>
+                            </div>
+        </header>
+
+        <aside class="sidebar" aria-label="Основная навигация">
+
+            
+            <div class="nav-group">
+                <div class="nav-section-label">ОПЕРАЦИИ</div>
+                <a class="nav-item" href="/company/clients">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="5.5" width="12" height="8.5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5V4C5 3.4 5.4 3 6 3H10C10.6 3 11 3.4 11 4V5.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 9.5H14" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 9.5V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <span class="nav-label">Клиенты</span>
+                </a>
+                <div class="nav-item is-parent is-open">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="1.5" y="5" width="13" height="9.5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 5V3.5C5 2.9 5.4 2.5 6 2.5H10C10.6 2.5 11 2.9 11 3.5V5" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M1.5 9H14.5" stroke="currentColor" stroke-width="1.4"/>
+                        <rect x="6.5" y="6.5" width="3" height="3" rx=".5" stroke="currentColor" stroke-width="1.2"/>
+                    </svg>
+                    <span class="nav-label">Подрядчики</span>
+                    <svg class="nav-chevron" viewBox="0 0 14 14" fill="none"><path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="nav-sub is-open">
+                    <a class="nav-sub-item" href="/company/contractors">
+                        <span>Перевозчики</span>
+                    </a>
+                    <a class="nav-sub-item" href="/company/driver-vehicle-blocks">
+                        <span>Водители+ТС</span>
+                    </a>
+                    <a class="nav-sub-item is-active" href="/company/drivers">
+                        <span>Водители</span>
+                    </a>
+                    <a class="nav-sub-item" href="/company/vehicle-sets">
+                        <span>Транспорт</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="nav-spacer"></div>
+
+            <div class="nav-group">
+                <div class="nav-section-label">СИСТЕМА</div>
+                <a class="nav-item" href="/company/logists">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <circle cx="6" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M1.5 13.5C1.5 10.5 4 8.5 6 8.5C8 8.5 10.5 10.5 10.5 13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        <path d="M12 3L14.5 4.5V7C14.5 9.5 12.8 11.3 12 12C11.2 11.3 9.5 9.5 9.5 7V4.5L12 3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                        <path d="M10.8 7L11.5 8L13.2 5.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="nav-label">Логисты</span>
+                </a>
+            </div>
+
+            
+        </aside>
+
+        <main class="content">
+            ﻿
+<div class="page-head">
+    <div>
+        <h1>Создать водителя</h1>
+        <p class="text-muted">Компания: ООО Тест Этап 2 Runtime</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+
+<form method="post" action="/company/drivers/create" class="panel" enctype="multipart/form-data">
+    <div class="panel-body">
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Основные данные</h3>
+
+            <div class="field">
+                <label class="field-label">ФИО <span class="req">*</span></label>
+                <input type="text" name="full_name" class="field-input" required
+                       value="">
+                            </div>
+
+            <div class="field">
+                <label class="field-label">Телефон <span class="req">*</span></label>
+                <input type="text" name="phone" class="field-input"
+                       value="">
+                            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Паспортные данные</h3>
+
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">Серия и номер</label>
+                    <input type="text" name="passport_number" class="field-input"
+                           value="">
+                </div>
+
+                <div class="field">
+                    <label class="field-label">Код подразделения</label>
+                    <input type="text" name="passport_department_code" class="field-input"
+                           value="">
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="field-label">Кем выдан</label>
+                <input type="text" name="passport_issued_by" class="field-input"
+                       value="">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Дата выдачи</label>
+                <input type="date" name="passport_issue_date" class="field-input"
+                       value="">
+            </div>
+
+            <div class="field">
+                <label class="field-label">СНИЛС</label>
+                <input type="text" name="snils" class="field-input"
+                       value="">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Водительское удостоверение</h3>
+
+            <div class="field">
+                <label class="field-label">Номер ВУ</label>
+                <input type="text" name="license_number" class="field-input"
+                       value="">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Категория</label>
+                <input type="text" name="license_category" class="field-input"
+                       value="">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Дата выдачи</label>
+                <input type="date" name="license_issue_date" class="field-input"
+                       value="">
+            </div>
+
+            <div class="field">
+                <label class="field-label">Дата окончания</label>
+                <input type="date" name="license_expire_date" class="field-input"
+                       value="">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Дополнительно</h3>
+
+            <div class="field">
+                <label class="field-label">Комментарий</label>
+                <textarea name="comments" class="field-textarea" rows="3"></textarea>
+            </div>
+        </div>
+
+                <div class="form-section">
+            <h3 class="panel-head-title">Предопределённые документы</h3>
+            <p class="field-hint">Загрузите ожидаемые документы. Можно загрузить сейчас или позже в карточке водителя.</p>
+
+                        <div class="doc-upload-row" style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem;">
+                <span style="min-width:200px; font-size:13px;">Паспорт</span>
+                <input type="file" name="predef_doc[passport]" accept=".pdf,.jpg,.jpeg,.png" class="field-input" style="flex:1;">
+                <input type="hidden" name="predef_doc_type[passport]" value="Паспорт">
+            </div>
+                        <div class="doc-upload-row" style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem;">
+                <span style="min-width:200px; font-size:13px;">Водительское удостоверение</span>
+                <input type="file" name="predef_doc[driver_license]" accept=".pdf,.jpg,.jpeg,.png" class="field-input" style="flex:1;">
+                <input type="hidden" name="predef_doc_type[driver_license]" value="Водительское удостоверение">
+            </div>
+                        <div class="doc-upload-row" style="display:flex; gap:0.75rem; align-items:center; margin-bottom:0.75rem;">
+                <span style="min-width:200px; font-size:13px;">СНИЛС</span>
+                <input type="file" name="predef_doc[snils]" accept=".pdf,.jpg,.jpeg,.png" class="field-input" style="flex:1;">
+                <input type="hidden" name="predef_doc_type[snils]" value="СНИЛС">
+            </div>
+                    </div>
+        
+        <!-- Custom documents block -->
+        <div class="form-section">
+            <h3 class="panel-head-title">Произвольные документы</h3>
+            <p class="field-hint">Добавьте дополнительные документы с указанием типа. <a href="/company/document-types/create" target="_blank">Создать новый тип</a></p>
+
+            <div id="custom-docs-container"></div>
+
+            <button type="button" class="btn btn-ghost btn-sm" id="add-custom-doc-btn">+ Добавить документ</button>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Создать водителя</button>
+        </div>
+
+    </div>
+</form>
+
+<!-- DOC_JS: custom document rows -->
+<script>
+(function() {
+    var container = document.getElementById('custom-docs-container');
+    var addBtn = document.getElementById('add-custom-doc-btn');
+    if (!container || !addBtn) return;
+
+    var docTypes = [{"id":1,"name":"Паспорт","code":"passport","entity_type":"driver"},{"id":2,"name":"Водительское удостоверение","code":"driver_license","entity_type":"driver"},{"id":3,"name":"СНИЛС","code":"snils","entity_type":"driver"}];
+
+    function buildSelect(name) {
+        var s = '<select name="' + name + '" class="field-input" style="flex:1;"><option value="">— Выберите тип —</option>';
+        for (var i = 0; i < docTypes.length; i++) {
+            s += '<option value="' + docTypes[i].name.replace(/"/g, '&quot;') + '" data-id="' + docTypes[i].id + '">' + docTypes[i].name.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>';
+        }
+        s += '</select>';
+        return s;
+    }
+
+    function buildRow() {
+        var idx = container.children.length;
+        var div = document.createElement('div');
+        div.className = 'custom-doc-row';
+        div.style.cssText = 'display:flex; gap:0.75rem; align-items:flex-start; margin-bottom:0.75rem;';
+        div.innerHTML =
+            buildSelect('custom_doc_type[]') +
+            '<input type="text" name="custom_doc_type_new[]" class="field-input" style="flex:1;" placeholder="Или новый тип...">' +
+            '<input type="file" name="custom_doc_file[]" class="field-input" style="flex:2;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">' +
+            '<button type="button" class="btn btn-ghost btn-sm remove-custom-doc" title="Удалить строку">&times;</button>';
+        container.appendChild(div);
+
+        div.querySelector('.remove-custom-doc').addEventListener('click', function() {
+            div.parentNode.removeChild(div);
+        });
+    }
+
+    addBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        buildRow();
+    });
+})();
+</script>
+
+        </main>
+    </div>
+
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>
