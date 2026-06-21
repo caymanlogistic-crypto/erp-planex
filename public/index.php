@@ -10,6 +10,9 @@
 
 session_start();
 
+define('ERP_MAX_FILE_SIZE', 20 * 1024 * 1024);        // 20 MB per file
+define('ERP_MAX_TOTAL_UPLOAD_SIZE', 80 * 1024 * 1024); // 80 MB per form submit
+
 if (PHP_SAPI === 'cli-server') {
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     $file = __DIR__ . $path;
@@ -405,6 +408,53 @@ function formatFileSize(int $bytes): string
         return number_format($bytes / 1024, 2) . ' КБ';
     }
     return $bytes . ' Б';
+}
+
+/**
+ * Validate total uploaded file size across all file inputs in $_FILES.
+ * Returns an error message string if total > ERP_MAX_TOTAL_UPLOAD_SIZE, or empty string if OK.
+ */
+function validateTotalUploadSize(): string
+{
+    $total = 0;
+    $processFileArray = function (array $arr) use (&$total, &$processFileArray): void {
+        if (isset($arr['size'])) {
+            if (is_array($arr['size'])) {
+                foreach ($arr['size'] as $size) {
+                    if (is_array($size)) {
+                        $processFileArray(['size' => $size]);
+                    } elseif (is_numeric($size)) {
+                        $total += (int) $size;
+                    }
+                }
+            } elseif (is_numeric($arr['size'])) {
+                $total += (int) $arr['size'];
+            }
+        } else {
+            foreach ($arr as $val) {
+                if (is_array($val)) {
+                    $processFileArray($val);
+                }
+            }
+        }
+    };
+    $processFileArray($_FILES);
+
+    if ($total > ERP_MAX_TOTAL_UPLOAD_SIZE) {
+        return 'Общий размер файлов превышает 80 МБ. Уменьшите количество файлов.';
+    }
+    return '';
+}
+
+/**
+ * Check if PHP truncated the POST body (post_max_size exceeded).
+ */
+function isPostTruncated(): bool
+{
+    return ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0
+        && empty($_POST)
+        && empty($_FILES)
+        && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
 }
 
 $router->get('/', function () use ($config) {
@@ -3131,6 +3181,15 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             $localPdo->exec($migrationSql);
         }
 
+        if (isPostTruncated()) {
+            $formError = 'Общий размер отправки превышает серверный лимит. Для ERP требуется настройка post_max_size не менее 100M. Уменьшите количество файлов или обратитесь к администратору.';
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
         $name = trim($_POST['name'] ?? '');
         $inn = trim($_POST['inn'] ?? '');
         $kpp = trim($_POST['kpp'] ?? '');
@@ -3188,6 +3247,17 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
         }
 
         if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/company_contractors_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        // Check total upload size before INSERT
+        $totalSizeError = validateTotalUploadSize();
+        if ($totalSizeError !== '') {
+            $formError = $totalSizeError;
             ob_start();
             require base_path('app/View/pages/company_contractors_create.php');
             $content = ob_get_clean();
@@ -4969,6 +5039,15 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             return implode(' ', $parts);
         };
 
+        if (isPostTruncated()) {
+            $formError = 'Общий размер отправки превышает серверный лимит. Для ERP требуется настройка post_max_size не менее 100M. Уменьшите количество файлов или обратитесь к администратору.';
+            ob_start();
+            require base_path('app/View/pages/company_drivers_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
         $fullName = $normalizeFullName($_POST['full_name'] ?? '');
         $phoneRaw = trim((string)($_POST['phone'] ?? ''));
         $phone = $normalizePhone($phoneRaw);
@@ -5050,6 +5129,17 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         }
 
         if (!empty($errors)) {
+            ob_start();
+            require base_path('app/View/pages/company_drivers_create.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        // Check total upload size before INSERT
+        $totalSizeError = validateTotalUploadSize();
+        if ($totalSizeError !== '') {
+            $formError = $totalSizeError;
             ob_start();
             require base_path('app/View/pages/company_drivers_create.php');
             $content = ob_get_clean();
@@ -8131,6 +8221,11 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
         }
         $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'vehicle_unit' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
 
+        if (isPostTruncated()) {
+            $formError = 'Общий размер отправки превышает серверный лимит. Для ERP требуется настройка post_max_size не менее 100M. Уменьшите количество файлов или обратитесь к администратору.';
+            goto renderCreateVehicleSetPost;
+        }
+
         $rules = vehicleSetTypeRules();
         $docSections = vehicleSetPredefinedDocumentSections();
         $setType = trim((string) ($_POST['set_type'] ?? ''));
@@ -8312,6 +8407,13 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
         }
 
         if (!empty($errors) || !empty($docErrors)) {
+            goto renderCreateVehicleSetPost;
+        }
+
+        // Check total upload size before transaction
+        $totalSizeError = validateTotalUploadSize();
+        if ($totalSizeError !== '') {
+            $formError = $totalSizeError;
             goto renderCreateVehicleSetPost;
         }
 
@@ -10705,7 +10807,6 @@ $router->post('/login', function () use ($config, $db) {
 
 $router->get('/logout', function () {
     session_destroy();
-    session_start();
     header('Location: /login', true, 302);
     exit;
 });

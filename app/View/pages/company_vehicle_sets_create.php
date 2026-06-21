@@ -1371,6 +1371,10 @@ $isCouplingSelected = $selectedSetType === 'coupling';
 
     setType.addEventListener('change', updateUi);
     form.addEventListener('submit', function (event) {
+        if (typeof window.erpCheckUploadSize === 'function') {
+            var uc = window.erpCheckUploadSize(form);
+            if (!uc.ok) { event.preventDefault(); return; }
+        }
         if (!getRule()) {
             event.preventDefault();
             var setError = form.querySelector('[data-field-error="set_type"]');

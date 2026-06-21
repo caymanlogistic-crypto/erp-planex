@@ -1253,6 +1253,10 @@ $predefDocs = [
     }
 
     createForm.addEventListener('submit', function (event) {
+        if (typeof window.erpCheckUploadSize === 'function') {
+            var uc = window.erpCheckUploadSize(createForm);
+            if (!uc.ok) { event.preventDefault(); return; }
+        }
         if (!validateForm()) {
             event.preventDefault();
             var firstError = createForm.querySelector('.field.is-error .field-input, .field.is-error .field-select, .field.is-error .field-textarea, .file-item.is-error');

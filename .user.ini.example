@@ -1,0 +1,19 @@
+; ============================================================
+; ERP PLANEX — Recommended PHP settings for document uploads
+; ============================================================
+; Copy this file to .user.ini in your project root or
+; configure these values in your php.ini / server config.
+;
+; ERP application limits:
+;   - max single file:   20 MB
+;   - max total upload:  80 MB per form submit
+;
+; Server settings should be slightly higher than app limits
+; to allow for multipart encoding overhead.
+
+upload_max_filesize = 25M
+post_max_size = 100M
+max_file_uploads = 50
+memory_limit = 256M
+max_execution_time = 120
+max_input_time = 120

@@ -455,6 +455,11 @@ document.documentElement.classList.add('js-ready');
     });
 
     form.addEventListener('submit', function (event) {
+        var uploadCheck = window.erpCheckUploadSize ? window.erpCheckUploadSize(form) : { ok: true };
+        if (!uploadCheck.ok) {
+            event.preventDefault();
+            return;
+        }
         var ok = true;
         var textInputs = form.querySelectorAll('input[name]:not([type="file"]), textarea[name]');
         Array.prototype.forEach.call(textInputs, function (input) {
@@ -491,4 +496,118 @@ document.documentElement.classList.add('js-ready');
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') closePopup();
     });
+})();
+
+// ============================================================
+// Общий валидатор загрузки документов (20 МБ/файл, 80 МБ/форма)
+// ============================================================
+(function () {
+    var MAX_FILE_SIZE = 20 * 1024 * 1024;   // 20 MB per file
+    var MAX_TOTAL_SIZE = 80 * 1024 * 1024;  // 80 MB per form
+
+    var overlay = null;
+
+    function getOverlay() {
+        if (overlay) return overlay;
+        overlay = document.createElement('div');
+        overlay.className = 'upload-error-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Ошибка загрузки документов');
+        overlay.innerHTML =
+            '<div class="upload-error-panel">' +
+                '<div class="upload-error-head">' +
+                    '<span class="upload-error-mark"></span>' +
+                    '<div class="upload-error-head-text">' +
+                        '<div class="upload-error-title" data-ue-title></div>' +
+                        '<div class="upload-error-subtitle" data-ue-subtitle></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="upload-error-body" data-ue-body></div>' +
+                '<div class="upload-error-actions">' +
+                    '<button type="button" class="btn btn-secondary" data-upload-error-close>Понятно</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('[data-upload-error-close]').addEventListener('click', closeOverlay);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeOverlay();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeOverlay();
+        });
+
+        return overlay;
+    }
+
+    function closeOverlay() {
+        var el = getOverlay();
+        el.classList.remove('is-open');
+    }
+
+    function showError(title, subtitle, bodyHtml) {
+        var el = getOverlay();
+        el.querySelector('[data-ue-title]').textContent = title;
+        el.querySelector('[data-ue-subtitle]').textContent = subtitle;
+        el.querySelector('[data-ue-body]').innerHTML = bodyHtml;
+        el.classList.add('is-open');
+        el.querySelector('[data-upload-error-close]').focus();
+    }
+
+    function formatMB(bytes) {
+        return (bytes / (1024 * 1024)).toFixed(1).replace('.0', '') + ' МБ';
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * Проверить размеры файлов формы перед отправкой.
+     * @param {HTMLFormElement} form
+     * @returns {{ok: boolean, errorType: string|null}}
+     */
+    window.erpCheckUploadSize = function (form) {
+        if (!form) return { ok: true, errorType: null };
+
+        var fileInputs = form.querySelectorAll('input[type="file"]');
+        var totalSize = 0;
+        var tooBigFiles = [];
+
+        Array.prototype.forEach.call(fileInputs, function (input) {
+            if (!input.files || !input.files.length) return;
+            for (var i = 0; i < input.files.length; i++) {
+                var file = input.files[i];
+                totalSize += file.size;
+                if (file.size > MAX_FILE_SIZE) {
+                    tooBigFiles.push(escapeHtml(file.name) + ' (' + formatMB(file.size) + ')');
+                }
+            }
+        });
+
+        // Check single file limit
+        if (tooBigFiles.length > 0) {
+            var singleBody = '<p>Файл слишком большой.</p>' +
+                '<p>Максимальный размер одного файла — 20 МБ.</p>';
+            if (tooBigFiles.length <= 3) {
+                singleBody += '<p>Проблемные файлы: ' + tooBigFiles.join(', ') + '</p>';
+            }
+            singleBody += '<p>Уменьшите файл или загрузите другой документ.</p>';
+            showError('Ошибка загрузки документов', 'Файлы не были отправлены', singleBody);
+            return { ok: false, errorType: 'single' };
+        }
+
+        // Check total size limit
+        if (totalSize > MAX_TOTAL_SIZE) {
+            var totalBody = '<p>Общий размер выбранных файлов слишком большой.</p>' +
+                '<p>Максимум за одну отправку — 80 МБ.</p>' +
+                '<p>Текущий размер: ' + formatMB(totalSize) + '.</p>' +
+                '<p>Уменьшите количество файлов или загрузите документы позже из карточки.</p>';
+            showError('Ошибка загрузки документов', 'Файлы не были отправлены', totalBody);
+            return { ok: false, errorType: 'total' };
+        }
+
+        return { ok: true, errorType: null };
+    };
 })();
