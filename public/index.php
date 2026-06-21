@@ -3168,6 +3168,17 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
             $errors['ogrn'] = 'ОГРН/ОГРНИП должен содержать 13 или 15 цифр';
         }
 
+        // Валидация банковских полей (если заполнены)
+        if (($_POST['bank_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_account'])) {
+            $errors['bank_account'] = 'Расчётный счёт должен содержать 20 цифр';
+        }
+        if (($_POST['bank_bik'] ?? '') !== '' && !preg_match('/^\d{9}$/', $_POST['bank_bik'])) {
+            $errors['bank_bik'] = 'БИК должен содержать 9 цифр';
+        }
+        if (($_POST['bank_corr_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_corr_account'])) {
+            $errors['bank_corr_account'] = 'Корр. счёт должен содержать 20 цифр';
+        }
+
         if ($inn !== '') {
             $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM contractors WHERE inn = ?');
             $checkStmt->execute([$inn]);
@@ -3247,7 +3258,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
                     if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
                     if (!move_uploaded_file($_FILES['predef_doc']['tmp_name'][$code], $absoluteDir . DIRECTORY_SEPARATOR . $storedName)) { $docErrors[] = 'Предопределённый документ «' . ($_POST['predef_doc_type'][$code] ?? $code) . '»: не удалось сохранить'; continue; }
                     $docTypeName = $_POST['predef_doc_type'][$code] ?? ''; $mime = $_FILES['predef_doc']['type'][$code]; $dtId = null;
-                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
+                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? AND entity_type = ? LIMIT 1"); $dts->execute([$docTypeName, $entityType]); $dtId = $dts->fetchColumn() ?: null; }
                     $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :cuid, :crole)');
                     $ins->execute([':et' => $entityType, ':eid' => $newContractorId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]);
                     $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';
@@ -3262,8 +3273,8 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
                 if ($fs > $maxSize) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': размер > 20 МБ'; continue; }
                 if (strpos($origName, '../') !== false || strpos($origName, '..\\') !== false || strpos($origName, '/') !== false || strpos($origName, '\\') !== false) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': недопустимое имя'; continue; }
                 $customTypeNew = trim($_POST['custom_doc_type_new'][$idx] ?? ''); $customTypeSelect = trim($_POST['custom_doc_type'][$idx] ?? ''); $docTypeName = $customTypeNew !== '' ? $customTypeNew : $customTypeSelect; $dtId = null;
-                if ($customTypeNew !== '') { try { $idts = $localPdo->prepare("INSERT IGNORE INTO document_types (name, entity_type, category, created_by_user_id, created_by_role) VALUES (:name, :et, 'custom', :uid, :role)"); $idts->execute([':name' => $customTypeNew, ':et' => $entityType, ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]); $dtId = $localPdo->lastInsertId(); if (!$dtId) { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeNew]); $dtId = $g->fetchColumn() ?: null; } } catch (\Exception $ex) {} }
-                elseif ($customTypeSelect !== '') { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $g->execute([$customTypeSelect]); $dtId = $g->fetchColumn() ?: null; }
+                if ($customTypeNew !== '') { try { $idts = $localPdo->prepare("INSERT IGNORE INTO document_types (name, entity_type, category, created_by_user_id, created_by_role) VALUES (:name, :et, 'custom', :uid, :role)"); $idts->execute([':name' => $customTypeNew, ':et' => $entityType, ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code']]); $dtId = $localPdo->lastInsertId(); if (!$dtId) { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? AND entity_type = ? LIMIT 1"); $g->execute([$customTypeNew, $entityType]); $dtId = $g->fetchColumn() ?: null; } } catch (\Exception $ex) { $docErrors[] = 'Произвольный документ #' . ($idx + 1) . ': ошибка создания типа документа'; } }
+                elseif ($customTypeSelect !== '') { $g = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? AND entity_type = ? LIMIT 1"); $g->execute([$customTypeSelect, $entityType]); $dtId = $g->fetchColumn() ?: null; }
                 try {
                     $storedName = uniqid('doc_', true) . '.' . $ext; $relativeDir = 'companies/' . $companyId . '/documents/' . $entityType . '/' . $newContractorId; $absoluteDir = storage_path($relativeDir);
                     if (!is_dir($absoluteDir)) mkdir($absoluteDir, 0755, true);
@@ -5167,7 +5178,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
                         if ($tmpSrc === '' || !move_uploaded_file($tmpSrc, $destPath)) { $docErrors[] = 'Предопределённый документ «' . $docTypeName . '»: не удалось сохранить'; continue; }
                         $mime = $types[$fileIdx] ?? '';
                         $dtId = null;
-                        if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? LIMIT 1"); $dts->execute([$docTypeName]); $dtId = $dts->fetchColumn() ?: null; }
+                    if ($docTypeName !== '') { $dts = $localPdo->prepare("SELECT id FROM document_types WHERE name = ? AND entity_type = ? LIMIT 1"); $dts->execute([$docTypeName, $entityType]); $dtId = $dts->fetchColumn() ?: null; }
                         $ins = $localPdo->prepare('INSERT INTO documents (entity_type, entity_id, document_type, document_type_id, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role, created_by_user_id, created_by_role) VALUES (:et, :eid, :dtype, :dtid, :oname, :sname, :rpath, :mime, :fsize, :status, :uid, :role, :cuid, :crole)');
                         $ins->execute([':et' => $entityType, ':eid' => $newDriverId, ':dtype' => $docTypeName ?: null, ':dtid' => $dtId, ':oname' => $origName, ':sname' => $storedName, ':rpath' => $relativeDir . '/' . $storedName, ':mime' => $mime, ':fsize' => $fs, ':status' => 'uploaded', ':uid' => (int)$_SESSION['user_id'], ':role' => $_SESSION['role_code'], ':cuid' => (int)$_SESSION['user_id'], ':crole' => $_SESSION['role_code']]);
                         $uploadedDocs[] = $docTypeName . ' (' . $origName . ')';

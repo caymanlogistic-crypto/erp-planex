@@ -3,7 +3,7 @@
 if (!function_exists('renderContractorContactFields')) {
     function renderContractorContactFields(array $contacts, array $errors = []): void
     {
-        $contacts = $contacts !== [] ? array_values($contacts) : [[
+        $contacts = $contacts !== [] ? $contacts : [[
             'contact_person' => '',
             'phone' => '',
             'email' => '',
@@ -18,53 +18,65 @@ if (!function_exists('renderContractorContactFields')) {
                     <?php $rowErrors = $errors[$index] ?? []; ?>
                     <div class="contractor-contact-row" data-contact-row>
 
-                        <div class="contact-input-suffix contact-person-cell<?= !empty($rowErrors['contact_person']) ? ' is-error' : '' ?>">
-                            <input type="text"
-                                   name="contacts[<?= $index ?>][contact_person]"
-                                   class="field-input"
-                                   placeholder="Контактное лицо"
-                                   value="<?= e($contact['contact_person'] ?? '') ?>"
-                                   data-contact-person>
-                            <label class="checkbox-item contact-inline-check" title="Сделать основным контактом" aria-label="Сделать основным контактом">
-                                <input type="checkbox"
-                                       name="contacts[<?= $index ?>][is_primary]"
-                                       value="1"
-                                       <?= !empty($contact['is_primary']) ? 'checked' : '' ?>
-                                       data-contact-primary>
-                                <span class="checkbox-mark"></span>
-                            </label>
+                        <div class="contact-cell-wrap contact-person-cell<?= !empty($rowErrors['contact_person']) ? ' is-error' : '' ?>">
+                            <div class="contact-input-suffix<?= !empty($rowErrors['contact_person']) ? ' is-error' : '' ?>">
+                                <input type="text"
+                                       name="contacts[<?= $index ?>][contact_person]"
+                                       class="field-input"
+                                       placeholder="Контактное лицо"
+                                       value="<?= e($contact['contact_person'] ?? '') ?>"
+                                       data-contact-person>
+                                <label class="checkbox-item contact-inline-check" title="Сделать основным контактом" aria-label="Сделать основным контактом">
+                                    <input type="checkbox"
+                                           name="contacts[<?= $index ?>][is_primary]"
+                                           value="1"
+                                           <?= !empty($contact['is_primary']) ? 'checked' : '' ?>
+                                           data-contact-primary>
+                                    <span class="checkbox-mark"></span>
+                                </label>
+                            </div>
+                            <div class="contact-error-msg" data-contact-error><?= e($rowErrors['contact_person'] ?? '') ?></div>
                         </div>
 
-                        <input type="text"
-                               name="contacts[<?= $index ?>][phone]"
-                               class="field-input contact-phone-cell"
-                               placeholder="Телефон"
-                               value="<?= e($contact['phone'] ?? '') ?>"
-                               data-contact-phone>
-
-                        <div class="contact-input-suffix contact-email-cell<?= !empty($rowErrors['email']) ? ' is-error' : '' ?>">
+                        <div class="contact-cell-wrap contact-phone-cell<?= !empty($rowErrors['phone']) ? ' is-error' : '' ?>">
                             <input type="text"
-                                   name="contacts[<?= $index ?>][email]"
-                                   class="field-input"
-                                   placeholder="Email"
-                                   value="<?= e($contact['email'] ?? '') ?>"
-                                   data-contact-email>
-                            <label class="checkbox-item contact-inline-check" title="Email для официальной переписки" aria-label="Email для официальной переписки">
-                                <input type="checkbox"
-                                       name="contacts[<?= $index ?>][is_document_email]"
-                                       value="1"
-                                       <?= !empty($contact['is_document_email']) ? 'checked' : '' ?>
-                                       data-contact-document-email>
-                                <span class="checkbox-mark"></span>
-                            </label>
+                                   name="contacts[<?= $index ?>][phone]"
+                                   class="field-input<?= !empty($rowErrors['phone']) ? ' is-error' : '' ?>"
+                                   placeholder="Телефон"
+                                   value="<?= e($contact['phone'] ?? '') ?>"
+                                   data-contact-phone>
+                            <div class="contact-error-msg" data-contact-error><?= e($rowErrors['phone'] ?? '') ?></div>
                         </div>
 
-                        <input type="text"
-                               name="contacts[<?= $index ?>][comment]"
-                               class="field-input contact-comment-cell"
-                               placeholder="Комментарий"
-                               value="<?= e($contact['comment'] ?? '') ?>"
-                               data-contact-comment>
+                        <div class="contact-cell-wrap contact-email-cell<?= !empty($rowErrors['email']) ? ' is-error' : '' ?>">
+                            <div class="contact-input-suffix<?= !empty($rowErrors['email']) ? ' is-error' : '' ?>">
+                                <input type="text"
+                                       name="contacts[<?= $index ?>][email]"
+                                       class="field-input"
+                                       placeholder="Email"
+                                       value="<?= e($contact['email'] ?? '') ?>"
+                                       data-contact-email>
+                                <label class="checkbox-item contact-inline-check" title="Email для официальной переписки" aria-label="Email для официальной переписки">
+                                    <input type="checkbox"
+                                           name="contacts[<?= $index ?>][is_document_email]"
+                                           value="1"
+                                           <?= !empty($contact['is_document_email']) ? 'checked' : '' ?>
+                                           data-contact-document-email>
+                                    <span class="checkbox-mark"></span>
+                                </label>
+                            </div>
+                            <div class="contact-error-msg" data-contact-error><?= e($rowErrors['email'] ?? '') ?></div>
+                        </div>
+
+                        <div class="contact-cell-wrap contact-comment-cell<?= !empty($rowErrors['comment']) ? ' is-error' : '' ?>">
+                            <input type="text"
+                                   name="contacts[<?= $index ?>][comment]"
+                                   class="field-input contact-comment-cell"
+                                   placeholder="Комментарий"
+                                   value="<?= e($contact['comment'] ?? '') ?>"
+                                   data-contact-comment>
+                            <div class="contact-error-msg" data-contact-error></div>
+                        </div>
 
                         <button type="button" class="file-remove contractor-contact-remove" data-remove-contact aria-label="Удалить контакт">&times;</button>
                     </div>
@@ -77,25 +89,37 @@ if (!function_exists('renderContractorContactFields')) {
         <template data-contact-template>
             <div class="contractor-contact-row" data-contact-row>
 
-                <div class="contact-input-suffix contact-person-cell">
-                    <input type="text" class="field-input" placeholder="Контактное лицо" data-contact-person>
-                    <label class="checkbox-item contact-inline-check" title="Сделать основным контактом" aria-label="Сделать основным контактом">
-                        <input type="checkbox" value="1" data-contact-primary>
-                        <span class="checkbox-mark"></span>
-                    </label>
+                <div class="contact-cell-wrap contact-person-cell">
+                    <div class="contact-input-suffix">
+                        <input type="text" class="field-input" placeholder="Контактное лицо" data-contact-person>
+                        <label class="checkbox-item contact-inline-check" title="Сделать основным контактом" aria-label="Сделать основным контактом">
+                            <input type="checkbox" value="1" data-contact-primary>
+                            <span class="checkbox-mark"></span>
+                        </label>
+                    </div>
+                    <div class="contact-error-msg" data-contact-error></div>
                 </div>
 
-                <input type="text" class="field-input contact-phone-cell" placeholder="Телефон" data-contact-phone>
-
-                <div class="contact-input-suffix contact-email-cell">
-                    <input type="text" class="field-input" placeholder="Email" data-contact-email>
-                    <label class="checkbox-item contact-inline-check" title="Email для официальной переписки" aria-label="Email для официальной переписки">
-                        <input type="checkbox" value="1" data-contact-document-email>
-                        <span class="checkbox-mark"></span>
-                    </label>
+                <div class="contact-cell-wrap contact-phone-cell">
+                    <input type="text" class="field-input" placeholder="Телефон" data-contact-phone>
+                    <div class="contact-error-msg" data-contact-error></div>
                 </div>
 
-                <input type="text" class="field-input contact-comment-cell" placeholder="Комментарий" data-contact-comment>
+                <div class="contact-cell-wrap contact-email-cell">
+                    <div class="contact-input-suffix">
+                        <input type="text" class="field-input" placeholder="Email" data-contact-email>
+                        <label class="checkbox-item contact-inline-check" title="Email для официальной переписки" aria-label="Email для официальной переписки">
+                            <input type="checkbox" value="1" data-contact-document-email>
+                            <span class="checkbox-mark"></span>
+                        </label>
+                    </div>
+                    <div class="contact-error-msg" data-contact-error></div>
+                </div>
+
+                <div class="contact-cell-wrap contact-comment-cell">
+                    <input type="text" class="field-input" placeholder="Комментарий" data-contact-comment>
+                    <div class="contact-error-msg" data-contact-error></div>
+                </div>
 
                 <button type="button" class="file-remove contractor-contact-remove" data-remove-contact aria-label="Удалить контакт">&times;</button>
             </div>

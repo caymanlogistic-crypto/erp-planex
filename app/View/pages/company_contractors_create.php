@@ -412,16 +412,31 @@ $predefDocs = [
         }
     }
 
+    function clearContactFieldError(input) {
+        if (!input) return;
+        var wrap = input.closest('.contact-cell-wrap');
+        if (wrap) wrap.classList.remove('is-error');
+        input.classList.remove('is-error');
+        var suffix = input.closest('.contact-input-suffix');
+        if (suffix) suffix.classList.remove('is-error');
+        var err = input.closest('.contact-cell-wrap') ? input.closest('.contact-cell-wrap').querySelector('[data-contact-error]') : null;
+        if (err) err.textContent = '';
+    }
+
     function setContactFieldError(input, message) {
         if (!input) {
             return;
         }
+        var wrap = input.closest('.contact-cell-wrap');
+        if (wrap) wrap.classList.add('is-error');
         var suffix = input.closest('.contact-input-suffix');
         if (suffix) {
             suffix.classList.add('is-error');
         } else {
             input.classList.add('is-error');
         }
+        var err = input.closest('.contact-cell-wrap') ? input.closest('.contact-cell-wrap').querySelector('[data-contact-error]') : null;
+        if (err) err.textContent = message || '';
     }
 
     function renameContactRows() {
@@ -480,6 +495,8 @@ $predefDocs = [
                     });
             Array.prototype.forEach.call(row.querySelectorAll('.contact-input-suffix'), function(w) { w.classList.remove('is-error'); });
             Array.prototype.forEach.call(row.querySelectorAll('.field-input.is-error'), function(i) { i.classList.remove('is-error'); });
+            Array.prototype.forEach.call(row.querySelectorAll('.contact-cell-wrap'), function(w) { w.classList.remove('is-error'); });
+            Array.prototype.forEach.call(row.querySelectorAll('[data-contact-error]'), function(e) { e.textContent = ''; });
                     return;
                 }
                 row.remove();
@@ -523,7 +540,7 @@ $predefDocs = [
                 if (normalized.error) {
                     setContactFieldError(phoneField, normalized.error);
                 } else {
-                    clearFieldError(phoneField.closest('.field'));
+                    clearContactFieldError(phoneField);
                 }
             });
         }
@@ -851,6 +868,8 @@ $predefDocs = [
         Array.prototype.forEach.call(getContactRows(), function (row) {
             Array.prototype.forEach.call(row.querySelectorAll('.contact-input-suffix'), function(w) { w.classList.remove('is-error'); });
             Array.prototype.forEach.call(row.querySelectorAll('.field-input.is-error'), function(i) { i.classList.remove('is-error'); });
+            Array.prototype.forEach.call(row.querySelectorAll('.contact-cell-wrap'), function(w) { w.classList.remove('is-error'); });
+            Array.prototype.forEach.call(row.querySelectorAll('[data-contact-error]'), function(e) { e.textContent = ''; });
 
             var personField = row.querySelector('[data-contact-person]');
             var phoneField = row.querySelector('[data-contact-phone]');
@@ -1242,6 +1261,40 @@ $predefDocs = [
             }
             return;
         }
+
+        createForm.dataset.submitting = '1';
+
+        // Loading state на заполненных документах (как у водителя)
+        Array.prototype.forEach.call(
+            createForm.querySelectorAll('.js-predef-file-input'),
+            function (input) {
+                if (input.files && input.files.length > 0) {
+                    var badge = input.getAttribute('data-badge') ? document.getElementById(input.getAttribute('data-badge')) : null;
+                    var btnLabel = input.getAttribute('data-button-label') ? document.getElementById(input.getAttribute('data-button-label')) : null;
+                    if (badge) {
+                        badge.className = 'file-type-badge is-loading';
+                        badge.textContent = '';
+                    }
+                    if (btnLabel) {
+                        btnLabel.textContent = 'Загрузка...';
+                    }
+                    input.disabled = true;
+                }
+            }
+        );
+        Array.prototype.forEach.call(
+            createForm.querySelectorAll('.js-custom-file-input'),
+            function (input) {
+                if (input.files && input.files.length > 0) {
+                    var badge = input.getAttribute('data-badge') ? document.getElementById(input.getAttribute('data-badge')) : null;
+                    if (badge) {
+                        badge.className = 'file-type-badge is-loading';
+                        badge.textContent = '';
+                    }
+                    input.disabled = true;
+                }
+            }
+        );
 
         var submitBtn = createForm.querySelector('button[type="submit"]');
         if (submitBtn) {

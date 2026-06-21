@@ -2931,6 +2931,183 @@ input:autofill,
     }
 }
 
+/* === CONTRACTOR CREATE FORM — grid, contacts, autofill (moved from erp-ui.css 2026-06-21) === */
+.contractor-autofill-grid > [data-field="inn"]{order:1;}
+.contractor-autofill-grid > .contractor-autofill-action{order:2;}
+.contractor-autofill-grid > [data-field="name"]{order:3;grid-column:1 / -1;}
+.contractor-address-grid{align-items:start;}
+.contractor-bank-grid{grid-template-columns:minmax(0,1.2fr) minmax(180px,.7fr) minmax(240px,1fr) minmax(0,1fr);align-items:start;}
+/* Контакты — плоская grid-строка */
+.contractor-contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.contractor-contacts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.contractor-contact-row {
+  display: grid;
+  grid-template-columns:
+    minmax(210px, 1.2fr)
+    128px
+    minmax(190px, .95fr)
+    minmax(140px, .7fr)
+    28px;
+  align-items: start;
+  column-gap: 6px;
+  row-gap: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Обёртка ячейки контакта — держит input + ошибку */
+.contact-cell-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.contact-cell-wrap.is-error .field-input,
+.contact-cell-wrap.is-error .contact-input-suffix > .field-input {
+  background: var(--danger-field);
+  border-color: var(--danger-border);
+}
+
+/* Текст ошибки контакта */
+.contact-error-msg {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--danger);
+  min-height: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.contact-error-msg:empty {
+  display: none;
+}
+
+/* Поле с встроенным чекбоксом-суффиксом */
+.contact-input-suffix {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: stretch;
+  min-width: 0;
+  height: var(--control-h);
+}
+.contact-input-suffix > .field-input {
+  min-width: 0;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  border-right: 0;
+  border-radius: 2px 0 0 2px;
+}
+
+/* Чекбокс-суффикс (визуально слит с input) */
+.contact-inline-check {
+  width: 28px;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #c2bbb0;
+  border-left: 1px solid var(--line-hair);
+  background: linear-gradient(180deg, var(--surface-field) 0%, #f7f5f0 100%);
+  border-radius: 0 2px 2px 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.contact-inline-check .checkbox-mark {
+  margin-top: 0;
+}
+.contact-inline-check .checkbox-label {
+  display: none;
+}
+
+/* Состояние ошибки для suffix */
+.contact-input-suffix.is-error > .field-input {
+  background: var(--danger-field);
+  border-color: var(--danger-border);
+}
+
+/* Обычные поля строки (phone, comment — голые input внутри wrap) */
+.contact-cell-wrap > .field-input {
+  height: var(--control-h);
+  min-height: var(--control-h);
+  line-height: var(--control-h);
+}
+
+/* Ошибка на голом input внутри wrap */
+.contact-cell-wrap > .field-input.is-error {
+  background: var(--danger-field);
+  border-color: var(--danger-border);
+}
+
+/* Кнопка удаления */
+.contractor-contact-remove {
+  width: 24px;
+  height: 24px;
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+.contractor-contact-remove:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+/* Кнопка добавления */
+.contact-add-btn {
+  align-self: flex-start;
+  justify-self: start;
+  margin-top: 4px;
+  height: var(--toolbar-h);
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 1200px){
+  .contractor-bank-grid{grid-template-columns:1fr 1fr;}
+}
+@media (max-width: 860px){
+  .contractor-autofill-grid > [data-field="name"]{grid-column:auto;}
+  .contractor-bank-grid{grid-template-columns:1fr;}
+  .contractor-contact-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .contractor-contact-row .contractor-contact-remove {
+    grid-column: 2;
+    justify-self: end;
+  }
+}
+
+/* Автозаполнение DaData — спокойная системная подсветка */
+.field-input.is-autofilled,
+.field-select.is-autofilled,
+.field-textarea.is-autofilled {
+  background: var(--success-field);
+  border-color: var(--success-border);
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,.04),
+    0 0 0 1px rgba(31,107,67,.12);
+}
+
 /* === SIDEBAR LINK NORMALIZATION ===
    Sidebar items are navigation controls, not browser-default links.
    Keep this after general link/button rules so underline cannot leak into menu. */
