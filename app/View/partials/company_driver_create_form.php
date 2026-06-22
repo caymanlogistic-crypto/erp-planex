@@ -8,8 +8,9 @@ $formError = $formError ?? null;
 $errors = $errors ?? [];
 $old = $old ?? [];
 $docTypes = $docTypes ?? [];
+$driverCreateFormMode = $driverCreateFormMode ?? 'page';
 ?>
-<form method="post" action="/company/drivers/create" class="panel" enctype="multipart/form-data">
+<form id="driver-create-form" method="post" action="/company/drivers/create" class="panel" enctype="multipart/form-data">
 <div class="entity-form-layout driver-layout">
 
     <!-- ════ Левая колонка: данные водителя ════ -->
@@ -161,10 +162,12 @@ $docTypes = $docTypes ?? [];
 
         </div><!-- /.driver-fields -->
 
-        <!-- Action footer -->
+        <!-- Action footer — visible only on standalone page, hidden in modal -->
+        <?php if ($driverCreateFormMode === 'page'): ?>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать водителя</button>
         </div>
+        <?php endif; ?>
 
     </div><!-- /.driver-layout-main -->
 

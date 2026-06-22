@@ -3576,3 +3576,17 @@ a.nav-sub-item:visited {
   max-width: none;
 }
 
+/* ============================================================
+   MODAL FOOT ACTIONS — align buttons in driver create modal
+   ============================================================ */
+.modal-required-note {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.modal-foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+

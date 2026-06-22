@@ -58,7 +58,14 @@
       <button type="button" class="modal-close" onclick="closeModal('driver-create-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <?php require base_path('app/View/partials/company_driver_create_form.php'); ?>
+      <?php $driverCreateFormMode = 'modal'; require base_path('app/View/partials/company_driver_create_form.php'); ?>
+    </div>
+    <div class="modal-foot is-spaced">
+      <div class="modal-required-note"><span class="req">*</span> — обязательные поля</div>
+      <div class="modal-foot-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('driver-create-modal')">Отмена</button>
+        <button type="submit" form="driver-create-form" class="btn btn-primary">Создать водителя</button>
+      </div>
     </div>
   </div>
 </div>
@@ -188,7 +195,14 @@ function renderDocBadges(array $docs): string {
       <button type="button" class="modal-close" onclick="closeModal('driver-create-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <?php require base_path('app/View/partials/company_driver_create_form.php'); ?>
+      <?php $driverCreateFormMode = 'modal'; require base_path('app/View/partials/company_driver_create_form.php'); ?>
+    </div>
+    <div class="modal-foot is-spaced">
+      <div class="modal-required-note"><span class="req">*</span> — обязательные поля</div>
+      <div class="modal-foot-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('driver-create-modal')">Отмена</button>
+        <button type="submit" form="driver-create-form" class="btn btn-primary">Создать водителя</button>
+      </div>
     </div>
   </div>
 </div>
