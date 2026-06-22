@@ -499,9 +499,10 @@ document.documentElement.classList.add('js-ready');
 })();
 
 // ============================================================
-// ERP Grid: общий frontend-поиск по строкам таблиц
+// ERP Grid: общий frontend-поиск, сортировка и footer
 // Атрибуты: data-erp-grid (на .table-card),
-//           data-erp-grid-search (на input, опционально)
+//           data-erp-grid-sort (на select внутри .toolbar-right),
+//           data-erp-sort-date (на tr, опционально)
 // Работает автоматически для всех .table-card[data-erp-grid]
 // ============================================================
 (function () {
@@ -514,6 +515,16 @@ document.documentElement.classList.add('js-ready');
         if (!table) return;
         var tbody = table.querySelector('tbody');
         if (!tbody) return;
+
+        // Footer elements
+        var footerRange = card.querySelector('.footer-range');
+        var footerTotal = card.querySelector('.footer-total');
+        var totalRows = tbody.querySelectorAll('tr').length;
+        if (footerTotal) footerTotal.textContent = totalRows;
+
+        // Sort state (default: date — newest first)
+        var sortSelect = card.querySelector('select[data-erp-grid-sort]');
+        var sortMode = sortSelect ? sortSelect.value : 'date';
 
         // Создать no-results элемент, если отсутствует
         var noResults = card.querySelector('.table-no-results');
@@ -528,6 +539,63 @@ document.documentElement.classList.add('js-ready');
             var scroll = card.querySelector('.table-scroll');
             if (scroll) scroll.appendChild(noResults);
         }
+
+        // --- Sort helpers ---
+
+        function getSortValue(tr, mode) {
+            if (mode === 'alpha') {
+                var main = tr.querySelector('.cell-main');
+                if (main) return main.textContent.trim().toLowerCase();
+                var firstTd = tr.querySelector('td');
+                return (firstTd ? firstTd.textContent : '').trim().toLowerCase();
+            }
+            if (mode === 'date') {
+                var dateVal = tr.getAttribute('data-erp-sort-date');
+                if (dateVal !== null) {
+                    var num = parseInt(dateVal, 10);
+                    return isNaN(num) ? 0 : num;
+                }
+                // Fallback: extract ID from the first action link href
+                var link = tr.querySelector('a[href]');
+                if (link) {
+                    var match = link.getAttribute('href').match(/\/(\d+)(?:\/|$|\?)/);
+                    if (match) {
+                        var idNum = parseInt(match[1], 10);
+                        return isNaN(idNum) ? 0 : idNum;
+                    }
+                }
+                return 0;
+            }
+            return '';
+        }
+
+        function sortRows() {
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+            rows.sort(function (a, b) {
+                var va = getSortValue(a, sortMode);
+                var vb = getSortValue(b, sortMode);
+                if (sortMode === 'date') {
+                    return vb - va; // newer first (descending)
+                }
+                // alpha: ascending
+                if (va < vb) return -1;
+                if (va > vb) return 1;
+                return 0;
+            });
+            rows.forEach(function (row) { tbody.appendChild(row); });
+        }
+
+        // --- Footer update ---
+
+        function updateFooter() {
+            var visibleRows = tbody.querySelectorAll('tr:not(.is-hidden)').length;
+            if (footerRange) {
+                footerRange.textContent = visibleRows === 0 ? '0' : '1–' + visibleRows;
+            }
+            if (footerTotal) footerTotal.textContent = totalRows;
+        }
+
+        // --- Filter + combined update ---
 
         function filterRows() {
             var query = searchInput.value.trim().toLowerCase();
@@ -555,17 +623,34 @@ document.documentElement.classList.add('js-ready');
                 table.style.display = '';
                 noResults.classList.add('is-hidden');
             }
+
+            updateFooter();
         }
+
+        // --- Sort select change ---
+
+        if (sortSelect) {
+            sortSelect.addEventListener('change', function () {
+                sortMode = sortSelect.value;
+                sortRows();
+                filterRows();
+            });
+        }
+
+        // --- Search input events ---
 
         searchInput.addEventListener('input', filterRows);
 
-        // Очистка поиска по Escape
         searchInput.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 searchInput.value = '';
                 filterRows();
             }
         });
+
+        // --- Initial sort + footer ---
+        sortRows();
+        updateFooter();
     });
 })();
 

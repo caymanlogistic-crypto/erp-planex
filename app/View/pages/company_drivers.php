@@ -51,6 +51,32 @@
 </div>
 
 <?php else: ?>
+<?php
+// Helper: render document badges for a driver cell.
+// $docs — array of document rows (id, mime_type, original_name).
+// Returns HTML string with compact inline badges.
+function renderDocBadges(array $docs): string {
+    if (empty($docs)) return '';
+    $badges = [];
+    foreach ($docs as $doc) {
+        $mime = $doc['mime_type'] ?? '';
+        if (strpos($mime, 'pdf') !== false)          $label = 'PDF';
+        elseif (strpos($mime, 'image') !== false)    $label = 'IMG';
+        elseif (strpos($mime, 'word') !== false || strpos($mime, 'document') !== false && strpos($mime, 'openxml') !== false) $label = 'DOC';
+        elseif (strpos($mime, 'spreadsheet') !== false || strpos($mime, 'excel') !== false) $label = 'XLS';
+        else $label = 'FILE';
+        $badges[] = '<a href="/company/documents/view?id=' . $doc['id'] . '" target="_blank" class="driver-doc-badge" title="' . e($doc['original_name'] ?? '') . '">' . $label . '</a>';
+    }
+    $total = count($badges);
+    $shown = array_slice($badges, 0, 2);
+    $out = implode('', $shown);
+    if ($total > 2) {
+        $remaining = $total - 2;
+        $out .= ' <a href="/company/documents?entity_type=driver&amp;entity_id=' . $docs[0]['entity_id'] . '" class="driver-doc-more">+' . $remaining . '</a>';
+    }
+    return $out;
+}
+?>
 
 <div class="page-head">
     <div class="page-head-left">
@@ -62,10 +88,17 @@
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only" data-erp-grid>
+<div class="table-card table-card--standard" data-erp-grid>
     <div class="table-toolbar">
         <div class="found-label">Найдено: <b><?= count($drivers) ?></b> водителей</div>
         <div class="toolbar-right">
+            <div class="toolbar-sort">
+                <span class="toolbar-sort-label">Сортировка по:</span>
+                <select class="toolbar-select" data-erp-grid-sort>
+                    <option value="date" selected>По дате добавления</option>
+                    <option value="alpha">По алфавиту</option>
+                </select>
+            </div>
             <input type="text" class="toolbar-search" placeholder="Поиск по таблице">
         </div>
     </div>
@@ -73,55 +106,64 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Водитель</th>
-                    <th>Контакты</th>
-                    <th>Документы</th>
-                    <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                    <th>Создал</th>
-                    <?php endif; ?>
-                    <th>Статус</th>
-                    <th></th>
+                    <th>ФИО ВОДИТЕЛЯ</th>
+                    <th>КОНТАКТЫ</th>
+                    <th>ПАСПОРТ</th>
+                    <th>ВУ</th>
+                    <th>СНИЛС</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($drivers as $d): ?>
-                <tr>
-                    <td class="cell-double">
-                        <span class="cell-main"><?= e($d['full_name']) ?></span>
-                    </td>
-                    <td class="cell-double">
-                        <span class="cell-main col-mono"><?= e($d['main_phone'] ?? '—') ?></span>
-                        <span class="cell-sub">Основной телефон</span>
-                    </td>
-                    <td class="cell-double">
-                        <?php if (!empty($d['license_number'])): ?>
-                            <span class="cell-main">ВУ <?= e($d['license_number']) ?></span>
-                            <span class="cell-sub">Водительское удостоверение</span>
+                <tr data-erp-sort-date="<?= $d['id'] ?>">
+                    <td><?= e($d['full_name']) ?: '—' ?></td>
+                    <td>
+                        <?php if (!empty($d['main_phone'])): ?>
+                            <?= e($d['main_phone']) ?>
+                            <?php $extraCount = (int)($d['extra_phones_count'] ?? 0); ?>
+                            <?php if ($extraCount === 1): ?>
+                                (+1 доп. тел.)
+                            <?php elseif ($extraCount > 1): ?>
+                                (+<?= $extraCount ?> доп. тел.)
+                            <?php endif; ?>
                         <?php else: ?>
-                            <span class="cell-main">ВУ: нет</span>
-                            <span class="cell-sub">Документы доступны в карточке водителя</span>
+                            —
                         <?php endif; ?>
                     </td>
-                    <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
-                    <td class="col-muted"><?= e(ui_actor($d['created_by_role'] ?? null, $d['created_by_user_id'] ?? null, $d['created_by_name'] ?? null)) ?></td>
-                    <?php endif; ?>
                     <td>
-                        <span class="badge<?= $d['status'] === 'active' ? ' badge-ok' : '' ?>">
-                            <span class="dot"></span>
-                            <?= $d['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
-                        </span>
+                        <?php $passportDocs = $d['passport_docs'] ?? []; ?>
+                        <?php if (!empty($d['passport_number']) || !empty($passportDocs)): ?>
+                            <?= !empty($d['passport_number']) ? e($d['passport_number']) : '—' ?>
+                            <?= renderDocBadges($passportDocs) ?>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
                     </td>
-                    <td class="col-actions">
-                        <div class="row-actions">
-                            <a href="/company/drivers/<?= $d['id'] ?>" class="btn btn-toolbar">Просмотр</a>
-                            <a href="/company/drivers/<?= $d['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
-                            <a href="/company/documents?entity_type=driver&entity_id=<?= $d['id'] ?>" class="btn btn-toolbar">Документы</a>
-                        </div>
+                    <td>
+                        <?php $licenseDocs = $d['license_docs'] ?? []; ?>
+                        <?php if (!empty($d['license_number']) || !empty($licenseDocs)): ?>
+                            <?= !empty($d['license_number']) ? 'ВУ ' . e($d['license_number']) : '—' ?>
+                            <?= renderDocBadges($licenseDocs) ?>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php $snilsDocs = $d['snils_docs'] ?? []; ?>
+                        <?php if (!empty($d['snils']) || !empty($snilsDocs)): ?>
+                            <?= !empty($d['snils']) ? e($d['snils']) : '—' ?>
+                            <?= renderDocBadges($snilsDocs) ?>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+    <div class="table-footer">
+        <span class="footer-label">Показано <b class="footer-range">1–<?= count($drivers) ?></b> из <b class="footer-total"><?= count($drivers) ?></b></span>
     </div>
 </div>
 

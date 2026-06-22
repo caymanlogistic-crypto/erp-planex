@@ -900,27 +900,96 @@ form.panel {
 
 /* ============================================================
    TABLE TOOLBAR SEARCH
-   Compact search input inside .table-toolbar > .toolbar-right.
+   Compact FINAL3-style search inside .table-toolbar > .toolbar-right.
+   Explicitly resets global input rules (min-height:32px, width:100%,
+   padding:6px 8px, input:focus outline) that otherwise break the
+   toolbar rhythm and make the search look like a foreign browser input.
    ============================================================ */
 .table-toolbar .toolbar-search {
-    height: var(--toolbar-h);
+    /* Reset global input overrides */
     width: 200px;
-    padding: 0 8px;
-    font-size: 11px;
-    background: var(--surface-strong);
+    min-width: 0;
+    min-height: 0;
+    padding: 0 9px;
+    flex: 0 0 auto;
+    /* FINAL3 visual rhythm */
+    height: var(--toolbar-h);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main);
+    background: var(--surface-muted);
     border: 1px solid var(--line-soft);
     border-radius: 2px;
-    color: var(--text-main);
+    /* Kill browser chrome */
     outline: none;
+    box-sizing: border-box;
     font-family: var(--font);
+    -webkit-appearance: none;
+    appearance: none;
 }
 .table-toolbar .toolbar-search::placeholder {
     color: var(--text-faint);
     font-weight: 400;
+    font-size: 12px;
 }
 .table-toolbar .toolbar-search:focus {
+    background: var(--surface-strong);
     border-color: var(--accent);
     box-shadow: 0 0 0 2px rgba(124,71,24,.1);
+    outline: none;
+    outline-offset: 0;
+}
+
+/* ============================================================
+   TABLE TOOLBAR SORT
+   Compact label + select inside .toolbar-right.
+   Based on FINAL3 .field-select, scaled to toolbar height.
+   ============================================================ */
+.table-card .toolbar-right {
+    gap: 14px;
+    flex: 0 0 auto;
+}
+.toolbar-sort {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.toolbar-sort-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-faint);
+    white-space: nowrap;
+}
+.table-toolbar .toolbar-select {
+    height: var(--toolbar-h);
+    min-height: 0;
+    width: auto;
+    padding: 0 24px 0 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main);
+    background-color: var(--surface-muted);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23827b70' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: calc(100% - 7px) center;
+    background-size: 10px 6px;
+    background-repeat: no-repeat;
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    outline: none;
+    box-sizing: border-box;
+    font-family: var(--font);
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 0 0 auto;
+    cursor: default;
+}
+.table-toolbar .toolbar-select:focus {
+    background-color: var(--surface-strong);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,71,24,.1);
+    outline: none;
+    outline-offset: 0;
 }
 
 /* ============================================================
@@ -928,6 +997,18 @@ form.panel {
    ============================================================ */
 .table tbody tr.is-hidden {
     display: none;
+}
+
+/* ============================================================
+   ERP GRID: thead contrast
+   Stronger header-background separation from body rows.
+   Uses --table-head token from FINAL3 palette, darker gradient
+   endpoints and --line border for consistent visual hierarchy.
+   ============================================================ */
+.table-card .table thead th {
+    background: linear-gradient(180deg, var(--table-head) 0%, #cdc7bc 100%);
+    border-bottom: 1px solid var(--line);
+    color: #2a2620;
 }
 
 h2 {
@@ -3345,12 +3426,23 @@ a.nav-sub-item:visited {
 /* ============================================================
    TABLE-CARD without pills-bar / pagination
    Overrides FINAL3 grid-template-rows:36px 34px 1fr 34px
-   when only toolbar + scroll are present.
+   when only toolbar + scroll are present (empty-state).
    Row 1: 36px — matches FINAL3 table-toolbar height.
    Row 2: auto — table content sizes naturally, no vertical scroll.
    ============================================================ */
 .table-card--toolbar-only {
     grid-template-rows: 36px auto;
+}
+
+/* ============================================================
+   TABLE-CARD with sort + footer (standard populated list)
+   3-row grid: toolbar / scroll / footer.
+   Row 1: 36px — table-toolbar (compact single-row controls)
+   Row 2: 1fr  — table-scroll
+   Row 3: 34px — table-footer
+   ============================================================ */
+.table-card--standard {
+    grid-template-rows: 36px 1fr 34px;
 }
 
 /* ============================================================
@@ -3381,5 +3473,90 @@ a.nav-sub-item:visited {
     background: transparent;
     border: none;
     padding: 24px 20px;
+}
+
+/* ============================================================
+   TABLE FOOTER
+   Matches FINAL3 .pagination visual rhythm.
+   Left: «Показано 1–N из N» (updates with search/sort).
+   Right: empty (no backend pagination).
+   ============================================================ */
+.table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    background: linear-gradient(180deg, #f0ede6, #e8e4da);
+    border-top: 1px solid var(--line);
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 500;
+}
+.table-footer .footer-label b {
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+/* ============================================================
+   ERP GRID: action column (row-actions inside table.table)
+   Compact text buttons, no-wrap, consistent gap.
+   ============================================================ */
+.table td.col-actions {
+    white-space: nowrap;
+    width: 1%;
+}
+.table .row-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+}
+.table .row-actions .btn-toolbar {
+    height: 22px;
+    padding: 0 8px;
+    font-size: 11px;
+    line-height: 22px;
+}
+
+/* ============================================================
+   DRIVER DOC BADGES — compact inline document labels in grid cells
+   Used in /company/drivers table columns (ПАСПОРТ/ВУ/СНИЛС).
+   Badges: PDF / IMG / DOC / XLS / FILE.
+   Overflow: +N link to full document list.
+   ============================================================ */
+.driver-doc-badge {
+    display: inline-block;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 18px;
+    color: var(--accent);
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-line);
+    border-radius: 2px;
+    text-decoration: none;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.driver-doc-badge:hover {
+    background: var(--accent);
+    border-color: var(--accent-deep);
+    color: #fff;
+}
+.driver-doc-more {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-decoration: none;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.driver-doc-more:hover {
+    color: var(--accent);
 }
 

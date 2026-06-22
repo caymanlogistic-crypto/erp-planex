@@ -5115,7 +5115,8 @@ $router->get('/company/drivers', function () use ($config, $db) {
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $driverStmt = $localPdo->prepare(
-                "SELECT d.*, dp.phone AS main_phone
+                "SELECT d.*, COALESCE(dp.phone, d.phone) AS main_phone,
+                        (SELECT COUNT(*) FROM driver_phones WHERE driver_id = d.id AND is_main = 0) AS extra_phones_count
                  FROM drivers d
                  LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
                  WHERE (d.created_by_user_id = ? OR d.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level = 'view'))
@@ -5125,12 +5126,61 @@ $router->get('/company/drivers', function () use ($config, $db) {
             $drivers = $driverStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
             $driverStmt = $localPdo->query(
-                "SELECT d.*, dp.phone AS main_phone
+                "SELECT d.*, COALESCE(dp.phone, d.phone) AS main_phone,
+                        (SELECT COUNT(*) FROM driver_phones WHERE driver_id = d.id AND is_main = 0) AS extra_phones_count
                  FROM drivers d
                  LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
                  ORDER BY d.created_at DESC"
             );
             $drivers = $driverStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Fetch documents separately — no JOIN that multiplies driver rows
+        if (!empty($drivers)) {
+            $driverIds = array_column($drivers, 'id');
+            $placeholders = implode(',', array_fill(0, count($driverIds), '?'));
+            $docStmt = $localPdo->prepare(
+                "SELECT id, entity_id, document_type, original_name, mime_type, stored_name
+                 FROM documents
+                 WHERE entity_type = 'driver'
+                   AND entity_id IN ($placeholders)
+                   AND deleted_at IS NULL
+                 ORDER BY entity_id, id"
+            );
+            $docStmt->execute($driverIds);
+            $allDocs = $docStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Categorize documents by driver_id + type
+            $docsByDriver = [];
+            foreach ($allDocs as $doc) {
+                $did = (int)$doc['entity_id'];
+                $dt  = mb_strtolower($doc['document_type'] ?? '');
+                if (strpos($dt, 'паспорт') !== false) {
+                    $docsByDriver[$did]['passport'][] = $doc;
+                } elseif (strpos($dt, 'водительск') !== false || strpos($dt, 'ву') !== false) {
+                    $docsByDriver[$did]['license'][] = $doc;
+                } elseif (strpos($dt, 'снилс') !== false) {
+                    $docsByDriver[$did]['snils'][] = $doc;
+                } else {
+                    $docsByDriver[$did]['other'][] = $doc;
+                }
+            }
+
+            // Attach document arrays to each driver
+            foreach ($drivers as &$drv) {
+                $did = (int)$drv['id'];
+                $drv['passport_docs'] = $docsByDriver[$did]['passport'] ?? [];
+                $drv['license_docs']  = $docsByDriver[$did]['license']  ?? [];
+                $drv['snils_docs']    = $docsByDriver[$did]['snils']    ?? [];
+            }
+            unset($drv);
+        } else {
+            foreach ($drivers as &$drv) {
+                $drv['passport_docs'] = [];
+                $drv['license_docs']  = [];
+                $drv['snils_docs']    = [];
+            }
+            unset($drv);
         }
         $dbError = null;
     } catch (\Exception $e) {
@@ -10373,6 +10423,89 @@ $router->get('/company/documents/download', function () use ($config, $db) {
     } catch (\Exception $e) {
         http_response_code(500);
         echo 'Error downloading file';
+    }
+});
+
+$router->get('/company/documents/view', function () use ($config, $db) {
+    requireRole(['company_owner', 'logist']);
+
+    $docId = (int)($_GET['id'] ?? 0);
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+
+    if ($docId <= 0 || $companyId <= 0) {
+        http_response_code(404);
+        echo 'Document not found';
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || $company['status'] !== 'active') {
+            http_response_code(404);
+            echo 'Company not found';
+            return;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try {
+            $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        $docStmt = $localPdo->prepare('SELECT * FROM documents WHERE id = ?');
+        $docStmt->execute([$docId]);
+        $doc = $docStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$doc) {
+            http_response_code(404);
+            echo 'Document not found';
+            return;
+        }
+
+        $storageBase = storage_path('companies/' . $companyId . '/documents/');
+        $filePath = $storageBase . $doc['entity_type'] . '/' . $doc['entity_id'] . '/' . $doc['stored_name'];
+
+        $realBase = realpath($storageBase);
+        $realFile = realpath($filePath);
+        if ($realFile === false || !str_starts_with($realFile, $realBase)) {
+            http_response_code(404);
+            echo 'File not found';
+            return;
+        }
+
+        if (!file_exists($realFile)) {
+            http_response_code(404);
+            echo 'File not found';
+            return;
+        }
+
+        $mimeType = $doc['mime_type'] ?: 'application/octet-stream';
+        $originalName = $doc['original_name'] ?: 'document';
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: inline; filename="' . $originalName . '"');
+        header('Content-Length: ' . filesize($realFile));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store, must-revalidate');
+
+        readfile($realFile);
+        exit;
+
+    } catch (\Exception $e) {
+        http_response_code(500);
+        echo 'Error viewing file';
     }
 });
 
