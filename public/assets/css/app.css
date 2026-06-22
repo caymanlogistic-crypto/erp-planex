@@ -3560,3 +3560,19 @@ a.nav-sub-item:visited {
     color: var(--accent);
 }
 
+/* ============================================================
+   DRIVER CREATE MODAL — wider than standard .modal-lg (820px)
+   ============================================================ */
+.driver-create-modal {
+  width: min(1100px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+}
+.driver-create-modal .modal-body {
+  padding: 0;
+}
+.driver-create-modal .panel {
+  margin-bottom: 0;
+  border: none;
+  max-width: none;
+}
+

@@ -39,7 +39,7 @@
         <div class="page-summary"><span>Реестр водителей транспортных средств · Управление доступами и документами</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers/create" class="btn btn-primary">Создать водителя</a>
+        <button type="button" class="btn btn-primary" onclick="openModal('driver-create-modal')">Создать водителя</button>
     </div>
 </div>
 
@@ -48,6 +48,19 @@
         <p class="empty-title">Нет доступных водителей</p>
         <p class="empty-desc">У вас пока нет созданных водителей, либо руководитель ещё не выдал вам доступ к существующим.</p>
     </div>
+</div>
+
+<!-- Modal: create driver -->
+<div class="modal-overlay" id="driver-create-modal" onclick="closeOnOverlay(event,this)">
+  <div class="modal modal-lg driver-create-modal">
+    <div class="modal-head">
+      <span class="modal-title">Создать водителя</span>
+      <button type="button" class="modal-close" onclick="closeModal('driver-create-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <?php require base_path('app/View/partials/company_driver_create_form.php'); ?>
+    </div>
+  </div>
 </div>
 
 <?php else: ?>
@@ -84,7 +97,7 @@ function renderDocBadges(array $docs): string {
         <div class="page-summary"><span>Реестр водителей транспортных средств · Управление доступами и документами</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers/create" class="btn btn-primary">Создать водителя</a>
+        <button type="button" class="btn btn-primary" onclick="openModal('driver-create-modal')">Создать водителя</button>
     </div>
 </div>
 
@@ -165,6 +178,19 @@ function renderDocBadges(array $docs): string {
     <div class="table-footer">
         <span class="footer-label">Показано <b class="footer-range">1–<?= count($drivers) ?></b> из <b class="footer-total"><?= count($drivers) ?></b></span>
     </div>
+</div>
+
+<!-- Modal: create driver -->
+<div class="modal-overlay" id="driver-create-modal" onclick="closeOnOverlay(event,this)">
+  <div class="modal modal-lg driver-create-modal">
+    <div class="modal-head">
+      <span class="modal-title">Создать водителя</span>
+      <button type="button" class="modal-close" onclick="closeModal('driver-create-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <?php require base_path('app/View/partials/company_driver_create_form.php'); ?>
+    </div>
+  </div>
 </div>
 
 <?php endif; ?>

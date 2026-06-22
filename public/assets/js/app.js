@@ -767,3 +767,29 @@ document.documentElement.classList.add('js-ready');
         return { ok: true, errorType: null };
     };
 })();
+
+// ============================================================
+// FINAL3 Modal system: openModal / closeModal / closeOnOverlay
+// ============================================================
+window.openModal = function (id) {
+    var modal = document.getElementById(id);
+    if (modal) modal.classList.add('is-open');
+};
+
+window.closeModal = function (id) {
+    var modal = document.getElementById(id);
+    if (modal) modal.classList.remove('is-open');
+};
+
+window.closeOnOverlay = function (event, overlay) {
+    if (event.target === overlay) {
+        overlay.classList.remove('is-open');
+    }
+};
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+        var openModals = document.querySelectorAll('.modal-overlay.is-open');
+        openModals.forEach(function (m) { m.classList.remove('is-open'); });
+    }
+});
