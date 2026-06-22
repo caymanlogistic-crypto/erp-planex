@@ -79,10 +79,17 @@
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only" data-erp-grid>
+<div class="table-card table-card--standard" data-erp-grid>
     <div class="table-toolbar">
         <div class="found-label">Найдено: <b><?= count($crews) ?></b> экипажей</div>
         <div class="toolbar-right">
+            <div class="toolbar-sort">
+                <span class="toolbar-sort-label">Сортировка по:</span>
+                <select class="toolbar-select" data-erp-grid-sort>
+                    <option value="date" selected>По дате добавления</option>
+                    <option value="alpha">По алфавиту</option>
+                </select>
+            </div>
             <input type="text" class="toolbar-search" placeholder="Поиск по таблице">
         </div>
     </div>
@@ -100,7 +107,7 @@
             </thead>
             <tbody>
                 <?php foreach ($crews as $c): ?>
-                <tr>
+                <tr data-erp-sort-date="<?= $c['id'] ?>">
                     <td class="cell-double">
                         <span class="cell-main">Экипаж #<?= $c['id'] ?></span>
                         <span class="cell-sub">Создан <?= e(ui_date($c['created_at'] ?? null)) ?></span>
@@ -131,6 +138,9 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+    <div class="table-footer">
+        <span class="footer-label">Показано <b class="footer-range">1–<?= count($crews) ?></b> из <b class="footer-total"><?= count($crews) ?></b></span>
     </div>
 </div>
 

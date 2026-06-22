@@ -62,10 +62,17 @@
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only" data-erp-grid>
+<div class="table-card table-card--standard" data-erp-grid>
     <div class="table-toolbar">
         <div class="found-label">Найдено: <b><?= count($vehicleSets) ?></b> транспорта</div>
         <div class="toolbar-right">
+            <div class="toolbar-sort">
+                <span class="toolbar-sort-label">Сортировка по:</span>
+                <select class="toolbar-select" data-erp-grid-sort>
+                    <option value="date" selected>По дате добавления</option>
+                    <option value="alpha">По алфавиту</option>
+                </select>
+            </div>
             <input type="text" class="toolbar-search" placeholder="Поиск по таблице">
         </div>
     </div>
@@ -84,7 +91,7 @@
             </thead>
             <tbody>
                 <?php foreach ($vehicleSets as $vs): ?>
-                <tr>
+                <tr data-erp-sort-date="<?= $vs['id'] ?>">
                     <td class="cell-double">
                         <span class="cell-main"><?= e($vs['set_type'] ?? 'Транспорт') ?></span>
                     </td>
@@ -112,6 +119,9 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+    <div class="table-footer">
+        <span class="footer-label">Показано <b class="footer-range">1–<?= count($vehicleSets) ?></b> из <b class="footer-total"><?= count($vehicleSets) ?></b></span>
     </div>
 </div>
 

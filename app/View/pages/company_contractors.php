@@ -64,10 +64,17 @@
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only" data-erp-grid>
+<div class="table-card table-card--standard" data-erp-grid>
     <div class="table-toolbar">
         <div class="found-label">Найдено: <b><?= count($contractors) ?></b> перевозчиков</div>
         <div class="toolbar-right">
+            <div class="toolbar-sort">
+                <span class="toolbar-sort-label">Сортировка по:</span>
+                <select class="toolbar-select" data-erp-grid-sort>
+                    <option value="date" selected>По дате добавления</option>
+                    <option value="alpha">По алфавиту</option>
+                </select>
+            </div>
             <input type="text" class="toolbar-search" placeholder="Поиск по таблице">
         </div>
     </div>
@@ -86,7 +93,7 @@
             </thead>
             <tbody>
                 <?php foreach ($contractors as $c): ?>
-                <tr>
+                <tr data-erp-sort-date="<?= $c['id'] ?>">
                     <td class="cell-double">
                         <span class="cell-main"><?= e($c['name']) ?></span>
                         <span class="cell-sub">ИНН <?= e($c['inn']) ?> · <?= !empty($c['contractor_type']) ? e(ui_contractor_type($c['contractor_type'])) : '—' ?></span>
@@ -115,6 +122,9 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+    <div class="table-footer">
+        <span class="footer-label">Показано <b class="footer-range">1–<?= count($contractors) ?></b> из <b class="footer-total"><?= count($contractors) ?></b></span>
     </div>
 </div>
 

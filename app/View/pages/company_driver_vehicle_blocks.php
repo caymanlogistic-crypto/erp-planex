@@ -62,10 +62,17 @@
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only" data-erp-grid>
+<div class="table-card table-card--standard" data-erp-grid>
     <div class="table-toolbar">
         <div class="found-label">Найдено: <b><?= count($blocks) ?></b> связок</div>
         <div class="toolbar-right">
+            <div class="toolbar-sort">
+                <span class="toolbar-sort-label">Сортировка по:</span>
+                <select class="toolbar-select" data-erp-grid-sort>
+                    <option value="date" selected>По дате добавления</option>
+                    <option value="alpha">По алфавиту</option>
+                </select>
+            </div>
             <input type="text" class="toolbar-search" placeholder="Поиск по таблице">
         </div>
     </div>
@@ -85,7 +92,7 @@
             </thead>
             <tbody>
                 <?php foreach ($blocks as $b): ?>
-                <tr>
+                <tr data-erp-sort-date="<?= $b['id'] ?>">
                     <td class="cell-double">
                         <span class="cell-main">Водители+ТС</span>
                     </td>
@@ -117,6 +124,9 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+    <div class="table-footer">
+        <span class="footer-label">Показано <b class="footer-range">1–<?= count($blocks) ?></b> из <b class="footer-total"><?= count($blocks) ?></b></span>
     </div>
 </div>
 
