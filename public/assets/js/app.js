@@ -499,6 +499,77 @@ document.documentElement.classList.add('js-ready');
 })();
 
 // ============================================================
+// ERP Grid: общий frontend-поиск по строкам таблиц
+// Атрибуты: data-erp-grid (на .table-card),
+//           data-erp-grid-search (на input, опционально)
+// Работает автоматически для всех .table-card[data-erp-grid]
+// ============================================================
+(function () {
+    document.querySelectorAll('.table-card[data-erp-grid]').forEach(function (card) {
+        var searchInput = card.querySelector('.toolbar-search, [data-erp-grid-search]');
+        if (!searchInput) return;
+
+        var countEl = card.querySelector('.found-label b');
+        var table = card.querySelector('table.table');
+        if (!table) return;
+        var tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        // Создать no-results элемент, если отсутствует
+        var noResults = card.querySelector('.table-no-results');
+        if (!noResults) {
+            noResults = document.createElement('div');
+            noResults.className = 'table-no-results is-hidden';
+            noResults.innerHTML =
+                '<div class="empty-state is-compact">' +
+                    '<p class="empty-title">Ничего не найдено</p>' +
+                    '<p class="empty-desc">Попробуйте изменить поисковый запрос</p>' +
+                '</div>';
+            var scroll = card.querySelector('.table-scroll');
+            if (scroll) scroll.appendChild(noResults);
+        }
+
+        function filterRows() {
+            var query = searchInput.value.trim().toLowerCase();
+            var rows = tbody.querySelectorAll('tr');
+            var visible = 0;
+
+            rows.forEach(function (tr) {
+                var text = tr.textContent.toLowerCase();
+                if (query === '' || text.indexOf(query) !== -1) {
+                    tr.classList.remove('is-hidden');
+                    visible++;
+                } else {
+                    tr.classList.add('is-hidden');
+                }
+            });
+
+            if (countEl) {
+                countEl.textContent = visible;
+            }
+
+            if (query !== '' && visible === 0) {
+                table.style.display = 'none';
+                noResults.classList.remove('is-hidden');
+            } else {
+                table.style.display = '';
+                noResults.classList.add('is-hidden');
+            }
+        }
+
+        searchInput.addEventListener('input', filterRows);
+
+        // Очистка поиска по Escape
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                filterRows();
+            }
+        });
+    });
+})();
+
+// ============================================================
 // Общий валидатор загрузки документов (20 МБ/файл, 80 МБ/форма)
 // ============================================================
 (function () {

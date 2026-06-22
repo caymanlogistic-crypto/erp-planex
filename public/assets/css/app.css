@@ -547,7 +547,7 @@ a.nav-item {
     overflow-y: auto;
     overflow-x: hidden;
     background: var(--app-bg);
-    padding: 8px 0 0;
+    padding: 12px 0 0;
 }
 
 /* === TOPBAR BRAND === */
@@ -880,9 +880,54 @@ form.panel {
 /* Page content area (below page-head) */
 /* NOTE: .content already provides 14px left/right — no extra horizontal padding here */
 .page-content {
-    padding: 10px 0 16px;
+    padding: 12px 0 16px;
     display: flex;
     flex-direction: column;
+}
+
+/* ============================================================
+   SYSTEM RULE: stable visual gap around .page-head
+   .content padding-top (12px) = gap above page-head
+   Rules below = gap below page-head (same 12px)
+   Both equal → consistent vertical rhythm.
+   Value 12px = --space-3 from design tokens.
+   ============================================================ */
+.page-head + .table-card,
+.page-head + .notice,
+.page-head + form {
+    margin-top: 12px;
+}
+
+/* ============================================================
+   TABLE TOOLBAR SEARCH
+   Compact search input inside .table-toolbar > .toolbar-right.
+   ============================================================ */
+.table-toolbar .toolbar-search {
+    height: var(--toolbar-h);
+    width: 200px;
+    padding: 0 8px;
+    font-size: 11px;
+    background: var(--surface-strong);
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    color: var(--text-main);
+    outline: none;
+    font-family: var(--font);
+}
+.table-toolbar .toolbar-search::placeholder {
+    color: var(--text-faint);
+    font-weight: 400;
+}
+.table-toolbar .toolbar-search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,71,24,.1);
+}
+
+/* ============================================================
+   TABLE ROW — hidden by search filter (JS-controlled)
+   ============================================================ */
+.table tbody tr.is-hidden {
+    display: none;
 }
 
 h2 {
@@ -1561,7 +1606,8 @@ input.field-input:-webkit-autofill:active {
 }
 
 /* Cells containing two-line content: auto height, top-align */
-.tbl td.cell-double {
+.tbl td.cell-double,
+.table td.cell-double {
     height: auto;
     padding: 6px 8px;
     vertical-align: top;
@@ -3294,5 +3340,46 @@ a.nav-sub-item:focus,
 a.nav-sub-item:active,
 a.nav-sub-item:visited {
     text-decoration: none;
+}
+
+/* ============================================================
+   TABLE-CARD without pills-bar / pagination
+   Overrides FINAL3 grid-template-rows:36px 34px 1fr 34px
+   when only toolbar + scroll are present.
+   Row 1: 36px — matches FINAL3 table-toolbar height.
+   Row 2: auto — table content sizes naturally, no vertical scroll.
+   ============================================================ */
+.table-card--toolbar-only {
+    grid-template-rows: 36px auto;
+}
+
+/* ============================================================
+   ERP GRID: production overrides for FINAL3 .table inside .table-card
+   FINAL3 .table uses table-layout:fixed for demo columns.
+   Production tables need auto layout for variable content.
+   ============================================================ */
+.table-card .table {
+    table-layout: auto;
+    min-width: 0;
+}
+
+/* ============================================================
+   TABLE NO-RESULTS (search filter empty state)
+   Shown inside .table-scroll when search returns 0 rows.
+   Hidden by default, toggled via JS.
+   ============================================================ */
+.table-no-results {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+}
+.table-no-results.is-hidden {
+    display: none;
+}
+.table-no-results .empty-state {
+    background: transparent;
+    border: none;
+    padding: 24px 20px;
 }
 
