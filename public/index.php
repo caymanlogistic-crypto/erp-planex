@@ -5455,17 +5455,8 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
             $errors['full_name'] = 'ФИО: 3 слова';
         }
 
-        if ($phoneRaw === '') {
-            $errors['phone'] = 'Укажите телефон';
-        } elseif ($phone === null) {
+        if ($phoneRaw !== '' && $phone === null) {
             $errors['phone'] = 'Неверный формат';
-        } else {
-            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM drivers WHERE phone = ?');
-            $checkStmt->execute([$phone]);
-            if ($checkStmt->fetchColumn() > 0) {
-                $errors['phone'] = 'Телефон уже есть';
-                $formError = 'Водитель с таким телефоном уже есть в системе.';
-            }
         }
 
         if ($licenseNumberRaw !== '' && $licenseNumber === null) {
@@ -5525,7 +5516,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         );
         $insert->execute([
             ':full_name'              => $fullName,
-            ':phone'                  => $phone,
+            ':phone'                  => $phone ?? '',
             ':email'                  => $email !== '' ? $email : null,
             ':license_number'         => $licenseNumber,
             ':license_category'       => $licenseCategory !== '' ? $licenseCategory : null,
@@ -5694,12 +5685,7 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
         $success = true;
     } catch (\PDOException $e) {
         $company = $company ?? null;
-        if ((string)$e->getCode() === '23000') {
-            $errors['phone'] = 'Телефон уже есть';
-            $formError = 'Водитель с таким телефоном уже есть в системе.';
-        } else {
-            $formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';
-        }
+        $formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';
     } catch (\Exception $e) {
         $company = $company ?? null;
         $formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';
@@ -6115,15 +6101,7 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
             $errors['full_name'] = 'Обязательное поле';
         }
 
-        if ($phone === '') {
-            $errors['phone'] = 'Обязательное поле';
-        } else {
-            $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM drivers WHERE phone = ? AND id != ?');
-            $dupStmt->execute([$phone, (int) $id]);
-            if ($dupStmt->fetchColumn() > 0) {
-                $errors['phone'] = 'Телефон уже используется';
-            }
-        }
+        // Phone is optional — no uniqueness check (business rule: phone is not a unique identifier)
 
         if (!empty($errors)) {
             ob_start();
