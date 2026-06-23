@@ -382,7 +382,7 @@ function ensureDocumentTypeRecord(PDO $localPdo, string $name, string $code, str
 
 function applyLocalMigrations(\PDO $localPdo): void
 {
-    for ($i = 1; $i <= 35; $i++) {
+    for ($i = 1; $i <= 36; $i++) {
         $pattern = base_path('database/migrations-local/' . sprintf('%03d', $i) . '_*.sql');
         $files = glob($pattern);
         if (!$files) {
@@ -4874,7 +4874,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
                 "SELECT g.*, u.full_name AS logist_name
                  FROM entity_access_grants g
                  LEFT JOIN users u ON g.granted_to_user_id = u.id
-                 WHERE g.entity_type = ? AND g.entity_id = ?"
+                 WHERE g.entity_type = ? AND g.entity_id = ? AND g.revoked_at IS NULL"
             );
             $grantsStmt->execute(['contractor', (int)$id]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -14179,6 +14179,262 @@ $router->post('/company/access-grants/{id}/revoke', function ($id) use ($config,
         $update = $localPdo->prepare('UPDATE entity_access_grants SET revoked_at = NOW(), revoked_by_user_id = ? WHERE id = ?');
         $update->execute([(int)$_SESSION['user_id'], (int)$id]);
     } catch (\Exception $e) {}
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+// ============================================================
+// BLOCK D2: Contractor cascade sharing
+// ============================================================
+
+// Share contractor + cascade to selected logists / all logists
+$router->post('/company/contractors/{id}/share', function ($id) use ($config, $db) {
+    requireRole('company_owner');
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $contractorId = (int)$id;
+    $redirect = $_POST['redirect'] ?? '/company/contractors/' . $contractorId;
+
+    if ($companyId <= 0 || $contractorId <= 0) {
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || $company['status'] !== 'active') {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        // Verify contractor exists
+        $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $cStmt->execute([$contractorId]);
+        $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$contractor) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        // Determine target logists
+        $grantAll = ($_POST['grant_all'] ?? '') === '1';
+        $targetUserIds = [];
+
+        if ($grantAll) {
+            // All active logists (NOT senior_logist, NOT company_owner)
+            $usersStmt = $localPdo->query(
+                "SELECT id FROM users WHERE role_code = 'logist' AND status = 'active' ORDER BY full_name"
+            );
+            $targetUserIds = $usersStmt->fetchAll(PDO::FETCH_COLUMN);
+        } else {
+            // Selected logists from checkboxes
+            $postedIds = $_POST['granted_to_user_ids'] ?? [];
+            if (is_array($postedIds)) {
+                foreach ($postedIds as $uid) {
+                    $uid = (int)$uid;
+                    if ($uid > 0) {
+                        $targetUserIds[] = $uid;
+                    }
+                }
+            }
+        }
+
+        if (empty($targetUserIds)) {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $grantSource = 'contractor_cascade:' . $contractorId;
+        $grantedByUserId = (int)$_SESSION['user_id'];
+        $comment = 'Расшарено с перевозчиком #' . $contractorId;
+
+        // Collect cascade entities
+        $crewIds = [];
+        $blockIds = [];
+        $driverIds = [];
+        $vehicleSetIds = [];
+
+        // Find crews for this contractor
+        $crewsStmt = $localPdo->prepare(
+            "SELECT c.id AS crew_id, c.driver_vehicle_block_id,
+                    dvb.driver_id, dvb.vehicle_set_id
+             FROM crews c
+             JOIN driver_vehicle_blocks dvb ON c.driver_vehicle_block_id = dvb.id
+             WHERE c.contractor_id = ? AND c.status != 'archived'"
+        );
+        $crewsStmt->execute([$contractorId]);
+        $cascadeRows = $crewsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($cascadeRows as $row) {
+            $crewIds[] = (int)$row['crew_id'];
+            $blockIds[] = (int)$row['driver_vehicle_block_id'];
+            $driverIds[] = (int)$row['driver_id'];
+            $vehicleSetIds[] = (int)$row['vehicle_set_id'];
+        }
+
+        $localPdo->beginTransaction();
+        try {
+            $grantStmt = $localPdo->prepare(
+                "INSERT INTO entity_access_grants
+                    (entity_type, entity_id, granted_to_user_id, granted_by_user_id, access_level, grant_source, comment)
+                 VALUES (:entity_type, :entity_id, :granted_to_user_id, :granted_by_user_id, 'view', :grant_source, :comment)
+                 ON DUPLICATE KEY UPDATE grant_source = VALUES(grant_source), comment = VALUES(comment)"
+            );
+
+            foreach ($targetUserIds as $targetUserId) {
+                // 1. Contractor grant
+                $grantStmt->execute([
+                    ':entity_type'        => 'contractor',
+                    ':entity_id'          => $contractorId,
+                    ':granted_to_user_id' => $targetUserId,
+                    ':granted_by_user_id' => $grantedByUserId,
+                    ':grant_source'       => $grantSource,
+                    ':comment'            => $comment,
+                ]);
+
+                // 2. Crew grants
+                foreach ($crewIds as $crewId) {
+                    $grantStmt->execute([
+                        ':entity_type'        => 'crew',
+                        ':entity_id'          => $crewId,
+                        ':granted_to_user_id' => $targetUserId,
+                        ':granted_by_user_id' => $grantedByUserId,
+                        ':grant_source'       => $grantSource,
+                        ':comment'            => $comment,
+                    ]);
+                }
+
+                // 3. Driver_vehicle_block grants (unique)
+                $uniqueBlockIds = array_unique($blockIds);
+                foreach ($uniqueBlockIds as $blockId) {
+                    $grantStmt->execute([
+                        ':entity_type'        => 'driver_vehicle_block',
+                        ':entity_id'          => $blockId,
+                        ':granted_to_user_id' => $targetUserId,
+                        ':granted_by_user_id' => $grantedByUserId,
+                        ':grant_source'       => $grantSource,
+                        ':comment'            => $comment,
+                    ]);
+                }
+
+                // 4. Driver grants (unique)
+                $uniqueDriverIds = array_unique($driverIds);
+                foreach ($uniqueDriverIds as $driverId) {
+                    $grantStmt->execute([
+                        ':entity_type'        => 'driver',
+                        ':entity_id'          => $driverId,
+                        ':granted_to_user_id' => $targetUserId,
+                        ':granted_by_user_id' => $grantedByUserId,
+                        ':grant_source'       => $grantSource,
+                        ':comment'            => $comment,
+                    ]);
+                }
+
+                // 5. Vehicle_set grants (unique)
+                $uniqueVehicleSetIds = array_unique($vehicleSetIds);
+                foreach ($uniqueVehicleSetIds as $vsId) {
+                    $grantStmt->execute([
+                        ':entity_type'        => 'vehicle_set',
+                        ':entity_id'          => $vsId,
+                        ':granted_to_user_id' => $targetUserId,
+                        ':granted_by_user_id' => $grantedByUserId,
+                        ':grant_source'       => $grantSource,
+                        ':comment'            => $comment,
+                    ]);
+                }
+            }
+
+            $localPdo->commit();
+        } catch (\Exception $e) {
+            $localPdo->rollBack();
+            error_log('Contractor share error: ' . $e->getMessage());
+        }
+    } catch (\Exception $e) {
+        error_log('Contractor share setup error: ' . $e->getMessage());
+    }
+
+    header('Location: ' . $redirect);
+    exit;
+});
+
+// Unshare contractor + cascade revoke for a specific logist
+$router->post('/company/contractors/{id}/unshare', function ($id) use ($config, $db) {
+    requireRole('company_owner');
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $contractorId = (int)$id;
+    $grantedToUserId = (int)($_POST['granted_to_user_id'] ?? 0);
+    $redirect = $_POST['redirect'] ?? '/company/contractors/' . $contractorId;
+
+    if ($companyId <= 0 || $contractorId <= 0 || $grantedToUserId <= 0) {
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || $company['status'] !== 'active') {
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        $revokedByUserId = (int)$_SESSION['user_id'];
+        $grantSource = 'contractor_cascade:' . $contractorId;
+
+        $localPdo->beginTransaction();
+        try {
+            // 1. Revoke the contractor grant itself
+            $revokeContractor = $localPdo->prepare(
+                "UPDATE entity_access_grants
+                 SET revoked_at = NOW(), revoked_by_user_id = ?
+                 WHERE entity_type = 'contractor'
+                   AND entity_id = ?
+                   AND granted_to_user_id = ?
+                   AND revoked_at IS NULL"
+            );
+            $revokeContractor->execute([$revokedByUserId, $contractorId, $grantedToUserId]);
+
+            // 2. Revoke all cascade grants for this contractor+logist pair
+            $revokeCascade = $localPdo->prepare(
+                "UPDATE entity_access_grants
+                 SET revoked_at = NOW(), revoked_by_user_id = ?
+                 WHERE grant_source = ?
+                   AND granted_to_user_id = ?
+                   AND revoked_at IS NULL"
+            );
+            $revokeCascade->execute([$revokedByUserId, $grantSource, $grantedToUserId]);
+
+            $localPdo->commit();
+        } catch (\Exception $e) {
+            $localPdo->rollBack();
+            error_log('Contractor unshare error: ' . $e->getMessage());
+        }
+    } catch (\Exception $e) {
+        error_log('Contractor unshare setup error: ' . $e->getMessage());
+    }
 
     header('Location: ' . $redirect);
     exit;
