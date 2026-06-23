@@ -58,20 +58,29 @@ app/Service/DocumentService.php       — единый сервис докуме
 
 Подробнее: `docs/ai/ARCHITECTURE_FOUNDATION_STAGE_B.md`
 
-## MASTER-FLOW (архитектурный план)
+## MASTER-FLOW (РЕАЛИЗОВАН)
 
-Подготовлен архитектурный план master-flow — главного пользовательского паттерна ERP:
+Реализованы два сценария master-flow:
 
 ```text
 docs/ai/MASTER_FLOW_ARCHITECTURE.md
 ```
 
-Два сценария:
-- Сценарий A: «Добавить экипаж перевозчику» (из карточки `/company/contractors/{id}`)
-- Сценарий B: «Создать перевозчика с экипажем» (create-full, уже реализован)
+### Сценарий B: «Создать перевозчика с экипажем» (create-full)
+- Маршрут: GET/POST `/company/contractors/create-full`
+- 4-шаговый stepper: Перевозчик → Водитель → Машина → Проверка
+- Транзакционное создание: contractor + driver + vehicle_set + driver_vehicle_block + crew
+- Проверка дублей перед INSERT
+- Success-экран показывает все 5 сущностей со ссылками
 
-План не реализован в коде — ждёт подтверждения владельца и разрешения на изменение
-защищённой страницы `/company/contractors`.
+### Сценарий A: «Добавить экипаж перевозчику» (из карточки)
+- Маршрут: GET/POST `/company/contractors/{id}/add-crew`
+- 3-шаговый stepper: Водитель → Машина → Проверка
+- Кнопка «+ Водитель + Машина» в карточке перевозчика
+- Перевозчик уже выбран (из URL), пользователь НЕ выбирает его заново
+- Транзакционное создание: driver + vehicle_set + driver_vehicle_block + crew
+- Проверка дублей перед INSERT
+- Success-экран показывает все созданные сущности со ссылками
 
 ## Стиль взаимодействия с владельцем
 
@@ -107,6 +116,7 @@ docs/ai/MASTER_FLOW_ARCHITECTURE.md
 По выводу владельца в этом чате:
 
 ```text
+888ba64 feat(master-flow): add contractor crew creation workflows
 c3b825c fix(drivers): align create modal footer with FINAL3
 7a796fb feat(drivers): open create form in FINAL3 modal from drivers list
 051155f wip(ui): refine ERP grid toolbar and list pages
@@ -117,7 +127,7 @@ a2149a7 feat(stepper): contractor/driver/vehicle create-full with FINAL3 stepper
 67b5454 feat(clients): align client create flow with legal entity standard
 ```
 
-`c3b825c` — последний подтверждённый commit по созданию водителя в модалке.
+`888ba64` — последний коммит: master-flow реализован (C2a + C2b).
 
 После `c3b825c` были незакоммиченные доработки edit-модала водителя. Они пока **не приняты как production**.
 

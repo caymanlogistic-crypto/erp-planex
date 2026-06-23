@@ -79,7 +79,7 @@ VEHICLE_SET_PRODUCTION_CREATE — подготовлены MD, отложено 
 PROTECTED_ARCHITECTURE_PLAN — ПРИНЯТ (c19c67a).
 FOUNDATION_STAGE_B — ВЫПОЛНЕН: AccessControlService + DocumentService (не подключены к ядру).
 BLOCK_C — ВЫПОЛНЕН (cf20e09): driver_vehicle_blocks + crews CRUD complete.
-MASTER_FLOW_ARCHITECTURE — ПЛАН ГОТОВ: docs/ai/MASTER_FLOW_ARCHITECTURE.md.
+MASTER_FLOW_IMPLEMENTATION — ВЫПОЛНЕН (888ba64): contractor crew creation workflows (C2a + C2b).
 ```
 
 ## Текущая активная задача
@@ -91,6 +91,12 @@ DRIVER_EDIT_MODAL_GEOMETRY_NEEDS_REWORK
 Нужно довести edit modal водителя до соответствия create-form 1 в 1 по геометрии.
 
 Критерий: edit-form должна быть той же формой создания, только предзаполненной. Разница только в значениях, кнопке `Сохранить`, `Заменить` и `×` у существующих документов.
+
+## Последний подтверждённый commit по текущей ветке работ
+
+```text
+888ba64 — feat(master-flow): add contractor crew creation workflows
+```
 
 ## Текущий визуальный blocker
 
