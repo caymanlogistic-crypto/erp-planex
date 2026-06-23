@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список экипажей</h1>
+        <div class="page-summary"><span>Экипажи: перевозчик + водитель + транспорт · Управление рейсами</span></div>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список экипажей</h1>
+        <div class="page-summary"><span>Экипажи: перевозчик + водитель + транспорт · Управление рейсами</span></div>
     </div>
 </div>
 
@@ -34,9 +34,9 @@
 <?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список экипажей</h1>
+        <div class="page-summary"><span>Экипажи: перевозчик + водитель + транспорт · Управление рейсами</span></div>
     </div>
     <?php if (!$isLogist): ?>
     <div class="page-head-actions">
@@ -70,9 +70,9 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипажи</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Список экипажей</h1>
+        <div class="page-summary"><span>Экипажи: перевозчик + водитель + транспорт · Управление рейсами</span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>

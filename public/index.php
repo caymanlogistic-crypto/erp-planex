@@ -9138,6 +9138,11 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
             "SELECT id, name, inn FROM contractors WHERE status = 'active' ORDER BY name"
         )->fetchAll(PDO::FETCH_ASSOC);
 
+        $cStmt = $localPdo->prepare('SELECT * FROM crews WHERE id = ?');
+        $cStmt->execute([$crewId]);
+        $crew = $cStmt->fetch(PDO::FETCH_ASSOC);
+
+        $currentBlockId = $crew ? (int)($crew['driver_vehicle_block_id'] ?? 0) : 0;
         $driverVehicleBlocks = $localPdo->query(
             "SELECT dvb.id, d.full_name AS driver_name, d.phone AS driver_phone, vs.set_type,
              vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
@@ -9146,7 +9151,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
              JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
              LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
              LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
-             WHERE dvb.status = 'active'
+             WHERE dvb.status = 'active' " . ($currentBlockId > 0 ? "OR dvb.id = " . $currentBlockId : "") . "
              ORDER BY d.full_name"
         )->fetchAll(PDO::FETCH_ASSOC);
 
@@ -9167,7 +9172,6 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
         }
 
         if (!empty($blockingNotices)) {
-            $crew = null;
             $dbError = null;
 
             ob_start();
@@ -9176,10 +9180,6 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
             require base_path('app/View/layouts/main.php');
             return;
         }
-
-        $cStmt = $localPdo->prepare('SELECT * FROM crews WHERE id = ?');
-        $cStmt->execute([$crewId]);
-        $crew = $cStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$crew) {
             $entityNotFound = true;
@@ -9231,9 +9231,12 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
 
         if ($driverVehicleBlockId === '') {
             $errors['driver_vehicle_block_id'] = 'Выберите связку «Водители+ТС»';
-
-        } elseif (!$dvBlock) {
-            $errors['driver_vehicle_block_id'] = 'Связка «Водители+ТС» не найдена';
+        } else {
+            $checkDvbStmt = $localPdo->prepare('SELECT COUNT(*) FROM driver_vehicle_blocks WHERE id = ?');
+            $checkDvbStmt->execute([(int)$driverVehicleBlockId]);
+            if ($checkDvbStmt->fetchColumn() == 0) {
+                $errors['driver_vehicle_block_id'] = 'Связка «Водители+ТС» не найдена';
+            }
         }
 
         if (empty($errors)) {
@@ -9259,7 +9262,8 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
 
         $update = $localPdo->prepare(
             'UPDATE crews SET contractor_id = :contractor_id, driver_vehicle_block_id = :driver_vehicle_block_id,
-             status = :status, comments = :comments
+             status = :status, comments = :comments,
+             updated_by_user_id = :uid, updated_by_role = :role
              WHERE id = :id'
         );
         $update->execute([
@@ -9267,6 +9271,8 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
             ':driver_vehicle_block_id' => $driverVehicleBlockId,
             ':status'        => $status,
             ':comments'      => $comments !== '' ? $comments : null,
+            ':uid'           => (int)$_SESSION['user_id'],
+            ':role'          => $_SESSION['role_code'],
             ':id'            => $crewId,
         ]);
 

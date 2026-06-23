@@ -19,6 +19,7 @@ $contractorsOpen = ($roleCode !== 'superadmin') && (
     || str_starts_with($_SERVER['REQUEST_URI'], '/company/driver-vehicle-blocks')
     || str_starts_with($_SERVER['REQUEST_URI'], '/company/drivers')
     || str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets')
+    || str_starts_with($_SERVER['REQUEST_URI'], '/company/crews')
 );
 
 $userName = $_SESSION['user_name'] ?? '';
@@ -153,6 +154,9 @@ if ($crumbContext !== '') {
                     <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                         <span>Транспорт</span>
                     </a>
+                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/crews') ? ' is-active' : '' ?>" href="/company/crews">
+                        <span>Экипажи</span>
+                    </a>
                 </div>
             </div>
 
@@ -201,6 +205,9 @@ if ($crumbContext !== '') {
                     </a>
                     <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                         <span>Транспорт</span>
+                    </a>
+                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/crews') ? ' is-active' : '' ?>" href="/company/crews">
+                        <span>Экипажи</span>
                     </a>
                 </div>
             </div>
