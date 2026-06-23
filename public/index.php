@@ -4067,6 +4067,7 @@ $router->get('/company/contractors/{id}/add-crew', function ($id) use ($config, 
     $contractorId = (int)$id;
     $drivers = [];
     $vehicleSets = [];
+    $driverVehicleBlocks = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -4183,6 +4184,31 @@ $router->get('/company/contractors/{id}/add-crew', function ($id) use ($config, 
             $vehicleSets = [];
         }
 
+        // Load driver-vehicle blocks not already crewed with this contractor
+        try {
+            $dvbStmt = $localPdo->prepare(
+                "SELECT dvb.id, d.full_name AS driver_name, d.id AS driver_id,
+                        vs.id AS vehicle_set_id, vs.set_type,
+                        vu1.plate_number AS primary_plate,
+                        vu2.plate_number AS secondary_plate
+                   FROM driver_vehicle_blocks dvb
+                   JOIN drivers d ON dvb.driver_id = d.id
+                   JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                   JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                   LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                  WHERE dvb.status = 'active'
+                    AND dvb.id NOT IN (
+                        SELECT driver_vehicle_block_id FROM crews
+                         WHERE contractor_id = ? AND status != 'archived'
+                    )
+                  ORDER BY d.full_name"
+            );
+            $dvbStmt->execute([$contractorId]);
+            $driverVehicleBlocks = $dvbStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Exception $e) {
+            $driverVehicleBlocks = [];
+        }
+
         $success = false;
         $errors = [];
         $old = [];
@@ -4221,6 +4247,7 @@ $router->post('/company/contractors/{id}/add-crew', function ($id) use ($config,
     $createdCrew = null;
     $drivers = [];
     $vehicleSets = [];
+    $driverVehicleBlocks = [];
 
     if ($companyId <= 0) {
         $company = null;
@@ -4340,72 +4367,127 @@ $router->post('/company/contractors/{id}/add-crew', function ($id) use ($config,
         } catch (\Exception $e) {}
 
         // --- Determine modes ---
-        $driverMode = trim($_POST['driver_mode'] ?? 'existing');
-        $vehicleMode = trim($_POST['vehicle_mode'] ?? 'existing');
+        $blockMode = trim($_POST['block_mode'] ?? 'existing');
 
-        // --- Validation ---
-        $driverFullName = trim($_POST['driver_full_name'] ?? '');
-        $driverPhone = trim($_POST['driver_phone'] ?? '');
-        $driverIdExisting = trim($_POST['driver_id'] ?? '');
-
-        $plateNumber = trim($_POST['plate_number'] ?? '');
-        $brand = trim($_POST['brand'] ?? '');
-        $model = trim($_POST['model'] ?? '');
-        $setType = trim($_POST['set_type'] ?? 'single');
-        $secondaryPlateNumber = trim($_POST['secondary_plate_number'] ?? '');
-        $vehicleSetIdExisting = trim($_POST['vehicle_set_id'] ?? '');
-
-        // Driver validation
-        if ($driverMode === 'existing') {
-            if ($driverIdExisting === '') {
-                $errors['driver_id'] = 'Выберите водителя';
-            } else {
-                $checkStmt = $localPdo->prepare('SELECT id, full_name FROM drivers WHERE id = ?');
-                $checkStmt->execute([(int)$driverIdExisting]);
-                if (!$checkStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $errors['driver_id'] = 'Водитель не найден';
-                }
-            }
+        if ($blockMode === 'new') {
+            $driverMode = trim($_POST['driver_mode'] ?? 'existing');
+            $vehicleMode = trim($_POST['vehicle_mode'] ?? 'existing');
         } else {
-            if ($driverFullName === '') {
-                $errors['driver_full_name'] = 'Обязательное поле';
-            }
+            $driverMode = '';
+            $vehicleMode = '';
         }
 
-        // Vehicle validation
-        if ($vehicleMode === 'existing') {
-            if ($vehicleSetIdExisting === '') {
-                $errors['vehicle_set_id'] = 'Выберите транспорт';
+        // --- Validation ---
+        if ($blockMode === 'existing') {
+            // Validate existing driver_vehicle_block
+            $blockIdExisting = trim($_POST['block_id'] ?? '');
+            if ($blockIdExisting === '') {
+                $errors['block_id'] = 'Выберите связку Водитель+ТС';
             } else {
-                $checkStmt = $localPdo->prepare('SELECT id FROM vehicle_sets WHERE id = ?');
-                $checkStmt->execute([(int)$vehicleSetIdExisting]);
-                if (!$checkStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $errors['vehicle_set_id'] = 'Транспорт не найден';
+                $checkStmt = $localPdo->prepare(
+                    'SELECT dvb.id, d.full_name AS driver_name, d.id AS driver_id,
+                            vs.id AS vehicle_set_id,
+                            vu1.plate_number AS primary_plate,
+                            vu2.plate_number AS secondary_plate
+                       FROM driver_vehicle_blocks dvb
+                       JOIN drivers d ON dvb.driver_id = d.id
+                       JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                       JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                       LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                      WHERE dvb.id = ? AND dvb.status = \'active\''
+                );
+                $checkStmt->execute([(int)$blockIdExisting]);
+                $existingBlockRow = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                if (!$existingBlockRow) {
+                    $errors['block_id'] = 'Связка Водитель+ТС не найдена или неактивна';
                 }
             }
         } else {
-            if ($plateNumber === '') {
-                $errors['plate_number'] = 'Обязательное поле';
+            $driverFullName = trim($_POST['driver_full_name'] ?? '');
+            $driverPhone = trim($_POST['driver_phone'] ?? '');
+            $driverIdExisting = trim($_POST['driver_id'] ?? '');
+
+            $plateNumber = trim($_POST['plate_number'] ?? '');
+            $brand = trim($_POST['brand'] ?? '');
+            $model = trim($_POST['model'] ?? '');
+            $setType = trim($_POST['set_type'] ?? 'single');
+            $secondaryPlateNumber = trim($_POST['secondary_plate_number'] ?? '');
+            $vehicleSetIdExisting = trim($_POST['vehicle_set_id'] ?? '');
+
+            // Driver validation
+            if ($driverMode === 'existing') {
+                if ($driverIdExisting === '') {
+                    $errors['driver_id'] = 'Выберите водителя';
+                } else {
+                    $checkStmt = $localPdo->prepare('SELECT id, full_name FROM drivers WHERE id = ?');
+                    $checkStmt->execute([(int)$driverIdExisting]);
+                    if (!$checkStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $errors['driver_id'] = 'Водитель не найден';
+                    }
+                }
             } else {
-                $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ?');
-                $checkStmt->execute([$plateNumber]);
-                if ($checkStmt->fetchColumn() > 0) {
-                    $errors['plate_number'] = 'Госномер уже используется в этой компании';
+                if ($driverFullName === '') {
+                    $errors['driver_full_name'] = 'Обязательное поле';
                 }
             }
-            if (($setType === 'coupling' || $setType === 'road_train') && $secondaryPlateNumber === '') {
-                $errors['secondary_plate_number'] = 'Обязательно для сцепки и автопоезда';
-            }
-            if ($secondaryPlateNumber !== '' && empty($errors['plate_number'])) {
-                $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ?');
-                $checkStmt->execute([$secondaryPlateNumber]);
-                if ($checkStmt->fetchColumn() > 0) {
-                    $errors['secondary_plate_number'] = 'Госномер уже используется в этой компании';
+
+            // Vehicle validation
+            if ($vehicleMode === 'existing') {
+                if ($vehicleSetIdExisting === '') {
+                    $errors['vehicle_set_id'] = 'Выберите транспорт';
+                } else {
+                    $checkStmt = $localPdo->prepare('SELECT id FROM vehicle_sets WHERE id = ?');
+                    $checkStmt->execute([(int)$vehicleSetIdExisting]);
+                    if (!$checkStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $errors['vehicle_set_id'] = 'Транспорт не найден';
+                    }
+                }
+            } else {
+                if ($plateNumber === '') {
+                    $errors['plate_number'] = 'Обязательное поле';
+                } else {
+                    $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ?');
+                    $checkStmt->execute([$plateNumber]);
+                    if ($checkStmt->fetchColumn() > 0) {
+                        $errors['plate_number'] = 'Госномер уже используется в этой компании';
+                    }
+                }
+                if (($setType === 'coupling' || $setType === 'road_train') && $secondaryPlateNumber === '') {
+                    $errors['secondary_plate_number'] = 'Обязательно для сцепки и автопоезда';
+                }
+                if ($secondaryPlateNumber !== '' && empty($errors['plate_number'])) {
+                    $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM vehicle_units WHERE plate_number = ?');
+                    $checkStmt->execute([$secondaryPlateNumber]);
+                    if ($checkStmt->fetchColumn() > 0) {
+                        $errors['secondary_plate_number'] = 'Госномер уже используется в этой компании';
+                    }
                 }
             }
         }
 
         if (!empty($errors)) {
+            // Re-load entity lists for error re-display
+            try {
+                $dvbStmt = $localPdo->prepare(
+                    "SELECT dvb.id, d.full_name AS driver_name, d.id AS driver_id,
+                            vs.id AS vehicle_set_id, vs.set_type,
+                            vu1.plate_number AS primary_plate,
+                            vu2.plate_number AS secondary_plate
+                       FROM driver_vehicle_blocks dvb
+                       JOIN drivers d ON dvb.driver_id = d.id
+                       JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                       JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                       LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                      WHERE dvb.status = 'active'
+                        AND dvb.id NOT IN (
+                            SELECT driver_vehicle_block_id FROM crews
+                             WHERE contractor_id = ? AND status != 'archived'
+                        )
+                      ORDER BY d.full_name"
+                );
+                $dvbStmt->execute([$contractorId]);
+                $driverVehicleBlocks = $dvbStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\Exception $e) {}
             $dbError = null;
             ob_start();
             require base_path('app/View/pages/company_contractor_add_crew.php');
@@ -4420,119 +4502,126 @@ $router->post('/company/contractors/{id}/add-crew', function ($id) use ($config,
             $uid = (int)$_SESSION['user_id'];
             $role = $_SESSION['role_code'];
 
-            // 1. Driver — use existing or create new
-            $driverId = null;
-            $driverNameForSuccess = '';
-            if ($driverMode === 'existing') {
-                $driverId = (int)$driverIdExisting;
-                $drvStmt = $localPdo->prepare('SELECT full_name FROM drivers WHERE id = ?');
-                $drvStmt->execute([$driverId]);
-                $drvRow = $drvStmt->fetch(PDO::FETCH_ASSOC);
-                $driverNameForSuccess = $drvRow['full_name'] ?? '';
+            if ($blockMode === 'existing') {
+                // Use existing driver_vehicle_block — just create crew
+                $blockId = (int)$blockIdExisting;
+                $driverNameForSuccess = $existingBlockRow['driver_name'] ?? '';
+                $driverId = (int)($existingBlockRow['driver_id'] ?? 0);
+                $vehicleSetId = (int)($existingBlockRow['vehicle_set_id'] ?? 0);
+                $vehiclePrimaryPlateForSuccess = $existingBlockRow['primary_plate'] ?? '';
+                $vehicleSecondaryPlateForSuccess = (!empty($existingBlockRow['secondary_plate']) ? $existingBlockRow['secondary_plate'] : null);
             } else {
-                $insertDriver = $localPdo->prepare(
-                    'INSERT INTO drivers (full_name, phone, status, created_by_user_id, created_by_role)
-                     VALUES (:full_name, :phone, :status, :uid, :role)'
-                );
-                $insertDriver->execute([
-                    ':full_name' => $driverFullName,
-                    ':phone'     => $driverPhone !== '' ? $driverPhone : '',
-                    ':status'    => 'active',
-                    ':uid'       => $uid,
-                    ':role'      => $role,
-                ]);
-                $driverId = (int)$localPdo->lastInsertId();
-                $driverNameForSuccess = $driverFullName;
-            }
-
-            // 2. Vehicle — use existing or create new
-            $vehicleSetId = null;
-            $vehiclePrimaryPlateForSuccess = '';
-            $vehicleSecondaryPlateForSuccess = null;
-            if ($vehicleMode === 'existing') {
-                $vehicleSetId = (int)$vehicleSetIdExisting;
-                $vsStmt = $localPdo->prepare(
-                    'SELECT vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
-                       FROM vehicle_sets vs
-                       JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
-                       LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
-                      WHERE vs.id = ?'
-                );
-                $vsStmt->execute([$vehicleSetId]);
-                $vsRow = $vsStmt->fetch(PDO::FETCH_ASSOC);
-                $vehiclePrimaryPlateForSuccess = $vsRow['primary_plate'] ?? '';
-                $vehicleSecondaryPlateForSuccess = !empty($vsRow['secondary_plate']) ? $vsRow['secondary_plate'] : null;
-            } else {
-                // Create primary vehicle_unit
-                $insertPrimaryUnit = $localPdo->prepare(
-                    'INSERT INTO vehicle_units (plate_number, brand, model, unit_type, status, created_by_user_id, created_by_role)
-                     VALUES (:plate_number, :brand, :model, :unit_type, :status, :uid, :role)'
-                );
-                $insertPrimaryUnit->execute([
-                    ':plate_number' => $plateNumber,
-                    ':brand'        => $brand !== '' ? $brand : null,
-                    ':model'        => $model !== '' ? $model : null,
-                    ':unit_type'    => 'tractor',
-                    ':status'       => 'active',
-                    ':uid'          => $uid,
-                    ':role'         => $role,
-                ]);
-                $primaryUnitId = (int)$localPdo->lastInsertId();
-
-                // Create secondary vehicle_unit if needed
-                $secondaryUnitId = null;
-                if ($secondaryPlateNumber !== '') {
-                    $insertSecondaryUnit = $localPdo->prepare(
-                        'INSERT INTO vehicle_units (plate_number, unit_type, status, created_by_user_id, created_by_role)
-                         VALUES (:plate_number, :unit_type, :status, :uid, :role)'
+                // 1. Driver — use existing or create new
+                $driverId = null;
+                $driverNameForSuccess = '';
+                if ($driverMode === 'existing') {
+                    $driverId = (int)$driverIdExisting;
+                    $drvStmt = $localPdo->prepare('SELECT full_name FROM drivers WHERE id = ?');
+                    $drvStmt->execute([$driverId]);
+                    $drvRow = $drvStmt->fetch(PDO::FETCH_ASSOC);
+                    $driverNameForSuccess = $drvRow['full_name'] ?? '';
+                } else {
+                    $insertDriver = $localPdo->prepare(
+                        'INSERT INTO drivers (full_name, phone, status, created_by_user_id, created_by_role)
+                         VALUES (:full_name, :phone, :status, :uid, :role)'
                     );
-                    $insertSecondaryUnit->execute([
-                        ':plate_number' => $secondaryPlateNumber,
-                        ':unit_type'    => 'trailer',
+                    $insertDriver->execute([
+                        ':full_name' => $driverFullName,
+                        ':phone'     => $driverPhone !== '' ? $driverPhone : '',
+                        ':status'    => 'active',
+                        ':uid'       => $uid,
+                        ':role'      => $role,
+                    ]);
+                    $driverId = (int)$localPdo->lastInsertId();
+                    $driverNameForSuccess = $driverFullName;
+                }
+
+                // 2. Vehicle — use existing or create new
+                $vehicleSetId = null;
+                $vehiclePrimaryPlateForSuccess = '';
+                $vehicleSecondaryPlateForSuccess = null;
+                if ($vehicleMode === 'existing') {
+                    $vehicleSetId = (int)$vehicleSetIdExisting;
+                    $vsStmt = $localPdo->prepare(
+                        'SELECT vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate
+                           FROM vehicle_sets vs
+                           JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                           LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                          WHERE vs.id = ?'
+                    );
+                    $vsStmt->execute([$vehicleSetId]);
+                    $vsRow = $vsStmt->fetch(PDO::FETCH_ASSOC);
+                    $vehiclePrimaryPlateForSuccess = $vsRow['primary_plate'] ?? '';
+                    $vehicleSecondaryPlateForSuccess = !empty($vsRow['secondary_plate']) ? $vsRow['secondary_plate'] : null;
+                } else {
+                    $insertPrimaryUnit = $localPdo->prepare(
+                        'INSERT INTO vehicle_units (plate_number, brand, model, unit_type, status, created_by_user_id, created_by_role)
+                         VALUES (:plate_number, :brand, :model, :unit_type, :status, :uid, :role)'
+                    );
+                    $insertPrimaryUnit->execute([
+                        ':plate_number' => $plateNumber,
+                        ':brand'        => $brand !== '' ? $brand : null,
+                        ':model'        => $model !== '' ? $model : null,
+                        ':unit_type'    => 'tractor',
                         ':status'       => 'active',
                         ':uid'          => $uid,
                         ':role'         => $role,
                     ]);
-                    $secondaryUnitId = (int)$localPdo->lastInsertId();
+                    $primaryUnitId = (int)$localPdo->lastInsertId();
+
+                    $secondaryUnitId = null;
+                    if ($secondaryPlateNumber !== '') {
+                        $insertSecondaryUnit = $localPdo->prepare(
+                            'INSERT INTO vehicle_units (plate_number, unit_type, status, created_by_user_id, created_by_role)
+                             VALUES (:plate_number, :unit_type, :status, :uid, :role)'
+                        );
+                        $insertSecondaryUnit->execute([
+                            ':plate_number' => $secondaryPlateNumber,
+                            ':unit_type'    => 'trailer',
+                            ':status'       => 'active',
+                            ':uid'          => $uid,
+                            ':role'         => $role,
+                        ]);
+                        $secondaryUnitId = (int)$localPdo->lastInsertId();
+                    }
+
+                    $insertVehicleSet = $localPdo->prepare(
+                        'INSERT INTO vehicle_sets (set_type, primary_vehicle_unit_id, secondary_vehicle_unit_id, status, created_by_user_id, created_by_role)
+                         VALUES (:set_type, :primary_id, :secondary_id, :status, :uid, :role)'
+                    );
+                    $insertVehicleSet->execute([
+                        ':set_type'     => $setType,
+                        ':primary_id'   => $primaryUnitId,
+                        ':secondary_id' => $secondaryUnitId,
+                        ':status'       => 'active',
+                        ':uid'          => $uid,
+                        ':role'         => $role,
+                    ]);
+                    $vehicleSetId = (int)$localPdo->lastInsertId();
+                    $vehiclePrimaryPlateForSuccess = $plateNumber;
+                    $vehicleSecondaryPlateForSuccess = $secondaryPlateNumber !== '' ? $secondaryPlateNumber : null;
                 }
 
-                // Create vehicle_set
-                $insertVehicleSet = $localPdo->prepare(
-                    'INSERT INTO vehicle_sets (set_type, primary_vehicle_unit_id, secondary_vehicle_unit_id, status, created_by_user_id, created_by_role)
-                     VALUES (:set_type, :primary_id, :secondary_id, :status, :uid, :role)'
-                );
-                $insertVehicleSet->execute([
-                    ':set_type'     => $setType,
-                    ':primary_id'   => $primaryUnitId,
-                    ':secondary_id' => $secondaryUnitId,
-                    ':status'       => 'active',
-                    ':uid'          => $uid,
-                    ':role'         => $role,
-                ]);
-                $vehicleSetId = (int)$localPdo->lastInsertId();
-                $vehiclePrimaryPlateForSuccess = $plateNumber;
-                $vehicleSecondaryPlateForSuccess = $secondaryPlateNumber !== '' ? $secondaryPlateNumber : null;
-            }
-
-            // 3. Check for existing driver_vehicle_block (find or create)
-            $existingBlock = $localPdo->prepare('SELECT id FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ?');
-            $existingBlock->execute([$driverId, $vehicleSetId]);
-            $blockRow = $existingBlock->fetch(PDO::FETCH_ASSOC);
-            if ($blockRow) {
-                $blockId = (int)$blockRow['id'];
-            } else {
-                $insertBlock = $localPdo->prepare(
-                    'INSERT INTO driver_vehicle_blocks (driver_id, vehicle_set_id, status, created_by_user_id, created_by_role)
-                     VALUES (:driver_id, :vehicle_set_id, :status, :uid, :role)'
-                );
-                $insertBlock->execute([
-                    ':driver_id'       => $driverId,
-                    ':vehicle_set_id'  => $vehicleSetId,
-                    ':status'          => 'active',
-                    ':uid'             => $uid,
-                    ':role'            => $role,
-                ]);
-                $blockId = (int)$localPdo->lastInsertId();
+                // 3. Find or create driver_vehicle_block
+                $existingBlock = $localPdo->prepare('SELECT id FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ?');
+                $existingBlock->execute([$driverId, $vehicleSetId]);
+                $blockRow = $existingBlock->fetch(PDO::FETCH_ASSOC);
+                if ($blockRow) {
+                    $blockId = (int)$blockRow['id'];
+                } else {
+                    $insertBlock = $localPdo->prepare(
+                        'INSERT INTO driver_vehicle_blocks (driver_id, vehicle_set_id, status, created_by_user_id, created_by_role)
+                         VALUES (:driver_id, :vehicle_set_id, :status, :uid, :role)'
+                    );
+                    $insertBlock->execute([
+                        ':driver_id'       => $driverId,
+                        ':vehicle_set_id'  => $vehicleSetId,
+                        ':status'          => 'active',
+                        ':uid'             => $uid,
+                        ':role'            => $role,
+                    ]);
+                    $blockId = (int)$localPdo->lastInsertId();
+                }
             }
 
             // 4. Create crew (with duplicate check)

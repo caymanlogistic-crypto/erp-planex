@@ -93,7 +93,7 @@
             </thead>
             <tbody>
                 <?php foreach ($contractors as $c): ?>
-                <tr data-erp-sort-date="<?= $c['id'] ?>">
+                <tr data-erp-sort-date="<?= $c['id'] ?>" data-contractor-id="<?= $c['id'] ?>">
                     <td class="cell-double">
                         <span class="cell-main"><?= e($c['name']) ?></span>
                         <span class="cell-sub">ИНН <?= e($c['inn']) ?> · <?= !empty($c['contractor_type']) ? e(ui_contractor_type($c['contractor_type'])) : '—' ?></span>
@@ -127,5 +127,21 @@
         <span class="footer-label">Показано <b class="footer-range">1–<?= count($contractors) ?></b> из <b class="footer-total"><?= count($contractors) ?></b></span>
     </div>
 </div>
+
+<script>
+// Double-click row → open contractor card
+(function() {
+    var tableBody = document.querySelector('.table-card[data-erp-grid] tbody');
+    if (!tableBody) return;
+    tableBody.addEventListener('dblclick', function(e) {
+        if (e.target.closest('a, button, input, select, textarea, label')) return;
+        var row = e.target.closest('tr[data-contractor-id]');
+        if (!row) return;
+        var contractorId = row.getAttribute('data-contractor-id');
+        if (!contractorId) return;
+        window.location.href = '/company/contractors/' + contractorId;
+    });
+})();
+</script>
 
 <?php endif; ?>
