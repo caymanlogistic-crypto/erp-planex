@@ -80,6 +80,7 @@ PROTECTED_ARCHITECTURE_PLAN — ПРИНЯТ (c19c67a).
 FOUNDATION_STAGE_B — ВЫПОЛНЕН: AccessControlService + DocumentService (не подключены к ядру).
 BLOCK_C — ВЫПОЛНЕН (cf20e09): driver_vehicle_blocks + crews CRUD complete.
 MASTER_FLOW_IMPLEMENTATION — ВЫПОЛНЕН (888ba64): contractor crew creation workflows (C2a + C2b).
+BLOCK_D — ВЫПОЛНЕН (d3d3524): senior_logist role + visibility rules.
 ```
 
 ## Текущая активная задача

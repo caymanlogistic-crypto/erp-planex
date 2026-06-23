@@ -116,6 +116,7 @@ docs/ai/MASTER_FLOW_ARCHITECTURE.md
 По выводу владельца в этом чате:
 
 ```text
+d3d3524 feat(access): add senior logist role visibility
 888ba64 feat(master-flow): add contractor crew creation workflows
 c3b825c fix(drivers): align create modal footer with FINAL3
 7a796fb feat(drivers): open create form in FINAL3 modal from drivers list
