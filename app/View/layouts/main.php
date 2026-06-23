@@ -26,6 +26,7 @@ $userName = $_SESSION['user_name'] ?? '';
 $roleLabel = match($roleCode) {
     'superadmin' => 'Суперадминистратор',
     'company_owner' => 'Руководитель',
+    'senior_logist' => 'Логист+',
     'logist' => 'Логист',
     default => '',
 };
@@ -175,7 +176,7 @@ if ($crumbContext !== '') {
                 </a>
             </div>
 
-            <?php elseif ($roleCode === 'logist'): ?>
+            <?php elseif ($roleCode === 'logist' || $roleCode === 'senior_logist'): ?>
 
             <div class="nav-group">
                 <div class="nav-section-label">ОПЕРАЦИИ</div>

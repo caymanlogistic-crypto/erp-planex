@@ -111,6 +111,7 @@
                 <label class="field-label">Роль <span class="req">*</span></label>
                 <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
                     <option value="logist" <?= ($old['role_code'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Пользователь</option>
+                    <option value="senior_logist" <?= ($old['role_code'] ?? '') === 'senior_logist' ? 'selected' : '' ?>>Логист+</option>
                     <option value="company_owner" disabled>Руководитель (недоступно)</option>
                 </select>
                 <?php if (!empty($errors['role_code'])): ?>

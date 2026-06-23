@@ -63,7 +63,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dt>Новый временный пароль</dt>
             <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
             <dt>Роль</dt>
-            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Пользователь' : e($logist['role_code'] ?? '') ?></dd>
+            <dd><?php $rc = $logist['role_code'] ?? 'logist'; echo e($rc === 'logist' ? 'Пользователь' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></dd>
         </dl>
 
         <div class="notice warn">
@@ -113,7 +113,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dt>Телефон</dt>
             <dd><?= e($logist['phone'] ?? '—') ?></dd>
             <dt>Роль</dt>
-            <dd><?= e($logist['role_code'] ?? 'logist') === 'logist' ? 'Пользователь' : e($logist['role_code'] ?? '') ?></dd>
+            <dd><?php $rc = $logist['role_code'] ?? 'logist'; echo e($rc === 'logist' ? 'Пользователь' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></dd>
             <dt>Статус</dt>
             <dd><?= renderStatusBadge($logist['status']) ?></dd>
             <dt>Комментарий</dt>

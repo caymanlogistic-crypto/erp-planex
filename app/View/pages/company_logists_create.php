@@ -59,7 +59,7 @@
             </div>
             <div class="kv-row">
                 <span class="kv-key">Роль</span>
-                <span class="kv-value"><?= e($createdLogist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($createdLogist['role_code'] ?? '') ?></span>
+                <span class="kv-value"><?php $rc = $createdLogist['role_code'] ?? 'logist'; echo e($rc === 'logist' ? 'Логист' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></span>
             </div>
         </div>
 
@@ -165,6 +165,7 @@
                 <label class="field-label">Роль пользователя <span class="req">*</span></label>
                 <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
                     <option value="logist" <?= ($old['role_code'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Логист</option>
+                    <option value="senior_logist" <?= ($old['role_code'] ?? '') === 'senior_logist' ? 'selected' : '' ?>>Логист+</option>
                 </select>
                 <?php if (!empty($errors['role_code'])): ?>
                     <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>

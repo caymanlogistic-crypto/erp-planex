@@ -123,7 +123,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dt>Телефон</dt>
                 <dd><?= e($logist['phone'] ?? '') ?: '—' ?></dd>
                 <dt>Роль</dt>
-                <dd><?= ($logist['role_code'] ?? 'logist') === 'logist' ? 'Логист' : e($logist['role_code'] ?? '') ?></dd>
+                <dd><?php $rc = $logist['role_code'] ?? 'logist'; echo e($rc === 'logist' ? 'Логист' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></dd>
                 <dt>Статус</dt>
                 <dd><?= renderStatusBadge($logist['status']) ?></dd>
             </dl>

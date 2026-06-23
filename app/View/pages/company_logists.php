@@ -70,6 +70,7 @@
                 <thead>
                     <tr>
                         <th>Пользователь</th>
+                        <th>Роль</th>
                         <th>Статус</th>
                         <th></th>
                     </tr>
@@ -80,6 +81,14 @@
                         <td class="cell-double">
                             <span class="cell-main"><?= e($l['full_name']) ?></span>
                             <span class="cell-sub">@<?= e($l['login']) ?></span>
+                        </td>
+                        <td>
+                            <?php $rl = $l['role_code'] ?? 'logist'; ?>
+                            <?php if ($rl === 'senior_logist'): ?>
+                            <span class="badge">Логист+</span>
+                            <?php else: ?>
+                            <span class="badge badge-neutral">Логист</span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($l['status'] === 'active'): ?>

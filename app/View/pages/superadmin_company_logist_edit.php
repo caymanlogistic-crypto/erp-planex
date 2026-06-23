@@ -88,6 +88,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                     $currentRole = $old['role_code'] ?? $logist['role_code'] ?? 'logist';
                     ?>
                     <option value="logist" <?= $currentRole === 'logist' ? 'selected' : '' ?>>Пользователь</option>
+                    <option value="senior_logist" <?= $currentRole === 'senior_logist' ? 'selected' : '' ?>>Логист+</option>
                     <option value="company_owner" disabled>Руководитель (недоступно)</option>
                 </select>
                 <?php if (!empty($errors['role_code'])): ?>

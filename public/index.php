@@ -563,7 +563,7 @@ $router->get('/superadmin/companies/{id}', function ($id) use ($config, $db) {
                     "SELECT COUNT(*) as logist_total,
                             SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) as logist_active,
                             SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END) as logist_blocked
-                     FROM users WHERE role_code = 'logist'"
+                     FROM users WHERE role_code IN ('logist', 'senior_logist')"
                 );
                 $logistCountStmt->execute();
                 $logistCounts = $logistCountStmt->fetch(PDO::FETCH_ASSOC);
@@ -1430,7 +1430,7 @@ $router->post('/company/logists/create', function () use ($config, $db) {
         }
 
         // FR19: Validate role against whitelist
-        $allowedRoles = ['logist'];
+        $allowedRoles = ['logist', 'senior_logist'];
         if (!in_array($roleCode, $allowedRoles, true)) {
             $errors['role_code'] = 'Недопустимая роль';
         }
@@ -1827,7 +1827,7 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         }
 
         // FR21: Validate role
-        $allowedRoles = ['logist'];
+        $allowedRoles = ['logist', 'senior_logist'];
         if (!in_array($roleCode, $allowedRoles, true)) {
             $errors['role_code'] = 'Недопустимая роль';
         }
@@ -2074,7 +2074,7 @@ $router->post('/company/logists/{id}/archive', function ($id) use ($config, $db)
 });
 
 $router->get('/company/clients', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Клиенты';
     $pageContext = 'Клиенты › Компания';
 
@@ -2176,7 +2176,7 @@ $router->get('/company/clients', function () use ($config, $db) {
 });
 
 $router->get('/company/clients/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать клиента';
     $pageContext = 'Клиенты › Компания';
 
@@ -2261,7 +2261,7 @@ $router->get('/company/clients/create', function () use ($config, $db) {
 });
 
 $router->post('/company/clients/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать клиента';
     $pageContext = 'Клиенты › Компания';
 
@@ -2542,7 +2542,7 @@ $router->post('/company/clients/create', function () use ($config, $db) {
 });
 
 $router->get('/company/clients/{id}', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $grants = [];
@@ -2646,7 +2646,7 @@ $router->get('/company/clients/{id}', function ($id) use ($config, $db) {
             $grantsStmt->execute(['client', (int)$id]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $dbError = null;
@@ -2670,7 +2670,7 @@ $router->get('/company/clients/{id}', function ($id) use ($config, $db) {
 });
 
 $router->get('/company/clients/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2774,7 +2774,7 @@ $router->get('/company/clients/{id}/edit', function ($id) use ($config, $db) {
 });
 
 $router->post('/company/clients/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2939,7 +2939,7 @@ $router->post('/company/clients/{id}/edit', function ($id) use ($config, $db) {
 });
 
 $router->post('/company/clients/{id}/archive', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2985,7 +2985,7 @@ $router->post('/company/clients/{id}/archive', function ($id) use ($config, $db)
 });
 
 $router->get('/company/contractors', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Перевозчики';
     $pageContext = 'Перевозчики › Компания';
 
@@ -3105,7 +3105,7 @@ $router->get('/company/contractors', function () use ($config, $db) {
 });
 
 $router->get('/company/contractors/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать перевозчика';
     $pageContext = 'Перевозчики › Компания';
 
@@ -3190,7 +3190,7 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
 });
 
 $router->post('/company/requisites/lookup-by-inn', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -3236,7 +3236,7 @@ $router->post('/company/requisites/lookup-by-inn', function () use ($config, $db
 });
 
 $router->get('/company/contractors/create-full', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать перевозчика + Водителя + Транспорт';
     $pageContext = 'Перевозчики › Компания';
 
@@ -3345,7 +3345,7 @@ $router->get('/company/contractors/create-full', function () use ($config, $db) 
 });
 
 $router->post('/company/contractors/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать перевозчика';
     $pageContext = 'Перевозчики › Компания';
 
@@ -3601,7 +3601,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
 });
 
 $router->post('/company/contractors/create-full', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать перевозчика + Водителя + Транспорт';
     $pageContext = 'Перевозчики › Компания';
 
@@ -4059,7 +4059,7 @@ $router->post('/company/contractors/create-full', function () use ($config, $db)
 // MASTER-FLOW: Add crew to existing contractor
 // ====================================================================
 $router->get('/company/contractors/{id}/add-crew', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Добавить экипаж перевозчику';
     $pageContext = 'Перевозчики › Компания';
 
@@ -4231,7 +4231,7 @@ $router->get('/company/contractors/{id}/add-crew', function ($id) use ($config, 
 });
 
 $router->post('/company/contractors/{id}/add-crew', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Добавить экипаж перевозчику';
     $pageContext = 'Перевозчики › Компания';
 
@@ -4679,7 +4679,7 @@ $router->post('/company/contractors/{id}/add-crew', function ($id) use ($config,
 });
 
 $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Перевозчик';
     $pageContext = 'Перевозчики › Компания';
 
@@ -4879,7 +4879,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
             $grantsStmt->execute(['contractor', (int)$id]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $dbError = null;
@@ -4899,7 +4899,7 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
 });
 
 $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать перевозчика';
     $pageContext = 'Перевозчики › Компания';
 
@@ -5014,7 +5014,7 @@ $router->get('/company/contractors/{id}/edit', function ($id) use ($config, $db)
 });
 
 $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать перевозчика';
     $pageContext = 'Перевозчики › Компания';
 
@@ -5213,7 +5213,7 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
 });
 
 $router->post('/company/contractors/{id}/archive', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Перевозчик';
     $pageContext = 'Перевозчики › Компания';
 
@@ -5349,7 +5349,7 @@ $router->post('/company/contractors/{id}/archive', function ($id) use ($config, 
 // --- Contractor Contacts CRUD ---
 
 $router->post('/company/contractors/{contractor_id}/contacts/create', function ($contractor_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $contractor_id = (int)$contractor_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/contractors/' . $contractor_id;
@@ -5410,7 +5410,7 @@ $router->post('/company/contractors/{contractor_id}/contacts/create', function (
 });
 
 $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/edit', function ($contractor_id, $contact_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/contractors/' . $contractor_id;
@@ -5462,7 +5462,7 @@ $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/edit',
 });
 
 $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/delete', function ($contractor_id, $contact_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/contractors/' . $contractor_id;
@@ -5523,7 +5523,7 @@ $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/delete
 });
 
 $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/set-primary', function ($contractor_id, $contact_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/contractors/' . $contractor_id;
@@ -5568,7 +5568,7 @@ $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/set-pr
 });
 
 $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/set-document-email', function ($contractor_id, $contact_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $contractor_id = (int)$contractor_id; $contact_id = (int)$contact_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/contractors/' . $contractor_id;
@@ -5614,7 +5614,7 @@ $router->post('/company/contractors/{contractor_id}/contacts/{contact_id}/set-do
 // --- Contractor Tax History ---
 
 $router->post('/company/contractors/{contractor_id}/tax-history/create', function ($contractor_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $contractor_id = (int)$contractor_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/contractors/' . $contractor_id;
@@ -5667,7 +5667,7 @@ $router->post('/company/contractors/{contractor_id}/tax-history/create', functio
 });
 
 $router->get('/company/drivers', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Водители';
     $pageContext = 'Водители › Компания';
 
@@ -5794,7 +5794,7 @@ $router->get('/company/drivers', function () use ($config, $db) {
 });
 
 $router->get('/company/drivers/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать водителя';
     $pageContext = 'Водители › Компания';
 
@@ -5884,7 +5884,7 @@ $router->get('/company/drivers/create', function () use ($config, $db) {
 });
 
 $router->post('/company/drivers/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     require_once base_path('app/Support/driver_create_handler.php');
     handleCompanyDriverCreate($config, $db, 'page');
     return;
@@ -6349,13 +6349,13 @@ $router->post('/company/drivers/create', function () use ($config, $db) {
 });
 
 $router->post('/company/drivers/modal-create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     require_once base_path('app/Support/driver_create_handler.php');
     handleCompanyDriverCreate($config, $db, 'modal');
 });
 
 $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Водитель';
     $pageContext = 'Водители › Компания';
 
@@ -6511,7 +6511,7 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
             $grantsStmt->execute(['driver', (int)$id]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $dbError = null;
@@ -6532,7 +6532,7 @@ $router->get('/company/drivers/{id}', function ($id) use ($config, $db) {
 });
 
 $router->get('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать водителя';
     $pageContext = 'Водители › Компания';
 
@@ -6641,7 +6641,7 @@ $router->get('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
 });
 
 $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать водителя';
     $pageContext = 'Водители › Компания';
 
@@ -6824,7 +6824,7 @@ $router->post('/company/drivers/{id}/edit', function ($id) use ($config, $db) {
 });
 
 $router->post('/company/drivers/{id}/archive', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Водитель';
     $pageContext = 'Водители › Компания';
 
@@ -6971,7 +6971,7 @@ $router->post('/company/drivers/{id}/archive', function ($id) use ($config, $db)
 // --- Driver Modal View (dblclick from list) ---
 
 $router->get('/company/drivers/{id}/modal-view', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -7098,7 +7098,7 @@ $router->get('/company/drivers/{id}/modal-view', function ($id) use ($config, $d
         $canEdit = false;
         $canDelete = false;
         $role = $_SESSION['role_code'] ?? '';
-        if ($role === 'company_owner') {
+        if ($role === 'company_owner' || $role === 'senior_logist') {
             $canEdit = true;
             $canDelete = true;
         } elseif ($role === 'logist') {
@@ -7130,7 +7130,7 @@ $router->get('/company/drivers/{id}/modal-view', function ($id) use ($config, $d
 // --- Driver Modal Edit (GET) ---
 
 $router->get('/company/drivers/{id}/modal-edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -7193,7 +7193,7 @@ $router->get('/company/drivers/{id}/modal-edit', function ($id) use ($config, $d
         $role = $_SESSION['role_code'] ?? '';
         $canEdit = false;
         $canDelete = false;
-        if ($role === 'company_owner') {
+        if ($role === 'company_owner' || $role === 'senior_logist') {
             $canEdit = true;
             $canDelete = true;
         } elseif ($role === 'logist') {
@@ -7273,7 +7273,7 @@ $router->get('/company/drivers/{id}/modal-edit', function ($id) use ($config, $d
 // --- Driver Modal Edit (POST) ---
 
 $router->post('/company/drivers/{id}/modal-edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -7342,7 +7342,7 @@ $router->post('/company/drivers/{id}/modal-edit', function ($id) use ($config, $
         $role = $_SESSION['role_code'] ?? '';
         $canEdit = false;
         $canDelete = false;
-        if ($role === 'company_owner') {
+        if ($role === 'company_owner' || $role === 'senior_logist') {
             $canEdit = true;
             $canDelete = true;
         } elseif ($role === 'logist') {
@@ -7809,7 +7809,7 @@ $router->post('/company/drivers/{id}/modal-edit', function ($id) use ($config, $
 // --- Driver Modal Delete (POST) ---
 
 $router->post('/company/drivers/{id}/modal-delete', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     header('Content-Type: application/json; charset=utf-8');
 
@@ -7949,7 +7949,7 @@ $router->post('/company/drivers/{id}/modal-delete', function ($id) use ($config,
 // --- Driver Phones CRUD ---
 
 $router->post('/company/drivers/{driver_id}/phones/create', function ($driver_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $driver_id = (int)$driver_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/drivers/' . $driver_id;
@@ -8004,7 +8004,7 @@ $router->post('/company/drivers/{driver_id}/phones/create', function ($driver_id
 });
 
 $router->post('/company/drivers/{driver_id}/phones/{phone_id}/edit', function ($driver_id, $phone_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $driver_id = (int)$driver_id; $phone_id = (int)$phone_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/drivers/' . $driver_id;
@@ -8054,7 +8054,7 @@ $router->post('/company/drivers/{driver_id}/phones/{phone_id}/edit', function ($
 });
 
 $router->post('/company/drivers/{driver_id}/phones/{phone_id}/delete', function ($driver_id, $phone_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $driver_id = (int)$driver_id; $phone_id = (int)$phone_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/drivers/' . $driver_id;
@@ -8112,7 +8112,7 @@ $router->post('/company/drivers/{driver_id}/phones/{phone_id}/delete', function 
 });
 
 $router->post('/company/drivers/{driver_id}/phones/{phone_id}/set-main', function ($driver_id, $phone_id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $driver_id = (int)$driver_id; $phone_id = (int)$phone_id;
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = '/company/drivers/' . $driver_id;
@@ -8157,7 +8157,7 @@ $router->post('/company/drivers/{driver_id}/phones/{phone_id}/set-main', functio
 });
 
 $router->get('/company/vehicles', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Транспортные единицы';
     $pageContext = 'Транспортные единицы › Компания';
 
@@ -8266,7 +8266,7 @@ $router->get('/company/vehicles', function () use ($config, $db) {
 });
 
 $router->get('/company/vehicles/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Добавить транспортную единицу';
     $pageContext = 'Транспортные единицы › Компания';
 
@@ -8331,7 +8331,7 @@ $router->get('/company/vehicles/create', function () use ($config, $db) {
 });
 
 $router->post('/company/vehicles/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Добавить транспортную единицу';
     $pageContext = 'Транспортные единицы › Компания';
 
@@ -8478,7 +8478,7 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
 
 // --- Vehicle View ---
 $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Транспортные единицы';
     $pageContext = 'Транспортные единицы › Компания';
@@ -8619,7 +8619,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             $grantsStmt->execute(['vehicle_unit', $vehicleId]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $dbError = null;
@@ -8640,7 +8640,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
 
 // --- Vehicle Edit (form) ---
 $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Редактировать транспортную единицу';
     $pageContext = 'Транспортные единицы › Компания';
@@ -8745,7 +8745,7 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
 
 // --- Vehicle Edit (handle) ---
 $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $vehicleId = (int)$vehicleId;
     $pageTitle = 'Редактировать транспортную единицу';
     $pageContext = 'Транспортные единицы › Компания';
@@ -8917,7 +8917,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
 
 // --- Vehicle Archive ---
 $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $vehicleId = (int)$vehicleId;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -8996,7 +8996,7 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
 });
 
 $router->get('/company/crews', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Экипажи';
     $pageContext = 'Экипажи › Компания';
 
@@ -9138,7 +9138,7 @@ $router->get('/company/crews', function () use ($config, $db) {
 });
 
 $router->get('/company/crews/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать экипаж';
     $pageContext = 'Экипажи › Компания';
 
@@ -9217,7 +9217,7 @@ $router->get('/company/crews/create', function () use ($config, $db) {
 });
 
 $router->post('/company/crews/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать экипаж';
     $pageContext = 'Экипажи › Компания';
 
@@ -9360,7 +9360,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
 
 // --- Crew View ---
 $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $crewId = (int)$crewId;
     $pageTitle = 'Экипаж';
     $pageContext = 'Экипажи › Компания';
@@ -9495,7 +9495,7 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
             $grantsStmt->execute(['crew', $crewId]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $dbError = null;
@@ -9515,7 +9515,7 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
 
 // --- Crew Edit (form) ---
 $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $crewId = (int)$crewId;
     $pageTitle = 'Редактировать экипаж';
     $pageContext = 'Экипажи › Компания';
@@ -9610,7 +9610,7 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
             $currentUserId = (int)($_SESSION['user_id'] ?? 0);
             $currentRole = $_SESSION['role_code'] ?? '';
 
-            if ($currentRole !== 'company_owner') {
+            if ($currentRole !== 'company_owner' && $currentRole !== 'senior_logist') {
                 $isCreator = ($crew['created_by_user_id'] ?? 0) === $currentUserId;
 
                 $grantStmt = $localPdo->prepare(
@@ -9684,7 +9684,7 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
 
 // --- Crew Edit (handle) ---
 $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $crewId = (int)$crewId;
     $pageTitle = 'Редактировать экипаж';
     $pageContext = 'Экипажи › Компания';
@@ -9827,7 +9827,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
         $currentUserId = (int)($_SESSION['user_id'] ?? 0);
         $currentRole = $_SESSION['role_code'] ?? '';
 
-        if ($currentRole !== 'company_owner') {
+        if ($currentRole !== 'company_owner' && $currentRole !== 'senior_logist') {
             $isCreator = ($crew['created_by_user_id'] ?? 0) === $currentUserId;
 
             $grantStmt = $localPdo->prepare(
@@ -9942,7 +9942,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
 
 // --- Crew Archive ---
 $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $crewId = (int)$crewId;
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -9990,7 +9990,7 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
             exit;
         }
 
-        if ($currentRole !== 'company_owner') {
+        if ($currentRole !== 'company_owner' && $currentRole !== 'senior_logist') {
             $isCreator = ($crew['created_by_user_id'] ?? 0) === $currentUserId;
 
             $grantStmt = $localPdo->prepare(
@@ -10024,7 +10024,7 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
 // ---- VEHICLE SETS (Транспорт) ----
 
 $router->get('/company/vehicle-sets', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Транспорт';
     $pageContext = 'Транспорт › Компания';
 
@@ -10142,7 +10142,7 @@ $router->get('/company/vehicle-sets', function () use ($config, $db) {
 });
 
 $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать транспорт';
     $pageContext = 'Транспорт > Компания';
 
@@ -10200,7 +10200,7 @@ $router->get('/company/vehicle-sets/create', function () use ($config, $db) {
 });
 
 $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать транспорт';
     $pageContext = 'Транспорт > Компания';
 
@@ -10597,7 +10597,7 @@ $router->post('/company/vehicle-sets/create', function () use ($config, $db) {
 // --- Vehicle Set Modal View ---
 
 $router->get('/company/vehicle-sets/{id}/modal-view', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int) (getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -10700,7 +10700,7 @@ $router->get('/company/vehicle-sets/{id}/modal-view', function ($id) use ($confi
 
         $canEdit = false;
         $canDelete = false;
-        if ($roleCode === 'company_owner') {
+        if ($roleCode === 'company_owner' || $roleCode === 'senior_logist') {
             $canEdit = true;
             $canDelete = true;
         } elseif ($roleCode === 'logist') {
@@ -10726,7 +10726,7 @@ $router->get('/company/vehicle-sets/{id}/modal-view', function ($id) use ($confi
 // --- Vehicle Set Modal Edit (GET) ---
 
 $router->get('/company/vehicle-sets/{id}/modal-edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int) (getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -10766,7 +10766,7 @@ $router->get('/company/vehicle-sets/{id}/modal-edit', function ($id) use ($confi
         $roleCode = $_SESSION['role_code'] ?? '';
         $grantAccessLevel = null;
         $canEdit = false;
-        if ($roleCode === 'company_owner') {
+        if ($roleCode === 'company_owner' || $roleCode === 'senior_logist') {
             $canEdit = true;
         } elseif ($roleCode === 'logist') {
             $userId = (int) ($_SESSION['user_id'] ?? 0);
@@ -10854,7 +10854,7 @@ $router->get('/company/vehicle-sets/{id}/modal-edit', function ($id) use ($confi
 // --- Vehicle Set Modal Edit (POST) ---
 
 $router->post('/company/vehicle-sets/{id}/modal-edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int) (getSessionCompanyId() ?? 0);
     if ($companyId <= 0) {
@@ -10893,7 +10893,7 @@ $router->post('/company/vehicle-sets/{id}/modal-edit', function ($id) use ($conf
 
         $roleCode = $_SESSION['role_code'] ?? '';
         $canEdit = false;
-        if ($roleCode === 'company_owner') {
+        if ($roleCode === 'company_owner' || $roleCode === 'senior_logist') {
             $canEdit = true;
         } elseif ($roleCode === 'logist') {
             $userId = (int) ($_SESSION['user_id'] ?? 0);
@@ -11461,7 +11461,7 @@ $router->post('/company/vehicle-sets/{id}/modal-edit', function ($id) use ($conf
             'primary' => $rules[$vehicleSet['set_type'] ?? '']['units']['primary']['label'] ?? 'Основная единица',
             'secondary' => $rules[$vehicleSet['set_type'] ?? '']['units']['secondary']['label'] ?? 'Доп. единица',
         ];
-        $canDelete = $roleCode === 'company_owner' || (($roleCode === 'logist') && (int) ($vehicleSet['created_by_user_id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0));
+        $canDelete = $roleCode === 'company_owner' || $roleCode === 'senior_logist' || (($roleCode === 'logist') && (int) ($vehicleSet['created_by_user_id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0));
         $canEdit = true;
 
         header('Content-Type: text/html; charset=utf-8');
@@ -11477,7 +11477,7 @@ $router->post('/company/vehicle-sets/{id}/modal-edit', function ($id) use ($conf
 // --- Vehicle Set Modal Delete ---
 
 $router->post('/company/vehicle-sets/{id}/modal-delete', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     header('Content-Type: application/json; charset=utf-8');
 
@@ -11618,7 +11618,7 @@ $router->post('/company/vehicle-sets/{id}/modal-delete', function ($id) use ($co
 });
 
 $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Транспорт';
     $pageContext = 'Транспорт › Компания';
 
@@ -11680,7 +11680,7 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
             $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
             $grantsStmt->execute(['vehicle_set', (int)$id]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         // Load driver_vehicle_blocks for this vehicle set
@@ -11714,7 +11714,7 @@ $router->get('/company/vehicle-sets/{id}', function ($id) use ($config, $db) {
 });
 
 $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать транспорт';
     $pageContext = 'Транспорт › Компания';
 
@@ -11758,7 +11758,7 @@ $router->get('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db
 });
 
 $router->post('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать транспорт';
     $pageContext = 'Транспорт › Компания';
 
@@ -11831,7 +11831,7 @@ $router->post('/company/vehicle-sets/{id}/edit', function ($id) use ($config, $d
 });
 
 $router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) { header('Location: /company/vehicle-sets'); exit; }
 
@@ -11867,7 +11867,7 @@ $router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config,
 // ---- DRIVER VEHICLE BLOCKS (Водители+ТС) ----
 
 $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Водители+ТС';
     $pageContext = 'Водители+ТС › Компания';
 
@@ -11941,7 +11941,7 @@ $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
 });
 
 $router->get('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать связку';
     $pageContext = 'Водители+ТС › Компания';
 
@@ -11985,7 +11985,7 @@ $router->get('/company/driver-vehicle-blocks/create', function () use ($config, 
 });
 
 $router->post('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать связку';
     $pageContext = 'Водители+ТС › Компания';
 
@@ -12066,7 +12066,7 @@ $router->post('/company/driver-vehicle-blocks/create', function () use ($config,
 });
 
 $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Водители+ТС';
     $pageContext = 'Водители+ТС › Компания';
 
@@ -12142,7 +12142,7 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
             $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
             $grantsStmt->execute(['driver_vehicle_block', (int)$id]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code='logist' AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
     } catch (\Exception $e) {
@@ -12156,7 +12156,7 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
 });
 
 $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать связку';
     $pageContext = 'Водители+ТС › Компания';
 
@@ -12225,7 +12225,7 @@ $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($co
 });
 
 $router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать связку';
     $pageContext = 'Водители+ТС › Компания';
 
@@ -12309,7 +12309,7 @@ $router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($c
 });
 
 $router->post('/company/driver-vehicle-blocks/{id}/archive', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $companyId = (int)(getSessionCompanyId() ?? 0);
     if ($companyId <= 0) { header('Location: /company/driver-vehicle-blocks'); exit; }
 
@@ -12346,7 +12346,7 @@ $router->post('/company/driver-vehicle-blocks/{id}/archive', function ($id) use 
 });
 
 $router->get('/company/documents', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityType = $_GET['entity_type'] ?? '';
@@ -12528,7 +12528,7 @@ $router->get('/company/documents', function () use ($config, $db) {
 });
 
 $router->get('/company/documents/upload', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityType = $_GET['entity_type'] ?? '';
@@ -12711,7 +12711,7 @@ $router->get('/company/documents/upload', function () use ($config, $db) {
 });
 
 $router->post('/company/documents/upload', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $entityType = $_GET['entity_type'] ?? '';
@@ -13001,7 +13001,7 @@ $router->post('/company/documents/upload', function () use ($config, $db) {
 });
 
 $router->get('/company/documents/download', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $docId = (int)($_GET['id'] ?? 0);
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -13086,7 +13086,7 @@ $router->get('/company/documents/download', function () use ($config, $db) {
 });
 
 $router->get('/company/documents/view', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $docId = (int)($_GET['id'] ?? 0);
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -13169,7 +13169,7 @@ $router->get('/company/documents/view', function () use ($config, $db) {
 });
 
 $router->post('/company/documents/delete', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = getSessionCompanyId();
     $docId = (int)($_GET['id'] ?? 0);
@@ -13231,7 +13231,7 @@ $router->post('/company/documents/delete', function () use ($config, $db) {
 });
 
 $router->post('/company/documents/replace', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $companyId = getSessionCompanyId();
     $docId = (int)($_POST['replace_doc_id'] ?? 0);
@@ -13342,7 +13342,7 @@ $router->post('/company/documents/replace', function () use ($config, $db) {
 // -- Document Types (catalog/directory) --
 
 $router->get('/company/document-types', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Типы документов';
     $pageContext = 'Типы документов › Компания';
 
@@ -13417,7 +13417,7 @@ $router->get('/company/document-types', function () use ($config, $db) {
 });
 
 $router->get('/company/document-types/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать тип документа';
     $pageContext = 'Типы документов › Компания';
 
@@ -13464,7 +13464,7 @@ $router->get('/company/document-types/create', function () use ($config, $db) {
 });
 
 $router->post('/company/document-types/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать тип документа';
     $pageContext = 'Типы документов › Компания';
 
@@ -13540,7 +13540,7 @@ $router->post('/company/document-types/create', function () use ($config, $db) {
 });
 
 $router->get('/company/document-types/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать тип документа';
     $pageContext = 'Типы документов › Компания';
 
@@ -13606,7 +13606,7 @@ $router->get('/company/document-types/{id}/edit', function ($id) use ($config, $
 });
 
 $router->post('/company/document-types/{id}/edit', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Редактировать тип документа';
     $pageContext = 'Типы документов › Компания';
 
@@ -13685,7 +13685,7 @@ $router->post('/company/document-types/{id}/edit', function ($id) use ($config, 
 });
 
 $router->post('/company/document-types/{id}/delete', function ($id) use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Типы документов';
     $pageContext = 'Типы документов › Компания';
 
@@ -13920,7 +13920,7 @@ $router->post('/login', function () use ($config, $db) {
             if (password_verify($password, $candidate['user']['password_hash'])) {
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = (int)$candidate['user']['id'];
-                $_SESSION['role_code'] = 'logist';
+                $_SESSION['role_code'] = $candidate['user']['role_code'] ?? 'logist';
                 $_SESSION['company_id'] = $candidate['company_id'];
                 $_SESSION['user_name'] = $candidate['user']['full_name'];
                 header('Location: /company/dashboard');
@@ -13950,7 +13950,7 @@ $router->get('/logout', function () {
 });
 
 $router->get('/company/dashboard', function () use ($config, $db) {
-    requireRole(['company_owner', 'logist']);
+    requireRole(['company_owner', 'senior_logist', 'logist']);
 
     $pageTitle = 'Обзор';
     $pageContext = 'ДАШБОРД';
@@ -13982,7 +13982,7 @@ $router->get('/company/dashboard', function () use ($config, $db) {
             $localPdo = $localDb->connection();
             applyLocalMigrations($localPdo);
 
-            if ($roleCode === 'company_owner') {
+            if ($roleCode === 'company_owner' || $roleCode === 'senior_logist') {
                 $metrics = [
                     'total_contractors' => 0, 'active_contractors' => 0,
                     'total_drivers' => 0, 'active_drivers' => 0,
@@ -15299,7 +15299,7 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit',
         }
 
         // FR12: Validate role
-        $allowedRoles = ['logist'];
+        $allowedRoles = ['logist', 'senior_logist'];
         if (!in_array($roleCode, $allowedRoles, true)) {
             $errors['role_code'] = 'Недопустимая роль';
         }
@@ -15637,7 +15637,7 @@ $router->post('/superadmin/companies/{id}/users/logists/create', function ($id) 
     }
 
     // FR10: Validate role against whitelist
-    $allowedRoles = ['logist'];
+    $allowedRoles = ['logist', 'senior_logist'];
     if (!in_array($roleCode, $allowedRoles, true)) {
         $errors['role_code'] = 'Недопустимая роль';
     }
