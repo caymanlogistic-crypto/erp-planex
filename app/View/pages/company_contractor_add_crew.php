@@ -9,10 +9,10 @@
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Создать перевозчика + Водителя + Транспорт</span>
+        <span class="page-title">Добавить экипаж перевозчику</span>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+        <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-ghost">← К перевозчику</a>
     </div>
 </div>
 
@@ -20,22 +20,55 @@
     Компания находится в статусе «<?= e($company['status']) ?>». Создание недоступно.
 </div>
 
+<?php elseif (isset($dbError)): ?>
+
+<div class="panel">
+    <div class="panel-body">
+        <div class="notice danger">
+            <?= e($dbError) ?>
+        </div>
+        <div class="form-actions mt-4">
+            <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-ghost">← К перевозчику</a>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($contractor === null): ?>
+
+<div class="page-head">
+    <div class="page-head-left">
+        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
+        <span class="page-title">Перевозчик не найден</span>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-body">
+        <div class="notice warn">
+            Перевозчик с указанным ID не найден.
+        </div>
+    </div>
+</div>
+
 <?php elseif ($success): ?>
 
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Созданы перевозчик, водитель и транспорт</span>
+        <span class="page-title">Экипаж создан</span>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-primary">← К списку</a>
+        <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-primary">← К перевозчику</a>
     </div>
 </div>
 
 <div class="panel">
     <div class="panel-body">
         <div class="notice success">
-            Перевозчик, водитель и транспорт успешно созданы.
+            Водитель, транспорт и экипаж успешно созданы для перевозчика «<?= e($contractor['name']) ?>».
         </div>
 
         <div class="tbl-wrap mt-4">
@@ -51,11 +84,11 @@
                     <tr>
                         <td>Перевозчик</td>
                         <td class="cell-double">
-                            <span class="cell-main"><?= e($createdContractor['name']) ?></span>
-                            <span class="cell-sub">ИНН <?= e($createdContractor['inn']) ?></span>
+                            <span class="cell-main"><?= e($contractor['name']) ?></span>
+                            <span class="cell-sub">ИНН <?= e($contractor['inn'] ?? '—') ?></span>
                         </td>
                         <td class="col-actions">
-                            <a href="/company/contractors/<?= $createdContractor['id'] ?>" class="btn btn-toolbar">Просмотр</a>
+                            <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-toolbar">Просмотр</a>
                         </td>
                     </tr>
                     <tr>
@@ -92,7 +125,7 @@
                     <tr>
                         <td>Экипаж</td>
                         <td>
-                            <?= e($createdContractor['name']) ?> — <?= e($createdDriver['full_name']) ?> + <?= e($createdVehicleSet['primary_plate']) ?>
+                            <?= e($contractor['name']) ?> — <?= e($createdDriver['full_name']) ?> + <?= e($createdVehicleSet['primary_plate']) ?>
                         </td>
                         <td class="col-actions">
                             <a href="/company/crews/<?= $createdCrew['id'] ?>" class="btn btn-toolbar">Просмотр</a>
@@ -104,8 +137,8 @@
         </div>
 
         <div class="form-actions mt-4">
-            <a href="/company/contractors" class="btn btn-primary">← К списку перевозчиков</a>
-            <a href="/company/contractors/create-full" class="btn btn-ghost">Создать ещё</a>
+            <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-primary">← К перевозчику</a>
+            <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>/add-crew" class="btn btn-ghost">Добавить ещё экипаж</a>
         </div>
     </div>
 </div>
@@ -116,35 +149,21 @@
 // Determine initial step based on validation errors
 $initialStep = 1;
 if (!empty($old)) {
-    if (!empty($errors['contractor_id']) || !empty($errors['name']) || !empty($errors['inn']) || !empty($errors['kpp'])) {
+    if (!empty($errors['driver_id']) || !empty($errors['driver_full_name'])) {
         $initialStep = 1;
-    } elseif (!empty($errors['driver_id']) || !empty($errors['driver_full_name'])) {
-        $initialStep = 2;
     } elseif (!empty($errors['vehicle_set_id']) || !empty($errors['plate_number']) || !empty($errors['secondary_plate_number'])) {
-        $initialStep = 3;
+        $initialStep = 2;
     } else {
-        $initialStep = 4;
+        $initialStep = 3;
     }
 }
 
 // Pre-compute review display data
-$reviewContractor = '';
-if (!empty($old['contractor_mode']) && $old['contractor_mode'] === 'existing' && !empty($old['contractor_id'])) {
-    foreach ($contractors as $c) {
-        if ($c['id'] == $old['contractor_id']) {
-            $reviewContractor = $c['name'] . ' (ИНН ' . ($c['inn'] ?? '—') . ')';
-            break;
-        }
-    }
-} elseif (!empty($old['name'])) {
-    $reviewContractor = $old['name'] . ' (ИНН ' . ($old['inn'] ?? '—') . ')';
-}
-
 $reviewDriver = '';
 if (!empty($old['driver_mode']) && $old['driver_mode'] === 'existing' && !empty($old['driver_id'])) {
     foreach ($drivers as $d) {
         if ($d['id'] == $old['driver_id']) {
-            $reviewDriver = $d['full_name'] . ' (' . ($d['phone'] ?? '') . ')';
+            $reviewDriver = $d['full_name'] . ' (' . ($d['phone'] ?? '—') . ')';
             break;
         }
     }
@@ -168,10 +187,10 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
 <div class="page-head">
     <div class="page-head-left">
         <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Создать перевозчика + Водителя + Транспорт</span>
+        <span class="page-title">Добавить экипаж перевозчику «<?= e($contractor['name']) ?>»</span>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+        <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-ghost">← К перевозчику</a>
     </div>
 </div>
 
@@ -179,127 +198,33 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/contractors/create-full">
+<form method="post" action="/company/contractors/<?= (int)($contractorId ?? 0) ?>/add-crew">
 
     <!-- STEPPER INDICATORS -->
     <div class="stepper" id="stepper">
         <div class="step<?= $initialStep >= 1 ? ' is-active' : '' ?>" data-step="1">
             <div class="step-circle">1</div>
-            <div class="step-label">Перевозчик</div>
+            <div class="step-label">Водитель</div>
             <div class="step-sublabel">Выберите или создайте</div>
         </div>
         <div class="step<?= $initialStep == 2 ? ' is-active' : ($initialStep > 2 ? ' is-done' : '') ?>" data-step="2">
             <div class="step-circle">2</div>
-            <div class="step-label">Водитель</div>
-            <div class="step-sublabel">Выберите или создайте</div>
-        </div>
-        <div class="step<?= $initialStep == 3 ? ' is-active' : ($initialStep > 3 ? ' is-done' : '') ?>" data-step="3">
-            <div class="step-circle">3</div>
             <div class="step-label">Машина / Транспорт</div>
             <div class="step-sublabel">Выберите или создайте</div>
         </div>
-        <div class="step<?= $initialStep >= 4 ? ' is-active' : '' ?>" data-step="4">
-            <div class="step-circle">4</div>
+        <div class="step<?= $initialStep >= 3 ? ' is-active' : '' ?>" data-step="3">
+            <div class="step-circle">3</div>
             <div class="step-label">Проверка</div>
             <div class="step-sublabel">Подтверждение</div>
         </div>
     </div>
 
     <!-- ================================================================
-    STEP 1: ПЕРЕВОЗЧИК
+    STEP 1: ВОДИТЕЛЬ
     ================================================================ -->
     <div class="step-body<?= $initialStep !== 1 ? ' is-hidden' : '' ?>" id="step-body-1">
         <div class="step-body-head">
-            <span class="step-body-title">Шаг 1: Перевозчик</span>
-        </div>
-        <div class="step-body-content">
-
-            <div class="field">
-                <label class="field-label">Режим</label>
-                <div class="form-grid-2">
-                    <label class="btn btn-ghost mode-option<?= ($old['contractor_mode'] ?? 'existing') === 'existing' ? ' is-active' : '' ?>" id="lbl-contractor-existing">
-                        <input type="radio" name="contractor_mode" value="existing" class="is-hidden" <?= ($old['contractor_mode'] ?? 'existing') === 'existing' ? 'checked' : '' ?>>
-                        Выбрать существующего
-                    </label>
-                    <label class="btn btn-ghost mode-option<?= ($old['contractor_mode'] ?? '') === 'new' ? ' is-active' : '' ?>" id="lbl-contractor-new">
-                        <input type="radio" name="contractor_mode" value="new" class="is-hidden" <?= ($old['contractor_mode'] ?? '') === 'new' ? 'checked' : '' ?>>
-                        Создать нового
-                    </label>
-                </div>
-            </div>
-
-            <!-- Existing contractor select -->
-            <div id="contractor-existing-block"<?= ($old['contractor_mode'] ?? 'existing') !== 'existing' ? ' class="is-hidden"' : '' ?>>
-                <div class="field">
-                    <label class="field-label">Перевозчик <span class="req">*</span></label>
-                    <select name="contractor_id" class="field-select<?= !empty($errors['contractor_id']) ? ' is-error' : '' ?>"<?= empty($contractors) ? ' disabled' : '' ?>>
-                        <option value="">— Выберите перевозчика —</option>
-                        <?php foreach ($contractors as $c): ?>
-                        <option value="<?= $c['id'] ?>" <?= ($old['contractor_id'] ?? '') == $c['id'] ? 'selected' : '' ?>>
-                            <?= e($c['name']) ?> (ИНН <?= e($c['inn'] ?? '—') ?>)
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <?php if (empty($contractors)): ?>
-                        <p class="field-hint">Нет доступных перевозчиков</p>
-                    <?php endif; ?>
-                    <?php if (!empty($errors['contractor_id'])): ?>
-                        <div class="field-msg is-error"><?= e($errors['contractor_id']) ?></div>
-                    <?php endif; ?>
-                    <div class="field-msg is-error is-hidden" id="err-js-contractor-select">Пожалуйста, выберите перевозчика.</div>
-                </div>
-            </div>
-
-            <!-- New contractor form -->
-            <div id="contractor-new-block"<?= ($old['contractor_mode'] ?? 'existing') === 'existing' ? ' class="is-hidden"' : '' ?>>
-                <div class="field">
-                    <label class="field-label">Наименование <span class="req">*</span></label>
-                    <input type="text" name="name" class="field-input<?= !empty($errors['name']) ? ' is-error' : '' ?>"
-                           value="<?= e($old['name'] ?? '') ?>">
-                    <?php if (!empty($errors['name'])): ?>
-                        <div class="field-msg is-error"><?= e($errors['name']) ?></div>
-                    <?php endif; ?>
-                    <div class="field-msg is-error is-hidden" id="err-js-contractor-name">Пожалуйста, укажите наименование перевозчика.</div>
-                </div>
-
-                <div class="form-grid-2">
-                    <div class="field">
-                        <label class="field-label">ИНН <span class="req">*</span></label>
-                        <input type="text" name="inn" class="field-input<?= !empty($errors['inn']) ? ' is-error' : '' ?>"
-                               value="<?= e($old['inn'] ?? '') ?>">
-                        <?php if (!empty($errors['inn'])): ?>
-                            <div class="field-msg is-error"><?= e($errors['inn']) ?></div>
-                        <?php endif; ?>
-                        <div class="field-msg is-error is-hidden" id="err-js-contractor-inn">Пожалуйста, укажите ИНН перевозчика.</div>
-                    </div>
-
-                    <div class="field">
-                        <label class="field-label">КПП</label>
-                        <input type="text" name="kpp" class="field-input"
-                               value="<?= e($old['kpp'] ?? '') ?>">
-                    </div>
-                </div>
-
-                <div class="field">
-                    <label class="field-label">Телефон</label>
-                    <input type="text" name="phone" class="field-input"
-                           value="<?= e($old['phone'] ?? '') ?>">
-                </div>
-            </div>
-
-        </div>
-        <div class="step-nav">
-            <button type="button" class="btn btn-ghost step-back" disabled>← Назад</button>
-            <button type="button" class="btn btn-primary step-next" data-next="2">Далее →</button>
-        </div>
-    </div>
-
-    <!-- ================================================================
-    STEP 2: ВОДИТЕЛЬ
-    ================================================================ -->
-    <div class="step-body<?= $initialStep !== 2 ? ' is-hidden' : '' ?>" id="step-body-2">
-        <div class="step-body-head">
-            <span class="step-body-title">Шаг 2: Водитель</span>
+            <span class="step-body-title">Шаг 1: Водитель</span>
         </div>
         <div class="step-body-content">
 
@@ -360,17 +285,17 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
 
         </div>
         <div class="step-nav">
-            <button type="button" class="btn btn-ghost step-back" data-prev="1">← Назад</button>
-            <button type="button" class="btn btn-primary step-next" data-next="3">Далее →</button>
+            <button type="button" class="btn btn-ghost step-back" disabled>← Назад</button>
+            <button type="button" class="btn btn-primary step-next" data-next="2">Далее →</button>
         </div>
     </div>
 
     <!-- ================================================================
-    STEP 3: МАШИНА / ТРАНСПОРТ
+    STEP 2: МАШИНА / ТРАНСПОРТ
     ================================================================ -->
-    <div class="step-body<?= $initialStep !== 3 ? ' is-hidden' : '' ?>" id="step-body-3">
+    <div class="step-body<?= $initialStep !== 2 ? ' is-hidden' : '' ?>" id="step-body-2">
         <div class="step-body-head">
-            <span class="step-body-title">Шаг 3: Машина / Транспорт</span>
+            <span class="step-body-title">Шаг 2: Машина / Транспорт</span>
         </div>
         <div class="step-body-content">
 
@@ -459,24 +384,24 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
 
         </div>
         <div class="step-nav">
-            <button type="button" class="btn btn-ghost step-back" data-prev="2">← Назад</button>
-            <button type="button" class="btn btn-primary step-next" data-next="4">Далее →</button>
+            <button type="button" class="btn btn-ghost step-back" data-prev="1">← Назад</button>
+            <button type="button" class="btn btn-primary step-next" data-next="3">Далее →</button>
         </div>
     </div>
 
     <!-- ================================================================
-    STEP 4: ПРОВЕРКА
+    STEP 3: ПРОВЕРКА
     ================================================================ -->
-    <div class="step-body<?= $initialStep !== 4 ? ' is-hidden' : '' ?>" id="step-body-4">
+    <div class="step-body<?= $initialStep !== 3 ? ' is-hidden' : '' ?>" id="step-body-3">
         <div class="step-body-head">
-            <span class="step-body-title">Шаг 4: Проверка и создание</span>
+            <span class="step-body-title">Шаг 3: Проверка и создание</span>
         </div>
         <div class="step-body-content">
 
             <div class="kv">
                 <div class="kv-row">
                     <span class="kv-key">Перевозчик</span>
-                    <span class="kv-value" id="review-contractor"><?= e($reviewContractor ?: '—') ?></span>
+                    <span class="kv-value" id="review-contractor"><?= e($contractor['name']) ?> (ИНН <?= e($contractor['inn'] ?? '—') ?>)</span>
                 </div>
                 <div class="kv-row">
                     <span class="kv-key">Водитель</span>
@@ -490,8 +415,8 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
 
         </div>
         <div class="step-nav">
-            <button type="button" class="btn btn-ghost step-back" data-prev="3">← Назад</button>
-            <button type="submit" class="btn btn-primary">Создать связку</button>
+            <button type="button" class="btn btn-ghost step-back" data-prev="2">← Назад</button>
+            <button type="submit" class="btn btn-primary">Создать экипаж</button>
         </div>
     </div>
 
@@ -504,14 +429,12 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
     var bodies = [
         document.getElementById('step-body-1'),
         document.getElementById('step-body-2'),
-        document.getElementById('step-body-3'),
-        document.getElementById('step-body-4')
+        document.getElementById('step-body-3')
     ];
     var currentStep = <?= $initialStep ?>;
 
     function updateStepper(stepNum) {
         currentStep = stepNum;
-        // Update step indicators
         for (var i = 0; i < steps.length; i++) {
             var s = steps[i];
             var sNum = parseInt(s.getAttribute('data-step'));
@@ -522,7 +445,6 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
                 s.classList.add('is-active');
             }
         }
-        // Show/hide step bodies
         for (var j = 0; j < bodies.length; j++) {
             if (j + 1 === stepNum) {
                 bodies[j].classList.remove('is-hidden');
@@ -530,35 +452,14 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
                 bodies[j].classList.add('is-hidden');
             }
         }
-        // If navigating to step 4, refresh review data
-        if (stepNum === 4) {
+        if (stepNum === 3) {
             refreshReview();
         }
     }
 
     function refreshReview() {
-        var reviewContractor = document.getElementById('review-contractor');
         var reviewDriver = document.getElementById('review-driver');
         var reviewVehicle = document.getElementById('review-vehicle');
-
-        // --- Contractor ---
-        var contractorMode = document.querySelector('input[name="contractor_mode"]:checked');
-        if (contractorMode && contractorMode.value === 'existing') {
-            var contractorSelect = document.querySelector('select[name="contractor_id"]');
-            if (contractorSelect && contractorSelect.selectedIndex > 0) {
-                reviewContractor.textContent = contractorSelect.options[contractorSelect.selectedIndex].textContent;
-            } else {
-                reviewContractor.textContent = '—';
-            }
-        } else {
-            var nameInput = document.querySelector('input[name="name"]');
-            var innInput = document.querySelector('input[name="inn"]');
-            if (nameInput && nameInput.value.trim() !== '') {
-                reviewContractor.textContent = nameInput.value.trim() + ' (ИНН ' + (innInput ? innInput.value.trim() || '—' : '—') + ')';
-            } else {
-                reviewContractor.textContent = '—';
-            }
-        }
 
         // --- Driver ---
         var driverMode = document.querySelector('input[name="driver_mode"]:checked');
@@ -645,7 +546,6 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
         }
     }
 
-    setupModeToggle('contractor_mode', 'contractor-existing-block', 'contractor-new-block', 'lbl-contractor-existing', 'lbl-contractor-new');
     setupModeToggle('driver_mode', 'driver-existing-block', 'driver-new-block', 'lbl-driver-existing', 'lbl-driver-new');
     setupModeToggle('vehicle_mode', 'vehicle-existing-block', 'vehicle-new-block', 'lbl-vehicle-existing', 'lbl-vehicle-new');
 
@@ -658,7 +558,6 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
             var show = (v === 'coupling' || v === 'road_train');
             if (show) secondary.classList.remove('is-hidden');
             else secondary.classList.add('is-hidden');
-            var reqSpan = secondary.querySelector('.req');
             var input = secondary.querySelector('input');
             if (input) input.required = show;
         }
@@ -672,46 +571,7 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
         nextButtons[n].addEventListener('click', function(e) {
             var nextStep = parseInt(this.getAttribute('data-next'));
 
-            // Validate current step before moving forward
             if (currentStep === 1) {
-                var contractorMode = document.querySelector('input[name="contractor_mode"]:checked');
-                if (contractorMode && contractorMode.value === 'existing') {
-                    var sel = document.querySelector('select[name="contractor_id"]');
-                    var errEl = document.getElementById('err-js-contractor-select');
-                    if (!sel || sel.value === '') {
-                        if (errEl) errEl.classList.remove('is-hidden');
-                        if (sel) sel.classList.add('is-error');
-                        return;
-                    }
-                    if (errEl) errEl.classList.add('is-hidden');
-                    if (sel) sel.classList.remove('is-error');
-                } else {
-                    var nameInput = document.querySelector('input[name="name"]');
-                    var innInput = document.querySelector('input[name="inn"]');
-                    var errName = document.getElementById('err-js-contractor-name');
-                    var errInn = document.getElementById('err-js-contractor-inn');
-                    var hasError = false;
-                    if (!nameInput || nameInput.value.trim() === '') {
-                        if (errName) errName.classList.remove('is-hidden');
-                        if (nameInput) nameInput.classList.add('is-error');
-                        hasError = true;
-                    } else {
-                        if (errName) errName.classList.add('is-hidden');
-                        if (nameInput) nameInput.classList.remove('is-error');
-                    }
-                    if (!innInput || innInput.value.trim() === '') {
-                        if (errInn) errInn.classList.remove('is-hidden');
-                        if (innInput) innInput.classList.add('is-error');
-                        hasError = true;
-                    } else {
-                        if (errInn) errInn.classList.add('is-hidden');
-                        if (innInput) innInput.classList.remove('is-error');
-                    }
-                    if (hasError) return;
-                }
-            }
-
-            if (currentStep === 2) {
                 var driverMode = document.querySelector('input[name="driver_mode"]:checked');
                 if (driverMode && driverMode.value === 'existing') {
                     var sel = document.querySelector('select[name="driver_id"]');
@@ -736,7 +596,7 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
                 }
             }
 
-            if (currentStep === 3) {
+            if (currentStep === 2) {
                 var vehicleMode = document.querySelector('input[name="vehicle_mode"]:checked');
                 if (vehicleMode && vehicleMode.value === 'existing') {
                     var sel = document.querySelector('select[name="vehicle_set_id"]');
@@ -774,16 +634,13 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
         });
     }
 
-    // Initial review population if starting on step 4
-    if (currentStep === 4) {
+    // Initial review population if starting on step 3
+    if (currentStep === 3) {
         refreshReview();
     }
 
     // Clear js-validation errors on input/selection
     var jsErrFields = [
-        {trigger: 'select[name="contractor_id"]', err: 'err-js-contractor-select'},
-        {trigger: 'input[name="name"]', err: 'err-js-contractor-name'},
-        {trigger: 'input[name="inn"]', err: 'err-js-contractor-inn'},
         {trigger: 'select[name="driver_id"]', err: 'err-js-driver-select'},
         {trigger: 'input[name="driver_full_name"]', err: 'err-js-driver-name'},
         {trigger: 'select[name="vehicle_set_id"]', err: 'err-js-vehicle-select'},
@@ -809,8 +666,7 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
         }
     }
 
-    // Also clear error when mode switches
-    var modeRadios = document.querySelectorAll('input[name="contractor_mode"], input[name="driver_mode"], input[name="vehicle_mode"]');
+    var modeRadios = document.querySelectorAll('input[name="driver_mode"], input[name="vehicle_mode"]');
     for (var m = 0; m < modeRadios.length; m++) {
         modeRadios[m].addEventListener('change', function() {
             var allErrs = document.querySelectorAll('.field-msg.is-error[id^="err-js-"]');

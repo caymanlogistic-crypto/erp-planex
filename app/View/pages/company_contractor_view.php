@@ -399,7 +399,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             </div>
             <?php endif; ?>
 
-            <a href="/company/contractors/<?= $contractor['id'] ?>/add-block" class="btn btn-primary mt-4">Добавить Водителя+ТС</a>
+            <a href="/company/contractors/<?= $contractor['id'] ?>/add-crew" class="btn btn-primary mt-4">+ Водитель + Машина</a>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
