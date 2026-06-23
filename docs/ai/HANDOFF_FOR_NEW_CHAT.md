@@ -25,6 +25,25 @@ C:\Users\Vladimir\Desktop\PLANEX\SITE\erp
 
 Главный дизайнер / CODEX-дизайнер — внешние чаты/инструменты, не постоянные KILO-агенты.
 
+## PROTECTED WORKING CORE
+
+4 страницы объявлены защищённым рабочим ядром. Их нельзя менять без отдельной явной задачи:
+
+```text
+/company/drivers
+/company/vehicle-sets
+/company/clients
+/company/contractors
+```
+
+Полный список защищённых файлов (routes, views, partials, JS, CSS, сервисы, таблицы) и архитектурный план безопасного рефакторинга:
+
+```text
+docs/ai/PROTECTED_ARCHITECTURE_PLAN.md
+```
+
+Любой будущий рефакторинг должен начинаться с MD/карт/правил, а не с переноса кода.
+
 ## Стиль взаимодействия с владельцем
 
 - Отвечать коротко и по делу.

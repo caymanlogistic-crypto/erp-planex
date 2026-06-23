@@ -76,6 +76,7 @@ DRIVERS_GRID_DOCUMENT_COLUMNS — частично сделано ранее, н
 DRIVER_EDIT_MODAL_VIEW_EDIT_FLOW — В РАБОТЕ, НЕ ПРИНЯТ.
 STEPPER_CONTRACTOR_DRIVER_VEHICLE — есть предыдущая реализация/подготовка, но сейчас не текущий фокус.
 VEHICLE_SET_PRODUCTION_CREATE — подготовлены MD, отложено до закрытия driver edit modal.
+PROTECTED_ARCHITECTURE_PLAN — ПРИНЯТ (c19c67a).
 ```
 
 ## Текущая активная задача

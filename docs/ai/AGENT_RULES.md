@@ -154,7 +154,37 @@ Page-head / page-header, заголовочная зона страницы, в�
 
 Разрешено только добавлять новые кнопки/пункты/действия без изменения существующей структуры и поведения.
 
-## 9. Формы ERP: правило create/edit
+## 9. PROTECTED WORKING CORE
+
+Следующие страницы объявлены защищённым рабочим ядром (DO_NOT_TOUCH_WORKING_CORE):
+
+```text
+/company/drivers
+/company/vehicle-sets
+/company/clients
+/company/contractors
+```
+
+Архитектору, кодеру и любому агенту ERP PLANEX запрещено изменять без отдельной явной задачи от владельца:
+
+- routes этих страниц;
+- views (app/View/pages/company_drivers*.php, company_vehicle_sets*.php, company_clients*.php, company_contractors*.php);
+- partials (app/View/partials/company_driver_*.php, company_vehicle_set_*.php);
+- JS-поведение (initDriverForm, модальные окна, file-pickers, upload validation в app.js);
+- CSS-геометрию (.driver-create-modal, .entity-form-layout, .driver-layout, размеры и отступы в app.css/erp-ui.css);
+- формы (input name, form action, method, поля, валидацию, submit-логику);
+- бизнес-логику (создание, редактирование, удаление, архивацию);
+- документы (upload, replace, soft-delete, predef/custom docs);
+- сервисы (ContractorContactService, ClientContactService, CompanyInnLookupService, driver_create_handler);
+- таблицы и миграции (локальные миграции 002–004, 007–009, 011–035);
+- компоненты (app/View/components/*.php — используются внутри защищённых страниц);
+- layout (app/View/layouts/main.php).
+
+Полный список защищённых файлов: `docs/ai/PROTECTED_ARCHITECTURE_PLAN.md`.
+
+Если какой-то файл относится к этим страницам и кажется устаревшим или дублирующимся — не предлагать удаление. Помечать как DO_NOT_TOUCH_WORKING_CORE или NEEDS_RUNTIME_CHECK.
+
+## 10. Формы ERP: правило create/edit
 
 Для карточек и справочников, где есть create-form и edit-form:
 
@@ -174,7 +204,7 @@ edit-form должна использовать тот же form partial/pattern
 - browser alert запрещён, ошибки показывать внутри формы.
 ```
 
-## 10. Документы в формах
+## 11. Документы в формах
 
 Предопределённые документы используют единый pattern:
 
@@ -199,7 +229,7 @@ edit-form должна использовать тот же form partial/pattern
 
 Hard delete файлов запрещён без отдельного решения.
 
-## 11. Windows / Git / UTF-8
+## 12. Windows / Git / UTF-8
 
 PowerShell часто ломает кириллицу и Git output. По умолчанию использовать `cmd.exe /c`:
 
