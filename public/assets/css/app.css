@@ -2220,7 +2220,7 @@ input:-webkit-autofill:active,
 /* ─── Верхняя строка: ФИО | Телефон | Кнопка (плоская сетка, 3 колонки) ─── */
 .driver-contact-top-row {
     display: grid;
-    grid-template-columns: 400px 1fr;
+    grid-template-columns: 360px 1fr;
     column-gap: 8px;
     align-items: start;
     width: 100%;
@@ -2236,7 +2236,7 @@ input:-webkit-autofill:active,
 }
 .driver-contact-main-row {
     display: grid;
-    grid-template-columns: 170px max-content;
+    grid-template-columns: 154px max-content;
     column-gap: 8px;
     align-items: start;
 }
@@ -2253,7 +2253,7 @@ input:-webkit-autofill:active,
 /* ─── Обёртка доп. телефонов: отступ = ширина ФИО ─── */
 .driver-extra-phones-wrap {
     display: grid;
-    grid-template-columns: 400px 1fr;
+    grid-template-columns: 360px 1fr;
     column-gap: 8px;
     margin-top: 4px;
     width: 100%;
@@ -2273,7 +2273,7 @@ input:-webkit-autofill:active,
 /* Строка дополнительного телефона: поле + комментарий (крестик внутри) */
 .driver-extra-phone-row {
     display: grid;
-    grid-template-columns: 170px 1fr;
+    grid-template-columns: 154px 1fr;
     gap: 6px;
     align-items: start;
     width: 100%;
@@ -2448,8 +2448,8 @@ input:-webkit-autofill:active,
     outline: none;
 }
 .erp-date-popover {
-    position: absolute;
-    z-index: 300;
+    position: fixed;
+    z-index: 1400;
     display: none;
     width: 228px;
     padding: 8px;
@@ -2829,12 +2829,12 @@ input:autofill,
 .vehicle-set-card-stack {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0;
 }
 .vehicle-set-card-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0;
 }
 .vehicle-set-form-card {
     padding: 12px 14px 10px;
@@ -2842,12 +2842,23 @@ input:autofill,
     background: var(--surface-strong);
     overflow: hidden;
 }
+.vehicle-set-card-list > .vehicle-set-form-card + .vehicle-set-form-card {
+    border-top: none;
+}
 .vehicle-set-type-card .field {
     margin-bottom: 0;
     grid-template-rows: auto minmax(var(--control-h), auto);
 }
 .vehicle-set-type-card {
+    padding-left: 14px;
+    padding-right: 14px;
     padding-bottom: 0;
+    border: none;
+    background: transparent;
+}
+.vehicle-set-type-card .field-input option {
+    background: var(--surface-strong);
+    color: var(--text-main);
 }
 .vehicle-set-type-card .field-msg:empty {
     display: none;
@@ -2890,7 +2901,16 @@ input:autofill,
     margin-top: 0;
 }
 .vehicle-set-comment-card {
+    padding: 8px 14px 0;
     padding-bottom: 8px;
+    border: none;
+    background: transparent;
+}
+.vehicle-set-edit-extra-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px);
+    gap: 10px;
+    margin-bottom: 8px;
 }
 .vehicle-set-unit-card-body {
     display: grid;
@@ -3561,6 +3581,60 @@ a.nav-sub-item:visited {
 }
 
 /* ============================================================
+   DRIVER TABLE — ID column minimal width
+   ============================================================ */
+.table-card[data-erp-grid] .col-id {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   VEHICLE SETS TABLE — scoped layout
+   ============================================================ */
+.company-vehicle-sets-table td,
+.company-vehicle-sets-table th {
+  white-space: nowrap;
+}
+
+/* Fixed-width columns — 1% prevents stretching */
+.company-vehicle-sets-table .col-id,
+.company-vehicle-sets-table .col-type,
+.company-vehicle-sets-table .col-volume,
+.company-vehicle-sets-table .col-capacity,
+.company-vehicle-sets-table .col-check {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* Main content columns — absorb remaining width */
+.company-vehicle-sets-table .col-main-unit,
+.company-vehicle-sets-table .col-secondary-unit {
+  width: auto;
+  min-width: 220px;
+  white-space: nowrap;
+}
+
+/* Compact ✓/× document indicators */
+.company-vehicle-sets-table .table-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.company-vehicle-sets-table .table-check--yes {
+  color: var(--success);
+}
+
+.company-vehicle-sets-table .table-check--no {
+  color: var(--danger);
+}
+
+/* ============================================================
    DRIVER CREATE MODAL — wider than standard .modal-lg (820px)
    ============================================================ */
 .driver-create-modal {
@@ -3590,3 +3664,339 @@ a.nav-sub-item:visited {
   gap: 7px;
 }
 
+/* ── Driver modal shell ── */
+.driver-view-overlay .modal.driver-view-modal-inner {
+  width: min(1100px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+}
+.driver-view-overlay .modal.driver-view-modal-inner .modal-body {
+  padding: 0;
+}
+
+.driver-modal-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.driver-modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+  font-size: 14px;
+  min-height: 200px;
+}
+
+.driver-modal-body {
+  padding: 0;
+  flex: 0 1 auto;
+  overflow: visible;
+  max-height: none;
+}
+
+/* ── Two-column grid layout (view + edit reuse .driver-layout pattern) ── */
+.driver-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.driver-modal-main {
+  padding: 20px 22px;
+  overflow: visible;
+  min-width: 0;
+}
+
+.driver-modal-docs {
+  padding: 20px 18px;
+  background: var(--surface-inspector);
+  border-left: 1px solid var(--line);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+/* ── View mode: data fields ── */
+.driver-view-name {
+  margin: 0 0 14px 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.driver-view-card {
+  background: transparent;
+}
+
+.driver-view-grid {
+  display: block;
+}
+
+.driver-view-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  column-gap: 18px;
+  align-items: start;
+  padding: 10px 0 11px;
+  border-bottom: 1px solid var(--line-hair);
+}
+
+.driver-view-cell {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.driver-view-grid .driver-view-row:last-child {
+  border-bottom: 0;
+}
+
+.driver-view-cell-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding-top: 3px;
+}
+
+.driver-view-cell-value {
+  font-size: 13.5px;
+  color: var(--text-main);
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.driver-view-inline-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.driver-view-inline-row + .driver-view-inline-row {
+  margin-top: 6px;
+}
+
+.driver-view-inline-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.driver-view-row-wide .driver-view-cell-value {
+  white-space: pre-wrap;
+}
+
+.driver-view-row-wide {
+  grid-template-columns: 180px minmax(0, 1fr);
+}
+
+.driver-view-cell-value .is-na {
+  color: var(--text-muted);
+}
+
+.driver-view-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.driver-view-comments {
+  font-size: 13px;
+}
+
+/* ── Docs sidebar heading ── */
+.driver-docs-heading {
+  margin: 0 0 14px 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.driver-modal-docs .driver-docs-heading.section-title {
+  margin-bottom: 8px;
+}
+
+.driver-docs-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 12px 0;
+}
+
+/* ── Doc groups and rows (shared view + edit) ── */
+.driver-doc-group {
+  margin-bottom: 18px;
+}
+
+.driver-doc-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+}
+
+.driver-doc-view-item {
+  grid-template-columns: 38px minmax(0, 1fr) 108px 30px;
+  column-gap: 10px;
+}
+
+.driver-doc-download-btn {
+  text-decoration: none;
+}
+
+.driver-doc-download-btn svg {
+  display: block;
+}
+
+.driver-doc-section {
+  margin-bottom: 10px;
+}
+
+.driver-doc-section-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 4px;
+}
+
+.driver-doc-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  min-height: 28px;
+  border-radius: 2px;
+  text-decoration: none;
+  color: var(--text-main);
+  font-size: 12.5px;
+}
+
+.driver-doc-row:hover {
+  background: var(--surface-strong);
+  text-decoration: none;
+  color: var(--text-main);
+}
+
+.driver-doc-type {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: var(--surface-muted);
+  color: var(--text-faint);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.driver-doc-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.driver-doc-meta {
+  font-size: 10px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.driver-doc-open {
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.driver-doc-row:hover .driver-doc-open {
+  text-decoration: underline;
+}
+
+/* ── Docs footer (ZIP button) ── */
+.driver-docs-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 0;
+}
+
+/* ── Delete confirm modal ── */
+#driver-delete-confirm-modal .modal {
+  width: min(440px, calc(100vw - 32px));
+}
+
+#driver-delete-confirm-modal .modal-body {
+  padding: 20px 22px 16px;
+}
+
+.driver-delete-confirm-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.driver-delete-confirm-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+}
+
+.driver-delete-confirm-head .modal-icon {
+  flex: 0 0 auto;
+}
+
+.driver-delete-confirm-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.35;
+  margin: 0;
+}
+
+.driver-delete-confirm-text,
+.driver-delete-confirm-name {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.driver-delete-confirm-name {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.driver-delete-confirm-field {
+  width: 100%;
+}
+
+.driver-delete-confirm-error {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 2px;
+}
+
+/* Pointer cursor on driver table rows */
+.table-card[data-erp-grid] tbody tr {
+  cursor: pointer;
+}

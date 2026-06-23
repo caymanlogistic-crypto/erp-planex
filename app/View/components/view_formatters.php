@@ -8,7 +8,20 @@
 function ui_date(?string $value): string
 {
     $value = trim((string) $value);
-    return $value !== '' ? mb_substr($value, 0, 10) : '—';
+    if ($value === '') {
+        return '—';
+    }
+
+    $timestamp = strtotime($value);
+    if ($timestamp !== false) {
+        return date('d.m.Y', $timestamp);
+    }
+
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return date('d.m.Y', strtotime($value));
+    }
+
+    return $value;
 }
 
 function ui_actor(?string $role, mixed $id, ?string $name = null): string

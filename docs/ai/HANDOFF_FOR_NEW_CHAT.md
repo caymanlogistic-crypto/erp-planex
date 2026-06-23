@@ -1,245 +1,355 @@
-# ERP PLANEX — контекст для нового ChatGPT-чата
+# ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
-## Что это за проект
+## Главное для нового ChatGPT-чата
 
-ERP PLANEX — PHP/MySQL ERP для транспортной логистики.
-Рабочая папка: `C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\`
-Разработка ведётся ИИ-агентами KILO.
+Прочитай этот файл первым. Он является главным переносимым контекстом текущей работы ERP PLANEX.
 
-## Рабочая модель
+Рабочая папка проекта:
 
 ```text
-Владелец + ChatGPT → KILO erp-architect → KILO erp-coder
+C:\Users\Vladimir\Desktop\PLANEX\SITE\erp
 ```
 
-Главные решения принимает владелец вместе с ChatGPT (этим чатом).
-erp-architect переводит решения в технические задачи для erp-coder.
-erp-coder реализует, тестирует, применяет дизайн-базу.
+Разработка ведётся через KILO-агентов:
 
-Кодер не получает задачи напрямую от владельца/ChatGPT, кроме аварийных случаев.
-Основной поток: владелец/ChatGPT → erp-architect → erp-coder → erp-architect acceptance → commit.
+```text
+Владелец + ChatGPT → erp-architect → erp-coder → erp-architect acceptance → владелец + ChatGPT
+```
 
-## Агенты
-
-Постоянные KILO-агенты (только два):
+Постоянные KILO-агенты только:
 
 ```text
 .kilo/agents/erp-architect.md
 .kilo/agents/erp-coder.md
 ```
 
-Не используются постоянно: erp-uiux-designer, erp-qa-tester.
+Главный дизайнер / CODEX-дизайнер — внешние чаты/инструменты, не постоянные KILO-агенты.
 
-**Главный дизайнер** — отдельный ChatGPT-чат, НЕ KILO-агент. Подключается для дизайн-аудита и UI-полировки.
+## Стиль взаимодействия с владельцем
 
-**CODEX-дизайнер** — внешний инструмент/чат, НЕ KILO-агент. Выполняет точечные дизайн-правки.
-CODEX-дизайнер обязан сам проверять свои изменения: `php -l`, `git diff --check`, отсутствие inline-style (кроме `display:none`), сохранность `input name`/`form action`/`method`/`routes`, подключение CSS.
-CODEX-дизайнер не меняет функциональную логику. Если найден функциональный баг — фиксирует в отчёте, исправление идёт через архитектора и кодера.
+- Отвечать коротко и по делу.
+- Не писать промты агентам без прямой просьбы владельца: «пиши промт», «напиши промт», «дай промт».
+- Если не хватает данных — запросить реальные файлы/архив, не фантазировать.
+- Если нужны файлы — сразу дать CMD/PowerShell-команду в одну строку для архива.
+- Не принимать отчёт агента `DONE`, если нет фактической проверки.
+- UI оценивать только как соответствует / не соответствует / частично соответствует утверждённому стандарту, без вкусовщины.
 
-## Текущий статус проекта
+## Текущий активный фокус
 
-```text
-SUPERADMIN блок — ЗАКРЫТ на текущем этапе.
-```
-
-### Стабильный commit
-
-```text
-b105424 — feat: add WEBP support; remove license_category and license_expire_date from driver create form
-```
-
-### Важные последние commits
+Сейчас активная работа — **форма просмотра/редактирования водителя в модальном окне** на странице:
 
 ```text
-de190ab — fix: add created_by_user_id and created_by_role column check in driver create document handler
-b457557 — feat: multiple file upload support for predefined driver documents
-b1d665c — feat: add extra phones block to driver create form
-b105424 — feat: add WEBP support; remove license_category and license_expire_date from driver create form
+/company/drivers
 ```
 
-## Ключевое архитектурное решение: руководитель компании
+Сценарий:
 
-Руководитель в карточке компании — это **реквизитные данные компании** для документов, счетов, договоров и актов.
+```text
+/company/drivers
+→ двойной клик по строке водителя
+→ модал просмотра
+→ кнопка Редактировать
+→ форма редактирования
+→ Сохранить
+→ возврат в просмотр
+```
 
-Хранится в таблице `companies`:
-- `director_position` VARCHAR(255)
-- `director_full_name` VARCHAR(255)
+## Последние подтверждённые commits из текущей цепочки
 
-Это **НЕ** ERP-пользователь.
-Это **НЕ** `company_owner`.
-Автоматическое создание `company_owner` при создании/редактировании экспедитора **запрещено**.
+По выводу владельца в этом чате:
 
-ERP-доступ руководителя создаётся отдельно через:
-`/superadmin/companies/{id}/create-owner`
+```text
+c3b825c fix(drivers): align create modal footer with FINAL3
+7a796fb feat(drivers): open create form in FINAL3 modal from drivers list
+051155f wip(ui): refine ERP grid toolbar and list pages
+3ddade7 wip(drivers): recompose drivers grid fields and documents
+90ab717 fix(drivers): remove unique phone constraint
+365dbbe wip(ui): unify ERP grid list tables
+a2149a7 feat(stepper): contractor/driver/vehicle create-full with FINAL3 stepper
+67b5454 feat(clients): align client create flow with legal entity standard
+```
 
-## Контакты компании
+`c3b825c` — последний подтверждённый commit по созданию водителя в модалке.
 
-`contact_person`, `contact_phone`, `contact_email` остаются в БД (таблица `companies`), но убраны из форм создания/редактирования экспедитора и сейчас **не используются в UI**.
+После `c3b825c` были незакоммиченные доработки edit-модала водителя. Они пока **не приняты как production**.
 
-## Контакты перевозчика
+## Текущий статус edit-модала водителя
 
-`contractor_contacts` — основная модель контактов перевозчика/подрядчика.
+Текущий статус:
 
-- у перевозчика может быть несколько контактов;
-- `is_primary` должен быть ровно один, при отсутствии ручного выбора главным становится первый непустой контакт;
-- `is_document_email` необязателен и может быть отмечен у нескольких контактов;
-- legacy-поля `contractors.contact_person`, `contractors.contact_phone`, `contractors.contact_email` переведены в удаление локальной миграцией;
-- такую же модель позже планируется применить к клиентам, но текущая реализация касается только перевозчиков.
+```text
+DRIVER_EDIT_MODAL_GEOMETRY_NEEDS_REWORK
+```
 
-## Исправленная регрессия
+Не коммитить как финал, пока владелец не подтвердит визуально и runtime.
 
-После дизайн/функциональных правок была найдена регрессия:
-`POST /superadmin/companies/create` был ошибочно заменён логикой создания руководителя.
+Что уже было сделано агентами по отчёту, но требует проверки:
 
-Симптом: `Warning: Undefined variable $company` в `superadmin_company_owner_create.php`
+```text
+- edit-form подключает общий company_driver_create_form.php;
+- создана/обновлена window.initDriverForm(form);
+- убран cloneNode(form);
+- data-doc-types перемещался внутрь form;
+- добавлены уникальные DOM-prefix id;
+- убран browser alert в пользу form-alert;
+- добавлена логика delete_predef_doc для ×;
+- добавлена backend-обработка predef/custom docs в POST modal-edit;
+- ширина edit/view modal менялась 1040px → 1100px.
+```
 
-Причина: не выполнялся `INSERT INTO companies`, использовался неопределённый `$id`, рендерился неправильный view.
+Но по визуальной проверке владельца форма редактирования всё ещё отличается от эталона создания.
 
-Исправлено commit: `49e7218 — fix(superadmin): restore company create handler`
+## Главный текущий визуальный дефект
 
-## Дизайн-система
+Эталон — форма создания водителя:
+
+```text
+/company/drivers/create
+/company/drivers → Создать водителя
+```
+
+Редактирование должно быть **той же формой создания 1 в 1**, только:
+
+```text
+- поля предзаполнены;
+- action ведёт на update route;
+- кнопка в footer = Сохранить;
+- для существующих документов кнопка Заменить вместо Выбрать;
+- есть рабочий × для документа;
+- после сохранения возврат в просмотр.
+```
+
+По скринам владельца было видно:
+
+```text
+CREATE:
+общая рабочая ширина формы ≈ 948 px
+левая колонка данных ≈ 644 px
+правая колонка документов ≈ 304 px
+
+EDIT:
+общая рабочая ширина формы ≈ 880 px
+левая колонка данных ≈ 575 px
+правая колонка документов ≈ 304 px
+```
+
+Проблема: правая колонка документов почти нормальная, а левая колонка edit сжата примерно на 65–70 px. Поэтому поля, отступы, доп. телефон и общая геометрия не совпадают с формой создания.
+
+## Текущая задача для erp-architect
+
+Нужно исправить **геометрию edit-form под create-form**, не трогая backend и интерактив, если они уже исправлены.
+
+Архитектор должен сравнить:
+
+```text
+/company/drivers/create
+/company/drivers → двойной клик по строке → Редактировать
+```
+
+Цель:
+
+```text
+edit-form должна совпасть с create-form по:
+- общей рабочей ширине;
+- ширине левой колонки;
+- ширине правой колонки;
+- левому краю формы;
+- правому краю формы;
+- отступу между колонками;
+- ширине ФИО;
+- ширине телефона;
+- ширине паспортных полей;
+- ширине комментария;
+- положению блока документов;
+- ширине document-file-row;
+- footer.
+```
+
+Допустимая разница только в данных:
+
+```text
+create: пустые поля / Выбрать
+edit: предзаполненные поля / Заменить / ×
+```
+
+## Что архитектору нельзя менять в текущей геометрической правке
+
+Не менять без отдельной команды:
+
+```text
+backend
+routes
+сохранение
+driver_phones
+документы
+замену файлов
+soft delete
+initDriverForm
+sidebar
+topbar
+page-head
+menu
+```
+
+Сейчас задача — только geometry/layout edit-form.
+
+## Где искать текущий дефект
+
+Файлы:
+
+```text
+app/View/partials/company_driver_create_form.php
+app/View/partials/company_driver_modal_edit.php
+app/View/pages/company_drivers.php
+public/assets/css/app.css
+public/assets/js/app.js
+```
+
+Проверить CSS/DOM:
+
+```text
+.driver-create-modal
+.driver-view-overlay .modal.driver-view-modal-inner
+.modal-body
+.driver-modal-body
+.entity-form-layout
+.entity-form-main
+.entity-form-docs
+.panel
+.panel-body
+```
+
+Если create modal имеет:
+
+```css
+.driver-create-modal {
+  width: min(1100px, calc(100vw - 48px));
+}
+```
+
+а edit/view modal имеет меньшую ширину — edit должен быть приведён к create.
+
+Также нужно убрать всё, что съедает рабочую ширину edit-form:
+
+```text
+лишний wrapper
+лишний padding
+лишний margin
+panel/panel-body spacing
+page-form spacing внутри modal
+```
+
+Внутри edit modal должно быть:
+
+```text
+modal-body
+  form#driver-edit-form
+    entity-form-layout
+      entity-form-main
+      entity-form-docs
+```
+
+Без дополнительной внутренней рамки и без лишнего внешнего padding вокруг `entity-form-layout`.
+
+## Проверки после геометрической правки
+
+Команды через CMD:
+
+```bat
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l app\View\partials\company_driver_create_form.php"
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l app\View\partials\company_driver_modal_edit.php"
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && git diff --check"
+```
+
+Runtime:
+
+```bat
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -d upload_max_filesize=25M -d post_max_size=100M -d max_file_uploads=50 -d memory_limit=256M -d max_execution_time=120 -d max_input_time=120 -S 127.0.0.1:8016 -t public public/index.php"
+```
+
+Вручную:
+
+```text
+1. /company/drivers/create — эталон не сломан.
+2. /company/drivers → Создать водителя — create modal не сломан.
+3. /company/drivers → двойной клик → Редактировать.
+4. edit-form визуально совпадает с create-form.
+5. + Доп. телефон работает.
+6. + Добавить документ работает.
+7. Заменить работает.
+8. × работает.
+9. Сохранить возвращает в просмотр.
+10. Консоль без JS errors.
+```
+
+## После успешной проверки
+
+Если владелец подтвердит, коммитить только кодовые файлы, без docs и `.kilo`:
+
+```text
+public/index.php
+app/View/pages/company_drivers.php
+app/View/partials/company_driver_create_form.php
+app/View/partials/company_driver_modal_view.php
+app/View/partials/company_driver_modal_edit.php
+public/assets/js/app.js
+public/assets/css/app.css
+```
+
+Не добавлять:
+
+```text
+.kilo/
+docs/ai/
+README.md
+```
+
+## Дизайн-система и UI lock
 
 Главный исторический дизайн-источник:
+
 ```text
 C:\Users\Vladimir\Desktop\PLANEX\SITE\STYLE ERP\ФИНАЛЬНЫЙ РАБОЧИЙ ВАРИАНТ\FINAL3.html
 ```
 
 Рабочий CSS:
+
 ```text
 public/assets/css/erp-ui.css
+public/assets/css/app.css
 ```
-
-Текстовый стандарт:
-```text
-docs/ui/DESIGN_STANDARD.md
-```
-
-Кодер обязан использовать `erp-ui.css`, не писать inline-style, не создавать второй UI-kit.
-
-## Документация
-
-Рабочие MD (не раздувать):
-
-```text
-docs/ai/PROJECT_STATE.md    — текущее состояние проекта
-docs/ai/AGENT_RULES.md      — правила всех агентов
-docs/ai/CURRENT_TASK.md     — текущая задача и статус
-docs/ai/DECISIONS.md        — утверждённые архитектурные решения
-docs/ai/HANDOFF_FOR_NEW_CHAT.md — этот файл, главный контекст для нового чата
-AGENTS.md                   — агентская схема (в корне проекта)
-docs/ui/DESIGN_STANDARD.md  — стандарт дизайн-системы
-```
-
-Новые управляющие MD создаются только по решению владельца + ChatGPT.
-
-**Файл `docs/ai/ERP_PLANEX_CONTEXT_FOR_NEW_CHAT.md` не существует и не используется.**
-Главный переносимый контекст — `docs/ai/HANDOFF_FOR_NEW_CHAT.md` (этот файл).
-
-## Следующий блок в работе
-
-```text
-Ожидает решения владельца.
-```
-
-Переработка меню и UX блока Подрядчики/Перевозчики/Водители/Транспорт — ЗАВЕРШЕНА (6 блоков + fix регрессии доступа логиста, commit 140c318).
-
-CREATE_FORMS_WITH_DOCUMENT_TYPES — РЕАЛИЗОВАНА:
-- Формы создания водителя, транспорта, перевозчика с inline-загрузкой документов
-- Справочник типов документов (/company/document-types)
-- Предопределённые документы (10 типов)
-- Произвольные документы с выбором/созданием типа
-- document_type_id FK в таблице documents
-- Миграции 024, 025
-- WEBP добавлен в whitelist
-
-DRIVER_CREATE_DOCS_AND_PHONES — РЕАЛИЗОВАНА:
-- Исправлена ошибка сохранения документов (отсутствовали колонки created_by_user_id/created_by_role)
-- Предопределённые документы поддерживают multiple upload
-- Добавлен блок дополнительных телефонов в форму создания водителя
-- Из формы создания убраны поля «ВУ: категория» и «ВУ: дата окончания»
-- WEBP разрешён во всех обработчиках загрузки документов
-
-## Правила финальной визуальной приёмки в новом чате
-
-Новый ChatGPT-чат должен сначала восстановить контекст по этому файлу и не писать промты агентам без прямой команды владельца.
-
-Текущая задача нового чата:
-
-```text
-Проверить финальные screenshots после FINAL_VISUAL_POLISH и дать вердикт:
-COMPLIANT / PARTIALLY_COMPLIANT / NON_COMPLIANT
-```
-
-Проверять не “красиво/некрасиво”, а соответствие дизайн-системе ERP PLANEX:
-- единый промышленный UI;
-- нет backend/dev-слов в интерфейсе;
-- нет случайного UI-kit;
-- нет больших пустот и хаоса;
-- sidebar/topbar читаемые;
-- таблицы и карточки иерархичны;
-- действия понятны;
-- опасные действия отделены;
-- роли owner/logist/superadmin не теряют нужные функции.
-
-Screenshots лежат:
-
-```text
-docs/design-audit/final-visual-polish/screenshots/
-```
-
-Если screenshots неполные, обрезанные, пустые, 404 или без CSS — запросить новый screenshot set.
-
-## Что нельзя нарушать
-
-- Руководитель — это реквизиты компании, а не ERP-пользователь.
-- `company_owner` не создаётся автоматически при создании/редактировании экспедитора.
-- Контакты не добавлять в формы создания/редактирования экспедитора.
-- Кодер не получает задачи напрямую, только через erp-architect.
-- Inline-style запрещены (кроме `display:none` для JS).
-- Новый UI-kit не создавать — использовать `erp-ui.css`.
-- Не переписывать утверждённый дизайнером UI целиком.
-- Не создавать новые MD без решения владельца + ChatGPT.
-
-## CRITICAL UI LOCK RULE
 
 Запрещено менять без прямого подтверждения владельца:
 
-1. **Основную шапку ERP** — HTML, CSS, размеры, отступы, структуру, классы, поведение, внешний вид.
-2. **Шапку контентного блока** — page-head / page-header, заголовочную зону страницы, её высоту, отступы, кнопочную структуру, классы и визуальное поведение.
-3. **Основное меню** — структуру, внешний вид, классы, поведение, отступы, активные состояния, раскрытие/сворачивание.
-
-Разрешено только: добавлять новые кнопки, пункты меню, действия без изменения существующей структуры.
-
-Если задача требует изменить заблокированные зоны — агент обязан остановиться и запросить подтверждение владельца.
-
-## Ключевые пути
-
 ```text
-C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\                    — корень проекта
-C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\public\index.php     — роутер
-C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\app\View\pages\      — view-файлы
-C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\database\migrations\  — миграции
-C:\Users\Vladimir\Desktop\PLANEX\SITE\erp\public\assets\css\erp-ui.css — главный CSS
+- основную шапку ERP;
+- шапку контентного блока / page-head;
+- основное меню / sidebar;
+- shell layout.
 ```
 
+## Правила документации
 
-## Семантика меню компании — новая модель подрядчиков
-
-```text
-Подрядчики — раскрываемая группа меню, а не отдельный справочник.
-Перевозчики — пользовательское название сущности contractors; это бывшие Подрядчики.
-Водители+ТС — пользовательское название driver_vehicle_blocks; неизменяемая по составу связка Водитель + Транспорт.
-Водители — справочник drivers; здесь редактируются данные водителя.
-Транспорт — пользовательское название vehicle_sets; бывшие Транспортные комплекты; здесь редактируются данные транспорта.
-Транспортные единицы — vehicle_units; техническая внутренняя сущность, из меню убрать, из БД не удалять.
-Экипажи / crews — техническая связь Перевозчик + Водители+ТС; не показывать как главный пользовательский раздел.
-```
-
-Правило неизменяемости связки `Водители+ТС`:
+Разрешённый минимум MD:
 
 ```text
-Нельзя заменить водителя или транспорт внутри существующей связки.
-Если нужен другой водитель или другой транспорт — создаётся новая связка.
-В разделе Водители+ТС разрешены просмотр, документы и переход к редактированию исходных карточек водителя/транспорта.
+docs/ai/PROJECT_STATE.md
+docs/ai/AGENT_RULES.md
+docs/ai/CURRENT_TASK.md
+docs/ai/DECISIONS.md
+docs/ai/HANDOFF_FOR_NEW_CHAT.md
+docs/ui/DESIGN_STANDARD.md
 ```
 
+Новые управляющие MD не создавать без решения владельца + ChatGPT.
+
+## Следующий отдельный блок, не текущий
+
+Есть подготовленные документы по будущей форме транспортного комплекта:
+
+```text
+docs/ai/vehicle_set_schema_for_codex.md
+docs/ai/vehicle_set_full_implementation_prompt_for_erp_coder.md
+```
+
+Они не являются текущей задачей, пока не закрыта форма редактирования водителя.

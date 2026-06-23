@@ -1,57 +1,141 @@
 # ERP PLANEX — текущая задача
 
-## STATUS: CODE_CHANGED_NEEDS_RUNTIME_AND_OWNER_CHECK
+## STATUS: DRIVER_EDIT_MODAL_GEOMETRY_NEEDS_REWORK
 
-Форма создания полной связки и форма создания связки Водитель+Машина переведены на stepper FINAL3.
-Логист получил доступ к `/company/contractors/create-full`.
+Текущая активная задача — довести форму редактирования водителя в модальном окне до production-соответствия эталону создания.
 
-## Последний commit (ещё не сделан)
+Страница:
 
 ```text
-Рабочая директория изменена. Ожидает commit после полной проверки владельцем.
+/company/drivers
 ```
 
-## Что сделано
+Сценарий:
 
-### Этап 2 — Права доступа
-- `GET/POST /company/contractors/create-full`: `requireRole(['company_owner'])` → `requireRole(['company_owner', 'logist'])`
+```text
+/company/drivers
+→ двойной клик по строке водителя
+→ модал просмотра
+→ Редактировать
+→ форма редактирования
+```
 
-### Этап 3 — Stepper для DVB create
-- `company_driver_vehicle_blocks.php`: текст кнопки «Создать связку» → «Создать связку Водитель + Машина»
-- `company_driver_vehicle_blocks_create.php`: полная переработка на 3-шаговый stepper (Водитель → Машина/Транспорт → Проверка)
+## Главный критерий
 
-### Этап 4 — Stepper для create-full
-- `company_contractors_create_full.php`: полная переработка на 4-шаговый stepper (Перевозчик → Водитель → Машина/Транспорт → Проверка)
-- `public/index.php` (POST create-full): расширен backend — поддержка выбора существующих ИЛИ создания новых сущностей на каждом шаге
-- `public/index.php` (GET create-full): добавлена загрузка списков contractors/drivers/vehicleSets
+Форма редактирования водителя должна быть **1 в 1 как форма создания водителя**.
 
-### Этап 5 — JS/CSS cleanup
-- Удалены все `alert()` из JS валидации в обоих stepper'ах
-- Валидация через inline-сообщения `.field-msg.is-error`
-- Очистка ошибок при выборе/вводе
+Эталон:
 
-## Файлы изменены
+```text
+/company/drivers/create
+/company/drivers → Создать водителя
+```
 
-| Файл | Изменения |
-|---|---|
-| `public/index.php` | requireRole fix, GET entity lists, POST validation + creation modes |
-| `app/View/pages/company_contractors_create_full.php` | 249 → ~800 строк, 4-шаговый stepper |
-| `app/View/pages/company_driver_vehicle_blocks.php` | Текст кнопки (2 строки) |
-| `app/View/pages/company_driver_vehicle_blocks_create.php` | 144 → ~350 строк, 3-шаговый stepper |
+Разница edit от create допускается только в данных и действиях:
 
-## Что проверено
+```text
+create: пустые поля / Выбрать / Создать водителя
+edit: предзаполненные поля / Заменить / × / Сохранить
+```
 
-- `php -l` для всех 4 файлов — PASS
-- `git diff --check` — PASS (только CRLF-предупреждения Windows)
-- Отсутствие `alert()` во view-файлах — PASS
-- Отсутствие inline-style кроме `display:none` — PASS
-- `.is-hidden` существует в erp-ui.css — PASS
-- Backend: duplicate check для driver_vehicle_block — сохранён
-- Backend: duplicate check для crew — добавлен
-- Backend: created_by_user_id / created_by_role — проставляются
+Геометрия должна совпадать.
 
-## Что не закрыто этим этапом
+## Что уже было исправлено по отчёту агента, но требует проверки
 
-- Ownership-фильтрация dropdown-списков для логиста (логист видит все сущности в select'ах — существующий паттерн, требует отдельного решения)
-- Inline-создание водителя/транспорта внутри `/company/driver-vehicle-blocks/create` (backend пока только select)
-- Визуальное выделение активного режима для `.btn-ghost.is-active` (DESIGN_TODO для дизайнера)
+```text
+- edit/view modal width 1040px → 1100px;
+- data-doc-types перенесён внутрь form;
+- интерактивные id префиксированы через DOM-prefix;
+- browser alert заменён на .form-alert.alert-error;
+- добавлен delete_predef_doc для ×;
+- POST modal-edit сохраняет predef docs, custom docs, soft-delete;
+- initDriverForm(form) scoped по form;
+- cloneNode(form) убран.
+```
+
+## Почему задача ещё не принята
+
+По визуальной проверке владельца edit-form всё ещё не совпадает с create-form.
+
+По скринам:
+
+```text
+CREATE:
+общая рабочая ширина формы ≈ 948 px
+левая колонка данных ≈ 644 px
+правая колонка документов ≈ 304 px
+
+EDIT:
+общая рабочая ширина формы ≈ 880 px
+левая колонка данных ≈ 575 px
+правая колонка документов ≈ 304 px
+```
+
+Проблема: правая колонка почти совпадает, но левая колонка edit сжата примерно на 65–70 px. Нужно вернуть недостающую ширину в левую колонку за счёт modal/body/layout/wrapper/padding, не сжимая документы.
+
+## Следующее действие архитектора
+
+Исправить только геометрию edit-form:
+
+```text
+1. Сравнить /company/drivers/create и /company/drivers → Редактировать.
+2. Найти wrapper/padding/margin/panel-body, который съедает ширину edit-form.
+3. Сделать edit modal/layout той же рабочей ширины, что create.
+4. Оставить правую колонку документов около 304 px.
+5. Вернуть левую колонку к ширине около 644 px.
+6. Не трогать backend/JS-интерактив/сохранение, если они уже исправлены.
+```
+
+## Запреты текущей задачи
+
+Не трогать без отдельного решения:
+
+```text
+backend
+routes
+сохранение
+driver_phones
+документы
+замену файлов
+soft delete
+initDriverForm
+sidebar
+topbar
+page-head
+menu
+```
+
+## Проверка
+
+```bat
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l app\View\partials\company_driver_create_form.php"
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l app\View\partials\company_driver_modal_edit.php"
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && git diff --check"
+```
+
+Runtime запуск:
+
+```bat
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -d upload_max_filesize=25M -d post_max_size=100M -d max_file_uploads=50 -d memory_limit=256M -d max_execution_time=120 -d max_input_time=120 -S 127.0.0.1:8016 -t public public/index.php"
+```
+
+Ручная проверка:
+
+```text
+1. /company/drivers/create — эталон не сломан.
+2. /company/drivers → Создать водителя — create modal не сломан.
+3. /company/drivers → двойной клик → Редактировать.
+4. edit-form совпадает с create-form по геометрии.
+5. + Доп. телефон работает.
+6. + Добавить документ работает.
+7. Заменить работает.
+8. × работает.
+9. Сохранить возвращает в просмотр.
+10. Консоль без JS errors.
+```
+
+## Коммит
+
+Не коммитить до owner visual/runtime acceptance.
+
+Если владелец подтвердит, коммитить только кодовые файлы, не docs/ai и не .kilo.

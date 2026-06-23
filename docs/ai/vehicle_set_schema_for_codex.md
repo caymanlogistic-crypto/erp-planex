@@ -1,4 +1,10 @@
-﻿# Vehicle Set — Схема данных и логики для CODEX-дизайнера
+# ВНИМАНИЕ
+
+Этот документ подготовлен для будущего блока `/company/vehicle-sets/create`. Он не является текущей активной задачей, пока не закрыт driver edit modal.
+
+---
+
+# Vehicle Set — Схема данных и логики для CODEX-дизайнера
 
 > Страница: `/company/vehicle-sets/create`  
 > Дата выгрузки: 2026-06-19  
@@ -486,5 +492,3 @@ $docErrors = []; $uploadedDocs = []; $entityType = 'vehicle_set';
 | `database/migrations-local/020_update_documents.sql` | Расширение `documents` (document_name, number, date, expire, soft-delete) |
 | `database/migrations-local/024_create_document_types.sql` | `document_types` |
 | `database/migrations-local/025_add_document_type_id.sql` | FK `document_type_id` + seed предопределённых типов |
-
-
