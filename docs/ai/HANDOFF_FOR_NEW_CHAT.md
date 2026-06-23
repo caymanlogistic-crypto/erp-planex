@@ -44,6 +44,20 @@ docs/ai/PROTECTED_ARCHITECTURE_PLAN.md
 
 Любой будущий рефакторинг должен начинаться с MD/карт/правил, а не с переноса кода.
 
+## FOUNDATION SERVICES (не подключены к ядру)
+
+Созданы архитектурные сервисы для будущих модулей:
+
+```text
+app/Service/AccessControlService.php  — единая проверка прав (роли, ownership, grants)
+app/Service/DocumentService.php       — единый сервис документов (upload, replace, пути, бейджи)
+```
+
+Оба сервиса НЕ подключены к защищённому ядру.
+Новые модули (driver_vehicle_blocks, crews) должны использовать эти сервисы с момента создания.
+
+Подробнее: `docs/ai/ARCHITECTURE_FOUNDATION_STAGE_B.md`
+
 ## Стиль взаимодействия с владельцем
 
 - Отвечать коротко и по делу.
