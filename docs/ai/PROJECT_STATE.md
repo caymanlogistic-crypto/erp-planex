@@ -78,6 +78,8 @@ STEPPER_CONTRACTOR_DRIVER_VEHICLE — есть предыдущая реализ
 VEHICLE_SET_PRODUCTION_CREATE — подготовлены MD, отложено до закрытия driver edit modal.
 PROTECTED_ARCHITECTURE_PLAN — ПРИНЯТ (c19c67a).
 FOUNDATION_STAGE_B — ВЫПОЛНЕН: AccessControlService + DocumentService (не подключены к ядру).
+BLOCK_C — ВЫПОЛНЕН (cf20e09): driver_vehicle_blocks + crews CRUD complete.
+MASTER_FLOW_ARCHITECTURE — ПЛАН ГОТОВ: docs/ai/MASTER_FLOW_ARCHITECTURE.md.
 ```
 
 ## Текущая активная задача
