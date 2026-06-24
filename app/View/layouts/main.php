@@ -164,6 +164,17 @@ if ($crumbContext !== '') {
                         <span>Транспорт</span>
                     </a>
                 </div>
+                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/responsible-assignments') ? ' is-active' : '' ?>" href="/company/responsible-assignments">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <circle cx="4" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M1 12.5C1 9.5 2.5 7.5 4 7.5C5.5 7.5 7 9.5 7 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        <circle cx="12" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M9 12.5C9 9.5 10.5 7.5 12 7.5C13.5 7.5 15 9.5 15 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        <path d="M7 10L9 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M9 9L7 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Ответственные логисты</span>
+                </a>
             </div>
 
             <div class="nav-spacer"></div>

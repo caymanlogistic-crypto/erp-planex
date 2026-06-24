@@ -158,7 +158,7 @@ d3d3524 feat(access): add senior logist role visibility
 888ba64 feat(master-flow): add contractor crew creation workflows
 ```
 
-## BLOCK E3 — Исполнитель рейса: полный CRUD (ТЕКУЩИЙ ЭТАП — ПРИНЯТ)
+## BLOCK E3 — Исполнитель рейса: полный CRUD (ПРИНЯТ)
 
 **Статус**: E3 выполнен и принят. Commit `1488d55`.
 
@@ -212,4 +212,42 @@ app/View/pages/company_route_executor_edit.php     (редактирование
 - Protected core (`/company/drivers`, `/company/vehicle-sets`, `/company/clients`, `/company/contractors`) не тронут.
 - Документы в форму Исполнителя рейса не добавлены.
 
-**Следующий блок**: **E4** — Переназначение ответственных логистов (вкладки: Исполнители рейса / Подрядчики / Водители / ТС).
+## BLOCK E4 — Переназначение ответственных логистов (ЗАВЕРШЁН)
+
+**Статус**: E4 реализован.
+
+### Новые routes
+
+```
+GET  /company/responsible-assignments
+POST /company/responsible-assignments/reassign
+```
+
+### Новые views
+
+```
+app/View/pages/company_responsible_assignments.php  (страница с 4 вкладками)
+```
+
+### Новые миграции
+
+```
+database/migrations-local/038_create_responsible_assignment_history.sql
+```
+
+### Меню
+
+Пункт «Ответственные логисты» добавлен в ОПЕРАЦИИ (виден только company_owner).
+
+### Логика переназначения
+
+- **Исполнитель рейса**: полный каскад (crew → block → contractor + driver + vehicle_set).
+- **Подрядчик**: опциональный каскад через чекбокс «Перенести вместе с исполнителями рейса».
+- **Водитель**: опциональный каскад на crews + blocks.
+- **ТС**: опциональный каскад на crews + blocks.
+- **Массовое переназначение**: чекбоксы + общий select.
+- **История**: таблица `responsible_assignment_history`.
+- **Grants**: отзыв активных grants при переназначении.
+- **Доступ**: только company_owner.
+
+**Следующий блок**: **E5** — определяется владельцем (возможные варианты: зачистка старых пунктов, документы, master-flow адаптация).
