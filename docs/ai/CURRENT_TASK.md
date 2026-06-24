@@ -1,50 +1,33 @@
 # ERP PLANEX — текущая задача
 
-## STATUS: BLOCK_E1_ROUTE_EXECUTOR_ARCHITECTURE
+## STATUS: BLOCK_E3_COMPLETE
 
-Текущая активная задача — архитектурный план упрощения модели «Водитель+ТС» + «Экипаж» → «Исполнитель рейса».
+Блоки E1 (архитектурный план), E2 (facade list + menu), E3 (полный CRUD workflow) выполнены.
 
-Это архитектурный этап: только MD, без кода, без SQL, без UI, без миграций.
+## Что реализовано в E3
 
-## Что сделано
+1. **Список Исполнителей рейса** (`/company/route-executors`) — с кнопкой создания.
+2. **Создание** (`GET/POST /company/route-executors/create`) — три выпадающих списка: Подрядчик + Водитель + ТС. Backend сам находит/создаёт driver_vehicle_block и crew в одной транзакции.
+3. **Просмотр** (`GET /company/route-executors/{id}`) — карточка с блоками: Подрядчик, Водитель, ТС, Ответственный логист, Статус, Действия.
+4. **Редактирование** (`GET/POST /company/route-executors/{id}/edit`) — изменение подрядчика/водителя/ТС/статуса.
+5. **Архивирование** (`POST /company/route-executors/{id}/archive`) — архивирует crew, не трогает driver_vehicle_block.
+6. **Backend-защита от чужих ID** — для logist проверяется доступ к contractor_id, driver_id, vehicle_set_id через created_by_user_id + entity_access_grants.
+7. **Проверка дублей** — UNIQUE constraint на crews (contractor_id, driver_vehicle_block_id) защищает от дублей; backend проверяет перед INSERT.
+8. **Dropdown filtering** — для logist выпадающие списки фильтруются по доступности.
+9. **Меню** — скрыты «Водители+ТС», «Экипажи», «Привязка перевозчиков» (выполнено в E2).
+10. **Старые routes** — сохранены и работают.
 
-1. Изучены все таблицы: `driver_vehicle_blocks`, `crews`, `contractors`, `drivers`, `vehicle_sets`, `vehicle_units`, `entity_access_grants`, `contractor_assignment_history`, `documents`.
-2. Изучены все routes для driver_vehicle_blocks, crews, contractor-assignments.
-3. Изучены master-flow routes: create-full, add-crew.
-4. Изучена структура меню в `app/View/layouts/main.php`.
-5. Изучены миграции: 006, 009, 017, 018, 019, 021, 036, 037.
-6. Создан `docs/ai/ROUTE_EXECUTOR_ARCHITECTURE_PLAN.md`.
-7. Выбран рекомендованный путь: **Вариант А (UI-facade)** — физические таблицы сохраняются, UI показывает «Исполнитель рейса».
+## Commit
 
-## Новая целевая сущность
+`1488d55 — feat(route-executors): complete route executor workflow`
 
-**Исполнитель рейса** = Подрядчик + Водитель + ТС.
+## Следующая задача
 
-- «Водитель+ТС» и «Экипаж» больше не являются целевыми пользовательскими пунктами.
-- «Привязка перевозчиков» упраздняется как отдельный пункт.
-- Будущая перепривязка ответственного — через списки: Исполнитель рейса / Подрядчик / Водитель / ТС.
+**BLOCK_E4** — Переназначение ответственных логистов (страница с вкладками: Исполнители рейса / Подрядчики / Водители / ТС).
 
-## Файлы к обновлению
+## Запреты (всё ещё актуальны)
 
-```text
-docs/ai/ROUTE_EXECUTOR_ARCHITECTURE_PLAN.md — СОЗДАН (новый)
-docs/ai/DECISIONS.md                        — добавить решение #54
-docs/ai/PROJECT_STATE.md                    — статус E1
-docs/ai/CURRENT_TASK.md                     — этот файл
-docs/ai/HANDOFF_FOR_NEW_CHAT.md             — новый контекст
-```
-
-## После выполнения
-
-Commit: `docs(architecture): plan route executor simplification`
-
-Следующая задача: **BLOCK_E2** — UI/menu facade «Исполнители рейса» (после утверждения плана владельцем).
-
-## Запреты
-
-- Не писать код.
-- Не менять PHP/SQL/CSS/JS.
-- Не создавать новые routes.
-- Не менять меню сейчас.
-- Не делать миграции.
-- Не удалять таблицы.
+- Не удалять таблицы `driver_vehicle_blocks`, `crews`.
+- Не менять protected core (`/company/drivers`, `/company/vehicle-sets`, `/company/clients`, `/company/contractors`).
+- Не менять topbar/sidebar без подтверждения владельца.
+- Не добавлять документы в форму Исполнителя рейса без отдельного этапа.

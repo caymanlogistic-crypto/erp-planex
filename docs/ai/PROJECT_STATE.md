@@ -50,15 +50,17 @@ docs/ui/DESIGN_STANDARD.md
 ## Последний подтверждённый commit по текущей ветке работ
 
 ```text
-f993342 — fix(access): enforce contractor assignment context visibility
+1488d55 — feat(route-executors): complete route executor workflow
 ```
 
 ## Важные commits из текущей цепочки
 
 ```text
+1488d55 — feat(route-executors): complete route executor workflow (E3)
+f462a7c — feat(route-executors): add facade list and menu (E2)
+2547904 — docs: plan route executor simplification (E1)
 f993342 — fix(access): enforce contractor assignment context visibility
 c0cf919 — feat(access): add contractor assignment management
-d5a6ace — feat(access): add contractor cascade sharing (заменён, см. DECISIONS #51)
 d3d3524 — feat(access): add senior logist role visibility
 888ba64 — feat(master-flow): add contractor crew creation workflows
 ```
@@ -75,16 +77,18 @@ BLOCK_D — ВЫПОЛНЕН (d3d3524): senior_logist role + visibility rules.
 BLOCK_D2/D5 — ВЫПОЛНЕН: contractor cascade sharing заменён на contractor assignment.
 CONTRACTOR_ASSIGNMENT — УСЛОВНО ПРИНЯТ (c0cf919 + f993342): привязка перевозчиков + visibility enforcement.
 BLOCK_D6 — ВЫПОЛНЕН: документация новой модели доступа (3e5405c).
-BLOCK_E1 — АРХИТЕКТУРНЫЙ ПЛАН: упрощение «Водитель+ТС» + «Экипаж» → «Исполнитель рейса».
+BLOCK_E1 — ВЫПОЛНЕН: архитектурный план «Исполнитель рейса» (2547904).
+BLOCK_E2 — ВЫПОЛНЕН: UI/menu facade «Исполнители рейса» (f462a7c).
+BLOCK_E3 — ВЫПОЛНЕН: полный CRUD workflow «Исполнители рейса» (1488d55).
 ```
 
 ## Текущая активная задача
 
 ```text
-BLOCK_E1 — архитектурный план перехода к «Исполнителю рейса» (только MD, без кода).
+BLOCK_E3 — complete route executor workflow (ПРИНЯТ, commit 1488d55).
 ```
 
-Следующая задача: **BLOCK_E2** — UI/menu facade «Исполнители рейса» (после утверждения плана владельцем).
+Следующая задача: **BLOCK_E4** — Переназначение ответственных логистов (вкладки: Исполнители рейса / Подрядчики / Водители / ТС).
 
 ## CRITICAL UI LOCK RULE
 

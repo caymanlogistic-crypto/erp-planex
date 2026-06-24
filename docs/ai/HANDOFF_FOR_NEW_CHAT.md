@@ -158,22 +158,58 @@ d3d3524 feat(access): add senior logist role visibility
 888ba64 feat(master-flow): add contractor crew creation workflows
 ```
 
-## BLOCK E1 — Архитектурное упрощение (ТЕКУЩИЙ ЭТАП)
+## BLOCK E3 — Исполнитель рейса: полный CRUD (ТЕКУЩИЙ ЭТАП — ПРИНЯТ)
 
-Владелец решил упростить модель:
+**Статус**: E3 выполнен и принят. Commit `1488d55`.
 
-- Вместо двух пользовательских сущностей «Водитель+ТС» и «Экипаж» вводится одна: **«Исполнитель рейса»**.
-- «Исполнитель рейса» = Подрядчик + Водитель + ТС.
-- Технические таблицы `driver_vehicle_blocks` и `crews` остаются как внутренний слой.
-- Рекомендован **Вариант А (UI-facade)**: физические таблицы не меняются, UI показывает новую сущность.
-- «Привязка перевозчиков» упраздняется; переназначение ответственного логиста — через вкладки Исполнители рейса / Подрядчики / Водители / ТС.
+Реализован полный пользовательский модуль «Исполнитель рейса»:
 
-**Текущий статус**: архитектурный план создан (`docs/ai/ROUTE_EXECUTOR_ARCHITECTURE_PLAN.md`). Код не менялся. Ожидается утверждение владельцем.
+### Новые routes
 
-**Следующий блок**: E2 — UI/menu facade «Исполнители рейса» (после утверждения).
+```
+GET  /company/route-executors
+GET  /company/route-executors/create
+POST /company/route-executors/create
+GET  /company/route-executors/{id}
+GET  /company/route-executors/{id}/edit
+POST /company/route-executors/{id}/edit
+POST /company/route-executors/{id}/archive
+```
 
-## Что изменилось в меню (план)
+### Новые views
 
-Пункты «Водители+ТС», «Экипажи», «Привязка перевозчиков» будут убраны из меню.
-Добавлены: «Исполнители рейса», «Переназначение логистов» (company_owner).
-Старые routes `/company/driver-vehicle-blocks`, `/company/crews`, `/company/contractor-assignments` сохраняются как технические.
+```
+app/View/pages/company_route_executors.php         (список)
+app/View/pages/company_route_executors_create.php  (создание)
+app/View/pages/company_route_executor_view.php     (просмотр)
+app/View/pages/company_route_executor_edit.php     (редактирование)
+```
+
+### Логика создания
+
+- Пользователь выбирает: Подрядчик + Водитель + ТС (3 отдельных выпадающих списка).
+- Backend находит или создаёт `driver_vehicle_block` для driver_id + vehicle_set_id.
+- Backend создаёт `crew` для contractor_id + driver_vehicle_block_id.
+- Всё в одной транзакции.
+- Проверка дублей через UNIQUE constraint на crews.
+
+### Логика редактирования
+
+- При изменении водителя/ТС backend находит/создаёт новый driver_vehicle_block и обновляет crew.
+- При изменении подрядчика обновляется crew.contractor_id.
+- Проверка дублей исключая текущий crew.
+
+### Защита доступа (logist)
+
+- Dropdown фильтруются: только свои + grants (contractor/driver/vehicle_set).
+- POST backend проверяет created_by_user_id + entity_access_grants для каждого ID.
+- Чужие ID отклоняются с понятной ошибкой.
+
+### Что НЕ изменилось
+
+- Таблицы `driver_vehicle_blocks` и `crews` не менялись.
+- Старые routes `/company/crews/*`, `/company/driver-vehicle-blocks/*`, `/company/contractor-assignments/*` сохранены и работают.
+- Protected core (`/company/drivers`, `/company/vehicle-sets`, `/company/clients`, `/company/contractors`) не тронут.
+- Документы в форму Исполнителя рейса не добавлены.
+
+**Следующий блок**: **E4** — Переназначение ответственных логистов (вкладки: Исполнители рейса / Подрядчики / Водители / ТС).
