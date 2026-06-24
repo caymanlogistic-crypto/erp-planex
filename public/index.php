@@ -382,7 +382,7 @@ function ensureDocumentTypeRecord(PDO $localPdo, string $name, string $code, str
 
 function applyLocalMigrations(\PDO $localPdo): void
 {
-    for ($i = 1; $i <= 36; $i++) {
+    for ($i = 1; $i <= 37; $i++) {
         $pattern = base_path('database/migrations-local/' . sprintf('%03d', $i) . '_*.sql');
         $files = glob($pattern);
         if (!$files) {
@@ -4869,19 +4869,6 @@ $router->get('/company/contractors/{id}', function ($id) use ($config, $db) {
 
         $grants = [];
         $logists = [];
-        if (($_SESSION['role_code'] ?? '') === 'company_owner') {
-            $grantsStmt = $localPdo->prepare(
-                "SELECT g.*, u.full_name AS logist_name
-                 FROM entity_access_grants g
-                 LEFT JOIN users u ON g.granted_to_user_id = u.id
-                 WHERE g.entity_type = ? AND g.entity_id = ? AND g.revoked_at IS NULL"
-            );
-            $grantsStmt->execute(['contractor', (int)$id]);
-            $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
-        }
-
         $dbError = null;
     } catch (\Exception $e) {
         $company = $company ?? null;
@@ -14185,18 +14172,110 @@ $router->post('/company/access-grants/{id}/revoke', function ($id) use ($config,
 });
 
 // ============================================================
-// BLOCK D2: Contractor cascade sharing
+// BLOCK D5: Contractor assignment management
 // ============================================================
 
-// Share contractor + cascade to selected logists / all logists
-$router->post('/company/contractors/{id}/share', function ($id) use ($config, $db) {
+$router->get('/company/contractor-assignments', function () use ($config, $db) {
+    requireRole('company_owner');
+    $pageTitle = 'Привязка перевозчиков';
+    $pageContext = 'Перевозчики › Компания';
+
+    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $successMessage = null;
+    $formError = null;
+
+    if ($companyId <= 0) {
+        $company = null;
+        $assignments = [];
+        $logists = [];
+        $dbError = null;
+        ob_start();
+        require base_path('app/View/pages/company_contractor_assignments.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
+    try {
+        $pdo = $db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$company || $company['status'] !== 'active') {
+            $company = $company ?? null;
+            $assignments = [];
+            $logists = [];
+            $dbError = null;
+            ob_start();
+            require base_path('app/View/pages/company_contractor_assignments.php');
+            $content = ob_get_clean();
+            require base_path('app/View/layouts/main.php');
+            return;
+        }
+
+        $pageContext = 'Перевозчики › Компания: ' . $company['name'];
+
+        $dbIdentifier = $company['db_identifier'];
+        $localDbConfig = $config['database'];
+        $localDbConfig['database'] = $dbIdentifier;
+        $localDb = new \App\Core\Database($localDbConfig);
+        $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+
+        try { $localPdo->query("SELECT 1 FROM contractors LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/003_create_company_contractors.sql'))); }
+
+        // Load all contractors with their current owner, crew/driver/vehicle counts
+        $assignmentsStmt = $localPdo->prepare(
+            "SELECT c.id, c.name, c.inn, c.status,
+                    c.created_by_user_id AS logist_id,
+                    u.full_name AS logist_name,
+                    u.login AS logist_login,
+                    COUNT(DISTINCT cr.id) AS crew_count,
+                    COUNT(DISTINCT dvb.driver_id) AS driver_count,
+                    COUNT(DISTINCT dvb.vehicle_set_id) AS vehicle_count
+             FROM contractors c
+             LEFT JOIN users u ON c.created_by_user_id = u.id
+             LEFT JOIN crews cr ON cr.contractor_id = c.id AND cr.status != 'archived'
+             LEFT JOIN driver_vehicle_blocks dvb ON cr.driver_vehicle_block_id = dvb.id
+             WHERE c.status != 'archived'
+             GROUP BY c.id, c.name, c.inn, c.status, c.created_by_user_id, u.full_name, u.login
+             ORDER BY c.name"
+        );
+        $assignmentsStmt->execute();
+        $assignments = $assignmentsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Load active logists for dropdown
+        $logists = $localPdo->query(
+            "SELECT id, full_name, login FROM users
+             WHERE role_code = 'logist' AND status = 'active'
+             ORDER BY full_name"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $dbError = null;
+    } catch (\Exception $e) {
+        $company = $company ?? null;
+        $assignments = [];
+        $logists = [];
+        $dbError = 'Не удалось загрузить данные: ' . $e->getMessage();
+    }
+
+    ob_start();
+    require base_path('app/View/pages/company_contractor_assignments.php');
+    $content = ob_get_clean();
+    require base_path('app/View/layouts/main.php');
+});
+
+$router->post('/company/contractor-assignments/{id}/assign', function ($id) use ($config, $db) {
     requireRole('company_owner');
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $contractorId = (int)$id;
-    $redirect = $_POST['redirect'] ?? '/company/contractors/' . $contractorId;
+    $newLogistId = (int)($_POST['new_logist_id'] ?? 0);
+    $redirect = '/company/contractor-assignments';
 
-    if ($companyId <= 0 || $contractorId <= 0) {
+    if ($companyId <= 0 || $contractorId <= 0 || $newLogistId <= 0) {
         header('Location: ' . $redirect);
         exit;
     }
@@ -14219,7 +14298,7 @@ $router->post('/company/contractors/{id}/share', function ($id) use ($config, $d
         $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 
-        // Verify contractor exists
+        // Validate contractor exists
         $cStmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
         $cStmt->execute([$contractorId]);
         $contractor = $cStmt->fetch(PDO::FETCH_ASSOC);
@@ -14228,215 +14307,197 @@ $router->post('/company/contractors/{id}/share', function ($id) use ($config, $d
             exit;
         }
 
-        // Determine target logists
-        $grantAll = ($_POST['grant_all'] ?? '') === '1';
-        $targetUserIds = [];
-
-        if ($grantAll) {
-            // All active logists (NOT senior_logist, NOT company_owner)
-            $usersStmt = $localPdo->query(
-                "SELECT id FROM users WHERE role_code = 'logist' AND status = 'active' ORDER BY full_name"
-            );
-            $targetUserIds = $usersStmt->fetchAll(PDO::FETCH_COLUMN);
-        } else {
-            // Selected logists from checkboxes
-            $postedIds = $_POST['granted_to_user_ids'] ?? [];
-            if (is_array($postedIds)) {
-                foreach ($postedIds as $uid) {
-                    $uid = (int)$uid;
-                    if ($uid > 0) {
-                        $targetUserIds[] = $uid;
-                    }
-                }
-            }
-        }
-
-        if (empty($targetUserIds)) {
+        // Validate new logist
+        $lStmt = $localPdo->prepare(
+            "SELECT id, full_name FROM users WHERE id = ? AND role_code = 'logist' AND status = 'active'"
+        );
+        $lStmt->execute([$newLogistId]);
+        $newLogist = $lStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$newLogist) {
             header('Location: ' . $redirect);
             exit;
         }
 
-        $grantSource = 'contractor_cascade:' . $contractorId;
-        $grantedByUserId = (int)$_SESSION['user_id'];
-        $comment = 'Расшарено с перевозчиком #' . $contractorId;
+        $oldLogistId = (int)($contractor['created_by_user_id'] ?? 0);
+
+        // If already assigned to this logist, skip
+        if ($oldLogistId === $newLogistId) {
+            header('Location: ' . $redirect . '?msg=already_assigned');
+            exit;
+        }
 
         // Collect cascade entities
-        $crewIds = [];
-        $blockIds = [];
-        $driverIds = [];
-        $vehicleSetIds = [];
-
-        // Find crews for this contractor
-        $crewsStmt = $localPdo->prepare(
-            "SELECT c.id AS crew_id, c.driver_vehicle_block_id,
+        // crews for this contractor -> blocks -> drivers -> vehicle_sets
+        $cascadeStmt = $localPdo->prepare(
+            "SELECT c.id AS crew_id, c.driver_vehicle_block_id AS block_id,
                     dvb.driver_id, dvb.vehicle_set_id
              FROM crews c
              JOIN driver_vehicle_blocks dvb ON c.driver_vehicle_block_id = dvb.id
              WHERE c.contractor_id = ? AND c.status != 'archived'"
         );
-        $crewsStmt->execute([$contractorId]);
-        $cascadeRows = $crewsStmt->fetchAll(PDO::FETCH_ASSOC);
+        $cascadeStmt->execute([$contractorId]);
+        $cascadeRows = $cascadeStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $crewIds = [];
+        $blockIds = [];
+        $driverIds = [];
+        $vehicleSetIds = [];
         foreach ($cascadeRows as $row) {
             $crewIds[] = (int)$row['crew_id'];
-            $blockIds[] = (int)$row['driver_vehicle_block_id'];
+            $blockIds[] = (int)$row['block_id'];
             $driverIds[] = (int)$row['driver_id'];
             $vehicleSetIds[] = (int)$row['vehicle_set_id'];
         }
+        $uniqueBlockIds = array_unique($blockIds);
+        $uniqueDriverIds = array_unique($driverIds);
+        $uniqueVehicleSetIds = array_unique($vehicleSetIds);
+
+        // Check which drivers are shared with OTHER contractors
+        $sharedDriverIds = [];
+        $safeDriverIds = [];
+        foreach ($uniqueDriverIds as $did) {
+            $checkStmt = $localPdo->prepare(
+                "SELECT COUNT(*) FROM crews cr
+                 JOIN driver_vehicle_blocks dvb ON cr.driver_vehicle_block_id = dvb.id
+                 WHERE dvb.driver_id = ? AND cr.contractor_id != ? AND cr.status != 'archived'"
+            );
+            $checkStmt->execute([$did, $contractorId]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $sharedDriverIds[] = $did;
+            } else {
+                $safeDriverIds[] = $did;
+            }
+        }
+
+        // Check which vehicle_sets are shared with OTHER contractors
+        $sharedVehicleSetIds = [];
+        $safeVehicleSetIds = [];
+        foreach ($uniqueVehicleSetIds as $vid) {
+            $checkStmt = $localPdo->prepare(
+                "SELECT COUNT(*) FROM crews cr
+                 JOIN driver_vehicle_blocks dvb ON cr.driver_vehicle_block_id = dvb.id
+                 WHERE dvb.vehicle_set_id = ? AND cr.contractor_id != ? AND cr.status != 'archived'"
+            );
+            $checkStmt->execute([$vid, $contractorId]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $sharedVehicleSetIds[] = $vid;
+            } else {
+                $safeVehicleSetIds[] = $vid;
+            }
+        }
+
+        $role = 'logist';
+        $changedByUserId = (int)$_SESSION['user_id'];
+        $changedByRole = $_SESSION['role_code'] ?? 'company_owner';
+
+        $summary = [
+            'reassigned_contractors' => 1,
+            'reassigned_crews' => 0,
+            'reassigned_blocks' => 0,
+            'reassigned_drivers' => 0,
+            'skipped_shared_drivers' => count($sharedDriverIds),
+            'reassigned_vehicle_sets' => 0,
+            'skipped_shared_vehicle_sets' => count($sharedVehicleSetIds),
+        ];
 
         $localPdo->beginTransaction();
         try {
-            $grantStmt = $localPdo->prepare(
-                "INSERT INTO entity_access_grants
-                    (entity_type, entity_id, granted_to_user_id, granted_by_user_id, access_level, grant_source, comment)
-                 VALUES (:entity_type, :entity_id, :granted_to_user_id, :granted_by_user_id, 'view', :grant_source, :comment)
-                 ON DUPLICATE KEY UPDATE grant_source = VALUES(grant_source), comment = VALUES(comment)"
+            // 1. Reassign contractor
+            $upd = $localPdo->prepare(
+                "UPDATE contractors SET created_by_user_id = ?, created_by_role = ?, updated_by_user_id = ?, updated_by_role = ? WHERE id = ?"
             );
+            $upd->execute([$newLogistId, $role, $changedByUserId, $changedByRole, $contractorId]);
 
-            foreach ($targetUserIds as $targetUserId) {
-                // 1. Contractor grant
-                $grantStmt->execute([
-                    ':entity_type'        => 'contractor',
-                    ':entity_id'          => $contractorId,
-                    ':granted_to_user_id' => $targetUserId,
-                    ':granted_by_user_id' => $grantedByUserId,
-                    ':grant_source'       => $grantSource,
-                    ':comment'            => $comment,
-                ]);
-
-                // 2. Crew grants
-                foreach ($crewIds as $crewId) {
-                    $grantStmt->execute([
-                        ':entity_type'        => 'crew',
-                        ':entity_id'          => $crewId,
-                        ':granted_to_user_id' => $targetUserId,
-                        ':granted_by_user_id' => $grantedByUserId,
-                        ':grant_source'       => $grantSource,
-                        ':comment'            => $comment,
-                    ]);
-                }
-
-                // 3. Driver_vehicle_block grants (unique)
-                $uniqueBlockIds = array_unique($blockIds);
-                foreach ($uniqueBlockIds as $blockId) {
-                    $grantStmt->execute([
-                        ':entity_type'        => 'driver_vehicle_block',
-                        ':entity_id'          => $blockId,
-                        ':granted_to_user_id' => $targetUserId,
-                        ':granted_by_user_id' => $grantedByUserId,
-                        ':grant_source'       => $grantSource,
-                        ':comment'            => $comment,
-                    ]);
-                }
-
-                // 4. Driver grants (unique)
-                $uniqueDriverIds = array_unique($driverIds);
-                foreach ($uniqueDriverIds as $driverId) {
-                    $grantStmt->execute([
-                        ':entity_type'        => 'driver',
-                        ':entity_id'          => $driverId,
-                        ':granted_to_user_id' => $targetUserId,
-                        ':granted_by_user_id' => $grantedByUserId,
-                        ':grant_source'       => $grantSource,
-                        ':comment'            => $comment,
-                    ]);
-                }
-
-                // 5. Vehicle_set grants (unique)
-                $uniqueVehicleSetIds = array_unique($vehicleSetIds);
-                foreach ($uniqueVehicleSetIds as $vsId) {
-                    $grantStmt->execute([
-                        ':entity_type'        => 'vehicle_set',
-                        ':entity_id'          => $vsId,
-                        ':granted_to_user_id' => $targetUserId,
-                        ':granted_by_user_id' => $grantedByUserId,
-                        ':grant_source'       => $grantSource,
-                        ':comment'            => $comment,
-                    ]);
-                }
+            // 2. Reassign crews
+            if (!empty($crewIds)) {
+                $placeholders = implode(',', array_fill(0, count($crewIds), '?'));
+                $params = [$newLogistId, $role, $changedByUserId, $changedByRole];
+                $params = array_merge($params, $crewIds);
+                $localPdo->prepare(
+                    "UPDATE crews SET created_by_user_id = ?, created_by_role = ?, updated_by_user_id = ?, updated_by_role = ? WHERE id IN ($placeholders)"
+                )->execute($params);
+                $summary['reassigned_crews'] = count($crewIds);
             }
 
-            $localPdo->commit();
-        } catch (\Exception $e) {
-            $localPdo->rollBack();
-            error_log('Contractor share error: ' . $e->getMessage());
-        }
-    } catch (\Exception $e) {
-        error_log('Contractor share setup error: ' . $e->getMessage());
-    }
+            // 3. Reassign driver_vehicle_blocks (all blocks from this contractor's crews)
+            if (!empty($uniqueBlockIds)) {
+                $placeholders = implode(',', array_fill(0, count($uniqueBlockIds), '?'));
+                $params = [$newLogistId, $role, $changedByUserId, $changedByRole];
+                $params = array_merge($params, array_values($uniqueBlockIds));
+                $localPdo->prepare(
+                    "UPDATE driver_vehicle_blocks SET created_by_user_id = ?, created_by_role = ?, updated_by_user_id = ?, updated_by_role = ? WHERE id IN ($placeholders)"
+                )->execute($params);
+                $summary['reassigned_blocks'] = count($uniqueBlockIds);
+            }
 
-    header('Location: ' . $redirect);
-    exit;
-});
+            // 4. Reassign safe drivers (not shared with other contractors)
+            if (!empty($safeDriverIds)) {
+                $placeholders = implode(',', array_fill(0, count($safeDriverIds), '?'));
+                $params = [$newLogistId, $role, $changedByUserId, $changedByRole];
+                $params = array_merge($params, $safeDriverIds);
+                $localPdo->prepare(
+                    "UPDATE drivers SET created_by_user_id = ?, created_by_role = ?, updated_by_user_id = ?, updated_by_role = ? WHERE id IN ($placeholders)"
+                )->execute($params);
+                $summary['reassigned_drivers'] = count($safeDriverIds);
+            }
 
-// Unshare contractor + cascade revoke for a specific logist
-$router->post('/company/contractors/{id}/unshare', function ($id) use ($config, $db) {
-    requireRole('company_owner');
+            // 5. Reassign safe vehicle_sets (not shared with other contractors)
+            if (!empty($safeVehicleSetIds)) {
+                $placeholders = implode(',', array_fill(0, count($safeVehicleSetIds), '?'));
+                $params = [$newLogistId, $role, $changedByUserId, $changedByRole];
+                $params = array_merge($params, $safeVehicleSetIds);
+                $localPdo->prepare(
+                    "UPDATE vehicle_sets SET created_by_user_id = ?, created_by_role = ?, updated_by_user_id = ?, updated_by_role = ? WHERE id IN ($placeholders)"
+                )->execute($params);
+                $summary['reassigned_vehicle_sets'] = count($safeVehicleSetIds);
+            }
 
-    $companyId = (int)(getSessionCompanyId() ?? 0);
-    $contractorId = (int)$id;
-    $grantedToUserId = (int)($_POST['granted_to_user_id'] ?? 0);
-    $redirect = $_POST['redirect'] ?? '/company/contractors/' . $contractorId;
-
-    if ($companyId <= 0 || $contractorId <= 0 || $grantedToUserId <= 0) {
-        header('Location: ' . $redirect);
-        exit;
-    }
-
-    try {
-        $pdo = $db->connection();
-        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
-        $stmt->execute([$companyId]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$company || $company['status'] !== 'active') {
-            header('Location: ' . $redirect);
-            exit;
-        }
-
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
-        $localDb = new \App\Core\Database($localDbConfig);
-        $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
-
-        $revokedByUserId = (int)$_SESSION['user_id'];
-        $grantSource = 'contractor_cascade:' . $contractorId;
-
-        $localPdo->beginTransaction();
-        try {
-            // 1. Revoke the contractor grant itself
-            $revokeContractor = $localPdo->prepare(
+            // 6. Revoke existing contractor grants for this contractor
+            $revokeGrantsStmt = $localPdo->prepare(
                 "UPDATE entity_access_grants
                  SET revoked_at = NOW(), revoked_by_user_id = ?
                  WHERE entity_type = 'contractor'
                    AND entity_id = ?
-                   AND granted_to_user_id = ?
                    AND revoked_at IS NULL"
             );
-            $revokeContractor->execute([$revokedByUserId, $contractorId, $grantedToUserId]);
+            $revokeGrantsStmt->execute([$changedByUserId, $contractorId]);
 
-            // 2. Revoke all cascade grants for this contractor+logist pair
-            $revokeCascade = $localPdo->prepare(
+            // 7. Revoke cascade grants
+            $grantSource = 'contractor_cascade:' . $contractorId;
+            $revokeCascadeStmt = $localPdo->prepare(
                 "UPDATE entity_access_grants
                  SET revoked_at = NOW(), revoked_by_user_id = ?
                  WHERE grant_source = ?
-                   AND granted_to_user_id = ?
                    AND revoked_at IS NULL"
             );
-            $revokeCascade->execute([$revokedByUserId, $grantSource, $grantedToUserId]);
+            $revokeCascadeStmt->execute([$changedByUserId, $grantSource]);
+
+            // 8. Record history
+            $historyStmt = $localPdo->prepare(
+                "INSERT INTO contractor_assignment_history
+                    (contractor_id, old_logist_id, new_logist_id, changed_by_user_id, changed_by_role, summary_json, comment)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+            );
+            $historyStmt->execute([
+                $contractorId,
+                $oldLogistId > 0 ? $oldLogistId : null,
+                $newLogistId,
+                $changedByUserId,
+                $changedByRole,
+                json_encode($summary, JSON_UNESCAPED_UNICODE),
+                'Перепривязка перевозчика «' . ($contractor['name'] ?? '') . '» от логиста #' . ($oldLogistId ?: 'нет') . ' к логисту «' . $newLogist['full_name'] . '"',
+            ]);
 
             $localPdo->commit();
         } catch (\Exception $e) {
             $localPdo->rollBack();
-            error_log('Contractor unshare error: ' . $e->getMessage());
+            error_log('Contractor assign error: ' . $e->getMessage());
         }
     } catch (\Exception $e) {
-        error_log('Contractor unshare setup error: ' . $e->getMessage());
+        error_log('Contractor assign setup error: ' . $e->getMessage());
     }
 
-    header('Location: ' . $redirect);
+    header('Location: ' . $redirect . '?msg=assigned');
     exit;
 });
 

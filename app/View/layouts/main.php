@@ -158,6 +158,11 @@ if ($crumbContext !== '') {
                     <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/crews') ? ' is-active' : '' ?>" href="/company/crews">
                         <span>Экипажи</span>
                     </a>
+                    <?php if ($roleCode === 'company_owner'): ?>
+                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/contractor-assignments') ? ' is-active' : '' ?>" href="/company/contractor-assignments">
+                        <span>Привязка перевозчиков</span>
+                    </a>
+                    <?php endif; ?>
                 </div>
             </div>
 
