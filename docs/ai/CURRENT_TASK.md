@@ -1,141 +1,40 @@
 # ERP PLANEX — текущая задача
 
-## STATUS: DRIVER_EDIT_MODAL_GEOMETRY_NEEDS_REWORK
+## STATUS: BLOCK_D6_ACCESS_MODEL_DOCS
 
-Текущая активная задача — довести форму редактирования водителя в модальном окне до production-соответствия эталону создания.
+Текущая активная задача — обновить MD-документацию после изменения модели доступа в блоках D/D2/D5.
 
-Страница:
+Это документационный этап: только MD, без кода, без SQL, без UI.
 
-```text
-/company/drivers
-```
+## Что нужно зафиксировать
 
-Сценарий:
+1. Роль senior_logist / Логист+.
+2. Отказ от UI «Доступ логистов» / cascade sharing.
+3. Привязка перевозчиков как основной сценарий управления между логистами.
+4. Полный перенос контекста при перепривязке.
+5. Ограничения выбора для обычного logist + backend-валидация.
+6. Актуальный статус блоков в PROJECT_STATE.md.
 
-```text
-/company/drivers
-→ двойной клик по строке водителя
-→ модал просмотра
-→ Редактировать
-→ форма редактирования
-```
-
-## Главный критерий
-
-Форма редактирования водителя должна быть **1 в 1 как форма создания водителя**.
-
-Эталон:
+## Файлы к обновлению
 
 ```text
-/company/drivers/create
-/company/drivers → Создать водителя
+docs/ai/DECISIONS.md       — добавить решения #50–53
+docs/ai/PROJECT_STATE.md   — актуальный статус, следующий блок E
+docs/ai/CURRENT_TASK.md    — этот файл, заменить на D6
+docs/ai/HANDOFF_FOR_NEW_CHAT.md — новый контекст для ChatGPT
+docs/ai/AGENT_RULES.md     — правило доступа и прав
 ```
 
-Разница edit от create допускается только в данных и действиях:
+## После выполнения
 
-```text
-create: пустые поля / Выбрать / Создать водителя
-edit: предзаполненные поля / Заменить / × / Сохранить
-```
+Commit: `docs(access): document contractor assignment model`
 
-Геометрия должна совпадать.
+Следующая задача: **BLOCK E** — стабилизация рабочих сценариев водитель + ТС + экипаж.
 
-## Что уже было исправлено по отчёту агента, но требует проверки
+## Запреты
 
-```text
-- edit/view modal width 1040px → 1100px;
-- data-doc-types перенесён внутрь form;
-- интерактивные id префиксированы через DOM-prefix;
-- browser alert заменён на .form-alert.alert-error;
-- добавлен delete_predef_doc для ×;
-- POST modal-edit сохраняет predef docs, custom docs, soft-delete;
-- initDriverForm(form) scoped по form;
-- cloneNode(form) убран.
-```
-
-## Почему задача ещё не принята
-
-По визуальной проверке владельца edit-form всё ещё не совпадает с create-form.
-
-По скринам:
-
-```text
-CREATE:
-общая рабочая ширина формы ≈ 948 px
-левая колонка данных ≈ 644 px
-правая колонка документов ≈ 304 px
-
-EDIT:
-общая рабочая ширина формы ≈ 880 px
-левая колонка данных ≈ 575 px
-правая колонка документов ≈ 304 px
-```
-
-Проблема: правая колонка почти совпадает, но левая колонка edit сжата примерно на 65–70 px. Нужно вернуть недостающую ширину в левую колонку за счёт modal/body/layout/wrapper/padding, не сжимая документы.
-
-## Следующее действие архитектора
-
-Исправить только геометрию edit-form:
-
-```text
-1. Сравнить /company/drivers/create и /company/drivers → Редактировать.
-2. Найти wrapper/padding/margin/panel-body, который съедает ширину edit-form.
-3. Сделать edit modal/layout той же рабочей ширины, что create.
-4. Оставить правую колонку документов около 304 px.
-5. Вернуть левую колонку к ширине около 644 px.
-6. Не трогать backend/JS-интерактив/сохранение, если они уже исправлены.
-```
-
-## Запреты текущей задачи
-
-Не трогать без отдельного решения:
-
-```text
-backend
-routes
-сохранение
-driver_phones
-документы
-замену файлов
-soft delete
-initDriverForm
-sidebar
-topbar
-page-head
-menu
-```
-
-## Проверка
-
-```bat
-cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l app\View\partials\company_driver_create_form.php"
-cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l app\View\partials\company_driver_modal_edit.php"
-cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && git diff --check"
-```
-
-Runtime запуск:
-
-```bat
-cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -d upload_max_filesize=25M -d post_max_size=100M -d max_file_uploads=50 -d memory_limit=256M -d max_execution_time=120 -d max_input_time=120 -S 127.0.0.1:8016 -t public public/index.php"
-```
-
-Ручная проверка:
-
-```text
-1. /company/drivers/create — эталон не сломан.
-2. /company/drivers → Создать водителя — create modal не сломан.
-3. /company/drivers → двойной клик → Редактировать.
-4. edit-form совпадает с create-form по геометрии.
-5. + Доп. телефон работает.
-6. + Добавить документ работает.
-7. Заменить работает.
-8. × работает.
-9. Сохранить возвращает в просмотр.
-10. Консоль без JS errors.
-```
-
-## Коммит
-
-Не коммитить до owner visual/runtime acceptance.
-
-Если владелец подтвердит, коммитить только кодовые файлы, не docs/ai и не .kilo.
+- Не писать код.
+- Не менять PHP/SQL/CSS/JS.
+- Не создавать новые routes.
+- Не создавать новые MD без необходимости.
+- Не возвращать старый UI «Доступ логистов».

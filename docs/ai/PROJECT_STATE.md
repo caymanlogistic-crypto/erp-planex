@@ -50,20 +50,17 @@ docs/ui/DESIGN_STANDARD.md
 ## Последний подтверждённый commit по текущей ветке работ
 
 ```text
-c3b825c — fix(drivers): align create modal footer with FINAL3
+f993342 — fix(access): enforce contractor assignment context visibility
 ```
 
 ## Важные commits из текущей цепочки
 
 ```text
-c3b825c — fix(drivers): align create modal footer with FINAL3
-7a796fb — feat(drivers): open create form in FINAL3 modal from drivers list
-051155f — wip(ui): refine ERP grid toolbar and list pages
-3ddade7 — wip(drivers): recompose drivers grid fields and documents
-90ab717 — fix(drivers): remove unique phone constraint
-365dbbe — wip(ui): unify ERP grid list tables
-a2149a7 — feat(stepper): contractor/driver/vehicle create-full with FINAL3 stepper
-67b5454 — feat(clients): align client create flow with legal entity standard
+f993342 — fix(access): enforce contractor assignment context visibility
+c0cf919 — feat(access): add contractor assignment management
+d5a6ace — feat(access): add contractor cascade sharing (заменён, см. DECISIONS #51)
+d3d3524 — feat(access): add senior logist role visibility
+888ba64 — feat(master-flow): add contractor crew creation workflows
 ```
 
 ## Статус блоков
@@ -72,43 +69,21 @@ a2149a7 — feat(stepper): contractor/driver/vehicle create-full with FINAL3 ste
 SUPERADMIN — ЗАКРЫТ на текущем этапе.
 CLIENT_CREATE_LEGAL_ENTITY_STANDARD — ПРИНЯТ.
 DRIVER_CREATE_MODAL_FROM_LIST — ПРИНЯТ И ЗАКОММИЧЕН (c3b825c).
-DRIVERS_GRID_DOCUMENT_COLUMNS — частично сделано ранее, не текущий фокус.
 DRIVER_EDIT_MODAL_VIEW_EDIT_FLOW — В РАБОТЕ, НЕ ПРИНЯТ.
-STEPPER_CONTRACTOR_DRIVER_VEHICLE — есть предыдущая реализация/подготовка, но сейчас не текущий фокус.
-VEHICLE_SET_PRODUCTION_CREATE — подготовлены MD, отложено до закрытия driver edit modal.
-PROTECTED_ARCHITECTURE_PLAN — ПРИНЯТ (c19c67a).
-FOUNDATION_STAGE_B — ВЫПОЛНЕН: AccessControlService + DocumentService (не подключены к ядру).
-BLOCK_C — ВЫПОЛНЕН (cf20e09): driver_vehicle_blocks + crews CRUD complete.
-MASTER_FLOW_IMPLEMENTATION — ВЫПОЛНЕН (888ba64): contractor crew creation workflows (C2a + C2b).
+MASTER_FLOW_IMPLEMENTATION — ВЫПОЛНЕН (888ba64): contractor crew creation workflows.
 BLOCK_D — ВЫПОЛНЕН (d3d3524): senior_logist role + visibility rules.
+BLOCK_D2/D5 — ВЫПОЛНЕН: contractor cascade sharing заменён на contractor assignment.
+CONTRACTOR_ASSIGNMENT — УСЛОВНО ПРИНЯТ (c0cf919 + f993342): привязка перевозчиков + visibility enforcement.
+BLOCK_D6 — В РАБОТЕ: документация новой модели доступа.
 ```
 
 ## Текущая активная задача
 
 ```text
-DRIVER_EDIT_MODAL_GEOMETRY_NEEDS_REWORK
+BLOCK_D6 — обновление MD-документации после изменения модели доступа.
 ```
 
-Нужно довести edit modal водителя до соответствия create-form 1 в 1 по геометрии.
-
-Критерий: edit-form должна быть той же формой создания, только предзаполненной. Разница только в значениях, кнопке `Сохранить`, `Заменить` и `×` у существующих документов.
-
-## Последний подтверждённый commit по текущей ветке работ
-
-```text
-888ba64 — feat(master-flow): add contractor crew creation workflows
-```
-
-## Текущий визуальный blocker
-
-По скринам владельца:
-
-```text
-CREATE: левая колонка ≈ 644 px, правая ≈ 304 px, общая рабочая ширина ≈ 948 px.
-EDIT: левая колонка ≈ 575 px, правая ≈ 304 px, общая рабочая ширина ≈ 880 px.
-```
-
-Edit-form сжата примерно на 65–70 px по левой колонке. Нужно исправить modal/body/layout/wrapper/padding/margin, не трогая backend и интерактив.
+Следующая задача: **BLOCK E** — рабочие сценарии водитель + ТС + экипаж, стабилизация и финальная проверка.
 
 ## CRITICAL UI LOCK RULE
 

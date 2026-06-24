@@ -57,3 +57,16 @@
 47. 4 страницы объявлены DO_NOT_TOUCH_WORKING_CORE: `/company/drivers`, `/company/vehicle-sets`, `/company/clients`, `/company/contractors`. Их routes, views, partials, JS, CSS, сервисы, таблицы и миграции запрещено менять без отдельной явной задачи от владельца. Полный список защищённых файлов и архитектурный план безопасного рефакторинга — в `docs/ai/PROTECTED_ARCHITECTURE_PLAN.md`.
 48. Созданы foundation-сервисы `AccessControlService` и `DocumentService` как архитектурный фундамент. Они пока НЕ подключены к защищённому ядру и НЕ меняют существующую бизнес-логику. Новые модули (driver_vehicle_blocks, crews) должны использовать их с момента создания. Документация: `docs/ai/ARCHITECTURE_FOUNDATION_STAGE_B.md`.
 49. Главный пользовательский паттерн ERP PLANEX — master-flow: многошаговый мастер, создающий цепочку Перевозчик → Водитель → Машина → Связка → Экипаж за один проход. Обычные CRUD-страницы — второстепенный инструмент для просмотра/исправления/архивирования. Архитектурный план: `docs/ai/MASTER_FLOW_ARCHITECTURE.md`.
+
+50. **Роль senior_logist / Логист+** — техническая роль с `role_code = 'senior_logist'`, UI-лейбл «Логист+». Видит все данные компании без фильтрации. НЕ управляет пользователями. НЕ управляет привязкой перевозчиков. НЕ является company_owner. Роль активирована в routes, sidebar и visibility-фильтрах (commit `d3d3524`).
+
+51. **Отказ от UI «Доступ логистов» / cascade sharing.** Пользовательский сценарий «Доступ логистов» в карточке перевозчика признан непонятным и удалён. Cascade sharing routes (`/company/contractors/{id}/share`, `.../unshare`) удалены. Секция UI в `company_contractor_view.php` удалена. Общая таблица `entity_access_grants` сохранена как технический механизм для других мест. Основной сценарий для руководителя теперь — «Привязка перевозчиков», а не «расшаривание».
+
+52. **Привязка перевозчиков (contractor assignment)** — основной механизм управления доступом между логистами. Страница: `/company/contractor-assignments`, меню: «Привязка перевозчиков», доступ: только `company_owner`. При перепривязке `created_by_user_id` и `created_by_role` меняются на нового логиста (`role = 'logist'`). Переносится весь рабочий контекст: contractor → crews → driver_vehicle_blocks → drivers → vehicle_sets. Все сущности контекста переносятся без проверки shared (полный перенос). История записывается в таблицу `contractor_assignment_history`. Активные grants на contractor и cascade grants отзываются.
+
+53. **Ограничения выбора для обычного logist.** Обычный logist видит только свои доступные данные. При создании связки (`driver_vehicle_block`) и экипажа (`crew`):
+  - frontend-выпадающие списки фильтруются по `created_by_user_id = ?` + grants;
+  - backend-валидация проверяет `created_by_user_id` и `entity_access_grants`;
+  - чужие `driver_id` / `vehicle_set_id` / `contractor_id` / `driver_vehicle_block_id` через POST отклоняются с ошибкой.
+  Маршруты master-flow (`/company/contractors/{id}/add-crew`) также защищены backend-валидацией.
+  Commit: `f993342`.
