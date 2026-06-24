@@ -9054,6 +9054,10 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
 
 $router->get('/company/crews', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
+    header('Location: /company/route-executors', true, 302);
+    exit;
+
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Экипажи';
     $pageContext = 'Экипажи › Компания';
 
@@ -9195,6 +9199,10 @@ $router->get('/company/crews', function () use ($config, $db) {
 });
 
 $router->get('/company/crews/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'senior_logist', 'logist']);
+    header('Location: /company/route-executors/create', true, 302);
+    exit;
+
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать экипаж';
     $pageContext = 'Экипажи › Компания';
@@ -12040,6 +12048,10 @@ $router->post('/company/vehicle-sets/{id}/archive', function ($id) use ($config,
 
 $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
+    header('Location: /company/route-executors', true, 302);
+    exit;
+
+    requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Водители+ТС';
     $pageContext = 'Водители+ТС › Компания';
 
@@ -12113,6 +12125,10 @@ $router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
 });
 
 $router->get('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
+    requireRole(['company_owner', 'senior_logist', 'logist']);
+    header('Location: /company/route-executors/create', true, 302);
+    exit;
+
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать связку';
     $pageContext = 'Водители+ТС › Компания';
@@ -14426,6 +14442,10 @@ $router->post('/company/access-grants/{id}/revoke', function ($id) use ($config,
 // ============================================================
 
 $router->get('/company/contractor-assignments', function () use ($config, $db) {
+    requireRole('company_owner');
+    header('Location: /company/responsible-assignments', true, 302);
+    exit;
+
     requireRole('company_owner');
     $pageTitle = 'Привязка перевозчиков';
     $pageContext = 'Перевозчики › Компания';

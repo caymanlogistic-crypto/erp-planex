@@ -93,7 +93,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
 <!-- Mass reassignment form (global bar above table) -->
 <div class="table-card table-card--standard" style="margin-top:12px;">
     <div class="table-toolbar">
-        <form method="post" action="/company/responsible-assignments/reassign" class="inline-form" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <form id="massReassignToolbarForm" method="post" action="/company/responsible-assignments/reassign" class="inline-form" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;" onsubmit="return massReassignConfirm(this)">
             <input type="hidden" name="entity_type" value="<?= e($activeTab) ?>">
             <?php if ($showCascade): ?>
             <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;white-space:nowrap;">
@@ -108,7 +108,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
                 <option value="<?= $l['id'] ?>"><?= e($l['full_name']) ?> (<?= e($l['login']) ?>)</option>
                 <?php endforeach; ?>
             </select>
-            <button type="submit" class="btn btn-primary btn-sm" onclick="return massReassignConfirm(this)">Переназначить выбранные</button>
+            <button type="submit" class="btn btn-primary btn-sm">Переназначить выбранные</button>
         </form>
     </div>
     <div class="table-scroll">
@@ -141,7 +141,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
                 <?php foreach ($items as $item): ?>
                 <tr>
                     <td>
-                        <input type="checkbox" name="entity_ids[]" value="<?= $item[($activeTab === 'route_executor') ? 'crew_id' : 'id'] ?>" form="massReassignForm">
+                        <input type="checkbox" class="js-mass-entity-checkbox" name="entity_ids[]" value="<?= $item[($activeTab === 'route_executor') ? 'crew_id' : 'id'] ?>" form="massReassignToolbarForm">
                     </td>
                     <?php if ($activeTab === 'route_executor'): ?>
                     <td><?= e($item['contractor_name'] ?? '—') ?></td>
@@ -194,14 +194,6 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
     </div>
 </div>
 
-<!-- Hidden mass form for checkbox-based reassignment (referenced by checkboxes via form attribute) -->
-<form id="massReassignForm" method="post" action="/company/responsible-assignments/reassign" style="display:none;">
-    <input type="hidden" name="entity_type" value="<?= e($activeTab) ?>">
-    <?php if ($showCascade): ?>
-    <input type="hidden" name="cascade" value="0">
-    <?php endif; ?>
-</form>
-
 <?php endif; ?>
 
 <?php endif; ?>
@@ -222,57 +214,25 @@ function showFormError(msg) {
 
 // Toggle all checkboxes
 function toggleAllCheckboxes(el) {
-    var checkboxes = document.querySelectorAll('input[name="entity_ids[]"]');
+    var checkboxes = document.querySelectorAll('.js-mass-entity-checkbox');
     for (var i = 0; i < checkboxes.length; i++) {
         checkboxes[i].checked = el.checked;
     }
 }
 
 // Mass reassign confirm
-function massReassignConfirm(btn) {
-    var checked = document.querySelectorAll('input[name="entity_ids[]"]:checked');
+function massReassignConfirm(form) {
+    var checked = document.querySelectorAll('.js-mass-entity-checkbox:checked');
     if (checked.length === 0) {
         showFormError('Выберите хотя бы одну запись для переназначения.');
         return false;
     }
-    var newLogist = btn.form.querySelector('select[name="new_logist_id"]');
+    var newLogist = form.querySelector('select[name="new_logist_id"]');
     if (!newLogist || !newLogist.value) {
         showFormError('Выберите нового логиста из выпадающего списка.');
         return false;
     }
 
-    // Move checked entity_ids[] to the mass form and set new_logist_id + cascade
-    var massForm = document.getElementById('massReassignForm');
-    // Remove any existing entity_ids[] from massForm
-    var existing = massForm.querySelectorAll('input[name="entity_ids[]"]');
-    for (var i = 0; i < existing.length; i++) { existing[i].remove(); }
-
-    for (var i = 0; i < checked.length; i++) {
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'entity_ids[]';
-        input.value = checked[i].value;
-        massForm.appendChild(input);
-    }
-
-    // Set new_logist_id
-    var newLogistInput = massForm.querySelector('input[name="new_logist_id"]');
-    if (!newLogistInput) {
-        newLogistInput = document.createElement('input');
-        newLogistInput.type = 'hidden';
-        newLogistInput.name = 'new_logist_id';
-        massForm.appendChild(newLogistInput);
-    }
-    newLogistInput.value = newLogist.value;
-
-    // Set cascade
-    var cascadeCheck = massForm.querySelector('input[name="cascade"]');
-    if (cascadeCheck) {
-        var toolbarCascade = btn.form.querySelector('input[name="cascade"]');
-        cascadeCheck.value = (toolbarCascade && toolbarCascade.checked) ? '1' : '0';
-    }
-
-    massForm.submit();
-    return false; // prevent toolbar form submission
+    return true;
 }
 </script>
