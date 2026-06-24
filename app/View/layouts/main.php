@@ -20,7 +20,6 @@ $directoriesOpen = ($roleCode !== 'superadmin') && (
     || str_starts_with($_SERVER['REQUEST_URI'], '/company/drivers')
     || str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets')
     || str_starts_with($_SERVER['REQUEST_URI'], '/company/crews')
-    || str_starts_with($_SERVER['REQUEST_URI'], '/company/route-executors')
 );
 
 $userName = $_SESSION['user_name'] ?? '';
@@ -133,6 +132,16 @@ if ($crumbContext !== '') {
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="5.5" width="12" height="8.5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5V4C5 3.4 5.4 3 6 3H10C10.6 3 11 3.4 11 4V5.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 9.5H14" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 9.5V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                     <span class="nav-label">Клиенты</span>
                 </a>
+                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/route-executors') ? ' is-active' : '' ?>" href="/company/route-executors">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M1.5 13C1.5 10.5 3.5 8.5 6 8.5C8.5 8.5 10.5 10.5 10.5 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        <rect x="10" y="7" width="5" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <circle cx="12.5" cy="9" r=".8" stroke="currentColor" stroke-width="1"/>
+                        <path d="M14.5 11V12.5C14.5 13.3 13.8 13.5 13 13.5H12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Исполнители рейса</span>
+                </a>
                 <div class="nav-item is-parent<?= $directoriesOpen ? ' is-open' : '' ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
                         <rect x="1.5" y="5" width="13" height="9.5" rx="1" stroke="currentColor" stroke-width="1.4"/>
@@ -152,9 +161,6 @@ if ($crumbContext !== '') {
                     </a>
                     <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                         <span>ТС</span>
-                    </a>
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/route-executors') ? ' is-active' : '' ?>" href="/company/route-executors">
-                        <span>Исполнители рейса</span>
                     </a>
                 </div>
             </div>
@@ -193,6 +199,16 @@ if ($crumbContext !== '') {
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="5.5" width="12" height="8.5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5V4C5 3.4 5.4 3 6 3H10C10.6 3 11 3.4 11 4V5.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 9.5H14" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 9.5V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                     <span class="nav-label">Клиенты</span>
                 </a>
+                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/route-executors') ? ' is-active' : '' ?>" href="/company/route-executors">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M1.5 13C1.5 10.5 3.5 8.5 6 8.5C8.5 8.5 10.5 10.5 10.5 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                        <rect x="10" y="7" width="5" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <circle cx="12.5" cy="9" r=".8" stroke="currentColor" stroke-width="1"/>
+                        <path d="M14.5 11V12.5C14.5 13.3 13.8 13.5 13 13.5H12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Исполнители рейса</span>
+                </a>
                 <div class="nav-item is-parent<?= $directoriesOpen ? ' is-open' : '' ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
                         <rect x="1.5" y="5" width="13" height="9.5" rx="1" stroke="currentColor" stroke-width="1.4"/>
@@ -212,9 +228,6 @@ if ($crumbContext !== '') {
                     </a>
                     <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                         <span>ТС</span>
-                    </a>
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/route-executors') ? ' is-active' : '' ?>" href="/company/route-executors">
-                        <span>Исполнители рейса</span>
                     </a>
                 </div>
             </div>
