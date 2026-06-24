@@ -56,7 +56,8 @@
     <?php else: ?>
     <div class="empty-state">
         <p class="empty-title">Исполнители рейса ещё не созданы.</p>
-        <p class="empty-desc">Создайте исполнителя рейса через карточку подрядчика или мастер-форму создания перевозчика с экипажем.</p>
+        <p class="empty-desc">Создайте исполнителя рейса: выберите подрядчика, водителя и транспорт — система автоматически создаст связку.</p>
+        <a href="/company/route-executors/create" class="btn btn-primary">Создать первого исполнителя рейса</a>
     </div>
     <?php endif; ?>
 </div>
@@ -67,6 +68,9 @@
     <div class="page-head-left">
         <h1 class="page-title">Исполнители рейса</h1>
         <div class="page-summary"><span>Исполнитель рейса: подрядчик + водитель + транспорт</span></div>
+    </div>
+    <div class="page-head-actions">
+        <a href="/company/route-executors/create" class="btn btn-primary">Создать исполнителя рейса</a>
     </div>
 </div>
 
@@ -120,7 +124,7 @@
                     </td>
                     <td class="col-actions">
                         <div class="row-actions">
-                            <a href="/company/crews/<?= $e['crew_id'] ?>" class="btn btn-toolbar">Открыть</a>
+                            <a href="/company/route-executors/<?= $e['crew_id'] ?>" class="btn btn-toolbar">Открыть</a>
                         </div>
                     </td>
                 </tr>
