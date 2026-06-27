@@ -154,7 +154,7 @@
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($vehicleSets)): ?>
-                    <p class="field-hint">Нет доступных транспортных комплектов. <a href="/company/vehicle-sets/create">Создать ТС</a></p>
+                    <p class="field-hint">Нет доступных транспортных комплектов. <a href="/company/vehicle-sets">Создать ТС</a></p>
                 <?php endif; ?>
                 <?php if (!empty($errors['vehicle_set_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['vehicle_set_id']) ?></div>

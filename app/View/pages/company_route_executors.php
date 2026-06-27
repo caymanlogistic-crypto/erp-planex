@@ -38,9 +38,12 @@
         <h1 class="page-title">Исполнители рейса</h1>
         <div class="page-summary"><span>Исполнитель рейса: подрядчик + водитель + транспорт</span></div>
     </div>
+    <div class="page-head-actions">
+        <a href="/company/route-executors/create" class="btn btn-primary">Создать исполнителя рейса</a>
+    </div>
 </div>
 
-<div class="table-card table-card--toolbar-only">
+<div class="panel">
     <?php if ($isLogist && !empty($hasGrantsButAllArchived)): ?>
     <div class="empty-state">
         <div class="empty-icon">📦</div>
@@ -49,9 +52,9 @@
     </div>
     <?php elseif ($isLogist): ?>
     <div class="empty-state">
-        <div class="empty-icon">🔒</div>
-        <p class="empty-title">Нет доступа</p>
-        <p class="empty-desc">У вас нет доступа к исполнителям рейса. Обратитесь к руководителю для получения доступа.</p>
+        <p class="empty-title">Исполнители рейса ещё не созданы или пока не доступны.</p>
+        <p class="empty-desc">Можно создать исполнителя рейса из доступных вам подрядчиков, водителей и транспорта. Если нужных данных нет в списках, запросите доступ у руководителя.</p>
+        <a href="/company/route-executors/create" class="btn btn-primary">Создать исполнителя рейса</a>
     </div>
     <?php else: ?>
     <div class="empty-state">

@@ -204,6 +204,10 @@ function vehicle_table_num($value): string {
     </div>
 </div>
 
+
+<?php endif; ?>
+
+<?php if (($company ?? null) !== null && (($company['status'] ?? '') === 'active') && !isset($dbError)): ?>
 <div class="modal-overlay" id="vehicle-set-create-modal" data-close-on-overlay="0" data-close-on-escape="0" data-reset-on-close="1">
   <div class="modal modal-lg driver-create-modal">
     <div class="modal-head">

@@ -1,5 +1,21 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
+## Актуализация 2026-06-26 — Исполнители рейса / Транспорт
+
+Статус: подготовлен пакет исправлений `ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip`; перед финальной фиксацией владелец должен применить файлы, проверить runtime и затем закоммитить результат.
+
+Что обязательно учитывать дальше:
+
+- `/company/route-executors` должен быть доступен `company_owner`, `senior_logist`, `logist`. Для `logist` пустой список — это не «Нет доступа», а нормальное пустое состояние с действием `Создать исполнителя рейса`.
+- `Исполнитель рейса` — пользовательская сущность `Подрядчик + водитель + ТС`; технически создаются/используются `driver_vehicle_blocks` + `crews`.
+- Реальная локальная схема БД: таблицы сущностей находятся в `erp_company_{id}`, а не в центральной `erp_planex`.
+- `driver_vehicle_blocks` НЕ имеет поля `vehicle_id`. Запрещено писать `vehicle_id` в `driver_vehicle_blocks`.
+- `driver_vehicle_blocks` хранит: `driver_id`, `vehicle_set_id`, `status`, `comments`, `created_by_user_id`, `created_by_role`, `updated_by_user_id`, `updated_by_role`.
+- `crews` всё ещё имеет legacy-поля `vehicle_id` и `driver_id`; при создании исполнителя рейса `crews.vehicle_id` нужно заполнять значением `vehicle_sets.primary_vehicle_unit_id`, а `crews.driver_id` — выбранным водителем.
+- Для `logist` выбор contractor/driver/vehicle_set и видимость списков должны фильтроваться по `created_by_user_id` + активным grants. Активный grant: `revoked_at IS NULL` и `access_level IN ('view','edit')`.
+- На `/company/vehicle-sets` модалка создания транспорта должна быть в DOM всегда, включая пустой список, иначе кнопка `Добавить новый транспорт` визуально есть, но не работает.
+- Если возникает ошибка схемы БД, сначала запускать `db_schema_route_executor.php` и сверять реальные `DESCRIBE/SHOW CREATE TABLE`, не угадывать поля.
+
 ## Главное для нового ChatGPT-чата
 
 Прочитай этот файл первым. Он является главным переносимым контекстом текущей работы ERP PLANEX.
@@ -251,3 +267,36 @@ database/migrations-local/038_create_responsible_assignment_history.sql
 - **Доступ**: только company_owner.
 
 **Следующий блок**: **E5** — определяется владельцем (возможные варианты: зачистка старых пунктов, документы, master-flow адаптация).
+
+
+## АКТУАЛЬНЫЙ HOTFIX 2026-06-26 — route-executors / vehicle-sets
+
+Контекст последней работы:
+
+- Владелец вошёл как `logist` и получил ложное сообщение `Нет доступа` на `/company/route-executors`.
+- На `/company/vehicle-sets` кнопка `Добавить новый транспорт` не реагировала, когда список пустой/невидимый для логиста.
+- Были подготовлены несколько пакетов, но v3 оказался неверным из-за предположения по полю `vehicle_id` в `driver_vehicle_blocks`.
+- После выгрузки реальной схемы БД (`db_schema_route_executor.txt`) подтверждено: `driver_vehicle_blocks.vehicle_id` отсутствует, а `crews.vehicle_id` существует как legacy-поле.
+
+Правильная схема создания исполнителя рейса:
+
+```text
+1. Найти или создать driver_vehicle_blocks(driver_id, vehicle_set_id).
+2. Получить vehicle_sets.primary_vehicle_unit_id.
+3. Создать crews(contractor_id, vehicle_id, driver_id, driver_vehicle_block_id, status, comments, created_by_user_id, created_by_role).
+4. vehicle_id в crews = primary_vehicle_unit_id, НЕ vehicle_set_id.
+```
+
+Правила доступа:
+
+- `logist` видит свои записи по `created_by_user_id` + активные grants.
+- Активный grant: `revoked_at IS NULL` и `access_level IN ('view','edit')`.
+- Пустой список для логиста — это пустое состояние, не отказ доступа.
+
+Последний подготовленный архив:
+
+```text
+ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip
+```
+
+Перед доверием к результату обязательно выполнить runtime-проверки: создать исполнителя рейса под логистом, открыть `/company/route-executors`, открыть `/company/vehicle-sets` и нажать `Добавить новый транспорт`.

@@ -1,5 +1,21 @@
 # ERP PLANEX — текущая задача
 
+## Актуализация 2026-06-26 — Исполнители рейса / Транспорт
+
+Статус: подготовлен пакет исправлений `ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip`; перед финальной фиксацией владелец должен применить файлы, проверить runtime и затем закоммитить результат.
+
+Что обязательно учитывать дальше:
+
+- `/company/route-executors` должен быть доступен `company_owner`, `senior_logist`, `logist`. Для `logist` пустой список — это не «Нет доступа», а нормальное пустое состояние с действием `Создать исполнителя рейса`.
+- `Исполнитель рейса` — пользовательская сущность `Подрядчик + водитель + ТС`; технически создаются/используются `driver_vehicle_blocks` + `crews`.
+- Реальная локальная схема БД: таблицы сущностей находятся в `erp_company_{id}`, а не в центральной `erp_planex`.
+- `driver_vehicle_blocks` НЕ имеет поля `vehicle_id`. Запрещено писать `vehicle_id` в `driver_vehicle_blocks`.
+- `driver_vehicle_blocks` хранит: `driver_id`, `vehicle_set_id`, `status`, `comments`, `created_by_user_id`, `created_by_role`, `updated_by_user_id`, `updated_by_role`.
+- `crews` всё ещё имеет legacy-поля `vehicle_id` и `driver_id`; при создании исполнителя рейса `crews.vehicle_id` нужно заполнять значением `vehicle_sets.primary_vehicle_unit_id`, а `crews.driver_id` — выбранным водителем.
+- Для `logist` выбор contractor/driver/vehicle_set и видимость списков должны фильтроваться по `created_by_user_id` + активным grants. Активный grant: `revoked_at IS NULL` и `access_level IN ('view','edit')`.
+- На `/company/vehicle-sets` модалка создания транспорта должна быть в DOM всегда, включая пустой список, иначе кнопка `Добавить новый транспорт` визуально есть, но не работает.
+- Если возникает ошибка схемы БД, сначала запускать `db_schema_route_executor.php` и сверять реальные `DESCRIBE/SHOW CREATE TABLE`, не угадывать поля.
+
 ## STATUS: BLOCK_E4_COMPLETE
 
 Блоки E1 (архитектурный план), E2 (facade list + menu), E3 (полный CRUD workflow), E4 (переназначение ответственных логистов) выполнены.
@@ -31,3 +47,21 @@
 - Не менять protected core (`/company/drivers`, `/company/vehicle-sets`, `/company/clients`, `/company/contractors`).
 - Не менять topbar/sidebar без подтверждения владельца.
 - Не добавлять документы в форму Исполнителя рейса без отдельного этапа.
+
+
+## STATUS: ROUTE_EXECUTOR_VEHICLE_SETS_HOTFIX_V4_READY
+
+Пакет исправлений подготовлен, но финальный runtime-статус зависит от применения владельцем архива `ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip`.
+
+Исправляемый блок:
+
+1. `/company/route-executors` под ролью `logist` не должен показывать ложное «Нет доступа» при пустом списке.
+2. Кнопка `Создать исполнителя рейса` должна быть видна и доступна в пустом состоянии.
+3. Создание исполнителя рейса должно учитывать реальную схему БД:
+   - `driver_vehicle_blocks`: только `driver_id + vehicle_set_id`;
+   - `crews`: `contractor_id + vehicle_id + driver_id + driver_vehicle_block_id`;
+   - `vehicle_id` для `crews` = `vehicle_sets.primary_vehicle_unit_id`.
+4. `/company/vehicle-sets`: кнопка `Добавить новый транспорт` должна работать и при пустом списке, потому что modal создаётся вне условий списка.
+5. Для grants обычного `logist` обязательно использовать `revoked_at IS NULL` и `access_level IN ('view','edit')`.
+
+Перед следующим коммитом: применить v4, проверить runtime создание исполнителя рейса под `logist`, проверить открытие модалки транспорта, затем `php -l public/index.php` и `git diff --check`.
