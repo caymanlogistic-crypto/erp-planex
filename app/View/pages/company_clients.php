@@ -1,4 +1,4 @@
-﻿<?php if ($company === null): ?>
+<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/clients/create" class="btn btn-primary">Создать клиента</a>
+        <button type="button" class="btn btn-primary" onclick="openModal('le-client-modal')">Создать клиента</button>
     </div>
 </div>
 
@@ -57,7 +57,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/clients/create" class="btn btn-primary">Создать клиента</a>
+        <button type="button" class="btn btn-primary" onclick="openModal('le-client-modal')">Создать клиента</button>
     </div>
 </div>
 
@@ -123,3 +123,30 @@
 </div>
 
 <?php endif; ?>
+
+<div class="modal-overlay driver-view-overlay" id="le-client-modal" data-close-on-overlay="0" data-close-on-escape="0">
+  <div class="modal modal-lg driver-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Создать клиента</span>
+      <button type="button" class="modal-close" onclick="closeModal('le-client-modal')">&times;</button>
+    </div>
+    <div class="modal-body" id="le-client-modal-body">
+      <div class="driver-modal-loading">Загрузка...</div>
+    </div>
+  </div>
+</div>
+<script>
+(function initClientLegalEntityModal() {
+    var config = { modalId: 'le-client-modal', formAction: '/company/clients/create', typeField: 'entity_type' };
+    if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
+        window.LegalEntityModal.init(config);
+        return;
+    }
+
+    window.addEventListener('load', function () {
+        if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
+            window.LegalEntityModal.init(config);
+        }
+    }, { once: true });
+})();
+</script>

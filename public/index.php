@@ -167,6 +167,11 @@ use App\Service\ClientContactService;
 $db     = new Database($config['database']);
 $router = new Router();
 
+$router->get('/favicon.ico', function () {
+    http_response_code(204);
+    exit;
+});
+
 function generatePassword(int $length = 10): string
 {
     $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -518,6 +523,22 @@ function isPostTruncated(): bool
 }
 
 $router->get('/', function () use ($config) {
+    if (!isAuthenticated()) {
+        header('Location: /login');
+        exit;
+    }
+
+    $role = $_SESSION['role_code'] ?? '';
+    if ($role === 'superadmin') {
+        header('Location: /superadmin/companies');
+        exit;
+    }
+
+    header('Location: /company/dashboard');
+    exit;
+});
+
+$router->get('/dev/ui-foundation', function () use ($config) {
     $pageTitle = 'UI foundation';
 
     ob_start();
@@ -2605,6 +2626,7 @@ $router->get('/company/clients/create', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать клиента';
     $pageContext = 'Клиенты › Компания';
+    $isModalRequest = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -2680,6 +2702,23 @@ $router->get('/company/clients/create', function () use ($config, $db) {
         $createdClient = null;
     }
 
+    if ($isModalRequest) {
+        header('Content-Type: text/html; charset=utf-8');
+        $leEntityType = 'client';
+        $leFormAction = '/company/clients/create';
+        $leFormId = 'le-create-form';
+        $leOld = $old ?? [];
+        $leErrors = $errors ?? [];
+        $leFormError = $formError;
+        $leDocTypes = $docTypes ?? [];
+        $leContactValues = $contactValues ?? [];
+        $leContactErrors = [];
+        ob_start();
+        require base_path('app/View/partials/legal_entity_create_form.php');
+        echo ob_get_clean();
+        exit;
+    }
+
     ob_start();
     require base_path('app/View/pages/company_clients_create.php');
     $content = ob_get_clean();
@@ -2690,6 +2729,7 @@ $router->post('/company/clients/create', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать клиента';
     $pageContext = 'Клиенты › Компания';
+    $isModalRequest = !empty($_POST['is_modal']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -2959,6 +2999,30 @@ $router->post('/company/clients/create', function () use ($config, $db) {
     } catch (\Exception $e) {
         $company = $company ?? null;
         $formError = 'Ошибка создания клиента: ' . $e->getMessage();
+    }
+
+    if ($isModalRequest) {
+        header('Content-Type: text/html; charset=utf-8');
+        if ($success) {
+            echo '<div data-le-create-success="1"></div>';
+        } else {
+            if (empty($docTypes) && !empty($localPdo)) {
+                try { $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'client' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC); } catch (\Exception $e) { $docTypes = []; }
+            }
+            $leEntityType = 'client';
+            $leFormAction = '/company/clients/create';
+            $leFormId = 'le-create-form';
+            $leOld = $old;
+            $leErrors = $errors;
+            $leFormError = $formError;
+            $leDocTypes = $docTypes ?? [];
+            $leContactValues = $submittedContacts ?? ($old['contacts'] ?? []);
+            $leContactErrors = $errors['contacts'] ?? [];
+            ob_start();
+            require base_path('app/View/partials/legal_entity_create_form.php');
+            echo ob_get_clean();
+        }
+        exit;
     }
 
     ob_start();
@@ -3534,6 +3598,7 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать перевозчика';
     $pageContext = 'Перевозчики › Компания';
+    $isModalRequest = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
@@ -3607,6 +3672,23 @@ $router->get('/company/contractors/create', function () use ($config, $db) {
         $old = [];
         $formError = 'Ошибка загрузки данных: ' . $e->getMessage();
         $createdContractor = null;
+    }
+
+    if ($isModalRequest) {
+        header('Content-Type: text/html; charset=utf-8');
+        $leEntityType = 'contractor';
+        $leFormAction = '/company/contractors/create';
+        $leFormId = 'le-create-form';
+        $leOld = $old ?? [];
+        $leErrors = $errors ?? [];
+        $leFormError = $formError;
+        $leDocTypes = $docTypes ?? [];
+        $leContactValues = $contactValues ?? [];
+        $leContactErrors = [];
+        ob_start();
+        require base_path('app/View/partials/legal_entity_create_form.php');
+        echo ob_get_clean();
+        exit;
     }
 
     ob_start();
@@ -3774,6 +3856,7 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать перевозчика';
     $pageContext = 'Перевозчики › Компания';
+    $isModalRequest = !empty($_POST['is_modal']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $errors = [];
@@ -4018,6 +4101,30 @@ $router->post('/company/contractors/create', function () use ($config, $db) {
     } catch (\Exception $e) {
         $company = $company ?? null;
         $formError = 'Ошибка создания перевозчика: ' . $e->getMessage();
+    }
+
+    if ($isModalRequest) {
+        header('Content-Type: text/html; charset=utf-8');
+        if ($success) {
+            echo '<div data-le-create-success="1"></div>';
+        } else {
+            if (empty($docTypes) && !empty($localPdo)) {
+                try { $docTypes = $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'contractor' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC); } catch (\Exception $e) { $docTypes = []; }
+            }
+            $leEntityType = 'contractor';
+            $leFormAction = '/company/contractors/create';
+            $leFormId = 'le-create-form';
+            $leOld = $old;
+            $leErrors = $errors;
+            $leFormError = $formError;
+            $leDocTypes = $docTypes ?? [];
+            $leContactValues = $submittedContacts ?? ($old['contacts'] ?? []);
+            $leContactErrors = $errors['contacts'] ?? [];
+            ob_start();
+            require base_path('app/View/partials/legal_entity_create_form.php');
+            echo ob_get_clean();
+        }
+        exit;
     }
 
     ob_start();
@@ -5606,6 +5713,12 @@ $router->post('/company/contractors/{id}/edit', function ($id) use ($config, $db
         $errors = [];
         $old = $_POST;
         $formError = null;
+
+        $contactPayload = ContractorContactService::normalizeSubmittedContacts($_POST['contacts'] ?? []);
+        $submittedContacts = $contactPayload['contacts'];
+        if (!empty($contactPayload['errors'])) {
+            $errors['contacts'] = $contactPayload['errors'];
+        }
 
         $name = trim($_POST['name'] ?? '');
         $inn  = trim($_POST['inn'] ?? '');

@@ -345,7 +345,13 @@ $badgeMeta = static function (array $doc): array {
             removeBtn.addEventListener('click', function () {
                 if (deleteFlag) {
                     deleteFlag.value = '1';
-                    row.remove();
+                    if (input) input.value = '';
+                    row.classList.add('is-empty');
+                    row.classList.remove('has-file');
+                    row.classList.remove('has-existing-file');
+                    if (badge) { badge.className = 'file-type-badge file-type-badge-empty'; badge.textContent = '\u2014'; }
+                    if (meta) { meta.textContent = '\u0424\u0430\u0439\u043b \u0443\u0434\u0430\u043b\u0451\u043d'; meta.classList.remove('is-hidden'); }
+                    if (replaceBtn) { var label = replaceBtn.querySelector('span'); if (label) label.textContent = '\u0412\u044b\u0431\u0440\u0430\u0442\u044c'; }
                     return;
                 }
                 if (input) input.value = '';

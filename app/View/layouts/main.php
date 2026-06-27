@@ -51,6 +51,7 @@ if ($crumbContext !== '') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($pageTitle ?? $appName) ?> — <?= e($appName) ?></title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 18h18c6.627 0 12 5.373 12 12s-5.373 12-12 12H30v12H18V18zm12 12h6a4 4 0 1 0 0-8h-6v8z' fill='white'/%3E%3C/svg%3E">
     <link rel="preload" href="/assets/fonts/IBMPlexSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/assets/fonts/IBMPlexSans-Medium.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/assets/fonts/IBMPlexSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
@@ -230,6 +231,8 @@ if ($crumbContext !== '') {
         </main>
     </div>
 
+    <script src="/assets/js/modal-shell.js"></script>
+    <script src="/assets/js/legal-entity-modal.js"></script>
     <script src="/assets/js/app.js"></script>
 </body>
 </html>

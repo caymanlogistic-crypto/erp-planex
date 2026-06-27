@@ -1204,400 +1204,70 @@ document.addEventListener('keydown', function (e) {
 });
 
 // ============================================================
-// Driver row double-click → modal view/edit
+// Driver modal — ModalShell adapter
 // ============================================================
 (function () {
-    var driverTable = document.querySelector('.table-card[data-erp-grid] tbody');
-    if (!driverTable) return;
-
-    var createForm = document.querySelector('#driver-create-modal');
-    if (!createForm) {
-        // Not on the drivers list page — only page with create modal
-        // Also check for /company/drivers/create fallback page
-        if (!document.querySelector('form[action="/company/drivers/create"]')) return;
-    }
-
-    var MODAL_ID = 'driver-view-modal';
-    var DRIVER_GRID_STATE_KEY = 'companyDriversGridState';
-    var shell = null;
-
-    function getShell() {
-        if (shell) return shell;
-        shell = document.getElementById(MODAL_ID);
-        if (shell) return shell;
-
-        shell = document.createElement('div');
-        shell.className = 'modal-overlay driver-view-overlay';
-        shell.id = MODAL_ID;
-        shell.setAttribute('role', 'dialog');
-        shell.setAttribute('aria-modal', 'true');
-        shell.dataset.closeOnOverlay = '0';
-        shell.dataset.closeOnEscape = '0';
-        shell.innerHTML =
-            '<div class="modal modal-lg driver-view-modal-inner">' +
-            '  <div class="modal-head">' +
-            '    <span class="modal-title" data-modal-title></span>' +
-            '    <button type="button" class="modal-close" data-modal-close>&times;</button>' +
-            '  </div>' +
-            '</div>';
-
-        shell.querySelector('[data-modal-close]').addEventListener('click', function () {
-            closeDriverModal();
-        });
-        document.body.appendChild(shell);
-        return shell;
-    }
-
-    function getModal() {
-        return getShell().querySelector('.modal');
-    }
-
-    function saveDriverListState() {
-        if (window.location.pathname !== '/company/drivers' || !window.sessionStorage) return;
-
-        var card = document.querySelector('.table-card[data-erp-grid]');
-        if (!card) return;
-
-        var searchInput = card.querySelector('.toolbar-search, [data-erp-grid-search]');
-        var sortSelect = card.querySelector('select[data-erp-grid-sort]');
-
-        sessionStorage.setItem(DRIVER_GRID_STATE_KEY, JSON.stringify({
-            search: searchInput ? (searchInput.value || '') : '',
-            sort: sortSelect ? sortSelect.value : 'date'
-        }));
-    }
-
-    function closeDriverModal() {
-        var s = getShell();
-        var shouldRefreshList = s._refreshListOnClose === true;
-
-        window.closeModal(MODAL_ID);
-
-        if (!shouldRefreshList) return;
-
-        s._refreshListOnClose = false;
-        saveDriverListState();
-        window.location.reload();
-    }
-
-    function getDeleteConfirmShell() {
-        var existing = document.getElementById('driver-delete-confirm-modal');
-        if (existing) return existing;
-
-        var confirmShell = document.createElement('div');
-        confirmShell.className = 'modal-overlay';
-        confirmShell.id = 'driver-delete-confirm-modal';
-        confirmShell.setAttribute('role', 'dialog');
-        confirmShell.setAttribute('aria-modal', 'true');
-        confirmShell.dataset.closeOnOverlay = '0';
-        confirmShell.dataset.closeOnEscape = '0';
-        confirmShell.innerHTML =
-            '<div class="modal">' +
-            '  <div class="modal-head">' +
-            '    <span class="modal-title">\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f?</span>' +
-            '    <button type="button" class="modal-close" data-driver-delete-close>&times;</button>' +
-            '  </div>' +
-            '  <div class="modal-body">' +
-            '    <div class="driver-delete-confirm-body">' +
-            '      <div class="driver-delete-confirm-head">' +
-            '        <div class="modal-icon is-danger" aria-hidden="true">' +
-            '          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L16.5 15H1.5L9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><path d="M9 7V11M9 13V13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>' +
-            '        </div>' +
-            '        <div class="driver-delete-confirm-title">\u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0434\u0430\u043b\u0438\u0442 \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f \u0438\u0437 \u0431\u0430\u0437\u044b \u0438 \u043e\u0447\u0438\u0441\u0442\u0438\u0442 \u0432\u0441\u0435 \u0435\u0433\u043e \u0444\u0430\u0439\u043b\u044b.</div>' +
-            '      </div>' +
-            '      <div class="driver-delete-confirm-text">\u0414\u043b\u044f \u0437\u0430\u0449\u0438\u0442\u044b \u043e\u0442 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u043e\u0433\u043e \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u0432\u0432\u0435\u0434\u0438\u0442\u0435 <b>\u0423\u0414\u0410\u041b\u0418\u0422\u042c</b>.</div>' +
-            '      <div class="driver-delete-confirm-name" data-driver-delete-name></div>' +
-            '      <div class="field driver-delete-confirm-field">' +
-            '        <input type="text" class="field-input" data-driver-delete-input autocomplete="off" placeholder="\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0423\u0414\u0410\u041b\u0418\u0422\u042c">' +
-            '      </div>' +
-            '      <div class="driver-delete-confirm-error is-hidden" data-driver-delete-error></div>' +
-            '    </div>' +
-            '  </div>' +
-            '  <div class="modal-foot">' +
-            '    <button type="button" class="btn btn-ghost" data-driver-delete-cancel>\u041e\u0442\u043c\u0435\u043d\u0430</button>' +
-            '    <button type="button" class="btn btn-danger" data-driver-delete-confirm disabled>\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>' +
-            '  </div>' +
-            '</div>';
-
-        document.body.appendChild(confirmShell);
-        return confirmShell;
-    }
-
-    function bindDeleteConfirm() {
-        var confirmShell = getDeleteConfirmShell();
-        var closeBtn = confirmShell.querySelector('[data-driver-delete-close]');
-        var cancelBtn = confirmShell.querySelector('[data-driver-delete-cancel]');
-        var confirmBtn = confirmShell.querySelector('[data-driver-delete-confirm]');
-        var input = confirmShell.querySelector('[data-driver-delete-input]');
-        var errorBox = confirmShell.querySelector('[data-driver-delete-error]');
-
-        function closeConfirm() {
-            window.closeModal('driver-delete-confirm-modal');
-            if (input) input.value = '';
-            if (errorBox) {
-                errorBox.textContent = '';
-                errorBox.classList.add('is-hidden');
+    var driverCtrl = ModalShell.create({
+        modalId: 'driver-view-modal',
+        deleteConfirmId: 'driver-delete-confirm-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c',
+        loadingClass: 'driver-modal-loading',
+        nameSelector: '.driver-view-name',
+        editFormSelector: '#driver-edit-form',
+        gridSelector: '.table-card[data-erp-grid]',
+        gridStateKey: 'companyDriversGridState',
+        viewBtnSelectors: {
+            edit:   '[data-driver-edit-btn]',
+            close:  '[data-driver-view-cancel]',
+            delete: '[data-driver-delete-btn]'
+        },
+        editBtnSelectors: {
+            cancel: '[data-driver-cancel-edit-btn]'
+        },
+        endpoints: {
+            view:   function (id) { return '/company/drivers/' + id + '/modal-view'; },
+            edit:   function (id) { return '/company/drivers/' + id + '/modal-edit'; },
+            delete: function (id) { return '/company/drivers/' + id + '/modal-delete'; }
+        },
+        errorMessages: {
+            loadFailed:    '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435.',
+            saveFailed:    '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c.',
+            deleteFailed:  '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f.'
+        },
+        deleteConfirm: {
+            title:       '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f?',
+            warning:     '\u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0434\u0430\u043b\u0438\u0442 \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f \u0438\u0437 \u0431\u0430\u0437\u044b \u0438 \u043e\u0447\u0438\u0441\u0442\u0438\u0442 \u0432\u0441\u0435 \u0435\u0433\u043e \u0444\u0430\u0439\u043b\u044b.',
+            instruction: '\u0414\u043b\u044f \u0437\u0430\u0449\u0438\u0442\u044b \u043e\u0442 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u043e\u0433\u043e \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u0432\u0432\u0435\u0434\u0438\u0442\u0435 <b>\u0423\u0414\u0410\u041b\u0418\u0422\u042c</b>.',
+            placeholder: '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0423\u0414\u0410\u041b\u0418\u0422\u042c',
+            confirmWord: '\u0423\u0414\u0410\u041b\u0418\u0422\u042c',
+            cancelBtn:   '\u041e\u0442\u043c\u0435\u043d\u0430',
+            confirmBtn:  '\u0423\u0434\u0430\u043b\u0438\u0442\u044c'
+        },
+        onContentLoaded: function (shell, mode) {
+            if (mode === 'edit') {
+                var form = shell.querySelector('#driver-edit-form');
+                if (form && window.initDriverForm) {
+                    form.dataset.driverFormReady = '0';
+                    form.dataset.modalSubmitReady = '0';
+                    window.initDriverForm(form);
+                }
             }
-            if (confirmBtn) confirmBtn.disabled = true;
         }
-
-        function syncConfirmState() {
-            if (!input || !confirmBtn) return;
-            confirmBtn.disabled = input.value.trim().toUpperCase() !== '\u0423\u0414\u0410\u041b\u0418\u0422\u042c';
-        }
-
-        if (closeBtn && closeBtn.dataset.driverDeleteReady !== '1') {
-            closeBtn.dataset.driverDeleteReady = '1';
-            closeBtn.addEventListener('click', closeConfirm);
-        }
-        if (cancelBtn && cancelBtn.dataset.driverDeleteReady !== '1') {
-            cancelBtn.dataset.driverDeleteReady = '1';
-            cancelBtn.addEventListener('click', closeConfirm);
-        }
-        if (input && input.dataset.driverDeleteReady !== '1') {
-            input.dataset.driverDeleteReady = '1';
-            input.addEventListener('input', syncConfirmState);
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' && !confirmBtn.disabled) {
-                    e.preventDefault();
-                    confirmBtn.click();
-                }
-            });
-        }
-        if (confirmBtn && confirmBtn.dataset.driverDeleteReady !== '1') {
-            confirmBtn.dataset.driverDeleteReady = '1';
-            confirmBtn.addEventListener('click', function () {
-                var s = getShell();
-                if (!s._driverId) return;
-
-                confirmBtn.disabled = true;
-                if (errorBox) {
-                    errorBox.textContent = '';
-                    errorBox.classList.add('is-hidden');
-                }
-
-                fetch('/company/drivers/' + s._driverId + '/modal-delete', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(function (r) { if (!r.ok) throw Error(r.status); return r.json(); })
-                .then(function (result) {
-                    if (!result || !result.success) {
-                        throw new Error(result && result.error ? result.error : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f.');
-                    }
-
-                    closeConfirm();
-                    s._refreshListOnClose = false;
-                    saveDriverListState();
-                    window.closeModal(MODAL_ID);
-                    window.location.reload();
-                })
-                .catch(function (error) {
-                    if (errorBox) {
-                        errorBox.textContent = error && error.message ? error.message : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f.';
-                        errorBox.classList.remove('is-hidden');
-                    }
-                    syncConfirmState();
-                });
-            });
-        }
-
-        return {
-            open: function (driverName) {
-                var nameBox = confirmShell.querySelector('[data-driver-delete-name]');
-                if (nameBox) {
-                    nameBox.textContent = driverName || '';
-                }
-                if (input) {
-                    input.value = '';
-                }
-                if (errorBox) {
-                    errorBox.textContent = '';
-                    errorBox.classList.add('is-hidden');
-                }
-                if (confirmBtn) {
-                    confirmBtn.disabled = true;
-                }
-                window.openModal('driver-delete-confirm-modal');
-                if (input) input.focus();
-            }
-        };
-    }
-
-    function showModalError(msg) {
-        var modal = getModal();
-        var oldBody = modal.querySelector('.modal-body');
-        var oldFoot = modal.querySelector('.modal-foot');
-        if (oldBody) oldBody.remove();
-        if (oldFoot) oldFoot.remove();
-        var el = document.createElement('div');
-        el.className = 'modal-body';
-        el.innerHTML = '<div class="notice warn" style="margin:16px">' + msg + '</div>';
-        modal.appendChild(el);
-    }
-
-    function showLoading(message) {
-        var modal = getModal();
-        // Remove any existing body/foot
-        var oldBody = modal.querySelector('.modal-body');
-        var oldFoot = modal.querySelector('.modal-foot');
-        if (oldBody) oldBody.remove();
-        if (oldFoot) oldFoot.remove();
-        var el = document.createElement('div');
-        el.className = 'modal-body';
-        el.innerHTML = '<div class="driver-modal-loading">' + (message || '...') + '</div>';
-        modal.appendChild(el);
-    }
-
-    function setContent(html) {
-        var modal = getModal();
-        // Ensure modal title is set for driver view/edit
-        var titleEl = modal.querySelector('[data-modal-title]');
-        if (titleEl) titleEl.textContent = '\u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c';
-        // Remove existing body/foot
-        var oldBody = modal.querySelector('.modal-body');
-        var oldFoot = modal.querySelector('.modal-foot');
-        if (oldBody) oldBody.remove();
-        if (oldFoot) oldFoot.remove();
-        var tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        var body = tmp.querySelector('.modal-body');
-        var foot = tmp.querySelector('.modal-foot');
-        if (body) modal.appendChild(body);
-        if (foot) modal.appendChild(foot);
-    }
-
-    function loadView(driverId) {
-        showLoading('...');
-        var s = getShell();
-        s._driverId = driverId;
-        s.classList.add('is-open');
-
-        fetch('/company/drivers/' + driverId + '/modal-view', { credentials: 'same-origin' })
-            .then(function (r) { if (!r.ok) throw Error(r.status); return r.text(); })
-            .then(function (html) {
-                setContent(html);
-                bindViewButtons();
-            })
-            .catch(function () {
-                showModalError('    .');
-            });
-    }
-
-    function loadEdit(driverId) {
-        showLoading('...');
-
-        fetch('/company/drivers/' + driverId + '/modal-edit', { credentials: 'same-origin' })
-            .then(function (r) { if (!r.ok) throw Error(r.status); return r.text(); })
-            .then(function (html) {
-                setContent(html);
-                // Initialize the edit form's interactive elements
-                var s = getShell();
-                var editForm = s.querySelector('#driver-edit-form');
-                if (editForm && window.initDriverForm) {
-                    window.initDriverForm(editForm);
-                }
-                bindEditButtons();
-            })
-            .catch(function () {
-                showModalError('   .');
-            });
-    }
-
-    function bindViewButtons() {
-        var s = getShell();
-        var editBtn = s.querySelector('[data-driver-edit-btn]');
-        var cancelBtn = s.querySelector('[data-driver-view-cancel]');
-        var deleteBtn = s.querySelector('[data-driver-delete-btn]');
-
-        if (editBtn) {
-            var newBtn = editBtn.cloneNode(true);
-            editBtn.parentNode.replaceChild(newBtn, editBtn);
-            newBtn.addEventListener('click', function () {
-                loadEdit(s._driverId);
-            });
-        }
-        if (cancelBtn) {
-            var newCancel = cancelBtn.cloneNode(true);
-            cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-            newCancel.addEventListener('click', function () {
-                closeDriverModal();
-            });
-        }
-        if (deleteBtn) {
-            var newDelete = deleteBtn.cloneNode(true);
-            deleteBtn.parentNode.replaceChild(newDelete, deleteBtn);
-            newDelete.addEventListener('click', function () {
-                var nameEl = s.querySelector('.driver-view-name');
-                var driverName = nameEl ? nameEl.textContent.trim() : '';
-                bindDeleteConfirm().open(driverName);
-            });
-        }
-    }
-
-    function bindEditButtons() {
-        var s = getShell();
-        var cancelBtn = s.querySelector('[data-driver-cancel-edit-btn]');
-        var form = s.querySelector('#driver-edit-form');
-
-        if (cancelBtn) {
-            var newCancel = cancelBtn.cloneNode(true);
-            cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-            newCancel.addEventListener('click', function () {
-                loadView(s._driverId);
-            });
-        }
-
-        if (form && form.dataset.modalSubmitReady !== '1') {
-            form.dataset.modalSubmitReady = '1';
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                var formData = new FormData(form);
-                showLoading('...');
-
-                fetch('/company/drivers/' + s._driverId + '/modal-edit', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    body: formData
-                })
-                .then(function (r) { if (!r.ok) throw Error(r.status); return r.text(); })
-                .then(function (html) {
-                    var tmp = document.createElement('div');
-                    tmp.innerHTML = html;
-                    if (tmp.querySelector('#driver-edit-form')) {
-                        // Validation errors — stay in edit mode
-                        setContent(html);
-                        // Re-init the form after re-render
-                        var ef = getShell().querySelector('#driver-edit-form');
-                        if (ef && window.initDriverForm) {
-                            ef.dataset.driverFormReady = '0';
-                            ef.dataset.modalSubmitReady = '0';
-                            window.initDriverForm(ef);
-                        }
-                        bindEditButtons();
-                    } else {
-                        s._refreshListOnClose = true;
-                        setContent(html);
-                        bindViewButtons();
-                    }
-                })
-                .catch(function () {
-                    showModalError('  .');
-                });
-            });
-        }
-    }
-
-    // Double-click handler
-    driverTable.addEventListener('dblclick', function (e) {
-        if (e.target.closest('a, button, input, select, textarea, label')) return;
-        var row = e.target.closest('tr');
-        if (!row) return;
-        var driverId = row.getAttribute('data-driver-id');
-        if (!driverId) return;
-        loadView(driverId);
     });
+    ModalShell.register('driver', driverCtrl);
+
+    var driverTable = document.querySelector('.table-card[data-erp-grid] tbody');
+    if (driverTable) {
+        driverTable.addEventListener('dblclick', function (e) {
+            if (e.target.closest('a, button, input, select, textarea, label')) return;
+            var row = e.target.closest('tr');
+            if (!row) return;
+            var id = row.getAttribute('data-driver-id');
+            if (id) driverCtrl.loadView(id);
+        });
+    }
 })();
 
 // ============================================================
@@ -1746,402 +1416,51 @@ document.addEventListener('keydown', function (e) {
 })();
 
 // ============================================================
-// Vehicle sets list modal view/edit/delete
+// VehicleSet modal — ModalShell adapter
 // ============================================================
 (function () {
-    var vehicleGrid = document.querySelector('.table-card[data-vehicle-sets-grid]');
-    if (!vehicleGrid) return;
-
-    var tableBody = vehicleGrid.querySelector('tbody');
-    if (!tableBody) return;
-
-    var MODAL_ID = 'vehicle-set-view-modal';
-    var CONFIRM_MODAL_ID = 'vehicle-set-delete-confirm-modal';
-    var VEHICLE_GRID_STATE_KEY = 'companyVehicleSetsGridState';
-    var shell = null;
-
-    function getShell() {
-        if (shell) return shell;
-        shell = document.getElementById(MODAL_ID);
-        if (shell) return shell;
-
-        shell = document.createElement('div');
-        shell.className = 'modal-overlay driver-view-overlay';
-        shell.id = MODAL_ID;
-        shell.setAttribute('role', 'dialog');
-        shell.setAttribute('aria-modal', 'true');
-        shell.dataset.closeOnOverlay = '0';
-        shell.dataset.closeOnEscape = '0';
-        shell.innerHTML =
-            '<div class="modal modal-lg driver-view-modal-inner">' +
-            '  <div class="modal-head">' +
-            '    <span class="modal-title" data-modal-title>\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442</span>' +
-            '    <button type="button" class="modal-close" data-modal-close>&times;</button>' +
-            '  </div>' +
-            '</div>';
-
-        shell.querySelector('[data-modal-close]').addEventListener('click', function () {
-            closeVehicleModal();
-        });
-        document.body.appendChild(shell);
-        return shell;
-    }
-
-    function getModal() {
-        return getShell().querySelector('.modal');
-    }
-
-    function saveVehicleGridState() {
-        if (window.location.pathname !== '/company/vehicle-sets' || !window.sessionStorage) return;
-
-        var card = document.querySelector('.table-card[data-vehicle-sets-grid]');
-        if (!card) return;
-
-        var searchInput = card.querySelector('.toolbar-search, [data-erp-grid-search]');
-        var sortSelect = card.querySelector('select[data-erp-grid-sort]');
-
-        sessionStorage.setItem(VEHICLE_GRID_STATE_KEY, JSON.stringify({
-            search: searchInput ? (searchInput.value || '') : '',
-            sort: sortSelect ? sortSelect.value : 'date'
-        }));
-    }
-
-    function closeVehicleModal() {
-        var currentShell = getShell();
-        var shouldRefreshList = currentShell._refreshListOnClose === true;
-
-        window.closeModal(MODAL_ID);
-
-        if (!shouldRefreshList) return;
-
-        currentShell._refreshListOnClose = false;
-        saveVehicleGridState();
-        window.location.reload();
-    }
-
-    function showModalError(message) {
-        var modal = getModal();
-        var oldBody = modal.querySelector('.modal-body');
-        var oldFoot = modal.querySelector('.modal-foot');
-        if (oldBody) oldBody.remove();
-        if (oldFoot) oldFoot.remove();
-        var body = document.createElement('div');
-        body.className = 'modal-body';
-        body.innerHTML = '<div class="notice warn" style="margin:16px">' + message + '</div>';
-        modal.appendChild(body);
-    }
-
-    function showLoading(message) {
-        var modal = getModal();
-        var oldBody = modal.querySelector('.modal-body');
-        var oldFoot = modal.querySelector('.modal-foot');
-        if (oldBody) oldBody.remove();
-        if (oldFoot) oldFoot.remove();
-        var body = document.createElement('div');
-        body.className = 'modal-body';
-        body.innerHTML = '<div class="driver-modal-loading">' + (message || '\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...') + '</div>';
-        modal.appendChild(body);
-    }
-
-    function setContent(html) {
-        var modal = getModal();
-        var oldBody = modal.querySelector('.modal-body');
-        var oldFoot = modal.querySelector('.modal-foot');
-        modal.querySelectorAll('script[data-modal-inline-script="1"]').forEach(function (script) {
-            script.remove();
-        });
-        if (oldBody) oldBody.remove();
-        if (oldFoot) oldFoot.remove();
-
-        var tmp = document.createElement('div');
-        tmp.innerHTML = html;
-
-        var body = tmp.querySelector('.modal-body');
-        var foot = tmp.querySelector('.modal-foot');
-        if (body) modal.appendChild(body);
-        if (foot) modal.appendChild(foot);
-        tmp.querySelectorAll('script').forEach(function (script) {
-            var cloned = script.cloneNode(true);
-            cloned.setAttribute('data-modal-inline-script', '1');
-            (body || modal).appendChild(cloned);
-        });
-
-        if (typeof window.erpExecuteInlineScripts === 'function') {
-            window.erpExecuteInlineScripts(modal);
+    var vehicleSetCtrl = ModalShell.create({
+        modalId: 'vehicle-set-view-modal',
+        deleteConfirmId: 'vehicle-set-delete-confirm-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442',
+        loadingClass: 'driver-modal-loading',
+        nameSelector: '.driver-view-name',
+        editFormSelector: '#vehicle-set-edit-form',
+        gridSelector: '.table-card[data-vehicle-sets-grid]',
+        gridStateKey: 'companyVehicleSetsGridState',
+        viewBtnSelectors: {
+            edit:   '[data-vehicle-set-edit-btn]',
+            close:  '[data-vehicle-set-close-btn]',
+            delete: '[data-vehicle-set-delete-btn]'
+        },
+        editBtnSelectors: {
+            cancel: '[data-vehicle-set-cancel-edit-btn]'
+        },
+        endpoints: {
+            view:   function (id) { return '/company/vehicle-sets/' + id + '/modal-view'; },
+            edit:   function (id) { return '/company/vehicle-sets/' + id + '/modal-edit'; },
+            delete: function (id) { return '/company/vehicle-sets/' + id + '/modal-delete'; }
+        },
+        errorMessages: {
+            loadFailed:    '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430.',
+            saveFailed:    '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c.',
+            deleteFailed:  '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442.'
+        },
+        deleteConfirm: {
+            title:       '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442?',
+            warning:     '\u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0434\u0430\u043b\u0438\u0442 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442 \u0438\u0437 \u0431\u0430\u0437\u044b \u0438 \u043e\u0447\u0438\u0441\u0442\u0438\u0442 \u0432\u0441\u0435 \u0435\u0433\u043e \u0444\u0430\u0439\u043b\u044b.',
+            instruction: '\u0414\u043b\u044f \u0437\u0430\u0449\u0438\u0442\u044b \u043e\u0442 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u043e\u0433\u043e \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u0432\u0432\u0435\u0434\u0438\u0442\u0435 <b>\u0423\u0414\u0410\u041b\u0418\u0422\u042c</b>.',
+            placeholder: '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0423\u0414\u0410\u041b\u0418\u0422\u042c',
+            confirmWord: '\u0423\u0414\u0410\u041b\u0418\u0422\u042c',
+            cancelBtn:   '\u041e\u0442\u043c\u0435\u043d\u0430',
+            confirmBtn:  '\u0423\u0434\u0430\u043b\u0438\u0442\u044c'
+        },
+        onContentLoaded: function (shell, mode) {
         }
-    }
-
-    function getDeleteConfirmShell() {
-        var existing = document.getElementById(CONFIRM_MODAL_ID);
-        if (existing) return existing;
-
-        var confirmShell = document.createElement('div');
-        confirmShell.className = 'modal-overlay';
-        confirmShell.id = CONFIRM_MODAL_ID;
-        confirmShell.setAttribute('role', 'dialog');
-        confirmShell.setAttribute('aria-modal', 'true');
-        confirmShell.dataset.closeOnOverlay = '0';
-        confirmShell.dataset.closeOnEscape = '0';
-        confirmShell.innerHTML =
-            '<div class="modal">' +
-            '  <div class="modal-head">' +
-            '    <span class="modal-title">\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442?</span>' +
-            '    <button type="button" class="modal-close" data-vehicle-set-delete-close>&times;</button>' +
-            '  </div>' +
-            '  <div class="modal-body">' +
-            '    <div class="driver-delete-confirm-body">' +
-            '      <div class="driver-delete-confirm-head">' +
-            '        <div class="modal-icon is-danger" aria-hidden="true">' +
-            '          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L16.5 15H1.5L9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><path d="M9 7V11M9 13V13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>' +
-            '        </div>' +
-            '        <div class="driver-delete-confirm-title">\u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0434\u0430\u043b\u0438\u0442 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442 \u0438\u0437 \u0431\u0430\u0437\u044b \u0438 \u043e\u0447\u0438\u0441\u0442\u0438\u0442 \u0432\u0441\u0435 \u0435\u0433\u043e \u0444\u0430\u0439\u043b\u044b.</div>' +
-            '      </div>' +
-            '      <div class="driver-delete-confirm-text">\u0414\u043b\u044f \u0437\u0430\u0449\u0438\u0442\u044b \u043e\u0442 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u043e\u0433\u043e \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u0432\u0432\u0435\u0434\u0438\u0442\u0435 <b>\u0423\u0414\u0410\u041b\u0418\u0422\u042c</b>.</div>' +
-            '      <div class="driver-delete-confirm-name" data-vehicle-set-delete-name></div>' +
-            '      <div class="field driver-delete-confirm-field">' +
-            '        <input type="text" class="field-input" data-vehicle-set-delete-input autocomplete="off" placeholder="\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0423\u0414\u0410\u041b\u0418\u0422\u042c">' +
-            '      </div>' +
-            '      <div class="driver-delete-confirm-error is-hidden" data-vehicle-set-delete-error></div>' +
-            '    </div>' +
-            '  </div>' +
-            '  <div class="modal-foot">' +
-            '    <button type="button" class="btn btn-ghost" data-vehicle-set-delete-cancel>\u041e\u0442\u043c\u0435\u043d\u0430</button>' +
-            '    <button type="button" class="btn btn-danger" data-vehicle-set-delete-confirm disabled>\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>' +
-            '  </div>' +
-            '</div>';
-
-        document.body.appendChild(confirmShell);
-        return confirmShell;
-    }
-
-    function bindDeleteConfirm() {
-        var confirmShell = getDeleteConfirmShell();
-        var closeBtn = confirmShell.querySelector('[data-vehicle-set-delete-close]');
-        var cancelBtn = confirmShell.querySelector('[data-vehicle-set-delete-cancel]');
-        var confirmBtn = confirmShell.querySelector('[data-vehicle-set-delete-confirm]');
-        var input = confirmShell.querySelector('[data-vehicle-set-delete-input]');
-        var errorBox = confirmShell.querySelector('[data-vehicle-set-delete-error]');
-
-        function closeConfirm() {
-            window.closeModal(CONFIRM_MODAL_ID);
-            if (input) input.value = '';
-            if (errorBox) {
-                errorBox.textContent = '';
-                errorBox.classList.add('is-hidden');
-            }
-            if (confirmBtn) confirmBtn.disabled = true;
-        }
-
-        function syncConfirmState() {
-            if (!input || !confirmBtn) return;
-            confirmBtn.disabled = input.value.trim().toUpperCase() !== '\u0423\u0414\u0410\u041b\u0418\u0422\u042c';
-        }
-
-        if (closeBtn && closeBtn.dataset.ready !== '1') {
-            closeBtn.dataset.ready = '1';
-            closeBtn.addEventListener('click', closeConfirm);
-        }
-        if (cancelBtn && cancelBtn.dataset.ready !== '1') {
-            cancelBtn.dataset.ready = '1';
-            cancelBtn.addEventListener('click', closeConfirm);
-        }
-        if (input && input.dataset.ready !== '1') {
-            input.dataset.ready = '1';
-            input.addEventListener('input', syncConfirmState);
-            input.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter' && !confirmBtn.disabled) {
-                    event.preventDefault();
-                    confirmBtn.click();
-                }
-            });
-        }
-        if (confirmBtn && confirmBtn.dataset.ready !== '1') {
-            confirmBtn.dataset.ready = '1';
-            confirmBtn.addEventListener('click', function () {
-                var currentShell = getShell();
-                if (!currentShell._vehicleSetId) return;
-
-                confirmBtn.disabled = true;
-                if (errorBox) {
-                    errorBox.textContent = '';
-                    errorBox.classList.add('is-hidden');
-                }
-
-                fetch('/company/vehicle-sets/' + currentShell._vehicleSetId + '/modal-delete', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                    .then(function (response) {
-                        if (!response.ok) throw new Error(String(response.status));
-                        return response.json();
-                    })
-                    .then(function (result) {
-                        if (!result || !result.success) {
-                            throw new Error(result && result.error ? result.error : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442.');
-                        }
-
-                        closeConfirm();
-                        currentShell._refreshListOnClose = false;
-                        saveVehicleGridState();
-                        window.closeModal(MODAL_ID);
-                        window.location.reload();
-                    })
-                    .catch(function (error) {
-                        if (errorBox) {
-                            errorBox.textContent = error && error.message ? error.message : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442.';
-                            errorBox.classList.remove('is-hidden');
-                        }
-                        syncConfirmState();
-                    });
-            });
-        }
-
-        return {
-            open: function (vehicleName) {
-                var nameBox = confirmShell.querySelector('[data-vehicle-set-delete-name]');
-                if (nameBox) {
-                    nameBox.textContent = vehicleName || '';
-                }
-                if (input) {
-                    input.value = '';
-                }
-                if (errorBox) {
-                    errorBox.textContent = '';
-                    errorBox.classList.add('is-hidden');
-                }
-                if (confirmBtn) {
-                    confirmBtn.disabled = true;
-                }
-                window.openModal(CONFIRM_MODAL_ID);
-                if (input) input.focus();
-            }
-        };
-    }
-
-    function loadView(vehicleSetId) {
-        showLoading('\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...');
-        var currentShell = getShell();
-        currentShell._vehicleSetId = vehicleSetId;
-        currentShell.classList.add('is-open');
-
-        fetch('/company/vehicle-sets/' + vehicleSetId + '/modal-view', { credentials: 'same-origin' })
-            .then(function (response) {
-                if (!response.ok) throw new Error(String(response.status));
-                return response.text();
-            })
-            .then(function (html) {
-                setContent(html);
-                bindViewButtons();
-            })
-            .catch(function () {
-                showModalError('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430.');
-            });
-    }
-
-    function loadEdit(vehicleSetId) {
-        showLoading('\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...');
-
-        fetch('/company/vehicle-sets/' + vehicleSetId + '/modal-edit', { credentials: 'same-origin' })
-            .then(function (response) {
-                if (!response.ok) throw new Error(String(response.status));
-                return response.text();
-            })
-            .then(function (html) {
-                setContent(html);
-                if (typeof window.erpExecuteInlineScripts === 'function') {
-                    window.erpExecuteInlineScripts(getShell());
-                }
-                bindEditButtons();
-            })
-            .catch(function () {
-                showModalError('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0444\u043e\u0440\u043c\u0443.');
-            });
-    }
-
-    function bindViewButtons() {
-        var currentShell = getShell();
-        var editBtn = currentShell.querySelector('[data-vehicle-set-edit-btn]');
-        var closeBtn = currentShell.querySelector('[data-vehicle-set-close-btn]');
-        var deleteBtn = currentShell.querySelector('[data-vehicle-set-delete-btn]');
-
-        if (editBtn) {
-            var newEditBtn = editBtn.cloneNode(true);
-            editBtn.parentNode.replaceChild(newEditBtn, editBtn);
-            newEditBtn.addEventListener('click', function () {
-                loadEdit(currentShell._vehicleSetId);
-            });
-        }
-
-        if (closeBtn) {
-            var newCloseBtn = closeBtn.cloneNode(true);
-            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-            newCloseBtn.addEventListener('click', function () {
-                closeVehicleModal();
-            });
-        }
-
-        if (deleteBtn) {
-            var newDeleteBtn = deleteBtn.cloneNode(true);
-            deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
-            newDeleteBtn.addEventListener('click', function () {
-                var nameEl = currentShell.querySelector('.driver-view-name');
-                bindDeleteConfirm().open(nameEl ? nameEl.textContent.trim() : '');
-            });
-        }
-    }
-
-    function bindEditButtons() {
-        var currentShell = getShell();
-        var cancelBtn = currentShell.querySelector('[data-vehicle-set-cancel-edit-btn]');
-        var form = currentShell.querySelector('#vehicle-set-edit-form');
-
-        if (cancelBtn) {
-            var newCancelBtn = cancelBtn.cloneNode(true);
-            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-            newCancelBtn.addEventListener('click', function () {
-                loadView(currentShell._vehicleSetId);
-            });
-        }
-
-        if (form && form.dataset.modalSubmitReady !== '1') {
-            form.dataset.modalSubmitReady = '1';
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();
-
-                var formData = new FormData(form);
-                showLoading('\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435...');
-
-                fetch('/company/vehicle-sets/' + currentShell._vehicleSetId + '/modal-edit', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    body: formData
-                })
-                    .then(function (response) {
-                        if (!response.ok) throw new Error(String(response.status));
-                        return response.text();
-                    })
-                    .then(function (html) {
-                        var tmp = document.createElement('div');
-                        tmp.innerHTML = html;
-                        if (tmp.querySelector('#vehicle-set-edit-form')) {
-                            setContent(html);
-                            if (typeof window.erpExecuteInlineScripts === 'function') {
-                                window.erpExecuteInlineScripts(getShell());
-                            }
-                            bindEditButtons();
-                        } else {
-                            currentShell._refreshListOnClose = true;
-                            setContent(html);
-                            bindViewButtons();
-                        }
-                    })
-                    .catch(function () {
-                        showModalError('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c.');
-                    });
-            });
-        }
-    }
+    });
+    ModalShell.register('vehicleSet', vehicleSetCtrl);
 
     function resolveVehicleSetId(target) {
         var direct = target.closest('[data-vehicle-set-id]');
@@ -2152,29 +1471,33 @@ document.addEventListener('keydown', function (e) {
         return row ? row.getAttribute('data-vehicle-set-id') : '';
     }
 
-    tableBody.addEventListener('click', function (event) {
-        var viewBtn = event.target.closest('[data-vehicle-view-btn]');
-        if (viewBtn) {
-            var viewId = resolveVehicleSetId(viewBtn);
-            if (viewId) loadView(viewId);
-            return;
-        }
+    var vehicleGrid = document.querySelector('.table-card[data-vehicle-sets-grid]');
+    if (vehicleGrid) {
+        var tableBody = vehicleGrid.querySelector('tbody');
+        if (tableBody) {
+            tableBody.addEventListener('click', function (event) {
+                var viewBtn = event.target.closest('[data-vehicle-view-btn]');
+                if (viewBtn) {
+                    var viewId = resolveVehicleSetId(viewBtn);
+                    if (viewId) vehicleSetCtrl.loadView(viewId);
+                    return;
+                }
+                var editBtn = event.target.closest('[data-vehicle-edit-btn]');
+                if (editBtn) {
+                    var editId = resolveVehicleSetId(editBtn);
+                    if (editId) vehicleSetCtrl.loadEdit(editId);
+                }
+            });
 
-        var editBtn = event.target.closest('[data-vehicle-edit-btn]');
-        if (editBtn) {
-            var editId = resolveVehicleSetId(editBtn);
-            if (editId) loadEdit(editId);
+            tableBody.addEventListener('dblclick', function (event) {
+                if (event.target.closest('a, button, input, select, textarea, label')) return;
+                var row = event.target.closest('tr[data-vehicle-set-id]');
+                if (!row) return;
+                var id = row.getAttribute('data-vehicle-set-id');
+                if (id) vehicleSetCtrl.loadView(id);
+            });
         }
-    });
-
-    tableBody.addEventListener('dblclick', function (event) {
-        if (event.target.closest('a, button, input, select, textarea, label')) return;
-        var row = event.target.closest('tr[data-vehicle-set-id]');
-        if (!row) return;
-        var vehicleSetId = row.getAttribute('data-vehicle-set-id');
-        if (!vehicleSetId) return;
-        loadView(vehicleSetId);
-    });
+    }
 })();
 
 // ============================================================

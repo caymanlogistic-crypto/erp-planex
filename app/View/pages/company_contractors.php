@@ -39,7 +39,7 @@
         <div class="page-summary"><span>Компании-перевозчики и ИП · Управление договорами и документами</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors/create" class="btn btn-primary">Создать перевозчика</a>
+        <button type="button" class="btn btn-primary" onclick="openModal('le-contractor-modal')">Создать перевозчика</button>
     </div>
 </div>
 
@@ -59,7 +59,7 @@
         <div class="page-summary"><span>Компании-перевозчики и ИП · Управление договорами и документами</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors/create" class="btn btn-primary">Создать перевозчика</a>
+        <button type="button" class="btn btn-primary" onclick="openModal('le-contractor-modal')">Создать перевозчика</button>
         <a href="/company/contractors/create-full" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
     </div>
 </div>
@@ -145,3 +145,30 @@
 </script>
 
 <?php endif; ?>
+
+<div class="modal-overlay driver-view-overlay" id="le-contractor-modal" data-close-on-overlay="0" data-close-on-escape="0">
+  <div class="modal modal-lg driver-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Создать перевозчика</span>
+      <button type="button" class="modal-close" onclick="closeModal('le-contractor-modal')">&times;</button>
+    </div>
+    <div class="modal-body" id="le-contractor-modal-body">
+      <div class="driver-modal-loading">Загрузка...</div>
+    </div>
+  </div>
+</div>
+<script>
+(function initContractorLegalEntityModal() {
+    var config = { modalId: 'le-contractor-modal', formAction: '/company/contractors/create', typeField: 'contractor_type' };
+    if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
+        window.LegalEntityModal.init(config);
+        return;
+    }
+
+    window.addEventListener('load', function () {
+        if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
+            window.LegalEntityModal.init(config);
+        }
+    }, { once: true });
+})();
+</script>
