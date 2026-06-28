@@ -81,25 +81,33 @@
 
         <form method="post" action="/superadmin/companies/<?= $company['id'] ?>/delete">
             <div class="form-section">
-                <label class="field-label">Для подтверждения введите точную фразу:</label>
-                <code class="code-hi">DELETE COMPANY <?= $company['id'] ?></code>
-                <input type="text" class="field-input field-confirm" name="confirm_phrase" value="<?= e($confirmValue ?? '') ?>" placeholder="DELETE COMPANY <?= $company['id'] ?>" autocomplete="off">
-
-                <?php if (!empty($backupWarning)): ?>
-                <div class="notice warn">
-                    <?php if (!empty($backupDetails)): ?><?= e($backupDetails) ?><br><?php endif; ?>
-                    Резервная копия не создана. Локальная БД и файлы будут удалены без возможности восстановления.
+                <div class="field">
+                    <label class="field-label">
+                        <input type="checkbox" name="confirm_checkbox" value="1" required>
+                        <strong>Я понимаю, что действие необратимо</strong>
+                    </label>
+                    <p class="field-msg">Локальная БД, storage-папка, все пользователи, документы и файлы компании будут безвозвратно удалены. Восстановление возможно только из резервной копии.</p>
                 </div>
-                <label class="label-block">
-                    <input type="checkbox" name="skip_backup" value="1">
-                    Я понимаю, что резервная копия не создана
-                </label>
+
+                <div class="field">
+                    <label class="field-label" for="confirm_name">Введите точное название компании:</label>
+                    <code class="code-hi"><?= e($company['name']) ?></code>
+                    <input type="text" id="confirm_name" class="field-input field-confirm" name="confirm_name" value="" placeholder="<?= e($company['name']) ?>" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="confirm_phrase">Введите контрольную фразу:</label>
+                    <code class="code-hi">УДАЛИТЬ НАВСЕГДА</code>
+                    <input type="text" id="confirm_phrase" class="field-input field-confirm" name="confirm_phrase" value="" placeholder="УДАЛИТЬ НАВСЕГДА" autocomplete="off">
+                </div>
+
+                <?php if (!empty($localDbError)): ?>
+                <div class="notice warn"><?= e($localDbError) ?></div>
                 <?php endif; ?>
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-danger">Удалить компанию навсегда</button>
-         
                 <a href="/superadmin/companies/<?= $company['id'] ?>" class="btn btn-ghost">← Отмена</a>
             </div>
         </form>
