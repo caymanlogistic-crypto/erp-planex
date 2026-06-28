@@ -1207,6 +1207,162 @@ document.addEventListener('keydown', function (e) {
 // Driver modal — ModalShell adapter
 // ============================================================
 (function () {
+    var clientCtrl = ModalShell.create({
+        modalId: 'client-view-modal',
+        deleteConfirmId: 'client-archive-confirm-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u041a\u043b\u0438\u0435\u043d\u0442',
+        loadingClass: 'driver-modal-loading',
+        nameSelector: '.driver-view-name',
+        editFormSelector: '#client-edit-form',
+        gridSelector: '.table-card[data-erp-grid]',
+        gridStateKey: 'companyClientsGridState',
+        viewBtnSelectors: {
+            edit: '[data-client-edit-btn]',
+            close: '[data-client-view-close-btn]',
+            delete: '[data-client-archive-btn]'
+        },
+        editBtnSelectors: {
+            cancel: '[data-client-cancel-edit-btn]'
+        },
+        endpoints: {
+            view: function (id) { return '/company/clients/' + id + '/modal-view'; },
+            edit: function (id) { return '/company/clients/' + id + '/modal-edit'; },
+            delete: function (id) { return '/company/clients/' + id + '/modal-archive'; }
+        },
+        errorMessages: {
+            loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u043a\u043b\u0438\u0435\u043d\u0442\u0430.',
+            saveFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f.',
+            deleteFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043a\u043b\u0438\u0435\u043d\u0442\u0430.'
+        },
+        deleteConfirm: {
+            title: '\u0410\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043a\u043b\u0438\u0435\u043d\u0442\u0430?',
+            warning: '\u0417\u0430\u043f\u0438\u0441\u044c \u0431\u0443\u0434\u0435\u0442 \u0441\u043a\u0440\u044b\u0442\u0430 \u0438\u0437 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0433\u043e \u0441\u043f\u0438\u0441\u043a\u0430.',
+            instruction: '\u0414\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0432\u0432\u0435\u0434\u0438\u0442\u0435 <b>\u0410\u0420\u0425\u0418\u0412</b>.',
+            placeholder: '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0410\u0420\u0425\u0418\u0412',
+            confirmWord: '\u0410\u0420\u0425\u0418\u0412',
+            cancelBtn: '\u041e\u0442\u043c\u0435\u043d\u0430',
+            confirmBtn: '\u0410\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c'
+        },
+        onContentLoaded: function () {}
+    });
+    ModalShell.register('client', clientCtrl);
+
+    var clientTable = document.querySelector('.table-card[data-erp-grid] tbody');
+    if (clientTable && document.querySelector('tr[data-client-id]')) {
+        clientTable.addEventListener('click', function (event) {
+            var row = event.target.closest('tr[data-client-id]');
+            if (!row) {
+                return;
+            }
+
+            var viewLink = event.target.closest('a[href^="/company/clients/"]');
+            var viewHref = viewLink ? (viewLink.getAttribute('href') || '') : '';
+            if (viewLink && !viewHref.endsWith('/edit') && /^\/company\/clients\/\d+$/.test(viewHref)) {
+                event.preventDefault();
+                var viewId = row.getAttribute('data-client-id');
+                if (viewId) clientCtrl.loadView(viewId);
+                return;
+            }
+
+            var editLink = event.target.closest('a[href*="/company/clients/"][href$="/edit"]');
+            if (editLink) {
+                event.preventDefault();
+                var editId = row.getAttribute('data-client-id');
+                if (editId) clientCtrl.loadEdit(editId);
+            }
+        });
+
+        clientTable.addEventListener('dblclick', function (event) {
+            if (event.target.closest('a, button, input, select, textarea, label')) return;
+            var row = event.target.closest('tr[data-client-id]');
+            if (!row) return;
+            var id = row.getAttribute('data-client-id');
+            if (id) clientCtrl.loadView(id);
+        });
+    }
+})();
+
+(function () {
+    var contractorCtrl = ModalShell.create({
+        modalId: 'contractor-view-modal',
+        deleteConfirmId: 'contractor-archive-confirm-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u041f\u0435\u0440\u0435\u0432\u043e\u0437\u0447\u0438\u043a',
+        loadingClass: 'driver-modal-loading',
+        nameSelector: '.driver-view-name',
+        editFormSelector: '#contractor-edit-form',
+        gridSelector: '.table-card[data-erp-grid]',
+        gridStateKey: 'companyContractorsGridState',
+        viewBtnSelectors: {
+            edit: '[data-contractor-edit-btn]',
+            close: '[data-contractor-view-close-btn]',
+            delete: '[data-contractor-archive-btn]'
+        },
+        editBtnSelectors: {
+            cancel: '[data-contractor-cancel-edit-btn]'
+        },
+        endpoints: {
+            view: function (id) { return '/company/contractors/' + id + '/modal-view'; },
+            edit: function (id) { return '/company/contractors/' + id + '/modal-edit'; },
+            delete: function (id) { return '/company/contractors/' + id + '/modal-archive'; }
+        },
+        errorMessages: {
+            loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u043f\u0435\u0440\u0435\u0432\u043e\u0437\u0447\u0438\u043a\u0430.',
+            saveFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f.',
+            deleteFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043f\u0435\u0440\u0435\u0432\u043e\u0437\u0447\u0438\u043a\u0430.'
+        },
+        deleteConfirm: {
+            title: '\u0410\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043f\u0435\u0440\u0435\u0432\u043e\u0437\u0447\u0438\u043a\u0430?',
+            warning: '\u0417\u0430\u043f\u0438\u0441\u044c \u0431\u0443\u0434\u0435\u0442 \u0441\u043a\u0440\u044b\u0442\u0430 \u0438\u0437 \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0433\u043e \u0441\u043f\u0438\u0441\u043a\u0430.',
+            instruction: '\u0414\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0432\u0432\u0435\u0434\u0438\u0442\u0435 <b>\u0410\u0420\u0425\u0418\u0412</b>.',
+            placeholder: '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0410\u0420\u0425\u0418\u0412',
+            confirmWord: '\u0410\u0420\u0425\u0418\u0412',
+            cancelBtn: '\u041e\u0442\u043c\u0435\u043d\u0430',
+            confirmBtn: '\u0410\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c'
+        },
+        onContentLoaded: function () {}
+    });
+    ModalShell.register('contractor', contractorCtrl);
+
+    var contractorTable = document.querySelector('.table-card[data-erp-grid] tbody');
+    if (contractorTable && document.querySelector('tr[data-contractor-id]')) {
+        contractorTable.addEventListener('click', function (event) {
+            var row = event.target.closest('tr[data-contractor-id]');
+            if (!row) {
+                return;
+            }
+
+            var viewLink = event.target.closest('a[href^="/company/contractors/"]');
+            var viewHref = viewLink ? (viewLink.getAttribute('href') || '') : '';
+            if (viewLink && !viewHref.endsWith('/edit') && /^\/company\/contractors\/\d+$/.test(viewHref)) {
+                event.preventDefault();
+                var viewId = row.getAttribute('data-contractor-id');
+                if (viewId) contractorCtrl.loadView(viewId);
+                return;
+            }
+
+            var editLink = event.target.closest('a[href*="/company/contractors/"][href$="/edit"]');
+            if (editLink) {
+                event.preventDefault();
+                var editId = row.getAttribute('data-contractor-id');
+                if (editId) contractorCtrl.loadEdit(editId);
+            }
+        });
+
+        contractorTable.addEventListener('dblclick', function (event) {
+            if (event.target.closest('a, button, input, select, textarea, label')) return;
+            var row = event.target.closest('tr[data-contractor-id]');
+            if (!row) return;
+            var id = row.getAttribute('data-contractor-id');
+            if (id) contractorCtrl.loadView(id);
+        });
+    }
+})();
+
+(function () {
     var driverCtrl = ModalShell.create({
         modalId: 'driver-view-modal',
         deleteConfirmId: 'driver-delete-confirm-modal',

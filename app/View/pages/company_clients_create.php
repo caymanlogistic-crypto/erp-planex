@@ -1143,6 +1143,16 @@ $predefDocs = [
     }
 
     function runInnLookup() {
+        if (window.runLegalEntityInnLookup) {
+            window.runLegalEntityInnLookup(createForm, {
+                button: innAutofillBtn,
+                typeFieldName: 'entity_type',
+                idleButtonText: 'Заполнить автоматически',
+                loadingButtonText: 'Поиск...'
+            });
+            return;
+        }
+
         var innField = byName('inn');
         var rawInn = stripSpacesAndHyphens(innField ? innField.value : '');
 

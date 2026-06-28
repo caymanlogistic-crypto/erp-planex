@@ -232,6 +232,9 @@ if ($crumbContext !== '') {
     </div>
 
     <script src="/assets/js/modal-shell.js"></script>
+    <script src="/assets/js/contact-fields.js"></script>
+    <script src="/assets/js/legal-entity-documents.js"></script>
+    <script src="/assets/js/legal-entity-inn.js"></script>
     <script src="/assets/js/legal-entity-modal.js"></script>
     <script src="/assets/js/app.js"></script>
 </body>

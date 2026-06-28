@@ -101,3 +101,13 @@
 56. **Пустой список не равен отсутствию доступа.** Для `logist` на `/company/route-executors` пустой набор данных должен отображаться как empty-state с понятным действием, а не как сообщение «Нет доступа».
 
 57. **Модалки действий должны существовать в DOM во всех состояниях списка.** Для `/company/vehicle-sets` модалка создания транспорта должна подключаться независимо от того, есть ли строки в таблице. Нельзя размещать modal только внутри ветки непустого списка, если кнопка доступна и в empty-state.
+
+58. **Legal entity modal stack закреплён как рабочий pattern.** Для client/contractor допускается расширение через `ModalShell` + `LegalEntityCreateModal` при условии сохранения существующих full-page CRUD и без изменения базовой ERP table/shell-структуры страниц списка.
+
+59. **Contact fields и INN lookup должны жить в общих переиспользуемых helper-компонентах.** Для client/contractor принят единый partial `contact_fields.php` и единый frontend helper для INN lookup/fallback. Новые формы не должны дублировать эту логику отдельными реализациями.
+
+60. **Document upload для legal entities принят только как отдельный runtime-блок.** Для client/contractor document helper `app/Support/legal_entity_document_upload.php` считается принятым только при отдельной проверке create/edit/remove/save/reopen. Для driver/vehicle-set document runtime остаётся обязательным при любых изменениях document UI/handler.
+
+61. **Обязательный runtime-браузер — правило приёмки, а не опция.** Если задача затрагивает формы, CRUD, модалки, upload, lookup или frontend state, отчёт `DONE`/`PASS` невозможен без реального browser runtime с проверкой console/network. Простая проверка `302 -> login` или только backend lint не считается приёмкой.
+
+62. **Superadmin modal-create отложен до owner decision.** Текущий provisioning flow superadmin/company/owner нельзя переводить в modal-only режим без отдельного решения владельца. До этого разрешены только безопасные E2E-проверки существующего full-page flow.

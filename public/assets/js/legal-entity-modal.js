@@ -32,35 +32,37 @@
         }
 
         function wireForm(form) {
-            form.setAttribute('onsubmit', 'return false');
-            var btn = form.querySelector('button[type="submit"]');
-            if (btn) {
-                btn.addEventListener('click', function(e) {
+            if (window.initContactFields) {
+                window.initContactFields(form, { fieldPrefix: 'contacts' });
+            }
+            if (window.initLegalEntityDocuments) {
+                window.initLegalEntityDocuments(form);
+            }
+            if (form.dataset.leSubmitReady !== '1') {
+                form.dataset.leSubmitReady = '1';
+                form.addEventListener('submit', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     doSubmit(form);
                 });
             }
             var innBtn = form.querySelector('[data-inn-autofill-btn]');
-            if (innBtn) {
+            if (innBtn && innBtn.dataset.leInnReady !== '1') {
+                innBtn.dataset.leInnReady = '1';
                 innBtn.addEventListener('click', function() { doInnLookup(form, innBtn); });
             }
         }
 
         function doSubmit(form) {
-            var fields = ['name','inn',typeField,'kpp','ogrn','director_full_name','director_position',
-                'legal_address','physical_address','bank_account','bank_bik','bank_name','bank_corr_account','comments'];
-            var params = new URLSearchParams();
-            params.set('is_modal', '1');
-            fields.forEach(function(name) {
-                var el = form.querySelector('[name="' + name + '"]');
-                params.set(name, el ? el.value : '');
-            });
+            if (window.validateLegalEntityDocuments && !window.validateLegalEntityDocuments(form)) {
+                return;
+            }
+            var formData = new FormData(form);
+            formData.set('is_modal', '1');
             fetch(A, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params.toString()
+                body: formData
             })
             .then(function(r) { return r.text(); })
             .then(function(html) {
@@ -82,6 +84,15 @@
         }
 
         function doInnLookup(form, btn) {
+            if (window.runLegalEntityInnLookup) {
+                window.runLegalEntityInnLookup(form, {
+                    button: btn,
+                    typeFieldName: typeField,
+                    idleButtonText: '\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u043f\u043e \u0418\u041d\u041d',
+                    loadingButtonText: '\u041f\u043e\u0438\u0441\u043a...'
+                });
+                return;
+            }
             var inn = form.querySelector('[name="inn"]');
             if (!inn || !inn.value.trim()) return;
             btn.disabled = true;

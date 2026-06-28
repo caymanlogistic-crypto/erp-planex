@@ -89,7 +89,7 @@
             </thead>
             <tbody>
                 <?php foreach ($clients as $c): ?>
-                <tr data-erp-sort-date="<?= $c['id'] ?>">
+                <tr data-erp-sort-date="<?= $c['id'] ?>" data-client-id="<?= $c['id'] ?>">
                     <td class="col-mono"><?= $c['id'] ?></td>
                     <td><?= e($c['name']) ?></td>
                     <td class="col-mono"><?= e($c['inn']) ?></td>

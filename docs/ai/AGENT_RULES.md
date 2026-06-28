@@ -295,6 +295,43 @@ cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && git diff --check"
 - Cascade sharing через UI удалён.
 - Grants могут использоваться другими модулями, но НЕ как основной пользовательский сценарий управления доступом между логистами.
 
+## 15. Обязательное правило runtime для forms/modals/documents
+
+Если задача касается хотя бы одного из пунктов ниже, агент обязан сделать реальный browser/runtime до отчёта о приёмке:
+
+- create/edit/archive формы;
+- modal CRUD;
+- document upload / replace / delete / reopen;
+- lookup/helper-поведение на frontend;
+- JS-инициализация частичных форм;
+- изменения в protected core страницах списка и карточек.
+
+Минимум для приёмки:
+
+- реальный сценарий в браузере, а не только HTTP-статус;
+- `Console = 0 JS errors`;
+- `Network = 0` запросов `4xx/5xx/500`, кроме явно ожидаемых тестовых исключений, зафиксированных в задаче;
+- повторное открытие сущности после сохранения там, где это важно для state/documents;
+- `php -l` по изменённым PHP и `git diff --check`.
+
+## 16. Modal/entity pattern 2026-06-28
+
+Для client/contractor принят следующий безопасный pattern:
+
+- `ModalShell` отвечает за открытие/закрытие и загрузку modal routes;
+- `LegalEntityCreateModal` используется для create-сценария;
+- modal view/edit/archive работают рядом с существующими full-page routes и не заменяют их;
+- общий `ContactFields` и общий INN helper не дублируются отдельным кодом в каждой форме;
+- document helper legal entities проверяется отдельным runtime-блоком и не считается принятым по косвенной регрессии.
+
+## 17. Superadmin provisioning guardrail
+
+Текущий superadmin/company create flow находится под архитектурным ограничением:
+
+- modal-only create для superadmin/company/owner запрещён без owner decision;
+- разрешены только безопасные проверки существующего full-page flow;
+- повод остановить работу: риск сломать provisioning, роли/доступы, структуру БД, SUPERADMIN create-owner flow или удаление данных.
+
 
 ## 14. Исполнитель рейса и реальная схема БД
 

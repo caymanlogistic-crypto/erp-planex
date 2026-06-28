@@ -139,7 +139,7 @@
         if (!row) return;
         var contractorId = row.getAttribute('data-contractor-id');
         if (!contractorId) return;
-        window.location.href = '/company/contractors/' + contractorId;
+        return;
     });
 })();
 </script>
