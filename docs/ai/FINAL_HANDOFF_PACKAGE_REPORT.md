@@ -4,8 +4,8 @@
 
 **Date**: 2026-06-28
 **Branch**: `refactor/e14-e15-final-architecture-review`
-**Head commit**: (will be set after final commit — `fix(documents): close final handoff document actions runtime blocker`)
-**Previous commits**: `e0dd83c`, `f3aaa65b`, `e7f61630`, `40085d4b`, `ab1c8251`, `ccc159b2`, `3f73688e`
+**Head commit**: `7f8eca1` — `fix(documents): align document upload and replace actions`
+**Previous commits**: `ad89ffe`, `e0dd83c`, `f3aaa65b`, `e7f61630`, `40085d4b`, `ab1c8251`, `ccc159b2`, `3f73688e`
 **Working tree**: clean
 
 ---
@@ -106,13 +106,13 @@ All tests performed on PHP 8.5.6 built-in server.
 
 **Archive contents verified**:
 - `app/`, `bootstrap/`, `config/`, `database/`, `docs/`, `public/`, `tools/`
-- `AGENTS.md`, `README.md`, `README_UNPACK.md`, `composer.json`, `.env.example`, `.gitignore`
+- `AGENTS.md`, `README.md`, `README_UNPACK.md`, `.env.example`, `.gitignore`
 - `.kilo/node_modules` **absent** ✓
 - `.env` **absent** ✓
 - `storage/` **absent** ✓
 - `logs/` **absent** ✓
 - `tmp_runtime_server.*` **absent** ✓
-- `docs/ai/FINAL_HANDOFF_PACKAGE_REPORT.md` contains head commit `f3aaa65` ✓
+- `docs/ai/FINAL_HANDOFF_PACKAGE_REPORT.md` contains head commit `7f8eca1` ✓
 
 ---
 
@@ -139,18 +139,14 @@ All tests performed on PHP 8.5.6 built-in server.
 
 ---
 
-## FINAL-HANDOFF.3 DocumentActions blocker fixed
+## FINAL-HANDOFF.4 DocumentActions replace/upload type fix
 
 **Files changed**:
-- `app/Http/Controllers/Company/DocumentActions/index.php` — whitelist extended with `displayField`, universal `SELECT name,full_name,plate_number` replaced with safe `SELECT \`$displayField\`` from whitelist
-- `app/Http/Controllers/Company/DocumentActions/upload_form.php` — rewritten to prepare ALL view context variables ($company, $entityType, $entityId, $docTypes, $entityName, $entityLabel, $errors, $formError, $replacedDoc, etc.)
-- `app/View/pages/company_documents.php` — delete form now sends hidden POST fields (`id`, `entity_type`, `entity_id`) instead of relying on query string
-- `app/View/pages/company_documents_upload.php` — added hidden `entity_type`/`entity_id` fields; file input renamed to `doc_file` to match `upload_submit.php`
-- `tools/architecture_guard.php` — added DocumentActions consistency checks (file input name, hidden fields, whitelist displayField, POST id, etc.)
+- `app/Http/Controllers/Company/DocumentActions/upload_submit.php` — reads `document_type` (form standard) with `doc_type` fallback
+- `app/Http/Controllers/Company/DocumentActions/replace.php` — rewritten for new form: `doc_file`, `replace_doc_id`, `document_type`, `entity_type`, `entity_id`; soft-deletes old doc, creates new entry
+- `tools/architecture_guard.php` — added DocumentActions field name consistency checks (document_type vs doc_type, doc_file, replace_doc_id, hidden entity fields)
 
-**Entity types verified**: client, contractor, driver, vehicle_set, vehicle_unit, driver_vehicle_block, crew — all return 200 without SQL fatal.
-
-**Runtime results**: all PASS — docs list, upload form, regression pages, legacy redirects, roles.
+**Runtime results**: upload with type — PASS; .exe rejection — PASS; list all entity types — PASS; regression — PASS.
 
 1. **Extract and run**: copy `.env.example` → `.env`, configure DB, run `php -S localhost:8017 -t public public/index.php`
 2. **Login as each role** and test all CRUD workflows

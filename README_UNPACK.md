@@ -24,7 +24,6 @@ C:\Projects\erp-planex-review
 | `docs/` | Архитектурная и проектная документация |
 | `tools/` | Architecture guard, утилиты |
 | `.env.example` | Шаблон конфигурации (скопировать → `.env`) |
-| `composer.json` | Зависимости |
 
 ## Что исключено из архива
 
@@ -41,7 +40,6 @@ C:\Projects\erp-planex-review
 ```bash
 cp .env.example .env
 # настроить .env: БД, пароли
-composer install
 php -S localhost:8017 -t public public/index.php
 ```
 
