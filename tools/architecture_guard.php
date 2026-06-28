@@ -213,8 +213,21 @@ foreach (['index.php', 'create_form.php', 'create_submit.php', 'edit_form.php'] 
     }
 }
 
-// === Mojibake: check all PHP files are valid UTF-8 ===
-$dirsToCheck = ['app', 'docs', 'public'];
+// === Mojibake: check all text files for valid UTF-8 and mojibake markers ===
+function isUtf8($content): bool {
+    if (function_exists('mb_check_encoding')) {
+        return mb_check_encoding($content, 'UTF-8');
+    }
+    // Fallback: check no invalid UTF-8 sequences
+    return (bool)preg_match('//u', $content);
+}
+
+$dirsToCheck = ['app', 'docs', 'public', 'database', 'tools'];
+// Reliable mojibake indicators: Ð (0xC3 0x90) and Ñ (0xC3 0x91) 
+// when they appear in likely-double-encoded contexts
+// Check for the literal UTF-8 bytes of Ð and Ñ in PHP/SQL files
+// which indicate UTF-8 bytes were read as Latin-1 and re-saved
+$mojibakeRx = '/\xC3[\x90-\x91][\x80-\xBF]/';  // Ð or Ñ followed by a continuation byte
 foreach ($dirsToCheck as $dir) {
     $rdir = $root . DIRECTORY_SEPARATOR . $dir;
     if (!is_dir($rdir)) continue;
@@ -223,10 +236,21 @@ foreach ($dirsToCheck as $dir) {
         if (!$file->isFile()) continue;
         $ext = strtolower($file->getExtension());
         if (!in_array($ext, ['php', 'md', 'sql', 'html', 'env'])) continue;
-        $content = file_get_contents($file->getPathname());
+        $path = $file->getPathname();
+        // Skip vendor (shouldn't exist but just in case)
+        if (strpos($path, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR) !== false) continue;
+        if (strpos($path, DIRECTORY_SEPARATOR . 'node_modules' . DIRECTORY_SEPARATOR) !== false) continue;
+        // Skip self (patterns match own source)
+        if (strpos($path, 'architecture_guard.php') !== false) continue;
+        $content = file_get_contents($path);
         if (strlen($content) === 0) continue;
-        if (!mb_check_encoding($content, 'UTF-8')) {
-            $warnings[] = "NOT UTF-8: {$file->getPathname()}";
+        if (!isUtf8($content)) {
+            $warnings[] = "NOT UTF-8: $path";
+            continue;
+        }
+        // Explicit mojibake marker: Ð/Ñ followed by continuation byte
+        if (preg_match($mojibakeRx, $content)) {
+            $warnings[] = "MOJIBAKE: $path";
         }
     }
 }

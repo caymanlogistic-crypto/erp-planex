@@ -4,7 +4,9 @@
 
 **Date**: 2026-06-28
 **Branch**: `refactor/e14-e15-final-architecture-review`
-**Head commit**: `ccc159b2` — `fix(runtime): load modular service classes for final handoff`
+**Head commit**: `ab1c8251` — `docs: prepare final handoff package`
+**Fix commit**: `ccc159b2` — `fix(runtime): load modular service classes`
+**Handoff fixes**: (pending commit — `fix(handoff): clean final package and harden encoding guard`)
 **Previous commits**: E8 `41e075a`, E9 `b384802`, E10-E13 `3f4e51b`, Cyrillic `8d4c0e03`, E14-E15 `3f73688e`
 **Working tree**: clean
 

@@ -31,6 +31,6 @@ EXECUTE addUniqueIfNotExists;
 DEALLOCATE PREPARE addUniqueIfNotExists;
 
 INSERT IGNORE INTO `document_types` (`name`, `code`, `entity_type`, `category`, `sort_order`) VALUES
-('ëíë', 'sts', 'vehicle_unit', 'predefined', 1),
-('Ñ®†£≠Æ·‚®Á•·™†Ô ™†‡‚†', 'diagnostic_card', 'vehicle_unit', 'predefined', 2),
-('îÆ‚Æ£‡†‰®Ô', 'photo', 'vehicle_unit', 'predefined', 3);
+('–°–¢–°', 'sts', 'vehicle_unit', 'predefined', 1),
+('–î–∏–∞–≥–Ω–æ—Å—Ç–∏—á–µ—Å–∫–∞—è –∫–∞—Ä—Ç–∞', 'diagnostic_card', 'vehicle_unit', 'predefined', 2),
+('–§–æ—Ç–æ', 'photo', 'vehicle_unit', 'predefined', 3);
