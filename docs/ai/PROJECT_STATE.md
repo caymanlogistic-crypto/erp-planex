@@ -1,8 +1,18 @@
 # ERP PLANEX — текущее состояние проекта
 
-## Актуализация 2026-06-28 — E8 Clients Module Extraction
+## Актуализация 2026-06-28 — E9 Contractors Module Extraction
 
-**Статус**: CLIENTS_MODULE_E8_ACCEPTED
+**Статус**: CONTRACTORS_MODULE_E9_ACCEPTED
+
+Выполнено:
+- Модуль Contractors выделен из монолитного route-файла `company_contractors.php` (3212 → 51 строка) в модульную структуру `Route → Controller → Service → View`.
+- Создан `app/Http/Controllers/Company/ContractorController.php` — тонкий контроллер (135 строк), делегирует в action includes.
+- Создан `app/Service/ContractorService.php` — бизнес-логика: подключение к БД, валидация, CRUD, миграции, grants, logists.
+- Созданы 22 action include файла в `app/Http/Controllers/Company/ContractorActions/`.
+- Создан `docs/ai/CONTRACTORS_MODULE_E9_PLAN.md` — детальный план рефакторинга.
+- Весь функционал сохранён: список, create (full page + modal), edit, view, archive, create-full, add-crew, contacts CRUD, tax history, INN/autofill, документы, ролевой доступ.
+- `php -l` — 0 ошибок. `architecture_guard.php` — PASS.
+- Модуль Contractors — второй полноценный пример стандарта `Route → Controller → Service → View` вслед за Clients.
 
 Выполнено:
 - Модуль Clients выделен из монолитного route-файла `company_clients.php` (1372 → 16 строк) в модульную структуру `Route → Controller → Service → View`.

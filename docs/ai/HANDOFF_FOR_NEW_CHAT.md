@@ -1,8 +1,17 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
-## Актуализация 2026-06-28 — E8 Clients Module Extraction
+## Актуализация 2026-06-28 — E9 Contractors Module Extraction
 
-**Статус**: CLIENTS_MODULE_E8_ACCEPTED
+**Статус**: CONTRACTORS_MODULE_E9_ACCEPTED
+
+Ключевые изменения:
+- Модуль Contractors выделен из `company_contractors.php` (3212 → 51 строка) в `Route → Controller → Service → View`.
+- Создан `app/Http/Controllers/Company/ContractorController.php` — тонкий контроллер, делегирует в 22 action include файла.
+- Создан `app/Service/ContractorService.php` — бизнес-логика: подключение к БД, валидация, CRUD, миграции, grants.
+- Созданы 22 action файла в `app/Http/Controllers/Company/ContractorActions/`.
+- Полная обратная совместимость: все маршруты, права, дизайн, INN/autofill, contacts, документы, create-full, add-crew, contacts CRUD, tax history, modal view/edit/archive сохранены.
+- Contractors — второй модуль (после Clients, E8), приведённый к стандарту `Route → Controller → Service → View`.
+- `php -l` — 0 ошибок. `architecture_guard.php` — PASS.
 
 Ключевые изменения:
 - Модуль Clients выделен из `company_clients.php` (1372 → 16 строк) в `Route → Controller → Service → View`.
