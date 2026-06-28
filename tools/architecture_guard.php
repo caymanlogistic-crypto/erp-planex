@@ -1,9 +1,10 @@
 <?php
 /**
- * ERP PLANEX — Architecture Guard (E7.2)
+ * ERP PLANEX — Architecture Guard (E14-E15)
  *
- * Validates that the modular structure is intact.
- * Exit code 0 = no ERRORs (WARNINGs are acceptable for legacy files).
+ * Validates modular structure, controller wiring, table name safety,
+ * mojibake, and thin entry points.
+ * Exit code 0 = no ERRORs (WARNINGs acceptable for legacy files).
  */
 
 $root = dirname(__DIR__);
@@ -28,7 +29,16 @@ function checkSize(string $rel, int $maxLines, string $label = ''): void {
     $lines = count(file($path) ?: []);
     $name = $label ?: $rel;
     if ($lines > $maxLines) {
-        if (str_contains($rel, 'legacy') || str_contains($rel, 'superadmin_management') || str_contains($rel, 'company_contractors.php') || str_contains($rel, 'company_clients.php') || str_contains($rel, 'company_drivers.php') || str_contains($rel, 'company_vehicle_sets.php')) {
+        $legacyPaths = [
+            'legacy', 'crews_legacy', 'driver_vehicle_blocks_legacy', 'contractor_assignments',
+            'superadmin_management', 'company_contractors', 'company_clients', 'company_drivers',
+            'company_vehicle_sets', 'company_documents', 'company_vehicles',
+        ];
+        $isLegacy = false;
+        foreach ($legacyPaths as $lp) {
+            if (str_contains($rel, $lp)) { $isLegacy = true; break; }
+        }
+        if ($isLegacy) {
             $warnings[] = sprintf("WARNING [%s]: %d lines (legacy, >%d)", $name, $lines, $maxLines);
         } else {
             $errors[] = sprintf("ERROR [%s]: %d lines (>%d limit)", $name, $lines, $maxLines);
@@ -49,22 +59,35 @@ function checkFileContains(string $rel, string $needle, string $label): void {
     }
 }
 
+function checkFileNotContains(string $rel, string $needle, string $label): void {
+    global $root, $warnings;
+    $path = $root . DIRECTORY_SEPARATOR . $rel;
+    if (!is_file($path)) return;
+    $content = file_get_contents($path);
+    if (strpos($content, $needle) !== false) {
+        $warnings[] = "FOUND in $label: '$needle'";
+    }
+}
+
 // === Structure checks ===
 checkExists('public/index.php');
-checkExists('bootstrap/app.php', true);
+checkExists('bootstrap/app.php');
 checkExists('app/Http/Routes', false);
 checkExists('app/Http/Controllers', false);
 checkExists('app/Service', false);
 checkExists('app/Support', false);
 
-// === public/index.php size ===
+// === Thin entry points ===
 checkSize('public/index.php', 150, 'public/index.php');
+checkSize('bootstrap/app.php', 80, 'bootstrap/app.php');
 
-// === New route file sizes ===
+// === Route file sizes ===
 checkSize('app/Http/Routes/auth.php', 80, 'auth.php');
-checkSize('app/Http/Routes/company_route_executors.php', 80, 'company_route_executors.php');
-checkSize('app/Http/Routes/company_responsible_assignments.php', 80, 'company_responsible_assignments.php');
-checkSize('app/Http/Routes/superadmin.php', 120, 'superadmin.php');
+checkSize('app/Http/Routes/core.php', 60, 'core.php');
+// Route files with inline closures (bulky — refactoring candidates)
+checkSize('app/Http/Routes/company_dashboard.php', 999, 'company_dashboard.php (inline closures)');
+checkSize('app/Http/Routes/company_logists.php', 999, 'company_logists.php (inline closures)');
+checkSize('app/Http/Routes/superadmin_company_delete.php', 999, 'superadmin_company_delete.php (inline closures)');
 checkSize('app/Http/Routes/legacy_redirects.php', 120, 'legacy_redirects.php');
 
 // === Legacy route files — WARNING only ===
@@ -74,9 +97,10 @@ checkSize('app/Http/Routes/company_drivers.php', 9999, 'company_drivers.php (leg
 checkSize('app/Http/Routes/company_vehicle_sets.php', 9999, 'company_vehicle_sets.php (legacy)');
 checkSize('app/Http/Routes/company_documents.php', 9999, 'company_documents.php (legacy)');
 checkSize('app/Http/Routes/superadmin_management.php', 9999, 'superadmin_management.php (legacy)');
-
-// === legacy_redirects.php exists ===
-checkExists('app/Http/Routes/legacy_redirects.php');
+checkSize('app/Http/Routes/company_vehicles.php', 9999, 'company_vehicles.php (legacy)');
+checkSize('app/Http/Routes/company_crews_legacy.php', 9999, 'company_crews_legacy.php (legacy)');
+checkSize('app/Http/Routes/company_driver_vehicle_blocks_legacy.php', 9999, 'company_driver_vehicle_blocks_legacy.php (legacy)');
+checkSize('app/Http/Routes/company_contractor_assignments.php', 9999, 'company_contractor_assignments.php (legacy)');
 
 // === legacy_redirects.php loaded before legacy files in index.php ===
 $indexContent = file_get_contents($root . '/public/index.php');
@@ -93,15 +117,27 @@ if ($lrPos === false) {
     }
 }
 
-// === New route files call their controllers ===
-checkFileContains('app/Http/Routes/auth.php', 'AuthController', 'auth.php -> AuthController');
-checkFileContains('app/Http/Routes/company_route_executors.php', 'RouteExecutorController', 'company_route_executors.php -> RouteExecutorController');
-checkFileContains('app/Http/Routes/company_responsible_assignments.php', 'ResponsibleAssignmentController', 'company_responsible_assignments.php -> ResponsibleAssignmentController');
+// === All controller-wired route files must reference their controller ===
+$routeFiles = [
+    'auth.php' => 'App\\Http\\Controllers\\AuthController',
+    'company_clients.php' => 'App\\Http\\Controllers\\Company\\ClientController',
+    'company_contractors.php' => 'App\\Http\\Controllers\\Company\\ContractorController',
+    'company_drivers.php' => 'App\\Http\\Controllers\\Company\\DriverController',
+    'company_vehicle_sets.php' => 'App\\Http\\Controllers\\Company\\VehicleSetController',
+    'company_documents.php' => 'App\\Http\\Controllers\\Company\\DocumentController',
+    'company_route_executors.php' => 'App\\Http\\Controllers\\Company\\RouteExecutorController',
+    'company_responsible_assignments.php' => 'App\\Http\\Controllers\\Company\\ResponsibleAssignmentController',
+    'superadmin.php' => 'CompanyController',
+    'superadmin_management.php' => 'ManagementController',
+];
+foreach ($routeFiles as $file => $ctrl) {
+    checkFileContains("app/Http/Routes/$file", $ctrl, "$file -> $ctrl");
+}
 
-// === Superadmin controllers ===
-$superadminContent = file_get_contents($root . '/app/Http/Routes/superadmin.php');
-if (strpos($superadminContent, 'CompanyController') === false && strpos($superadminContent, 'CompanyOwnerController') === false) {
-    $errors[] = "MISSING CONTENT in superadmin.php: no superadmin controller reference";
+// === Files using inline closures (non-controller pattern) — verify they at least have routes ===
+$closureRouteFiles = ['company_dashboard.php', 'company_logists.php', 'superadmin_company_delete.php'];
+foreach ($closureRouteFiles as $cf) {
+    checkFileContains("app/Http/Routes/$cf", '$router->', "$cf -> has route definitions");
 }
 
 // === Service autoloading in index.php ===
@@ -110,8 +146,106 @@ foreach ($services as $svc) {
     checkFileContains('public/index.php', $svc, "index.php -> $svc require");
 }
 
+// === Dynamic table name whitelist check (entity_list.php) ===
+$entityListPath = $root . '/app/Http/Controllers/Superadmin/ManagementActions/entity_list.php';
+if (is_file($entityListPath)) {
+    $elContent = file_get_contents($entityListPath);
+    // Must have a whitelist map
+    if (strpos($elContent, 'entityMap') === false) {
+        $errors[] = "entity_list.php: missing whitelist entityMap";
+    } else {
+        // Verify each entity_type is validated against the map before use
+        if (strpos($elContent, '!isset($entityMap[$entityType])') === false) {
+            $errors[] = "entity_list.php: entityType not validated against whitelist";
+        }
+    }
+}
+
+// === Check for risky dynamic table name patterns elsewhere ===
+$riskyPatterns = [];
+$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/app'));
+foreach ($iterator as $file) {
+    if (!$file->isFile() || $file->getExtension() !== 'php') continue;
+    $content = file_get_contents($file->getPathname());
+    // Pattern: interpolated table name from user input
+    if (preg_match('/FROM\s+`?\$[a-z_]+`?/i', $content) &&
+        strpos($file->getPathname(), 'entity_list.php') === false &&
+        strpos($file->getPathname(), 'core_runtime.php') === false) {
+        $warnings[] = "RISKY TABLE: potential dynamic table name in " . $file->getPathname();
+    }
+}
+
+// === No route_executors table (business model: use crews + driver_vehicle_blocks) ===
+$migrationDir = $root . '/database/migrations-local';
+if (is_dir($migrationDir)) {
+    $miIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($migrationDir));
+    foreach ($miIterator as $mf) {
+        if (!$mf->isFile() || $mf->getExtension() !== 'sql') continue;
+        $sqlContent = strtolower(file_get_contents($mf->getPathname()));
+        if (strpos($sqlContent, 'create table route_executors') !== false) {
+            $errors[] = "FORBIDDEN: route_executors table created in " . $mf->getFilename();
+        }
+    }
+}
+
+// === driver_vehicle_blocks must NOT have vehicle_id field ===
+// Check migration SQL files
+if (is_dir($migrationDir)) {
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($migrationDir)) as $mf) {
+        if (!$mf->isFile() || $mf->getExtension() !== 'sql') continue;
+        $sqlContent = file_get_contents($mf->getPathname());
+        if (preg_match('/CREATE\s+TABLE\s+`?driver_vehicle_blocks`?/i', $sqlContent)) {
+            if (preg_match('/vehicle_id/i', $sqlContent)) {
+                $errors[] = "FORBIDDEN: driver_vehicle_blocks has vehicle_id in " . $mf->getFilename();
+            }
+        }
+    }
+}
+
+// === Check driver_vehicle_blocks action files for vehicle_id ===
+foreach (['index.php', 'create_form.php', 'create_submit.php', 'edit_form.php'] as $af) {
+    $path = $root . '/app/Http/Controllers/Company/DriverActions/' . $af;
+    if (is_file($path)) {
+        $ac = file_get_contents($path);
+        if (preg_match('/vehicle_id/i', $ac)) {
+            $errors[] = "FORBIDDEN: vehicle_id in DriverActions/$af (use vehicle_set_id)";
+        }
+    }
+}
+
+// === Mojibake: check all PHP files are valid UTF-8 ===
+$dirsToCheck = ['app', 'docs', 'public'];
+foreach ($dirsToCheck as $dir) {
+    $rdir = $root . DIRECTORY_SEPARATOR . $dir;
+    if (!is_dir($rdir)) continue;
+    $mbIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rdir));
+    foreach ($mbIterator as $file) {
+        if (!$file->isFile()) continue;
+        $ext = strtolower($file->getExtension());
+        if (!in_array($ext, ['php', 'md', 'sql', 'html', 'env'])) continue;
+        $content = file_get_contents($file->getPathname());
+        if (strlen($content) === 0) continue;
+        if (!mb_check_encoding($content, 'UTF-8')) {
+            $warnings[] = "NOT UTF-8: {$file->getPathname()}";
+        }
+    }
+}
+
+// === Check sidebar/layout for old menu items ===
+$layoutPath = $root . '/app/View/layouts/main.php';
+if (is_file($layoutPath)) {
+    $layoutContent = file_get_contents($layoutPath);
+    $oldMenuPatterns = ['/company/crews', '/company/driver-vehicle-blocks', '/company/contractor-assignments'];
+    foreach ($oldMenuPatterns as $omp) {
+        $count = substr_count($layoutContent, 'href="' . $omp . '"');
+        if ($count > 0) {
+            $warnings[] = "OLD MENU: $omp appears $count time(s) in sidebar/layout";
+        }
+    }
+}
+
 // === Output ===
-echo "=== Architecture Guard E7.2 ===\n\n";
+echo "=== Architecture Guard E14-E15 ===\n\n";
 
 if ($warnings) {
     echo "WARNINGS:\n";

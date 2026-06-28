@@ -1,6 +1,6 @@
 # MODULAR_DEVELOPMENT_RULES
 
-Статус: **ACTIVE** с E7.2
+Статус: **ACTIVE** с E14-E15 (2026-06-28)
 
 ## Жёсткие правила дальнейшей разработки
 
@@ -38,12 +38,21 @@ Route  →  Controller  →  Service  →  View
 
 ### 4. Action include-файлы
 
-Action include-файлы (`app/Http/Controllers/*/Actions/*.php`) допустимы **только как временный bridge** для legacy-кода, который ещё не вынесен в Controller+Service.
+Action include-файлы (`app/Http/Controllers/*/Actions/*.php`) допустимы **как принятый transitional pattern** (E14-E15 verdict). Все контроллеры используют единый паттерн делегирования action-файлам.
 
-При рефакторинге:
+При рефакторинге (только по отдельной задаче):
 1. Перенести логику в Service.
 2. Перенести HTTP-логику в Controller method.
 3. Удалить action include.
+
+### 4a. Inline closure route-файлы
+
+3 route-файла используют inline closures с полной бизнес-логикой:
+- `company_dashboard.php` — dashboard + access grants
+- `company_logists.php` — logist CRUD (960 строк)
+- `superadmin_company_delete.php` — company delete flow (445 строк)
+
+Эти файлы — refactoring-кандидаты. Изменения в них допустимы только точечные (баг-фикс). Полный рефакторинг — по отдельной задаче.
 
 ### 5. Legacy route-файлы
 

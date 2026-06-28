@@ -1,8 +1,15 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
-## Актуализация 2026-06-28 — E9 Contractors Module Extraction
+## Актуализация 2026-06-28 — E14-E15 Final Architecture Review
 
-**Статус**: CONTRACTORS_MODULE_E9_ACCEPTED
+**Статус**: E14_E15_FINAL_ARCHITECTURE_ACCEPTED
+
+Ключевые изменения:
+- **E14 Action Bridge Assessment**: все контроллеры используют единый паттерн делегирования action-файлам через require. Признан accepted transitional pattern — рефакторинг небезопасен на текущем этапе без полного покрытия тестами.
+- **E15 Architecture Review**: расширен `tools/architecture_guard.php` (E14-E15). Проверены: controller wiring, mojibake, dynamic table whitelist, запрет route_executors, business model rules (driver_vehicle_blocks без vehicle_id), sidebar отсутствие старых меню.
+- **3 route-файла** с inline closures (company_dashboard 240 строк, company_logists 960 строк, superadmin_company_delete 445 строк) — refactoring-кандидаты.
+- Runtime smoke: PASS. Mojibake: PASS. `php -l`: 0 errors. `architecture_guard.php`: PASS (0 errors, 3 warnings).
+- Cleaned up temp tool files (check_mojibake.php, runtime_check.php, check_redirect.php).
 
 Ключевые изменения:
 - Модуль Contractors выделен из `company_contractors.php` (3212 → 51 строка) в `Route → Controller → Service → View`.

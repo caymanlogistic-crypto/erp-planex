@@ -1,16 +1,14 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-06-28 — E10-E13 Batch Modular Refactor
+## Актуализация 2026-06-28 — E14-E15 Final Architecture Review
 
-**Статус**: E10_E13_BATCH_ACCEPTED
+**Статус**: E14_E15_FINAL_ARCHITECTURE_ACCEPTED
 
 Выполнено:
-- **E10 Drivers**: модульное выделение (Controller + Service + 17 action files). Route: ~2500 → 20 строк.
-- **E11 Vehicle Sets**: модульное выделение (Controller + Service + 8 action files). Route: 1844 → 11 строк.
-- **E12 Documents**: модульное выделение (Controller + 13 action files). Route: 1421 → 16 строк.
-- **E13 Superadmin**: модульное выделение (ManagementController + 11 action files). Route: 1544 → 27 строк.
-- `php -l` — 0 ошибок. `architecture_guard.php` — PASS.
-- Все модули соответствуют стандарту `Route → Controller → Service → View`.
+- **E14 Action Bridge Assessment**: все контроллеры используют единый паттерн делегирования action-файлам через require. Признан accepted transitional pattern — рефакторинг потребует перемещения тысяч строк кода и небезопасен на текущем этапе.
+- **E15 Architecture Review**: расширен architecture_guard.php (mojibake, dynamic table whitelist, controller wiring, busines model rules). Проверены sidebar/layout (нет старых меню). Проверены dynamic table names (все через whitelist). Проверена UTF-8 валидность.
+- **Runtime smoke**: все страницы для owner/senior/logist/superadmin — 200 OK.
+- **3 route-файла** (company_dashboard, company_logists, superadmin_company_delete) используют inline closures — refactoring-кандидаты.
 
 ## Что дальше
 

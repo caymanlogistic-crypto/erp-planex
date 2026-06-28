@@ -1,17 +1,22 @@
 # ERP PLANEX — текущее состояние проекта
 
-## Актуализация 2026-06-28 — E10-E13 Batch Modular Refactor
+## Актуализация 2026-06-28 — E14-E15 Final Architecture Review
 
-**Статус**: E10_E13_BATCH_ACCEPTED
+**Статус**: E14_E15_FINAL_ARCHITECTURE_ACCEPTED
 
 Выполнено:
-- **E10 Drivers**: `company_drivers.php` (~2500 → 20 строк). Созданы DriverController, DriverService, 17 action файлов.
-- **E11 Vehicle Sets**: `company_vehicle_sets.php` (1844 → 11 строк). Созданы VehicleSetController, VehicleSetService, 8 action файлов.
-- **E12 Documents**: `company_documents.php` (1421 → 16 строк). Создан DocumentController, 13 action файлов.
-- **E13 Superadmin**: `superadmin_management.php` (1544 → 27 строк). Создан ManagementController, 11 action файлов.
-- Всего: 4 контроллера, 2 новых сервиса, 54 action файла, 4 тонких роут-файла.
-- `php -l` — 0 ошибок. `architecture_guard.php` — PASS.
-- Все модули приведены к стандарту `Route → Controller → Service → View`.\n\nПредыдущие этапы:\n- E8/E9: Clients и Contractors модули (стандарт)\n- E7: Архитектурное разделение\n- E1-E6: Базовая архитектура
+- **E14**: Action bridge assessment — все контроллеры используют единый паттерн делегирования action-файлам через require. Action bridge признан accepted transitional pattern. __НЕ_УБИРАТЬ__: рефакторинг потребует перемещения тысяч строк логики из action-файлов в контроллеры/сервисы.
+- **E15**: Финальная архитектурная ревизия — расширен `tools/architecture_guard.php` (E14-E15: контроль mojibake, dynamic table whitelist, controller wiring, запрет route_executors таблицы, проверка driver_vehicle_blocks без vehicle_id, проверка sidebar).
+- 3 route-файла используют inline closures (company_dashboard, company_logists, superadmin_company_delete) — задокументированы как refactoring-кандидаты.
+- Runtime smoke: PASS (owner, senior_logist, logist, superadmin — все страницы 200).
+- Mojibake scan: PASS (все файлы валидный UTF-8).
+- `php -l` — 0 ошибок. `architecture_guard.php` — PASS (0 errors, 3 warnings).
+
+Предыдущие этапы:
+- E10-E13: Drivers, Vehicle Sets, Documents, Superadmin модули
+- E8/E9: Clients и Contractors модули
+- E7: Архитектурное разделение
+- E1-E6: Базовая архитектура
 
 Выполнено:
 - Модуль Contractors выделен из монолитного route-файла `company_contractors.php` (3212 → 51 строка) в модульную структуру `Route → Controller → Service → View`.
@@ -114,7 +119,7 @@ docs/ui/DESIGN_STANDARD.md
 ## Последний подтверждённый commit по текущей ветке работ
 
 ```text
-1488d55 — feat(route-executors): complete route executor workflow
+(будет создан при фиксации E14-E15 — refactor(core): finalize modular architecture review)
 ```
 
 ## Важные commits из текущей цепочки
