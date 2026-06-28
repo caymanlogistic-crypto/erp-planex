@@ -333,6 +333,20 @@ if (is_file($docReplace)) {
     if (strpos($dr, 'doc_file') === false && strpos($dr, 'predef_doc') !== false) {
         $errors[] = "replace.php: uses old predef_doc instead of doc_file";
     }
+    // Safety: deleted_at UPDATE must NOT happen before doc_file validation + move_uploaded_file
+    $deletePos = strpos($dr, "deleted_at=NOW()");
+    $uploadOkPos = strpos($dr, "UPLOAD_ERR_OK");
+    $movePos = strpos($dr, "move_uploaded_file");
+    if ($deletePos !== false && $uploadOkPos !== false) {
+        if ($deletePos < $uploadOkPos) {
+            $errors[] = "replace.php: UNSAFE — deleted_at set before doc_file validation";
+        }
+    }
+    if ($deletePos !== false && $movePos !== false) {
+        if ($deletePos < $movePos) {
+            $errors[] = "replace.php: UNSAFE — deleted_at set before move_uploaded_file";
+        }
+    }
 }
 $docUploadView = $root . '/app/View/pages/company_documents_upload.php';
 if (is_file($docUploadView)) {
