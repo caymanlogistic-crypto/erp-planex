@@ -373,3 +373,10 @@ tmp/codex-stage-docs/*
 - New route source of truth: pp/Http/Routes/*.php.
 - If a route regression appears, inspect the dedicated route file first, not the old monolith.
 - Shared helpers and pplyLocalMigrations() still remain in public/index.php for now.
+
+## 2026-06-28 storage/companies rule
+
+`storage/companies/*` — рабочие загруженные документы (PDF, изображения и т.д.).
+При очистке проекта/подготовке архива эти директории можно исключать из архива,
+но НЕЛЬЗЯ удалять из рабочей среды. Удаление приводит к осиротевшим записям в БД
+и 404 при просмотре/скачивании.

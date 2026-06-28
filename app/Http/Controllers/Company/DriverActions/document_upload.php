@@ -14,7 +14,7 @@ if($_FILES['doc_file']['size']>$maxSize){header('Location: '.$redirect);exit;}
 $docType=trim($_POST['doc_type']??'Документ');
 $storedName=uniqid('doc_',true).'.'.$ext;$relativeDir='companies/'.$companyId.'/documents/driver/'.$driver_id;$absoluteDir=storage_path($relativeDir);
 if(!is_dir($absoluteDir))mkdir($absoluteDir,0755,true);
-move_uploaded_file($_FILES['doc_file']['tmp_name'],$absoluteDir.DIRECTORY_SEPARATOR.$storedName);
+if(!move_uploaded_file($_FILES['doc_file']['tmp_name'],$absoluteDir.DIRECTORY_SEPARATOR.$storedName)){header('Location: '.$redirect);exit;}
 $localPdo->prepare("INSERT INTO documents (entity_type, entity_id, document_type, original_name, stored_name, relative_path, mime_type, file_size, status, uploaded_by_user_id, uploaded_by_role) VALUES ('driver', ?, ?, ?, ?, ?, ?, ?, 'uploaded', ?, ?)")->execute([
     $driver_id,$docType,$_FILES['doc_file']['name'],$storedName,$relativeDir.'/'.$storedName,$_FILES['doc_file']['type']?:'application/octet-stream',$_FILES['doc_file']['size'],(int)$_SESSION['user_id'],$_SESSION['role_code']??null]);}catch(\Exception$e){}
 header('Location: '.$redirect);exit;
