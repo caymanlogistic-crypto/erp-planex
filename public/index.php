@@ -30,6 +30,13 @@ require_once base_path('app/Service/CompanyInnLookupService.php');
 require_once base_path('app/Service/ContractorContactService.php');
 require_once base_path('app/Service/ClientContactService.php');
 require_once base_path('app/Service/ClientService.php');
+require_once base_path('app/Service/ContractorService.php');
+require_once base_path('app/Service/DriverService.php');
+require_once base_path('app/Service/VehicleSetService.php');
+require_once base_path('app/Service/SuperadminCompanyService.php');
+require_once base_path('app/Service/DocumentService.php');
+require_once base_path('app/Service/RouteExecutorService.php');
+require_once base_path('app/Service/ResponsibleAssignmentService.php');
 require_once base_path('app/Service/LocalMigrationService.php');
 
 require_once base_path('app/Support/core_runtime.php');
