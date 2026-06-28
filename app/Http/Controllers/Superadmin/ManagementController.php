@@ -75,30 +75,35 @@ final class ManagementController
     public function clients(string $id): void
     {
         requireRole('superadmin'); $config = $this->config; $db = $this->db;
+        $entityType = 'client';
         require base_path('app/Http/Controllers/Superadmin/ManagementActions/entity_list.php');
     }
 
     public function contractors(string $id): void
     {
         requireRole('superadmin'); $config = $this->config; $db = $this->db;
+        $entityType = 'contractor';
         require base_path('app/Http/Controllers/Superadmin/ManagementActions/entity_list.php');
     }
 
     public function drivers(string $id): void
     {
         requireRole('superadmin'); $config = $this->config; $db = $this->db;
+        $entityType = 'driver';
         require base_path('app/Http/Controllers/Superadmin/ManagementActions/entity_list.php');
     }
 
     public function vehicles(string $id): void
     {
         requireRole('superadmin'); $config = $this->config; $db = $this->db;
+        $entityType = 'vehicle_unit';
         require base_path('app/Http/Controllers/Superadmin/ManagementActions/entity_list.php');
     }
 
     public function crews(string $id): void
     {
         requireRole('superadmin'); $config = $this->config; $db = $this->db;
+        $entityType = 'crew';
         require base_path('app/Http/Controllers/Superadmin/ManagementActions/entity_list.php');
     }
 
