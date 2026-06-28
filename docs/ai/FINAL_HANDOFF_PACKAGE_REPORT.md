@@ -4,8 +4,8 @@
 
 **Date**: 2026-06-28
 **Branch**: `refactor/e14-e15-final-architecture-review`
-**Head commit**: `7f8eca1` — `fix(documents): align document upload and replace actions`
-**Previous commits**: `ad89ffe`, `e0dd83c`, `f3aaa65b`, `e7f61630`, `40085d4b`, `ab1c8251`, `ccc159b2`, `3f73688e`
+**Head commit**: `68bc4ff` — `fix(documents): make document replace atomic and safe`
+**Previous commits**: `5d1cb73`, `7f8eca1`, `ad89ffe`, `e0dd83c`, `f3aaa65b`, `e7f61630`, `40085d4b`
 **Working tree**: clean
 
 ---
@@ -112,7 +112,7 @@ All tests performed on PHP 8.5.6 built-in server.
 - `storage/` **absent** ✓
 - `logs/` **absent** ✓
 - `tmp_runtime_server.*` **absent** ✓
-- `docs/ai/FINAL_HANDOFF_PACKAGE_REPORT.md` contains head commit `7f8eca1` ✓
+- `docs/ai/FINAL_HANDOFF_PACKAGE_REPORT.md` contains head commit `68bc4ff` ✓
 
 ---
 
@@ -139,14 +139,17 @@ All tests performed on PHP 8.5.6 built-in server.
 
 ---
 
-## FINAL-HANDOFF.4 DocumentActions replace/upload type fix
+## FINAL-HANDOFF.5 DocumentActions replace safety fix
 
 **Files changed**:
-- `app/Http/Controllers/Company/DocumentActions/upload_submit.php` — reads `document_type` (form standard) with `doc_type` fallback
-- `app/Http/Controllers/Company/DocumentActions/replace.php` — rewritten for new form: `doc_file`, `replace_doc_id`, `document_type`, `entity_type`, `entity_id`; soft-deletes old doc, creates new entry
-- `tools/architecture_guard.php` — added DocumentActions field name consistency checks (document_type vs doc_type, doc_file, replace_doc_id, hidden entity fields)
+- `app/Http/Controllers/Company/DocumentActions/replace.php` — reordered: validate doc_file + save new file FIRST, then soft-delete old + insert new in transaction; rollback on failure, old doc preserved
+- `tools/architecture_guard.php` — added safety check: deleted_at before validation triggers error
 
-**Runtime results**: upload with type — PASS; .exe rejection — PASS; list all entity types — PASS; regression — PASS.
+**Runtime results**:
+- Replace valid file: PASS (old doc replaced, new doc active)
+- Replace no file: PASS (rejected, old doc stays active, `error=no_file`)
+- Replace .exe: PASS (rejected, old doc stays active, `error=invalid_extension`)
+- Regression: all pages 200, legacy redirects 302
 
 1. **Extract and run**: copy `.env.example` → `.env`, configure DB, run `php -S localhost:8017 -t public public/index.php`
 2. **Login as each role** and test all CRUD workflows
