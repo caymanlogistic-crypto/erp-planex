@@ -112,7 +112,7 @@ if ($companyError): ?>
 
                 <div class="metric-card">
                     <div class="metric-value"><?= (int)($metrics['archived_crews'] ?? 0) ?></div>
-                    <div class="metric-label">Экипажи (архивные)</div>
+                    <div class="metric-label">Экипажи (удалённые)</div>
                 </div>
 
                 <div class="metric-card">

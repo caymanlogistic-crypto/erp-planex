@@ -149,7 +149,7 @@
                 <select name="status" class="field-input">
                     <option value="active" <?= ($old['status'] ?? '') === 'active' ? 'selected' : '' ?>>Активен</option>
                     <option value="inactive" <?= ($old['status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Неактивен</option>
-                    <option value="archived" <?= ($old['status'] ?? '') === 'archived' ? 'selected' : '' ?>>Архив</option>
+
                 </select>
             </div>
         </div>

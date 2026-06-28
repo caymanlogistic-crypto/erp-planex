@@ -82,11 +82,11 @@ final class ClientService
     {
         if ($isLogist) {
             $stmt = $localPdo->prepare(
-                "SELECT * FROM clients WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'client' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT * FROM clients WHERE deleted_at IS NULL AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'client' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
             );
             $stmt->execute([$userId, $userId]);
         } else {
-            $stmt = $localPdo->query("SELECT * FROM clients ORDER BY created_at DESC");
+            $stmt = $localPdo->query("SELECT * FROM clients WHERE deleted_at IS NULL ORDER BY created_at DESC");
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -221,8 +221,10 @@ final class ClientService
 
     public function archiveClient(PDO $localPdo, int $id): void
     {
-        $update = $localPdo->prepare("UPDATE clients SET status = 'archived' WHERE id = ?");
-        $update->execute([$id]);
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $role = (string)($_SESSION['role_code'] ?? '');
+        $update = $localPdo->prepare("UPDATE clients SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ? AND deleted_at IS NULL");
+        $update->execute([$userId, $role, $id]);
     }
 
     public function getDocTypes(PDO $localPdo): array

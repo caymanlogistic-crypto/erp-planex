@@ -4,6 +4,9 @@ $companyId=(int)(getSessionCompanyId()??0);$docId=(int)($_POST['id']??0);$entity
 if($companyId<=0||$docId<=0){header('Location: /company/documents');exit;}
 try{$pdo=$db->connection();$stmt=$pdo->prepare('SELECT * FROM companies WHERE id=?');$stmt->execute([$companyId]);$company=$stmt->fetch(PDO::FETCH_ASSOC);if(!$company||$company['status']!=='active'){header('Location: /company/documents');exit;}
 $cfg=$config['database'];$cfg['database']=$company['db_identifier'];$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
-$lpdo->prepare("UPDATE documents SET deleted_at=NOW(),deleted_by_user_id=? WHERE id=?")->execute([(int)$_SESSION['user_id'],$docId]);
+$docStmt=$lpdo->prepare("SELECT * FROM documents WHERE id=?");$docStmt->execute([$docId]);$doc=$docStmt->fetch(PDO::FETCH_ASSOC);
+$uid=(int)($_SESSION['user_id']??0);$rl=(string)($_SESSION['role_code']??'');
+$lpdo->prepare("UPDATE documents SET deleted_at=NOW(),deleted_by_user_id=?,deleted_by_role=? WHERE id=?")->execute([$uid,$rl,$docId]);
+if($doc){$snapshot=json_encode($doc,JSON_UNESCAPED_UNICODE);$un=$_SESSION['user_name']??'';try{$cp=$db->connection();\App\Service\AuditService::recordDeletion($cp,$company,'document',$docId,'documents',$doc['original_name']??'#'.$docId,$uid,$rl,$un,null,$snapshot);}catch(\Exception$ae){error_log('Audit failed: '.$ae->getMessage());}}
 header('Location: /company/documents?entity_type='.urlencode($entityType).'&entity_id='.$entityId);exit;}
 catch(\Exception$e){header('Location: /company/documents?entity_type='.urlencode($entityType).'&entity_id='.$entityId);exit;}

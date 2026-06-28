@@ -106,7 +106,7 @@
                     <?php if ($vehicle['status'] === 'active'): ?>
                         <span class="badge badge-ok"><span class="dot"></span>Активен</span>
                     <?php elseif ($vehicle['status'] === 'archived'): ?>
-                        <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+
                     <?php else: ?>
                         <span class="badge"><span class="dot"></span>Неактивен</span>
                     <?php endif; ?>
@@ -226,8 +226,8 @@
         <div class="form-section">
             <h3 class="panel-head-title">Опасная зона</h3>
             <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
-            <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
-                <button type="submit" class="btn btn-danger">Архивировать</button>
+            <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
+                <button type="submit" class="btn btn-danger">Удалить</button>
             </form>
         </div>
 

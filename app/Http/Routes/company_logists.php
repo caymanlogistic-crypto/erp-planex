@@ -105,12 +105,12 @@ $router->get('/company/logists', function () use ($config, $db) {
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $logistStmt = $localPdo->prepare(
-                "SELECT * FROM users WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'logist' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT * FROM users WHERE deleted_at IS NULL AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'logist' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
             );
             $logistStmt->execute([$userId, $userId]);
             $logists = $logistStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $logistStmt = $localPdo->query("SELECT * FROM users ORDER BY created_at DESC");
+            $logistStmt = $localPdo->query("SELECT * FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC");
             $logists = $logistStmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
@@ -948,8 +948,26 @@ $router->post('/company/logists/{id}/archive', function ($id) use ($config, $db)
             $localPdo->exec($migrationSql);
         }
 
-        $update = $localPdo->prepare("UPDATE users SET status = 'archived' WHERE id = ?");
-        $update->execute([(int) $id]);
+        $userStmt = $localPdo->prepare('SELECT * FROM users WHERE id = ?');
+        $userStmt->execute([(int)$id]);
+        $userForDelete = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $rl = (string)($_SESSION['role_code'] ?? '');
+        $update = $localPdo->prepare("UPDATE users SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ?");
+        $update->execute([$uid, $rl, (int)$id]);
+
+        if ($userForDelete) {
+            $displayName = $userForDelete['full_name'] ?? '#' . $id;
+            $snapshot = json_encode($userForDelete, JSON_UNESCAPED_UNICODE);
+            $un = $_SESSION['user_name'] ?? '';
+            try {
+                $cp = $db->connection();
+                \App\Service\AuditService::recordDeletion($cp, $company, 'user', (int)$id, 'users', $displayName, $uid, $rl, $un, null, $snapshot);
+            } catch (\Exception $auditEx) {
+                error_log('Audit failed for user ' . $id . ': ' . $auditEx->getMessage());
+            }
+        }
 
         header('Location: /company/logists');
         exit;

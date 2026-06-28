@@ -92,7 +92,7 @@
                             <a href="/company/contractors/<?= $a['id'] ?>"><?= e($a['name']) ?></a>
                         </span>
                         <?php if ($a['status'] === 'archived'): ?>
-                        <span class="badge">Архив</span>
+                        <span class="badge">Удалён</span>
                         <?php endif; ?>
                     </td>
                     <td class="col-mono"><?= e($a['inn'] ?? '') ?: '—' ?></td>

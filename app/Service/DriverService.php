@@ -75,7 +75,7 @@ final class DriverService
                         (SELECT COUNT(*) FROM documents doc WHERE doc.entity_type = 'driver' AND doc.entity_id = d.id AND doc.deleted_at IS NULL) AS files_count
                  FROM drivers d
                  LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
-                 WHERE (d.created_by_user_id = ? OR d.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level = 'view'))
+                 WHERE d.deleted_at IS NULL AND (d.created_by_user_id = ? OR d.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level = 'view'))
                  ORDER BY d.created_at DESC"
             );
             $stmt->execute([$userId, $userId]);
@@ -86,6 +86,7 @@ final class DriverService
                         (SELECT COUNT(*) FROM documents doc WHERE doc.entity_type = 'driver' AND doc.entity_id = d.id AND doc.deleted_at IS NULL) AS files_count
                  FROM drivers d
                  LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
+                 WHERE d.deleted_at IS NULL
                  ORDER BY d.created_at DESC"
             );
         }
@@ -242,7 +243,9 @@ final class DriverService
 
     public function archiveDriver(PDO $localPdo, int $id): void
     {
-        $localPdo->prepare("UPDATE drivers SET status = 'archived' WHERE id = ?")->execute([$id]);
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $role = (string)($_SESSION['role_code'] ?? '');
+        $localPdo->prepare("UPDATE drivers SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ? AND deleted_at IS NULL")->execute([$userId, $role, $id]);
     }
 
     public function checkDriverHasCrews(PDO $localPdo, int $id): bool

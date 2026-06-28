@@ -38,6 +38,7 @@ require_once base_path('app/Service/DocumentService.php');
 require_once base_path('app/Service/RouteExecutorService.php');
 require_once base_path('app/Service/ResponsibleAssignmentService.php');
 require_once base_path('app/Service/LocalMigrationService.php');
+require_once base_path('app/Service/AuditService.php');
 
 require_once base_path('app/Support/core_runtime.php');
 require_once base_path('app/Support/http_runtime.php');
@@ -84,5 +85,6 @@ require_once base_path('app/Http/Routes/company_route_executors.php');
 require_once base_path('app/Http/Routes/company_responsible_assignments.php');
 require_once base_path('app/Http/Routes/superadmin_management.php');
 require_once base_path('app/Http/Routes/superadmin_company_delete.php');
+require_once base_path('app/Http/Routes/superadmin_deleted_data.php');
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

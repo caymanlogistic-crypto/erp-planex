@@ -19,7 +19,21 @@ try {
 
     $localPdo = $service->getLocalPdo($company);
 
-    $service->archiveClient($localPdo, (int) $id);
+    $client = $service->getClientById($localPdo, (int) $id);
+    if ($client) {
+        $service->archiveClient($localPdo, (int) $id);
+        $displayName = $client['name'] ?? $client['full_name'] ?? '#' . $id;
+        $snapshot = json_encode($client, JSON_UNESCAPED_UNICODE);
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $role = (string)($_SESSION['role_code'] ?? '');
+        $userName = $_SESSION['user_name'] ?? '';
+        try {
+            $centralPdo = $db->connection();
+            \App\Service\AuditService::recordDeletion($centralPdo, $company, 'client', (int)$id, 'clients', $displayName, $userId, $role, $userName, null, $snapshot);
+        } catch (\Exception $auditEx) {
+            error_log('Audit record failed for client ' . $id . ': ' . $auditEx->getMessage());
+        }
+    }
 
     header('Location: /company/clients');
     exit;

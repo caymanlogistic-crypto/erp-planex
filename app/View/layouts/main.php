@@ -117,9 +117,13 @@ if ($crumbContext !== '') {
 
             <div class="nav-group">
                 <div class="nav-section-label">СИСТЕМА</div>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/superadmin') ? ' is-active' : '' ?>" href="/superadmin/companies">
+                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/superadmin/companies') && !str_contains($_SERVER['REQUEST_URI'], '/deleted') ? ' is-active' : '' ?>" href="/superadmin/companies">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 15V11H11V15" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M2 7H14" stroke="currentColor" stroke-width="1.4"/><rect x="5" y="5" width="2" height="2" rx=".3" fill="currentColor"/><rect x="9" y="5" width="2" height="2" rx=".3" fill="currentColor"/><rect x="5" y="9" width="2" height="2" rx=".3" fill="currentColor"/><rect x="9" y="9" width="2" height="2" rx=".3" fill="currentColor"/></svg>
                     <span class="nav-label">Компании</span>
+                </a>
+                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/superadmin/deleted-data') ? ' is-active' : '' ?>" href="/superadmin/deleted-data">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4H14V13C14 13.6 13.6 14 13 14H3C2.4 14 2 13.6 2 13V4Z" stroke="currentColor" stroke-width="1.4"/><path d="M2 4L4 2H12L14 4" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 8L8 10L10 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <span class="nav-label">Удалённые данные</span>
                 </a>
             </div>
 

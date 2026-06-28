@@ -105,9 +105,9 @@
                         <span class="cell-sub"><?= e(ui_set_type($b['set_type'] ?? null)) ?></span>
                     </td>
                     <td>
-                        <span class="badge<?= $b['status'] === 'active' ? ' badge-ok' : ($b['status'] === 'archived' ? ' badge-warn' : '') ?>">
+                        <span class="badge<?= $b['status'] === 'active' ? ' badge-ok' : '' ?>">
                             <span class="dot"></span>
-                            <?= $b['status'] === 'active' ? 'Активен' : ($b['status'] === 'archived' ? 'Архив' : 'Неактивен') ?>
+                            <?= $b['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
                         </span>
                     </td>
                     <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>

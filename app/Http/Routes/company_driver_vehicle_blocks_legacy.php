@@ -26,19 +26,19 @@ $router->post('/company/driver-vehicle-blocks/create', function () use ($config,
         $userId = (int)$_SESSION['user_id'];
 
         if ($isLogist) {
-            $dStmt = $localPdo->prepare("SELECT * FROM drivers WHERE status = 'active' AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY full_name");
+            $dStmt = $localPdo->prepare("SELECT * FROM drivers WHERE status = 'active' AND deleted_at IS NULL AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY full_name");
             $dStmt->execute([$userId, $userId]);
             $drivers = $dStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' AND deleted_at IS NULL ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         if ($isLogist) {
-            $vsStmt = $localPdo->prepare("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' AND (vs.created_by_user_id = ? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY vs.id");
+            $vsStmt = $localPdo->prepare("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' AND vs.deleted_at IS NULL AND (vs.created_by_user_id = ? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY vs.id");
             $vsStmt->execute([$userId, $userId]);
             $vehicleSets = $vsStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $vehicleSets = $localPdo->query("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' ORDER BY vs.id")->fetchAll(PDO::FETCH_ASSOC);
+            $vehicleSets = $localPdo->query("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' AND vs.deleted_at IS NULL ORDER BY vs.id")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $driverId = trim($_POST['driver_id'] ?? '');
@@ -201,7 +201,7 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
             $grantsStmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
             $grantsStmt->execute(['driver_vehicle_block', (int)$id]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' AND deleted_at IS NULL ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
     } catch (\Exception $e) {
@@ -270,19 +270,19 @@ $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($co
         $userId = (int)$_SESSION['user_id'];
 
         if ($isLogist) {
-            $dStmt = $localPdo->prepare("SELECT * FROM drivers WHERE status = 'active' AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY full_name");
+            $dStmt = $localPdo->prepare("SELECT * FROM drivers WHERE status = 'active' AND deleted_at IS NULL AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY full_name");
             $dStmt->execute([$userId, $userId]);
             $drivers = $dStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $drivers = $localPdo->query("SELECT * FROM drivers WHERE status = 'active' AND deleted_at IS NULL ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         if ($isLogist) {
-            $vsStmt = $localPdo->prepare("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' AND (vs.created_by_user_id = ? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY vs.id");
+            $vsStmt = $localPdo->prepare("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' AND vs.deleted_at IS NULL AND (vs.created_by_user_id = ? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY vs.id");
             $vsStmt->execute([$userId, $userId]);
             $vehicleSets = $vsStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $vehicleSets = $localPdo->query("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' ORDER BY vs.id")->fetchAll(PDO::FETCH_ASSOC);
+            $vehicleSets = $localPdo->query("SELECT vs.*, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.status = 'active' AND vs.deleted_at IS NULL ORDER BY vs.id")->fetchAll(PDO::FETCH_ASSOC);
         }
         $errors = []; $old = $block; $formError = null;
     } catch (\Exception $e) {
@@ -401,6 +401,10 @@ $router->post('/company/driver-vehicle-blocks/{id}/archive', function ($id) use 
         try { $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch(); }
         catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/006_create_company_crews.sql'))); }
 
+        $blockStmt = $localPdo->prepare('SELECT * FROM driver_vehicle_blocks WHERE id = ?');
+        $blockStmt->execute([(int)$id]);
+        $block = $blockStmt->fetch(PDO::FETCH_ASSOC);
+
         $crewCheck = $localPdo->prepare('SELECT COUNT(*) FROM crews WHERE driver_vehicle_block_id = ? AND status = ?');
         $crewCheck->execute([(int)$id, 'active']);
         if ($crewCheck->fetchColumn() > 0) {
@@ -408,8 +412,23 @@ $router->post('/company/driver-vehicle-blocks/{id}/archive', function ($id) use 
             header('Location: /company/driver-vehicle-blocks/' . $id); exit;
         }
 
-        $update = $localPdo->prepare("UPDATE driver_vehicle_blocks SET status = 'archived' WHERE id = ?");
-        $update->execute([(int)$id]);
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $rl = (string)($_SESSION['role_code'] ?? '');
+        $update = $localPdo->prepare("UPDATE driver_vehicle_blocks SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ?");
+        $update->execute([$uid, $rl, (int)$id]);
+
+        if ($block) {
+            $displayName = 'Связка #' . $id;
+            $snapshot = json_encode($block, JSON_UNESCAPED_UNICODE);
+            $un = $_SESSION['user_name'] ?? '';
+            try {
+                $cp = $db->connection();
+                \App\Service\AuditService::recordDeletion($cp, $company, 'driver_vehicle_block', (int)$id, 'driver_vehicle_blocks', $displayName, $uid, $rl, $un, null, $snapshot);
+            } catch (\Exception $auditEx) {
+                error_log('Audit failed for DVB ' . $id . ': ' . $auditEx->getMessage());
+            }
+        }
+
         header('Location: /company/driver-vehicle-blocks'); exit;
     } catch (\Exception $e) {
         header('Location: /company/driver-vehicle-blocks'); exit;

@@ -96,7 +96,7 @@
                             <?php elseif ($l['status'] === 'blocked'): ?>
                             <span class="badge"><span class="dot"></span>Заблокирован</span>
                             <?php elseif ($l['status'] === 'archived'): ?>
-                            <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+
                             <?php else: ?>
                             <span class="badge"><span class="dot"></span><?= e($l['status']) ?></span>
                             <?php endif; ?>

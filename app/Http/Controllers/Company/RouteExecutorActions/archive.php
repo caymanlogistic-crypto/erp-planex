@@ -68,8 +68,20 @@
             }
         }
 
-        $update = $localPdo->prepare("UPDATE crews SET status = 'archived' WHERE id = ?");
-        $update->execute([$crewId]);
+        $update = $localPdo->prepare("UPDATE crews SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ?");
+        $update->execute([(int)($_SESSION['user_id'] ?? 0), $_SESSION['role_code'] ?? '', $crewId]);
+
+        $crewSnapshot = json_encode($crew, JSON_UNESCAPED_UNICODE);
+        $displayName = 'Экипаж #' . $crewId;
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $rl = (string)($_SESSION['role_code'] ?? '');
+        $un = $_SESSION['user_name'] ?? '';
+        try {
+            $centralPdo = $db->connection();
+            \App\Service\AuditService::recordDeletion($centralPdo, $company, 'crew', $crewId, 'crews', $displayName, $uid, $rl, $un, null, $crewSnapshot);
+        } catch (\Exception $auditEx) {
+            error_log('Audit record failed for crew ' . $crewId . ': ' . $auditEx->getMessage());
+        }
 
         header('Location: /company/route-executors');
         exit;

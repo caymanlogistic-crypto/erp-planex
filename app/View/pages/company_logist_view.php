@@ -148,8 +148,8 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <button type="submit" class="btn btn-secondary">Сбросить пароль</button>
             </form>
             <?php if ($logist['status'] !== 'archived'): ?>
-            <form method="post" action="/company/logists/<?= $logist['id'] ?>/archive" onsubmit="return confirm('Вы уверены, что хотите архивировать пользователя?')">
-                <button type="submit" class="btn btn-secondary">Архивировать</button>
+            <form method="post" action="/company/logists/<?= $logist['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
+                <button type="submit" class="btn btn-secondary">Удалить</button>
             </form>
             <?php endif; ?>
         </div>

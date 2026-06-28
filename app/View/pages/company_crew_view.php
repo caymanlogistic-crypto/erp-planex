@@ -131,7 +131,7 @@
                     <?php if ($crew['status'] === 'active'): ?>
                         <span class="badge badge-ok"><span class="dot"></span>Активен</span>
                     <?php elseif ($crew['status'] === 'archived'): ?>
-                        <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+
                     <?php else: ?>
                         <span class="badge"><span class="dot"></span>Неактивен</span>
                     <?php endif; ?>
@@ -198,8 +198,8 @@
                 <p class="text-muted">Экипаж уже находится в архиве.</p>
             <?php else: ?>
                 <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
-                <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
-                    <button type="submit" class="btn btn-danger">Архивировать</button>
+                <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
+                    <button type="submit" class="btn btn-danger">Удалить</button>
                 </form>
             <?php endif; ?>
         </div>

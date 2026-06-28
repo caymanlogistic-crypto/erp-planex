@@ -29,6 +29,16 @@ try {
 
     $service->archiveClient($localPdo, (int) $id);
 
+    $displayName = $client['name'] ?? $client['full_name'] ?? '#' . $id;
+    $snapshot = json_encode($client, JSON_UNESCAPED_UNICODE);
+    $userName = $_SESSION['user_name'] ?? '';
+    try {
+        $centralPdo = $db->connection();
+        \App\Service\AuditService::recordDeletion($centralPdo, $company, 'client', (int)$id, 'clients', $displayName, $userId, $roleCode, $userName, null, $snapshot);
+    } catch (\Exception $auditEx) {
+        error_log('Audit record failed for client ' . $id . ': ' . $auditEx->getMessage());
+    }
+
     echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
 } catch (\Throwable $e) {
     http_response_code(200);

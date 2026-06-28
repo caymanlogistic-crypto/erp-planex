@@ -99,7 +99,7 @@
                         <?php elseif ($c['status'] === 'inactive'): ?>
                         <span class="badge"><span class="dot"></span>Неактивен</span>
                         <?php elseif ($c['status'] === 'archived'): ?>
-                        <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+
                         <?php else: ?>
                         <span class="badge"><span class="dot"></span><?= e($c['status']) ?></span>
                         <?php endif; ?>

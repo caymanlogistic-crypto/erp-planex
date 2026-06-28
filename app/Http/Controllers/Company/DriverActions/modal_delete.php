@@ -9,16 +9,9 @@ $localPdo=$service->getLocalPdo($company);$driver=$service->getDriverById($local
 if(!$driver){echo json_encode(['success'=>false,'error'=>'Водитель не найден.']);exit;}
 $role=$_SESSION['role_code']??'';if($role==='logist'){$userId=(int)$_SESSION['user_id'];if((int)$driver['created_by_user_id']!==$userId){echo json_encode(['success'=>false,'error'=>'У вас нет права архивировать эту запись.']);exit;}}
 if($service->checkDriverHasCrews($localPdo,(int)$id)){echo json_encode(['success'=>false,'error'=>'Водитель участвует в экипажах. Сначала удалите экипажи.']);exit;}
-$storageBase=storage_path('companies/'.$companyId.'/documents/');$driverDocDir=$storageBase.'driver/'.(int)$id;
-$docsStmt=$localPdo->prepare("SELECT stored_name FROM documents WHERE entity_type='driver' AND entity_id=?");$docsStmt->execute([(int)$id]);$driverDocs=$docsStmt->fetchAll(PDO::FETCH_ASSOC);
-$filePathsToDelete=[];$realBase=realpath($storageBase);foreach($driverDocs as $doc){$sn=trim((string)($doc['stored_name']??''));if($sn==='')continue;$fp=$driverDocDir.DIRECTORY_SEPARATOR.$sn;$rf=realpath($fp);if($realBase!==false&&$rf!==false&&str_starts_with($rf,$realBase))$filePathsToDelete[]=$rf;}
-$localPdo->beginTransaction();
-$localPdo->prepare("DELETE FROM entity_access_grants WHERE entity_type='driver' AND entity_id=?")->execute([(int)$id]);
-$localPdo->prepare("DELETE FROM documents WHERE entity_type='driver' AND entity_id=?")->execute([(int)$id]);
-$localPdo->prepare("DELETE FROM driver_phones WHERE driver_id=?")->execute([(int)$id]);
-$localPdo->prepare("DELETE FROM drivers WHERE id=?")->execute([(int)$id]);
-$localPdo->commit();
-foreach(array_unique($filePathsToDelete) as $sp){if(is_string($sp)&&$sp!==''&&is_file($sp))@unlink($sp);}
-if(is_dir($driverDocDir)){$items=@scandir($driverDocDir)?:[];foreach($items as $item){if($item==='.'||$item==='..')continue;$path=$driverDocDir.DIRECTORY_SEPARATOR.$item;if(is_file($path))@unlink($path);}@rmdir($driverDocDir);}
+$uid=(int)($_SESSION['user_id']??0);$rl=(string)($_SESSION['role_code']??'');
+$localPdo->prepare("UPDATE drivers SET deleted_at=NOW(),deleted_by_user_id=?,deleted_by_role=? WHERE id=?")->execute([$uid,$rl,(int)$id]);
+$displayName=$driver['full_name']??'#'.$id;$snapshot=json_encode($driver,JSON_UNESCAPED_UNICODE);$un=$_SESSION['user_name']??'';
+try{$cp=$db->connection();\App\Service\AuditService::recordDeletion($cp,$company,'driver',(int)$id,'drivers',$displayName,$uid,$rl,$un,null,$snapshot);}catch(\Exception$ae){error_log('Audit failed: '.$ae->getMessage());}
 echo json_encode(['success'=>true]);exit;}
 catch(\Exception $e){echo json_encode(['success'=>false,'error'=>'Ошибка: '.$e->getMessage()]);exit;}

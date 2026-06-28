@@ -419,10 +419,10 @@ require_once __DIR__ . '/../components/status_badge.php';
         <?php endif; ?>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Опасная зона</h3>
-            <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
-            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
-                <button type="submit" class="btn btn-danger">Архивировать</button>
+            <h3 class="panel-head-title">Удаление записи</h3>
+            <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
+            <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
+                <button type="submit" class="btn btn-danger">Удалить</button>
             </form>
         </div>
 

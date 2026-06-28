@@ -222,11 +222,11 @@ require_once __DIR__ . '/../components/status_badge.php';
             <h3 class="panel-head-title">Опасная зона</h3>
             <?php if ($client['status'] !== 'archived'): ?>
                 <p class="text-muted hint-before-action">Архивирование скроет запись из основных списков.</p>
-                <form method="post" action="/company/clients/<?= $client['id'] ?>/archive" onsubmit="return confirm('Вы уверены? Запись будет перемещена в архив.')">
-                    <button type="submit" class="btn btn-danger">Архивировать</button>
+                <form method="post" action="/company/clients/<?= $client['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
+                    <button type="submit" class="btn btn-danger">Удалить</button>
                 </form>
             <?php else: ?>
-                <p class="text-muted">Клиент уже находится в архиве.</p>
+                <p class="text-muted">Клиент уже удалён.</p>
             <?php endif; ?>
         </div>
 

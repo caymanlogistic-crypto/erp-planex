@@ -47,8 +47,8 @@
     <?php if ($isLogist && !empty($hasGrantsButAllArchived)): ?>
     <div class="empty-state">
         <div class="empty-icon">📦</div>
-        <p class="empty-title">Исполнители рейса в архиве</p>
-        <p class="empty-desc">Доступные вам исполнители рейса заархивированы. Обратитесь к руководителю для восстановления записи или назначения доступа.</p>
+        <p class="empty-title">Нет доступных исполнителей рейса</p>
+        <p class="empty-desc">У вас пока нет созданных исполнителей рейса, либо руководитель ещё не выдал вам доступ к существующим.</p>
     </div>
     <?php elseif ($isLogist): ?>
     <div class="empty-state">

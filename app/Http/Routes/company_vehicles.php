@@ -88,12 +88,12 @@ $router->get('/company/vehicles', function () use ($config, $db) {
         if ($isLogist) {
             $userId = (int)$_SESSION['user_id'];
             $vehicleStmt = $localPdo->prepare(
-                "SELECT * FROM vehicle_units WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_unit' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT * FROM vehicle_units WHERE deleted_at IS NULL AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_unit' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
             );
             $vehicleStmt->execute([$userId, $userId]);
             $vehicles = $vehicleStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            $vehicleStmt = $localPdo->query("SELECT * FROM vehicle_units ORDER BY created_at DESC");
+            $vehicleStmt = $localPdo->query("SELECT * FROM vehicle_units WHERE deleted_at IS NULL ORDER BY created_at DESC");
             $vehicles = $vehicleStmt->fetchAll(PDO::FETCH_ASSOC);
         }
         $dbError = null;
@@ -463,7 +463,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             $grantsStmt->execute(['vehicle_unit', $vehicleId]);
             $grants = $grantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            $logists = $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' AND deleted_at IS NULL ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
         }
 
         $dbError = null;
@@ -810,10 +810,14 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
             $localPdo->exec($migrationSql);
         }
 
+        $vStmt = $localPdo->prepare('SELECT * FROM vehicle_units WHERE id = ?');
+        $vStmt->execute([$vehicleId]);
+        $vehicleForDelete = $vStmt->fetch(PDO::FETCH_ASSOC);
+
         $crewCheck = $localPdo->prepare('SELECT COUNT(*) FROM crews WHERE vehicle_id = ? AND status = ?');
         $crewCheck->execute([$vehicleId, 'active']);
         if ($crewCheck->fetchColumn() > 0) {
-            $pageTitle = 'Невозможно архивировать';
+            $pageTitle = 'Невозможно удалить';
             $pageContext = 'Транспортные единицы › Компания';
             $companyError = false;
             $company = $company;
@@ -828,8 +832,22 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
             return;
         }
 
-        $update = $localPdo->prepare("UPDATE vehicle_units SET status = 'archived' WHERE id = ?");
-        $update->execute([$vehicleId]);
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        $rl = (string)($_SESSION['role_code'] ?? '');
+        $update = $localPdo->prepare("UPDATE vehicle_units SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ?");
+        $update->execute([$uid, $rl, $vehicleId]);
+
+        if ($vehicleForDelete) {
+            $displayName = $vehicleForDelete['plate_number'] ?? '#' . $vehicleId;
+            $snapshot = json_encode($vehicleForDelete, JSON_UNESCAPED_UNICODE);
+            $un = $_SESSION['user_name'] ?? '';
+            try {
+                $cp = $db->connection();
+                \App\Service\AuditService::recordDeletion($cp, $company, 'vehicle_unit', $vehicleId, 'vehicle_units', $displayName, $uid, $rl, $un, null, $snapshot);
+            } catch (\Exception $auditEx) {
+                error_log('Audit failed for vehicle ' . $vehicleId . ': ' . $auditEx->getMessage());
+            }
+        }
 
         header('Location: /company/vehicles/' . $vehicleId);
         exit;

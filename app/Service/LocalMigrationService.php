@@ -50,7 +50,7 @@ final class LocalMigrationService
 
     public static function apply(PDO $localPdo): void
     {
-        for ($i = 1; $i <= 38; $i++) {
+        for ($i = 1; $i <= 39; $i++) {
             $pattern = base_path('database/migrations-local/' . sprintf('%03d', $i) . '_*.sql');
             $files = glob($pattern);
             if (!$files) {

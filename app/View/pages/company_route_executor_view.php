@@ -151,7 +151,7 @@
                     <?php if ($crew['status'] === 'active'): ?>
                         <span class="badge badge-ok"><span class="dot"></span>Активен</span>
                     <?php elseif ($crew['status'] === 'archived'): ?>
-                        <span class="badge badge-warn"><span class="dot"></span>Архив</span>
+
                     <?php else: ?>
                         <span class="badge"><span class="dot"></span>Неактивен</span>
                     <?php endif; ?>
@@ -178,8 +178,8 @@
             <div class="form-actions">
                 <a href="/company/route-executors/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
                 <?php if (($crew['status'] ?? '') !== 'archived'): ?>
-                <form method="post" action="/company/route-executors/<?= $crew['id'] ?>/archive" style="display:inline;" onsubmit="return confirm('Вы уверены? Исполнитель рейса будет перемещён в архив.')">
-                    <button type="submit" class="btn btn-danger">Архивировать</button>
+                <form method="post" action="/company/route-executors/<?= $crew['id'] ?>/archive" style="display:inline;" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
+                    <button type="submit" class="btn btn-danger">Удалить</button>
                 </form>
                 <?php else: ?>
                     <p class="text-muted">Исполнитель рейса уже находится в архиве.</p>

@@ -85,7 +85,7 @@ final class ContractorService
                         " . ContractorContactService::buildPrimaryContactSubquery('phone') . " AS primary_contact_phone,
                         " . ContractorContactService::buildDocumentEmailSubquery() . " AS doc_email
                  FROM contractors c
-                 WHERE (c.created_by_user_id = ? OR c.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'contractor' AND granted_to_user_id = ? AND access_level = 'view'))
+                 WHERE c.deleted_at IS NULL AND (c.created_by_user_id = ? OR c.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'contractor' AND granted_to_user_id = ? AND access_level = 'view'))
                  ORDER BY c.created_at DESC"
             );
             $stmt->execute([$userId, $userId]);
@@ -96,6 +96,7 @@ final class ContractorService
                         " . ContractorContactService::buildPrimaryContactSubquery('phone') . " AS primary_contact_phone,
                         " . ContractorContactService::buildDocumentEmailSubquery() . " AS doc_email
                  FROM contractors c
+                 WHERE c.deleted_at IS NULL
                  ORDER BY c.created_at DESC"
             );
         }
@@ -236,8 +237,10 @@ final class ContractorService
 
     public function archiveContractor(PDO $localPdo, int $id): void
     {
-        $update = $localPdo->prepare("UPDATE contractors SET status = 'archived' WHERE id = ?");
-        $update->execute([$id]);
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $role = (string)($_SESSION['role_code'] ?? '');
+        $update = $localPdo->prepare("UPDATE contractors SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ? AND deleted_at IS NULL");
+        $update->execute([$userId, $role, $id]);
     }
 
     public function getDocTypes(PDO $localPdo, string $entityType = 'contractor'): array

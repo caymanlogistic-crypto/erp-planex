@@ -58,11 +58,11 @@ final class VehicleSetService
             LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id=vu1.id
             LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id=vu2.id";
         if ($isLogist) {
-            $sql .= " WHERE (vs.created_by_user_id=? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type='vehicle_set' AND granted_to_user_id=? AND access_level IN ('view','edit') AND revoked_at IS NULL))";
+            $sql .= " WHERE vs.deleted_at IS NULL AND (vs.created_by_user_id=? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type='vehicle_set' AND granted_to_user_id=? AND access_level IN ('view','edit') AND revoked_at IS NULL))";
             $stmt = $pdo->prepare($sql . " ORDER BY vs.created_at DESC");
             $stmt->execute([$userId, $userId]);
         } else {
-            $stmt = $pdo->query($sql . " ORDER BY vs.created_at DESC");
+            $stmt = $pdo->query($sql . " WHERE vs.deleted_at IS NULL ORDER BY vs.created_at DESC");
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -117,6 +117,8 @@ final class VehicleSetService
 
     public function archiveVehicleSet(PDO $pdo, int $id): void
     {
-        $pdo->prepare("UPDATE vehicle_sets SET status='archived' WHERE id=?")->execute([$id]);
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $role = (string)($_SESSION['role_code'] ?? '');
+        $pdo->prepare("UPDATE vehicle_sets SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ? AND deleted_at IS NULL")->execute([$userId, $role, $id]);
     }
 }

@@ -99,6 +99,18 @@ try {
 
     $service->archiveContractor($localPdo, (int) $id);
 
+    $displayName = $contractor['name'] ?? '#' . $id;
+    $snapshot = json_encode($contractor, JSON_UNESCAPED_UNICODE);
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+    $role = (string)($_SESSION['role_code'] ?? '');
+    $userName = $_SESSION['user_name'] ?? '';
+    try {
+        $centralPdo = $db->connection();
+        \App\Service\AuditService::recordDeletion($centralPdo, $company, 'contractor', (int)$id, 'contractors', $displayName, $userId, $role, $userName, null, $snapshot);
+    } catch (\Exception $auditEx) {
+        error_log('Audit record failed: ' . $auditEx->getMessage());
+    }
+
     header('Location: /company/contractors');
     exit;
 } catch (\Exception $e) {
