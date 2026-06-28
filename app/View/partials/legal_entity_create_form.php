@@ -1,6 +1,5 @@
 <?php
-require_once base_path('app/View/components/contractor_contact_fields.php');
-require_once base_path('app/View/components/client_contact_fields.php');
+require_once base_path('app/View/components/contact_fields.php');
 $leEntityType   = $leEntityType ?? 'contractor';
 $leFormAction   = $leFormAction ?? '/company/contractors/create';
 $leFormId       = $leFormId ?? 'le-create-form';
@@ -14,7 +13,6 @@ $leContactErrors = $leContactErrors ?? [];
 $leTypeFieldName = $leEntityType === 'client' ? 'entity_type' : 'contractor_type';
 $leTitle = $leEntityType === 'client' ? 'КЛИЕНТА' : 'ПЕРЕВОЗЧИКА';
 $leLabel = $leEntityType === 'client' ? 'клиента' : 'перевозчика';
-$leContactFn = $leEntityType === 'client' ? 'renderClientContactFields' : 'renderContractorContactFields';
 
 $lePredefDocs = $lePredefDocs ?? [
     ['name' => 'Карточка предприятия', 'code' => 'company_card'],
@@ -36,7 +34,6 @@ $leTypeOptions = [
 
 <div class="entity-form-layout driver-layout">
 
-    <!-- Left column: data -->
     <div class="entity-form-main driver-layout-main">
         <div class="driver-fields">
 
@@ -59,7 +56,6 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <!-- Name + INN + autofill -->
             <div class="driver-contact-top-row">
                 <div class="field field-w-name<?= !empty($leErrors['name']) ? ' is-error' : '' ?>" data-field="name">
                     <label class="field-label">Наименование <span class="req">*</span></label>
@@ -78,7 +74,6 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <!-- Type + KPP + OGRN -->
             <div class="form-grid-3" style="margin-top:12px">
                 <div class="field" data-field="<?= e($leTypeFieldName) ?>">
                     <label class="field-label">Тип <?= $leLabel ?></label>
@@ -100,7 +95,6 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <!-- Director -->
             <div class="form-grid-2" style="margin-top:12px">
                 <div class="field" data-field="director_full_name">
                     <label class="field-label">Руководитель</label>
@@ -112,7 +106,6 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <!-- Addresses -->
             <div class="form-grid-2" style="margin-top:12px">
                 <div class="field" data-field="legal_address">
                     <label class="field-label">Юридический адрес</label>
@@ -124,15 +117,18 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <!-- Contacts -->
             <div style="margin-top:12px">
                 <div class="section-title">Контакты</div>
-                <?php if (function_exists($leContactFn)): ?>
-                    <?php $leContactFn($leContactValues, $leContactErrors); ?>
-                <?php endif; ?>
+                <?php renderContactFields([
+                    'entity_type' => $leEntityType,
+                    'field_prefix' => 'contacts',
+                    'contacts' => $leContactValues,
+                    'errors' => $leContactErrors,
+                    'allow_primary' => true,
+                    'allow_document_email' => true,
+                ]); ?>
             </div>
 
-            <!-- Bank -->
             <div style="margin-top:12px">
                 <div class="section-title">Банковские реквизиты</div>
                 <div class="form-grid-4">
@@ -158,7 +154,6 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <!-- Comments -->
             <div class="field" data-field="comments" style="margin-top:12px">
                 <label class="field-label">Комментарий</label>
                 <textarea name="comments" class="field-textarea driver-textarea" rows="2" placeholder="Примечания"><?= e($leOld['comments'] ?? '') ?></textarea>
@@ -171,7 +166,6 @@ $leTypeOptions = [
         </div>
     </div>
 
-    <!-- Right column: documents -->
     <div class="entity-form-docs driver-layout-docs">
         <div>
             <div class="section-title">Документы</div>
@@ -203,7 +197,7 @@ $leTypeOptions = [
         <button type="button" class="btn btn-ghost" id="le-add-custom-doc-btn">+ Добавить документ</button>
     </div>
 
-</div><!-- /.driver-layout -->
+</div>
 
 <script type="application/json" data-doc-types><?= json_encode($leDocTypes, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
 </form>

@@ -1,5 +1,16 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
+## Актуализация 2026-06-28 — E7.2 Architecture Hardening
+
+**Статус**: E7.2_ARCHITECTURE_HARDENED
+
+Ключевые исправления:
+- `company_contractors.php` и `company_clients.php` теперь имеют `use` statements для сервисов (причина Fatal error — PHP use file-scoped).
+- `legal_entity_create_form.php` перезаписан в UTF-8 с корректным кириллическим текстом.
+- `tools/architecture_guard.php` — автоматическая проверка архитектуры (`php tools/architecture_guard.php`).
+- `docs/ai/MODULAR_DEVELOPMENT_RULES.md` — жёсткие правила: Route->Controller->Service->View, запрет SQL в route-файлах, лимиты строк.
+- Остаточный долг: legacy route-файлы (`company_contractors.php`, `company_clients.php`, `company_drivers.php`, `company_vehicle_sets.php`, `company_documents.php`, `superadmin_management.php`) ещё содержат procedural business logic.
+
 ## Актуализация 2026-06-26 — Исполнители рейса / Транспорт
 
 Статус: подготовлен пакет исправлений `ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip`; перед финальной фиксацией владелец должен применить файлы, проверить runtime и затем закоммитить результат.

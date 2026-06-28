@@ -42,12 +42,6 @@ $router->get('/test-db', function () use ($db) {
         $db->connection();
         echo 'DB connection OK';
     } catch (\Exception $e) {
-        if (isset($localPdo) && $localPdo instanceof \PDO && $localPdo->inTransaction()) {
-            $localPdo->rollBack();
-        }
-        if (isset($localPdo) && $localPdo instanceof \PDO && $localPdo->inTransaction()) {
-            $localPdo->rollBack();
-        }
         echo 'DB connection FAILED';
     }
 });

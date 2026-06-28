@@ -1,5 +1,7 @@
 <?php
 
+use App\Service\ClientContactService;
+
 $router->get('/company/clients', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Клиенты';

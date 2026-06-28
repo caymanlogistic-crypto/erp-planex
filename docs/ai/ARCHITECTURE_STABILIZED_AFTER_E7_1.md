@@ -1,10 +1,21 @@
-# ARCHITECTURE_STABILIZED_AFTER_E7_1
+# ARCHITECTURE_STABILIZED_AFTER_E7_2
 
 ## Status
 
 `COMPLETE`
 
-E7.1 stabilizes the post-split architecture without changing the runtime contract.
+E7.2 hardens the post-split architecture, fixes two runtime blockers, and adds automated guardrails.
+
+### E7.2 Changes (2026-06-28)
+
+- **BLOCKER 1 FIXED**: `ContractorContactService` class existed but `use` statements were missing in `company_contractors.php` and `company_clients.php`. PHP `use` is file-scoped — declarations in `index.php` do not carry into `require`d files. Added `use App\Service\ContractorContactService;` and `use App\Service\CompanyInnLookupService;` to `company_contractors.php`, `use App\Service\ClientContactService;` to `company_clients.php`.
+- **BLOCKER 2 FIXED**: `app/View/partials/legal_entity_create_form.php` had double-encoded UTF-8 (UTF-8 read as CP1251 and re-encoded). Rewrote file with correct Cyrillic text.
+- **Duplicate rollback removed** in `core.php` `/test-db` route.
+- **`tools/architecture_guard.php`** created: validates structure, file sizes, load order, controller wiring, service autoloading.
+- **`docs/ai/MODULAR_DEVELOPMENT_RULES.md`** created: hard rules for Route->Controller->Service->View, SQL prohibition in routes, size limits.
+- **`docs/ai/RUNTIME_SMOKE_CHECKLIST_E7_2.md`** created: full smoke test results.
+
+## E7.1 Baseline (unchanged)
 
 ## What Changed
 

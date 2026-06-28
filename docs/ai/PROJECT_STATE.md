@@ -1,5 +1,20 @@
 # ERP PLANEX — текущее состояние проекта
 
+## Актуализация 2026-06-28 — E7.2 Architecture Hardening
+
+**Статус**: E7.2_ARCHITECTURE_HARDENED
+
+Выполнено:
+- **BLOCKER 1 FIXED**: Fatal error `Class "ContractorContactService" not found` на `/company/contractors` — добавлены `use` statements в `company_contractors.php` и `company_clients.php`.
+- **BLOCKER 2 FIXED**: Битая кодировка в popup "Создать клиента" (`legal_entity_create_form.php`) — перезаписан в UTF-8 с корректным кириллическим текстом.
+- Удалён дублирующий `rollBack()` в `core.php`.
+- Создан `tools/architecture_guard.php` — автоматическая проверка архитектуры.
+- Создан `docs/ai/MODULAR_DEVELOPMENT_RULES.md` — жёсткие правила разработки.
+- Создан `docs/ai/RUNTIME_SMOKE_CHECKLIST_E7_2.md` — полный smoke-отчёт.
+- Обновлены `ARCHITECTURE_STABILIZED_AFTER_E7_1.md` (-> E7.2), `REFACTOR_E7_REPORT.md`, `PROJECT_STATE.md`, `HANDOFF_FOR_NEW_CHAT.md`.
+
+Runtime smoke: все проверки пройдены. `php -l` — 0 ошибок. `architecture_guard.php` — PASS.
+
 ## Актуализация 2026-06-26 — Исполнители рейса / Транспорт
 
 Статус: подготовлен пакет исправлений `ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip`; перед финальной фиксацией владелец должен применить файлы, проверить runtime и затем закоммитить результат.

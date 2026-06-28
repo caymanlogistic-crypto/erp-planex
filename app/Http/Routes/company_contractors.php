@@ -1,5 +1,8 @@
 <?php
 
+use App\Service\ContractorContactService;
+use App\Service\CompanyInnLookupService;
+
 $router->get('/company/contractors', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Перевозчики';

@@ -1,6 +1,6 @@
 # REFACTOR_E7_REPORT
 
-STATUS: E7.1_ARCHITECTURE_STABILIZED
+STATUS: E7.2_ARCHITECTURE_HARDENED
 
 1. Original `public/index.php` before E7: `19627` lines.
 2. E7 result: `192` lines.
@@ -55,3 +55,26 @@ STATUS: E7.1_ARCHITECTURE_STABILIZED
 13. Remaining architectural debt:
     - action bodies still live in include files
     - protected core remains intentionally untouched
+
+## E7.2 Changes (2026-06-28)
+
+14. **BLOCKER 1 — Fatal error `Class "ContractorContactService" not found`**:
+    - Root cause: `use` statements in PHP are file-scoped. `index.php` had `use App\Service\ContractorContactService` but `company_contractors.php` (a `require`d file) referenced the class without its own `use` statement.
+    - Fix: Added `use App\Service\ContractorContactService;` and `use App\Service\CompanyInnLookupService;` to `company_contractors.php`. Added `use App\Service\ClientContactService;` to `company_clients.php`.
+15. **BLOCKER 2 — Broken encoding in client modal**:
+    - Root cause: `app/View/partials/legal_entity_create_form.php` had double-encoded UTF-8 text (UTF-8 bytes interpreted as CP1251 and re-encoded).
+    - Fix: Rewrote the entire file with correct UTF-8 Russian text.
+16. **Cleanup**: Removed duplicate `rollBack()` in `core.php` `/test-db` route.
+17. **Architecture guard** (`tools/architecture_guard.php`): Validates directory structure, file sizes, route load order, controller wiring, service autoloading. Exit 0 only on zero errors.
+18. **MODULAR_DEVELOPMENT_RULES.md**: Hard rules for future development — Route->Controller->Service->View, SQL ban in routes, size limits, legacy bridge policy.
+19. **Runtime smoke after E7.2**:
+    - All E7.1 tests preserved.
+    - `/company/contractors` -> 200 (was FATAL).
+    - `/company/contractors/create` -> 200 (was FATAL).
+    - `/company/clients` -> 200 (encoding fixed).
+    - Legacy redirects -> 302 (unchanged).
+    - Senior/logist access controls -> 403 (unchanged).
+20. **Remaining architectural debt**:
+    - Legacy route files (`company_contractors.php`, `company_clients.php`, `company_drivers.php`, `company_vehicle_sets.php`, `company_documents.php`, `superadmin_management.php`) still contain procedural business logic.
+    - Action include files still used as temporary bridges.
+    - No new major refactoring — legacy files stabilized with targeted fixes only.
