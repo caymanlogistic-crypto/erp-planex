@@ -65,3 +65,27 @@
 5. Для grants обычного `logist` обязательно использовать `revoked_at IS NULL` и `access_level IN ('view','edit')`.
 
 Перед следующим коммитом: применить v4, проверить runtime создание исполнителя рейса под `logist`, проверить открытие модалки транспорта, затем `php -l public/index.php` и `git diff --check`.
+
+## Актуализация 2026-06-28 — текущий фокус
+
+Текущий блок завершения перед приёмкой:
+
+1. Закрыть хвосты предыдущего промта отдельными runtime-отчётами, а не общим статусом.
+2. Держать `3.2 DocumentUpload` как отдельный принятый runtime-блок.
+3. Держать `3.1 ContactFields`, `3.3 INN helper`, `4 client/contractor modal CRUD` как отдельную регрессию после document runtime.
+4. Не внедрять modal-only superadmin create: статус этого направления остаётся `NEED_OWNER_DECISION`.
+5. Проверять безопасный E2E через существующий full-page flow: superadmin → company → owner → logist → client → contractor → driver → vehicle-set → route executor.
+6. После каждого крупного блока обязательно прогонять `php -l`, `git diff --check`, `git status --short`.
+
+Runtime, уже подтверждённый в этом цикле:
+
+- `tmp/runtime_stage32.spec.js` — отдельный headless Chromium runtime этапа 3.2.
+- `tmp/runtime_regression_314.spec.js` — отдельная регрессия этапов 3.1–4.
+- `tmp/runtime_stage6_e2e.spec.js` — безопасный E2E существующего full-page provisioning flow.
+
+Следующий шаг: держать рабочее дерево без новых функциональных отклонений, не коммитить без разрешения владельца и отдавать финальный отчёт только с покомпонентной самосверкой PASS/FAIL/NOT_APPLICABLE.
+
+## 2026-06-28 E7 progress update
+- Structural split of the index monolith is complete.
+- Remaining follow-up is helper/service extraction and browser-level regression, not route registration extraction.
+- Report: docs/ai/REFACTOR_E7_REPORT.md.

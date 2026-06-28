@@ -300,3 +300,36 @@ ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip
 ```
 
 Перед доверием к результату обязательно выполнить runtime-проверки: создать исполнителя рейса под логистом, открыть `/company/route-executors`, открыть `/company/vehicle-sets` и нажать `Добавить новый транспорт`.
+
+## Актуализация 2026-06-28 — что уже добито в текущем чате
+
+Перед продолжением новой сессии считай подтверждёнными только следующие runtime-блоки:
+
+- `3.2 DocumentUpload` — отдельный headless Chromium runtime пройден для driver create/edit, vehicle-set create/edit, client LegalEntityCreateModal, contractor LegalEntityCreateModal. Удалённые документы после save/reopen не возвращаются. Badge-типы PDF/DOC/XLS/IMG подтверждены. Для client/contractor modal edit document section сейчас `NOT_APPLICABLE`, потому что в modal edit документы не выведены.
+- `3.1–4 regression` — отдельно пройдены ContactFields create/edit, INN lookup/fallback, client/contractor modal CRUD, driver/vehicle-set ModalShell smoke, сохранность table layout (`page-head`, `table-card`, `table-toolbar`, `table.table`).
+- `Stage 6 safe E2E` — подтверждён существующий full-page flow: superadmin создал компанию и owner; owner создал logist; logist создал client, contractor, driver, vehicle-set и route executor; страницы view/edit/docs открываются там, где предусмотрены системой.
+
+Какие runtime-артефакты уже лежат в проекте:
+
+```text
+tmp/runtime_stage32.spec.js
+tmp/runtime_regression_314.spec.js
+tmp/runtime_stage6_e2e.spec.js
+tmp/runtime-stage32-result.json
+tmp/runtime-regression-314-result.json
+tmp/runtime-stage6-e2e-result.json
+tmp/playwright.runtime.config.js
+tmp/codex-stage-docs/*
+```
+
+Критичные правила продолжения:
+
+- Не коммитить без разрешения владельца.
+- Не трогать superadmin provisioning архитектуру и не делать modal-only create без owner decision.
+- Любой новый шаг по forms/modals/documents подтверждать повторным browser runtime, а не только lint/checks.
+
+## 2026-06-28 handoff note: E7 route split
+- public/index.php no longer contains route registration blocks.
+- New route source of truth: pp/Http/Routes/*.php.
+- If a route regression appears, inspect the dedicated route file first, not the old monolith.
+- Shared helpers and pplyLocalMigrations() still remain in public/index.php for now.

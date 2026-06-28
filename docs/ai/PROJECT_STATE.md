@@ -132,3 +132,33 @@ ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip
 Назначение: исправить доступ/пустые состояния `/company/route-executors`, создание исполнителя рейса по реальной схеме БД и неработающую кнопку `Добавить новый транспорт` на `/company/vehicle-sets`.
 
 Статус: **подготовлен к применению владельцем**, финальная приёмка и commit ещё требуются.
+
+## Актуализация 2026-06-28 — modal/entity runtime closure
+
+Статус: хвосты этапов 3.1–7 закрыты runtime-проверками без коммита.
+
+Что подтверждено в текущем рабочем дереве:
+
+- Общий `ContactFields` вынесен в переиспользуемый компонент `app/View/components/contact_fields.php` и подключён в client/contractor create/edit/modal forms.
+- `LegalEntityCreateModal` и `ModalShell` используются для client/contractor create/view/edit/archive без удаления существующих full-page CRUD.
+- Общий helper документов `app/Support/legal_entity_document_upload.php` покрывает client/contractor inline-upload, а driver/vehicle-set остаются на своём рабочем document-flow с общим runtime-циклом add/replace/delete/save/reopen.
+- INN helper вынесен в общий frontend pattern (`public/assets/js/legal-entity-inn.js`) и подтверждён runtime-сценариями lookup/fallback.
+- Отдельный runtime этапа 3.2 пройден: driver, vehicle-set, client create modal, contractor create modal; soft-delete после save/reopen не возвращает удалённые документы; badge-типы PDF/DOC/XLS/IMG подтверждены.
+- Регрессия 3.1–4 пройдена отдельно: contacts client/contractor create/edit, INN lookup/fallback, client/contractor modal CRUD, driver/vehicle-set ModalShell smoke, базовая ERP table-структура (`page-head`, `table-card`, `table-toolbar`, `table.table`) сохранена.
+- Безопасный superadmin flow подтверждён только через существующий full-page provisioning. Modal-only create для superadmin не внедрялся и остаётся `NEED_OWNER_DECISION`.
+
+Текущий runtime-статус:
+
+```text
+3.2 DocumentUpload — PASS
+3.1–4 regression — PASS
+Stage 5 superadmin modal-only — NEED_OWNER_DECISION
+Stage 6 safe E2E full-page flow — PASS
+Stage 7 docs refresh — IN PROGRESS / закрывается этим обновлением
+```
+
+## 2026-06-28 E7 index split
+- public/index.php was reduced to a thin front controller.
+- Route registration now lives in pp/Http/Routes/*.php (18 files / 165 routes).
+- Legacy redirects for crews, driver-vehicle-blocks, and contractor-assignments were preserved.
+- Detailed map: docs/ai/ROUTE_MAP_AFTER_E7.md.
