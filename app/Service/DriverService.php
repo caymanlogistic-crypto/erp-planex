@@ -1,0 +1,272 @@
+<?php
+
+namespace App\Service;
+
+use App\Core\Database;
+use PDO;
+
+final class DriverService
+{
+    public function __construct(
+        private readonly array $config,
+        private readonly Database $db
+    ) {
+    }
+
+    public function getCompanyId(): int
+    {
+        return (int)(getSessionCompanyId() ?? 0);
+    }
+
+    public function loadCompany(int $companyId): ?array
+    {
+        if ($companyId <= 0) return null;
+        $pdo = $this->db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function getLocalPdo(array $company): PDO
+    {
+        $localDbConfig = $this->config['database'];
+        $localDbConfig['database'] = $company['db_identifier'];
+        $localDb = new Database($localDbConfig);
+        $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+        $this->ensureDriverTables($localPdo);
+        return $localPdo;
+    }
+
+    public function ensureDriverTables(PDO $localPdo): void
+    {
+        try { $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/004_create_company_drivers.sql'))); }
+        try { $localPdo->query("SELECT created_by_user_id FROM drivers LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec("ALTER TABLE drivers ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL"); }
+        try { $localPdo->query("SELECT 1 FROM entity_access_grants LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/009_create_entity_access_grants.sql'))); }
+    }
+
+    public function ensureDocumentTables(PDO $localPdo): void
+    {
+        try { $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
+        try { $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
+        try { $localPdo->query("SELECT created_by_user_id FROM documents LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec("ALTER TABLE documents ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL"); }
+    }
+
+    public function getDocTypes(PDO $localPdo): array
+    {
+        try {
+            $this->ensureDocumentTables($localPdo);
+            return $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'driver' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) { return []; }
+    }
+
+    public function listDrivers(PDO $localPdo, bool $isLogist, int $userId): array
+    {
+        if ($isLogist) {
+            $stmt = $localPdo->prepare(
+                "SELECT d.*, COALESCE(dp.phone, d.phone) AS main_phone,
+                        (SELECT COUNT(*) FROM driver_phones WHERE driver_id = d.id AND is_main = 0) AS extra_phones_count,
+                        (SELECT COUNT(*) FROM documents doc WHERE doc.entity_type = 'driver' AND doc.entity_id = d.id AND doc.deleted_at IS NULL) AS files_count
+                 FROM drivers d
+                 LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
+                 WHERE (d.created_by_user_id = ? OR d.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level = 'view'))
+                 ORDER BY d.created_at DESC"
+            );
+            $stmt->execute([$userId, $userId]);
+        } else {
+            $stmt = $localPdo->query(
+                "SELECT d.*, COALESCE(dp.phone, d.phone) AS main_phone,
+                        (SELECT COUNT(*) FROM driver_phones WHERE driver_id = d.id AND is_main = 0) AS extra_phones_count,
+                        (SELECT COUNT(*) FROM documents doc WHERE doc.entity_type = 'driver' AND doc.entity_id = d.id AND doc.deleted_at IS NULL) AS files_count
+                 FROM drivers d
+                 LEFT JOIN driver_phones dp ON d.id = dp.driver_id AND dp.is_main = 1
+                 ORDER BY d.created_at DESC"
+            );
+        }
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getDriverById(PDO $localPdo, int $id): ?array
+    {
+        $stmt = $localPdo->prepare('SELECT * FROM drivers WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function getDriverPhones(PDO $localPdo, int $driverId): array
+    {
+        $stmt = $localPdo->prepare("SELECT * FROM driver_phones WHERE driver_id = ? ORDER BY is_main DESC, id ASC");
+        $stmt->execute([$driverId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getDriverBlocks(PDO $localPdo, int $driverId): array
+    {
+        try {
+            $stmt = $localPdo->prepare(
+                "SELECT dvb.id, dvb.status, dvb.driver_id, dvb.vehicle_set_id,
+                 vs.set_type, vu1.plate_number AS primary_plate, vu1.brand AS primary_brand, vu1.model AS primary_model,
+                 vu2.plate_number AS secondary_plate, vu2.brand AS secondary_brand, vu2.model AS secondary_model
+                 FROM driver_vehicle_blocks dvb
+                 JOIN vehicle_sets vs ON dvb.vehicle_set_id = vs.id
+                 LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id
+                 LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id
+                 WHERE dvb.driver_id = ? AND dvb.status != 'archived' ORDER BY dvb.id DESC"
+            );
+            $stmt->execute([$driverId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) { return []; }
+    }
+
+    public function getDriverDocuments(PDO $localPdo, int $driverId): array
+    {
+        $stmt = $localPdo->prepare(
+            "SELECT id, entity_id, document_type, original_name, mime_type, stored_name, file_size
+             FROM documents
+             WHERE entity_type = 'driver' AND entity_id = ? AND deleted_at IS NULL
+             ORDER BY id"
+        );
+        $stmt->execute([$driverId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getDocsByType(PDO $localPdo, array $documents): array
+    {
+        $docsByType = ['passport' => [], 'license' => [], 'snils' => [], 'other' => []];
+        foreach ($documents as $doc) {
+            $dt = mb_strtolower($doc['document_type'] ?? '');
+            if (strpos($dt, 'паспорт') !== false) { $docsByType['passport'][] = $doc; }
+            elseif (strpos($dt, 'водительск') !== false || strpos($dt, 'ву') !== false) { $docsByType['license'][] = $doc; }
+            elseif (strpos($dt, 'снилс') !== false) { $docsByType['snils'][] = $doc; }
+            else { $docsByType['other'][] = $doc; }
+        }
+        return $docsByType;
+    }
+
+    public function getGrants(PDO $localPdo, int $driverId): array
+    {
+        $stmt = $localPdo->prepare("SELECT g.*, u.full_name AS logist_name FROM entity_access_grants g LEFT JOIN users u ON g.granted_to_user_id = u.id WHERE g.entity_type = ? AND g.entity_id = ?");
+        $stmt->execute(['driver', $driverId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getLogists(PDO $localPdo): array
+    {
+        return $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function checkLogistAccess(PDO $localPdo, int $entityId, int $userId): ?string
+    {
+        $stmt = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL LIMIT 1");
+        $stmt->execute([$entityId, $userId]);
+        return $stmt->fetchColumn() ?: null;
+    }
+
+    public function checkLogistCanEdit(PDO $localPdo, int $entityId, int $userId, int $createdByUserId): bool
+    {
+        if ($createdByUserId === $userId) return true;
+        $grantLevel = $this->checkLogistAccess($localPdo, $entityId, $userId);
+        return $grantLevel === 'edit';
+    }
+
+    public function createDriver(PDO $localPdo, array $data, int $userId, string $role): int
+    {
+        $insert = $localPdo->prepare(
+            'INSERT INTO drivers (full_name, phone, email, license_number, license_category,
+             license_issue_date, license_expire_date, passport_number, passport_issued_by,
+             passport_department_code, passport_issue_date, snils, status, comments, created_by_user_id, created_by_role)
+             VALUES (:full_name, :phone, :email, :license_number, :license_category,
+             :license_issue_date, :license_expire_date, :passport_number, :passport_issued_by,
+             :passport_department_code, :passport_issue_date, :snils, :status, :comments, :created_by_user_id, :created_by_role)'
+        );
+        $insert->execute([
+            ':full_name' => $data['full_name'],
+            ':phone' => $data['phone'] ?? '',
+            ':email' => !empty($data['email']) ? $data['email'] : null,
+            ':license_number' => $data['license_number'] ?? null,
+            ':license_category' => !empty($data['license_category']) ? $data['license_category'] : null,
+            ':license_issue_date' => $data['license_issue_date'] ?: null,
+            ':license_expire_date' => !empty($data['license_expire_date']) ? $data['license_expire_date'] : null,
+            ':passport_number' => $data['passport_number'] ?? null,
+            ':passport_issued_by' => !empty($data['passport_issued_by']) ? $data['passport_issued_by'] : null,
+            ':passport_department_code' => $data['passport_department_code'] ?? null,
+            ':passport_issue_date' => $data['passport_issue_date'] ?: null,
+            ':snils' => $data['snils'] ?? null,
+            ':status' => 'active',
+            ':comments' => !empty($data['comments']) ? $data['comments'] : null,
+            ':created_by_user_id' => $userId,
+            ':created_by_role' => $role,
+        ]);
+        return (int)$localPdo->lastInsertId();
+    }
+
+    public function updateDriver(PDO $localPdo, int $id, array $data, int $userId, string $role): void
+    {
+        $update = $localPdo->prepare(
+            'UPDATE drivers SET
+                full_name = :full_name, phone = :phone, email = :email,
+                license_number = :license_number, license_category = :license_category,
+                license_issue_date = :license_issue_date, license_expire_date = :license_expire_date,
+                passport_number = :passport_number, passport_issued_by = :passport_issued_by,
+                passport_department_code = :passport_department_code, passport_issue_date = :passport_issue_date,
+                snils = :snils, status = :status, comments = :comments,
+                updated_by_user_id = :updated_by_user_id, updated_by_role = :updated_by_role
+             WHERE id = :id'
+        );
+        $update->execute([
+            ':full_name' => $data['full_name'] ?? '',
+            ':phone' => $data['phone'] ?? '',
+            ':email' => !empty($data['email']) ? $data['email'] : null,
+            ':license_number' => $data['license_number'] ?? null,
+            ':license_category' => !empty($data['license_category']) ? $data['license_category'] : null,
+            ':license_issue_date' => $data['license_issue_date'] ?? null,
+            ':license_expire_date' => $data['license_expire_date'] ?? null,
+            ':passport_number' => $data['passport_number'] ?? null,
+            ':passport_issued_by' => !empty($data['passport_issued_by']) ? $data['passport_issued_by'] : null,
+            ':passport_department_code' => $data['passport_department_code'] ?? null,
+            ':passport_issue_date' => $data['passport_issue_date'] ?? null,
+            ':snils' => $data['snils'] ?? null,
+            ':status' => $data['status'] ?? 'active',
+            ':comments' => !empty($data['comments']) ? $data['comments'] : null,
+            ':updated_by_user_id' => $userId,
+            ':updated_by_role' => $role,
+            ':id' => $id,
+        ]);
+    }
+
+    public function archiveDriver(PDO $localPdo, int $id): void
+    {
+        $localPdo->prepare("UPDATE drivers SET status = 'archived' WHERE id = ?")->execute([$id]);
+    }
+
+    public function checkDriverHasCrews(PDO $localPdo, int $id): bool
+    {
+        try { $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/006_create_company_crews.sql'))); }
+        try { $localPdo->query("SELECT 1 FROM driver_vehicle_blocks LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $localPdo->exec(file_get_contents(base_path('database/migrations-local/018_create_driver_vehicle_blocks.sql'))); }
+
+        $stmt = $localPdo->prepare(
+            'SELECT COUNT(*) FROM crews c
+             JOIN driver_vehicle_blocks dvb ON dvb.id = c.driver_vehicle_block_id
+             WHERE dvb.driver_id = ?'
+        );
+        $stmt->execute([$id]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    public function getMainPhone(PDO $localPdo, array $phones, array $driver): ?string
+    {
+        foreach ($phones as $ph) {
+            if (!empty($ph['is_main']) && !empty($ph['phone'])) return $ph['phone'];
+        }
+        if (!empty($phones)) return $phones[0]['phone'] ?? null;
+        return $driver['phone'] ?? null;
+    }
+}
