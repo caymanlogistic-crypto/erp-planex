@@ -1,17 +1,5 @@
 <?php
 
-$router->get('/company/driver-vehicle-blocks', function () use ($config, $db) {
-    requireRole(['company_owner', 'senior_logist', 'logist']);
-    header('Location: /company/route-executors', true, 302);
-    exit;
-});
-
-$router->get('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
-    requireRole(['company_owner', 'senior_logist', 'logist']);
-    header('Location: /company/route-executors/create', true, 302);
-    exit;
-});
-
 $router->post('/company/driver-vehicle-blocks/create', function () use ($config, $db) {
     requireRole(['company_owner', 'senior_logist', 'logist']);
     $pageTitle = 'Создать связку';

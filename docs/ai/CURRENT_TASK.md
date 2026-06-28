@@ -89,3 +89,18 @@ Runtime, уже подтверждённый в этом цикле:
 - Structural split of the index monolith is complete.
 - Remaining follow-up is helper/service extraction and browser-level regression, not route registration extraction.
 - Report: docs/ai/REFACTOR_E7_REPORT.md.
+
+## 2026-06-28 E7.1 completion
+
+- Status: `DONE / READY FOR ACCEPTANCE`.
+- Closed in this pass:
+  - auth moved to `AuthController`
+  - route executors moved to controller-based route registration
+  - responsible assignments moved to controller-based route registration
+  - superadmin companies/owner moved to controller-based route registration
+  - shared helpers extracted from `public/index.php` and `core.php`
+  - GET legacy redirects isolated in `legacy_redirects.php`
+- Verification:
+  - `php -l` -> PASS on front controller, routes, controllers, services, support, action includes
+  - runtime regression -> PASS on expected `200/403/302` contract
+- Next step: create a dedicated E7.1 commit without unrelated workspace changes.

@@ -1,11 +1,5 @@
 <?php
 
-$router->get('/company/contractor-assignments', function () use ($config, $db) {
-    requireRole(['company_owner', 'senior_logist', 'logist']);
-    header('Location: /company/responsible-assignments', true, 302);
-    exit;
-});
-
 $router->post('/company/contractor-assignments/{id}/assign', function ($id) use ($config, $db) {
     requireRole('company_owner');
 

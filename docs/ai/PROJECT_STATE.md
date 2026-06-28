@@ -162,3 +162,31 @@ Stage 7 docs refresh — IN PROGRESS / закрывается этим обно�
 - Route registration now lives in pp/Http/Routes/*.php (18 files / 165 routes).
 - Legacy redirects for crews, driver-vehicle-blocks, and contractor-assignments were preserved.
 - Detailed map: docs/ai/ROUTE_MAP_AFTER_E7.md.
+
+## 2026-06-28 E7.1 architecture stabilization
+
+- Status: `COMPLETE, RUNTIME REGRESSION PASS`.
+- Branch: `refactor/stabilize-modular-structure`.
+- `public/index.php`: `80` lines in current tree.
+- `app/Http/Routes/*.php`: `19` files after extracting `legacy_redirects.php`.
+- Controllers added:
+  - `app/Http/Controllers/AuthController.php`
+  - `app/Http/Controllers/Company/RouteExecutorController.php`
+  - `app/Http/Controllers/Company/ResponsibleAssignmentController.php`
+  - `app/Http/Controllers/Superadmin/CompanyController.php`
+  - `app/Http/Controllers/Superadmin/CompanyOwnerController.php`
+- Support/services added:
+  - `app/Support/http_runtime.php`
+  - `app/Support/core_runtime.php`
+  - `app/Service/LocalMigrationService.php`
+  - `app/Service/RouteExecutorService.php`
+  - `app/Service/ResponsibleAssignmentService.php`
+  - `app/Service/SuperadminCompanyService.php`
+- Runtime smoke after E7.1:
+  - `/login` -> `200`
+  - `superadmin` companies/owner routes -> `200`
+  - `company_owner` dashboard + route-executors + responsible-assignments + protected core lists -> `200`
+  - `senior_logist` route-executors -> `200`, responsible-assignments -> `403`
+  - `logist` route-executors -> `200`, responsible-assignments -> `403`
+  - legacy redirects preserved as `302`
+- Details: `docs/ai/ARCHITECTURE_STABILIZED_AFTER_E7_1.md`

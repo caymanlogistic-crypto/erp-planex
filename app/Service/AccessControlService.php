@@ -31,6 +31,63 @@ namespace App\Service;
 
 final class AccessControlService
 {
+    public static function hasEntityAccess(\PDO $pdo, string $entityType, int $entityId, int $userId, array $levels = ['view', 'edit']): bool
+    {
+        if ($entityId <= 0 || $userId <= 0) {
+            return false;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($levels), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT 1 FROM entity_access_grants
+             WHERE entity_type = ?
+               AND entity_id = ?
+               AND granted_to_user_id = ?
+               AND access_level IN ($placeholders)
+               AND revoked_at IS NULL
+             LIMIT 1"
+        );
+        $stmt->execute(array_merge([$entityType, $entityId, $userId], $levels));
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public static function hasRouteExecutorAccess(\PDO $pdo, array $crew, int $userId, string $mode = 'view'): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+
+        if ((int) ($crew['created_by_user_id'] ?? 0) === $userId) {
+            return true;
+        }
+
+        $levels = $mode === 'edit' ? ['edit'] : ['view', 'edit'];
+        $crewId = (int) ($crew['id'] ?? $crew['crew_id'] ?? 0);
+        if (self::hasEntityAccess($pdo, 'crew', $crewId, $userId, $levels)) {
+            return true;
+        }
+
+        $contractorId = (int) ($crew['contractor_id'] ?? 0);
+        $driverVehicleBlockId = (int) ($crew['driver_vehicle_block_id'] ?? 0);
+        $driverId = (int) ($crew['driver_id'] ?? 0);
+        $vehicleSetId = (int) ($crew['vehicle_set_id'] ?? 0);
+
+        $hasContractor = ((int) ($crew['contractor_created_by_user_id'] ?? 0) === $userId)
+            || self::hasEntityAccess($pdo, 'contractor', $contractorId, $userId, $levels);
+
+        $hasDriverVehicleBlock = ((int) ($crew['dvb_created_by_user_id'] ?? 0) === $userId)
+            || self::hasEntityAccess($pdo, 'driver_vehicle_block', $driverVehicleBlockId, $userId, $levels);
+
+        $hasDriver = ((int) ($crew['driver_created_by_user_id'] ?? 0) === $userId)
+            || self::hasEntityAccess($pdo, 'driver', $driverId, $userId, $levels);
+
+        $hasVehicleSet = ((int) ($crew['vehicle_set_created_by_user_id'] ?? 0) === $userId)
+            || self::hasEntityAccess($pdo, 'vehicle_set', $vehicleSetId, $userId, $levels);
+
+        return $hasContractor && ($hasDriverVehicleBlock || ($hasDriver && $hasVehicleSet));
+    }
+
     // -------------------------------------------------------------------------
     // Константы ролей
     // -------------------------------------------------------------------------

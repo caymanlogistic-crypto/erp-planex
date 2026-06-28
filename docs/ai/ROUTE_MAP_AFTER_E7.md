@@ -202,3 +202,10 @@ Generated from `app/Http/Routes/*.php` after the E7 index split.
 - `POST /superadmin/companies/{company_id}/users/logists/{user_id}/block`
 - `POST /superadmin/companies/{company_id}/users/logists/{user_id}/archive`
 - `POST /superadmin/companies/{id}/users/logists/create`
+
+## legacy_redirects.php
+- `GET /company/crews` -> `/company/route-executors`
+- `GET /company/crews/create` -> `/company/route-executors/create`
+- `GET /company/driver-vehicle-blocks` -> `/company/route-executors`
+- `GET /company/driver-vehicle-blocks/create` -> `/company/route-executors/create`
+- `GET /company/contractor-assignments` -> `/company/responsible-assignments`
