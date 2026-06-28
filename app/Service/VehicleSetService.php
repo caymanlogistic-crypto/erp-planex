@@ -92,10 +92,31 @@ final class VehicleSetService
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getDocTypes(PDO $pdo, string $entityType = 'vehicle_unit'): array
+    {
+        try {
+            $this->ensureDocumentTables($pdo);
+            return $pdo->query("SELECT id,name,code,entity_type FROM document_types WHERE entity_type='$entityType' OR entity_type IS NULL ORDER BY sort_order,name")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) { return []; }
+    }
+
+    public function ensureDocumentTables(PDO $pdo): void
+    {
+        try { $pdo->query("SELECT 1 FROM documents LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $pdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql'))); }
+        try { $pdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch(); }
+        catch (\Exception $e) { $pdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql'))); $pdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql'))); }
+    }
+
     public function checkLogistAccess(PDO $pdo, int $entityId, int $userId): ?string
     {
         $stmt = $pdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type='vehicle_set' AND entity_id=? AND granted_to_user_id=? AND revoked_at IS NULL LIMIT 1");
         $stmt->execute([$entityId, $userId]);
         return $stmt->fetchColumn() ?: null;
+    }
+
+    public function archiveVehicleSet(PDO $pdo, int $id): void
+    {
+        $pdo->prepare("UPDATE vehicle_sets SET status='archived' WHERE id=?")->execute([$id]);
     }
 }
