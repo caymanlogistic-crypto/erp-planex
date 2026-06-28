@@ -160,10 +160,13 @@
 <?php endif; ?>
 
 <form method="post"
-      action="/company/documents/<?= $replaceDocId > 0 ? 'replace' : 'upload' ?>?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>"
+      action="/company/documents/<?= $replaceDocId > 0 ? 'replace' : 'upload' ?>"
       enctype="multipart/form-data"
       class="panel">
     <div class="panel-body">
+
+        <input type="hidden" name="entity_type" value="<?= e($entityType) ?>">
+        <input type="hidden" name="entity_id" value="<?= $entityId ?>">
 
         <?php if ($replaceDocId > 0): ?>
             <input type="hidden" name="replace_doc_id" value="<?= $replaceDocId ?>">
@@ -202,7 +205,7 @@
 
             <div class="field">
                 <label class="field-label">Файл <span class="req">*</span></label>
-                <input type="file" name="document_file" class="field-input" required
+                <input type="file" name="doc_file" class="field-input" required
                        accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
                 <div class="field-msg">
                     Допустимые форматы: PDF, JPG, PNG, WEBP, DOC, DOCX, XLS, XLSX. Максимальный размер: 10 МБ.

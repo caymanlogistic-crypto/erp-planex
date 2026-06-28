@@ -148,7 +148,10 @@
                             <?php if (!$isDeleted): ?>
                             <a href="/company/documents/download?id=<?= $doc['id'] ?>" class="btn btn-toolbar">Скачать</a>
                             <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>&replace=<?= $doc['id'] ?>" class="btn btn-toolbar">Заменить</a>
-                            <form method="post" action="/company/documents/delete?id=<?= $doc['id'] ?>&redirect=<?= urlencode('/company/documents?entity_type=' . $entityType . '&entity_id=' . $entityId) ?>" class="inline-form" onsubmit="return confirm('Архивировать документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
+                            <form method="post" action="/company/documents/delete" class="inline-form" onsubmit="return confirm('Архивировать документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
+                                <input type="hidden" name="id" value="<?= $doc['id'] ?>">
+                                <input type="hidden" name="entity_type" value="<?= e($entityType) ?>">
+                                <input type="hidden" name="entity_id" value="<?= $entityId ?>">
                                 <button type="submit" class="btn btn-toolbar text-danger">Архивировать</button>
                             </form>
                             <?php else: ?>

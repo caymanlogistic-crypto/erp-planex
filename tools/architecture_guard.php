@@ -268,6 +268,73 @@ if (is_file($layoutPath)) {
     }
 }
 
+// === DocumentActions consistency checks ===
+$docIndex = $root . '/app/Http/Controllers/Company/DocumentActions/index.php';
+if (is_file($docIndex)) {
+    $di = file_get_contents($docIndex);
+    // Must use whitelist-based displayField, not universal SELECT name,full_name,plate_number
+    if (strpos($di, 'displayField') === false) {
+        $errors[] = "DocumentActions/index.php: missing whitelist displayField map";
+    }
+    if (preg_match('/SELECT\s+name,\s*full_name,\s*plate_number/i', $di)) {
+        $errors[] = "DocumentActions/index.php: risky universal SELECT name,full_name,plate_number";
+    }
+    // Must validate entity_type against whitelist before SQL
+    if (strpos($di, '!isset($whitelist[$entityType])') === false && strpos($di, '!isset($entityInfo[$entityType])') === false) {
+        $errors[] = "DocumentActions/index.php: entity_type not validated against whitelist";
+    }
+}
+$docUploadForm = $root . '/app/Http/Controllers/Company/DocumentActions/upload_form.php';
+if (is_file($docUploadForm)) {
+    $uf = file_get_contents($docUploadForm);
+    // Must set company, entityType, entityId, docTypes, entityName, etc.
+    $requiredVars = ['$entityType=', '$entityId=', '$docTypes=', '$entityName=', '$entityLabel='];
+    foreach ($requiredVars as $rv) {
+        if (strpos($uf, $rv) === false) {
+            $warnings[] = "DocumentActions/upload_form.php: missing required context '$rv'";
+        }
+    }
+}
+$docUploadView = $root . '/app/View/pages/company_documents_upload.php';
+if (is_file($docUploadView)) {
+    $uv = file_get_contents($docUploadView);
+    // File input name must match upload_submit.php: doc_file
+    if (strpos($uv, 'name="doc_file"') === false) {
+        $errors[] = "company_documents_upload.php: file input name mismatch (expected doc_file)";
+    }
+    // Must have hidden entity_type and entity_id fields
+    if (strpos($uv, 'name="entity_type"') === false) {
+        $errors[] = "company_documents_upload.php: missing hidden entity_type field";
+    }
+    if (strpos($uv, 'name="entity_id"') === false) {
+        $errors[] = "company_documents_upload.php: missing hidden entity_id field";
+    }
+}
+$docSubmit = $root . '/app/Http/Controllers/Company/DocumentActions/upload_submit.php';
+if (is_file($docSubmit)) {
+    $ds = file_get_contents($docSubmit);
+    // Must read from POST
+    if (strpos($ds, '$_POST') === false) {
+        $warnings[] = "upload_submit.php: does not read from POST";
+    }
+}
+$docDelete = $root . '/app/Http/Controllers/Company/DocumentActions/delete.php';
+if (is_file($docDelete)) {
+    $dd = file_get_contents($docDelete);
+    // Must read id from POST
+    if (strpos($dd, '$_POST[\'id\']') === false && strpos($dd, '$_POST[\"id\"]') === false) {
+        $errors[] = "DocumentActions/delete.php: does not read id from POST";
+    }
+}
+$docView = $root . '/app/View/pages/company_documents.php';
+if (is_file($docView)) {
+    $dv = file_get_contents($docView);
+    // Delete form must have hidden POST fields
+    if (strpos($dv, 'name="id"') === false || strpos($dv, 'name="entity_type"') === false) {
+        $errors[] = "company_documents.php: delete form missing hidden POST fields";
+    }
+}
+
 // === Output ===
 echo "=== Architecture Guard E14-E15 ===\n\n";
 

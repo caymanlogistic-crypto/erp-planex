@@ -1,11 +1,11 @@
 # FINAL HANDOFF PACKAGE REPORT
 
-## Status: FINAL_HANDOFF_PACKAGE_READY
+## Status: FINAL_DOCUMENTACTIONS_ACCEPTED
 
 **Date**: 2026-06-28
 **Branch**: `refactor/e14-e15-final-architecture-review`
-**Head commit**: `f3aaa65` — `docs(handoff): update final archive handoff metadata`
-**Previous commits**: `e7f61630`, `40085d4b`, `ab1c8251`, `ccc159b2`, `3f73688e`, `8d4c0e03`, `3f4e51bc`
+**Head commit**: (will be set after final commit — `fix(documents): close final handoff document actions runtime blocker`)
+**Previous commits**: `e0dd83c`, `f3aaa65b`, `e7f61630`, `40085d4b`, `ab1c8251`, `ccc159b2`, `3f73688e`
 **Working tree**: clean
 
 ---
@@ -139,7 +139,18 @@ All tests performed on PHP 8.5.6 built-in server.
 
 ---
 
-## What External Reviewer Should Verify
+## FINAL-HANDOFF.3 DocumentActions blocker fixed
+
+**Files changed**:
+- `app/Http/Controllers/Company/DocumentActions/index.php` — whitelist extended with `displayField`, universal `SELECT name,full_name,plate_number` replaced with safe `SELECT \`$displayField\`` from whitelist
+- `app/Http/Controllers/Company/DocumentActions/upload_form.php` — rewritten to prepare ALL view context variables ($company, $entityType, $entityId, $docTypes, $entityName, $entityLabel, $errors, $formError, $replacedDoc, etc.)
+- `app/View/pages/company_documents.php` — delete form now sends hidden POST fields (`id`, `entity_type`, `entity_id`) instead of relying on query string
+- `app/View/pages/company_documents_upload.php` — added hidden `entity_type`/`entity_id` fields; file input renamed to `doc_file` to match `upload_submit.php`
+- `tools/architecture_guard.php` — added DocumentActions consistency checks (file input name, hidden fields, whitelist displayField, POST id, etc.)
+
+**Entity types verified**: client, contractor, driver, vehicle_set, vehicle_unit, driver_vehicle_block, crew — all return 200 without SQL fatal.
+
+**Runtime results**: all PASS — docs list, upload form, regression pages, legacy redirects, roles.
 
 1. **Extract and run**: copy `.env.example` → `.env`, configure DB, run `php -S localhost:8017 -t public public/index.php`
 2. **Login as each role** and test all CRUD workflows
