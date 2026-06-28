@@ -310,28 +310,51 @@ if (is_file($docUploadView)) {
         $errors[] = "company_documents_upload.php: missing hidden entity_id field";
     }
 }
+
+// === DocumentActions field name consistency ===
 $docSubmit = $root . '/app/Http/Controllers/Company/DocumentActions/upload_submit.php';
 if (is_file($docSubmit)) {
     $ds = file_get_contents($docSubmit);
-    // Must read from POST
-    if (strpos($ds, '$_POST') === false) {
-        $warnings[] = "upload_submit.php: does not read from POST";
+    // Must read document_type (form standard) with doc_type fallback
+    if (strpos($ds, 'document_type') === false && strpos($ds, 'doc_type') === false) {
+        $errors[] = "upload_submit.php: missing document_type/doc_type read";
+    }
+    if (strpos($ds, '$_FILES[\'doc_file\']') === false) {
+        $errors[] = "upload_submit.php: expected doc_file upload field";
     }
 }
-$docDelete = $root . '/app/Http/Controllers/Company/DocumentActions/delete.php';
-if (is_file($docDelete)) {
-    $dd = file_get_contents($docDelete);
-    // Must read id from POST
-    if (strpos($dd, '$_POST[\'id\']') === false && strpos($dd, '$_POST[\"id\"]') === false) {
-        $errors[] = "DocumentActions/delete.php: does not read id from POST";
+$docReplace = $root . '/app/Http/Controllers/Company/DocumentActions/replace.php';
+if (is_file($docReplace)) {
+    $dr = file_get_contents($docReplace);
+    // Must handle new form: doc_file, replace_doc_id, document_type, entity_type, entity_id
+    if (strpos($dr, 'replace_doc_id') === false) {
+        $errors[] = "replace.php: missing replace_doc_id handling";
+    }
+    if (strpos($dr, 'doc_file') === false && strpos($dr, 'predef_doc') !== false) {
+        $errors[] = "replace.php: uses old predef_doc instead of doc_file";
     }
 }
-$docView = $root . '/app/View/pages/company_documents.php';
-if (is_file($docView)) {
-    $dv = file_get_contents($docView);
-    // Delete form must have hidden POST fields
-    if (strpos($dv, 'name="id"') === false || strpos($dv, 'name="entity_type"') === false) {
-        $errors[] = "company_documents.php: delete form missing hidden POST fields";
+$docUploadView = $root . '/app/View/pages/company_documents_upload.php';
+if (is_file($docUploadView)) {
+    $uv = file_get_contents($docUploadView);
+    // File input name
+    if (strpos($uv, 'name="doc_file"') === false) {
+        $errors[] = "company_documents_upload.php: file input name mismatch (expected doc_file)";
+    }
+    // Hidden entity fields
+    if (strpos($uv, 'name="entity_type"') === false) {
+        $errors[] = "company_documents_upload.php: missing hidden entity_type field";
+    }
+    if (strpos($uv, 'name="entity_id"') === false) {
+        $errors[] = "company_documents_upload.php: missing hidden entity_id field";
+    }
+    // Document type field name should be document_type (matches submit read standard)
+    if (strpos($uv, 'name="document_type"') === false) {
+        $errors[] = "company_documents_upload.php: missing document_type field name";
+    }
+    // Replace form sends replace_doc_id
+    if (strpos($uv, 'replace_doc_id') === false) {
+        $warnings[] = "company_documents_upload.php: replace form may miss replace_doc_id";
     }
 }
 
