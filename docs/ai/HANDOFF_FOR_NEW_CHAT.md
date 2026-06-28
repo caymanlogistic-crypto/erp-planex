@@ -1,5 +1,18 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
+## Актуализация 2026-06-28 — E8 Clients Module Extraction
+
+**Статус**: CLIENTS_MODULE_E8_ACCEPTED
+
+Ключевые изменения:
+- Модуль Clients выделен из `company_clients.php` (1372 → 16 строк) в `Route → Controller → Service → View`.
+- Создан `app/Http/Controllers/Company/ClientController.php` — тонкий контроллер, делегирует в 11 action include файлов.
+- Создан `app/Service/ClientService.php` — бизнес-логика: подключение к БД, валидация, CRUD, миграции.
+- Action include файлы: `app/Http/Controllers/Company/ClientActions/{index,create_form,create_submit,show,edit_form,edit_submit,archive,modal_view,modal_edit_form,modal_edit_submit,modal_archive}.php`.
+- Добавлен `require_once` для `ClientService.php` в `public/index.php`.
+- **Это первый модуль, полностью следующий стандарту `Route → Controller → Service → View`**.
+- Архитектурный guard расширен: автоматически проверяет `ClientService` в index.php.
+
 ## Актуализация 2026-06-28 — E7.2 Architecture Hardening
 
 **Статус**: E7.2_ARCHITECTURE_HARDENED

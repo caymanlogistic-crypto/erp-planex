@@ -1,0 +1,261 @@
+<?php
+
+namespace App\Service;
+
+use App\Core\Database;
+use PDO;
+
+final class ClientService
+{
+    public function __construct(
+        private readonly array $config,
+        private readonly Database $db
+    ) {
+    }
+
+    public function getCompanyId(): int
+    {
+        return (int)(getSessionCompanyId() ?? 0);
+    }
+
+    public function loadCompany(int $companyId): ?array
+    {
+        if ($companyId <= 0) {
+            return null;
+        }
+        $pdo = $this->db->connection();
+        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+        $stmt->execute([$companyId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function getLocalPdo(array $company): PDO
+    {
+        $localDbConfig = $this->config['database'];
+        $localDbConfig['database'] = $company['db_identifier'];
+        $localDb = new Database($localDbConfig);
+        $localPdo = $localDb->connection();
+        applyLocalMigrations($localPdo);
+        $this->ensureClientTables($localPdo);
+        return $localPdo;
+    }
+
+    public function ensureClientTables(PDO $localPdo): void
+    {
+        try {
+            $localPdo->query("SELECT 1 FROM clients LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/002_create_company_clients.sql'));
+            $localPdo->exec($migrationSql);
+        }
+
+        try {
+            $localPdo->query("SELECT created_by_user_id FROM clients LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $localPdo->exec("ALTER TABLE clients ADD COLUMN created_by_user_id INT UNSIGNED DEFAULT NULL, ADD COLUMN created_by_role VARCHAR(20) DEFAULT NULL");
+        }
+
+        try {
+            $localPdo->query("SELECT 1 FROM entity_access_grants LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $migrationSql = file_get_contents(base_path('database/migrations-local/009_create_entity_access_grants.sql'));
+            $localPdo->exec($migrationSql);
+        }
+    }
+
+    public function ensureDocumentTables(PDO $localPdo): void
+    {
+        try {
+            $localPdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql')));
+        }
+        try {
+            $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch();
+        } catch (\Exception $e) {
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));
+            $localPdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));
+        }
+    }
+
+    public function listClients(PDO $localPdo, bool $isLogist, int $userId): array
+    {
+        if ($isLogist) {
+            $stmt = $localPdo->prepare(
+                "SELECT * FROM clients WHERE (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'client' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+            );
+            $stmt->execute([$userId, $userId]);
+        } else {
+            $stmt = $localPdo->query("SELECT * FROM clients ORDER BY created_at DESC");
+        }
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getClientById(PDO $localPdo, int $id): ?array
+    {
+        $stmt = $localPdo->prepare('SELECT * FROM clients WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function validateClient(array $data, PDO $localPdo, ?int $excludeId = null): array
+    {
+        $errors = [];
+        $name = trim($data['name'] ?? '');
+        $inn = trim($data['inn'] ?? '');
+        $kpp = trim($data['kpp'] ?? '');
+        $ogrn = trim($data['ogrn'] ?? '');
+
+        if ($name === '') {
+            $errors['name'] = 'Обязательное поле';
+        }
+
+        if ($inn === '') {
+            $errors['inn'] = 'Укажите ИНН';
+        } elseif (!preg_match('/^\d+$/', $inn) || (strlen($inn) !== 10 && strlen($inn) !== 12)) {
+            $errors['inn'] = 'ИНН должен содержать 10 или 12 цифр';
+        }
+
+        if ($kpp !== '' && !preg_match('/^\d{9}$/', $kpp)) {
+            $errors['kpp'] = 'КПП должен содержать 9 цифр';
+        }
+
+        if ($ogrn !== '' && (!preg_match('/^\d+$/', $ogrn) || (strlen($ogrn) !== 13 && strlen($ogrn) !== 15))) {
+            $errors['ogrn'] = 'ОГРН/ОГРНИП должен содержать 13 или 15 цифр';
+        }
+
+        if (($_POST['bank_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_account'])) {
+            $errors['bank_account'] = 'Расчётный счёт должен содержать 20 цифр';
+        }
+        if (($_POST['bank_bik'] ?? '') !== '' && !preg_match('/^\d{9}$/', $_POST['bank_bik'])) {
+            $errors['bank_bik'] = 'БИК должен содержать 9 цифр';
+        }
+        if (($_POST['bank_corr_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_corr_account'])) {
+            $errors['bank_corr_account'] = 'Корр. счёт должен содержать 20 цифр';
+        }
+
+        if ($inn !== '') {
+            $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM clients WHERE inn = ?');
+            $params = [$inn];
+            if ($excludeId !== null) {
+                $checkStmt = $localPdo->prepare('SELECT COUNT(*) FROM clients WHERE inn = ? AND id != ?');
+                $params[] = $excludeId;
+            }
+            $checkStmt->execute($params);
+            if ($checkStmt->fetchColumn() > 0) {
+                $errors['inn'] = 'ИНН уже используется в этой компании';
+            }
+        }
+
+        return $errors;
+    }
+
+    public function createClient(PDO $localPdo, array $data, int $userId, string $role): int
+    {
+        $insert = $localPdo->prepare(
+            'INSERT INTO clients (name, inn, kpp, ogrn, entity_type, legal_address, physical_address,
+             bank_account, bank_name, bank_bik, bank_corr_account,
+             director_full_name, director_position,
+             status, comments, created_by_user_id, created_by_role,
+             updated_by_user_id, updated_by_role)
+             VALUES (:name, :inn, :kpp, :ogrn, :entity_type, :legal_address, :physical_address,
+             :bank_account, :bank_name, :bank_bik, :bank_corr_account,
+             :director_full_name, :director_position,
+             :status, :comments, :created_by_user_id, :created_by_role,
+             :updated_by_user_id, :updated_by_role)'
+        );
+        $insert->execute([
+            ':name'               => trim($data['name'] ?? ''),
+            ':inn'                => trim($data['inn'] ?? ''),
+            ':kpp'                => ($v = trim($data['kpp'] ?? '')) !== '' ? $v : null,
+            ':ogrn'               => ($v = trim($data['ogrn'] ?? '')) !== '' ? $v : null,
+            ':entity_type'        => ($data['entity_type'] ?? '') !== '' ? $data['entity_type'] : null,
+            ':legal_address'      => ($v = trim($data['legal_address'] ?? '')) !== '' ? $v : null,
+            ':physical_address'   => ($v = trim($data['physical_address'] ?? '')) !== '' ? $v : null,
+            ':bank_account'       => ($data['bank_account'] ?? '') !== '' ? $data['bank_account'] : null,
+            ':bank_name'          => ($data['bank_name'] ?? '') !== '' ? $data['bank_name'] : null,
+            ':bank_bik'           => ($data['bank_bik'] ?? '') !== '' ? $data['bank_bik'] : null,
+            ':bank_corr_account'  => ($data['bank_corr_account'] ?? '') !== '' ? $data['bank_corr_account'] : null,
+            ':director_full_name' => ($v = trim($data['director_full_name'] ?? '')) !== '' ? $v : null,
+            ':director_position'  => ($v = trim($data['director_position'] ?? '')) !== '' ? $v : null,
+            ':status'             => 'active',
+            ':comments'           => ($v = trim($data['comments'] ?? '')) !== '' ? $v : null,
+            ':created_by_user_id' => $userId,
+            ':created_by_role'    => $role,
+            ':updated_by_user_id' => $userId,
+            ':updated_by_role'    => $role,
+        ]);
+        return (int)$localPdo->lastInsertId();
+    }
+
+    public function updateClient(PDO $localPdo, int $id, array $data, int $userId, string $role): void
+    {
+        $update = $localPdo->prepare(
+            'UPDATE clients SET
+                name = :name,
+                inn = :inn,
+                kpp = :kpp,
+                ogrn = :ogrn,
+                legal_address = :legal_address,
+                physical_address = :physical_address,
+                status = :status,
+                comments = :comments,
+                updated_by_user_id = :updated_by_user_id,
+                updated_by_role = :updated_by_role
+             WHERE id = :id'
+        );
+        $update->execute([
+            ':name'             => trim($data['name'] ?? ''),
+            ':inn'              => trim($data['inn'] ?? ''),
+            ':kpp'              => ($v = trim($data['kpp'] ?? '')) !== '' ? $v : null,
+            ':ogrn'             => ($v = trim($data['ogrn'] ?? '')) !== '' ? $v : null,
+            ':legal_address'    => ($v = trim($data['legal_address'] ?? '')) !== '' ? $v : null,
+            ':physical_address' => ($v = trim($data['physical_address'] ?? '')) !== '' ? $v : null,
+            ':status'           => $data['status'] ?? 'active',
+            ':comments'         => ($v = trim($data['comments'] ?? '')) !== '' ? $v : null,
+            ':updated_by_user_id' => $userId,
+            ':updated_by_role'   => $role,
+            ':id'               => $id,
+        ]);
+    }
+
+    public function archiveClient(PDO $localPdo, int $id): void
+    {
+        $update = $localPdo->prepare("UPDATE clients SET status = 'archived' WHERE id = ?");
+        $update->execute([$id]);
+    }
+
+    public function getDocTypes(PDO $localPdo): array
+    {
+        try {
+            $this->ensureDocumentTables($localPdo);
+            return $localPdo->query("SELECT id, name, code, entity_type FROM document_types WHERE entity_type = 'client' OR entity_type IS NULL ORDER BY sort_order, name")->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    public function getGrants(PDO $localPdo, int $clientId): array
+    {
+        $stmt = $localPdo->prepare(
+            "SELECT g.*, u.full_name AS logist_name
+             FROM entity_access_grants g
+             LEFT JOIN users u ON g.granted_to_user_id = u.id
+             WHERE g.entity_type = ? AND g.entity_id = ?"
+        );
+        $stmt->execute(['client', $clientId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getLogists(PDO $localPdo): array
+    {
+        return $localPdo->query("SELECT id, full_name, login FROM users WHERE role_code IN ('logist', 'senior_logist') AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function checkLogistAccess(PDO $localPdo, int $clientId, int $userId, string $requiredLevel = 'view'): ?string
+    {
+        $stmt = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'client' AND entity_id = ? AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL LIMIT 1");
+        $stmt->execute([$clientId, $userId]);
+        return $stmt->fetchColumn() ?: null;
+    }
+}

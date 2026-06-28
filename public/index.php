@@ -29,6 +29,7 @@ require_once base_path('app/Service/AccessControlService.php');
 require_once base_path('app/Service/CompanyInnLookupService.php');
 require_once base_path('app/Service/ContractorContactService.php');
 require_once base_path('app/Service/ClientContactService.php');
+require_once base_path('app/Service/ClientService.php');
 require_once base_path('app/Service/LocalMigrationService.php');
 
 require_once base_path('app/Support/core_runtime.php');

@@ -1,5 +1,19 @@
 # ERP PLANEX — текущее состояние проекта
 
+## Актуализация 2026-06-28 — E8 Clients Module Extraction
+
+**Статус**: CLIENTS_MODULE_E8_ACCEPTED
+
+Выполнено:
+- Модуль Clients выделен из монолитного route-файла `company_clients.php` (1372 → 16 строк) в модульную структуру `Route → Controller → Service → View`.
+- Создан `app/Http/Controllers/Company/ClientController.php` — тонкий контроллер, делегирует в action includes.
+- Создан `app/Service/ClientService.php` — бизнес-логика: подключение к БД, валидация, CRUD, миграции.
+- Созданы 11 action include файлов в `app/Http/Controllers/Company/ClientActions/`.
+- Добавлен `require_once` для `ClientService.php` в `public/index.php`.
+- Весь функционал сохранён: дизайн, маршруты, права доступа, legal entity логика, client_contacts, документы, popup "Создать клиента".
+- Runtime smoke: PASS (все роли, legacy redirects, регрессия contractors, route-executors, responsible-assignments).
+- `php -l` — 0 ошибок. `architecture_guard.php` — PASS.
+
 ## Актуализация 2026-06-28 — E7.2 Architecture Hardening
 
 **Статус**: E7.2_ARCHITECTURE_HARDENED
