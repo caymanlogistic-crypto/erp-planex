@@ -182,7 +182,7 @@
                     <button type="submit" class="btn btn-danger">Удалить</button>
                 </form>
                 <?php else: ?>
-                    <p class="text-muted">Исполнитель рейса уже находится в архиве.</p>
+                    <p class="text-muted">Исполнитель рейса уже удалён.</p>
                 <?php endif; ?>
                 <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
             </div>

@@ -88,7 +88,7 @@ $contractorDocumentsUrl = '/company/documents?entity_type=contractor&entity_id='
 <div class="modal-foot is-spaced">
   <div class="modal-foot-actions">
     <?php if ($contractorCanArchive): ?>
-    <button type="button" class="btn btn-ghost" data-contractor-archive-btn>Архивировать</button>
+    <button type="button" class="btn btn-ghost" data-contractor-archive-btn>Удалить</button>
     <?php endif; ?>
   </div>
   <div class="modal-foot-actions">

@@ -1,4 +1,4 @@
-﻿<?php if ($company === null): ?>
+<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.

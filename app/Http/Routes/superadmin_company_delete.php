@@ -310,17 +310,18 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
                 $cmd = "mysqldump --host=" . escapeshellarg($dbHost) . " --port=" . escapeshellarg($dbPort) . " --user=" . escapeshellarg($dbUser) . " ";
                 if ($dbPass !== '') { $cmd .= "--password=" . escapeshellarg($dbPass) . " "; }
                 $cmd .= "--no-tablespaces --single-transaction --routines --triggers " . escapeshellarg($dbIdentifier);
+                $cmd .= " > " . escapeshellarg($dumpFile) . " 2>&1";
 
-                $output = null; $retval = 0;
-                exec($cmd . ' 2>&1', $output, $retval);
+                $shellOutput = null; $retval = 0;
+                exec($cmd, $shellOutput, $retval);
                 if ($retval === 0) {
-                    file_put_contents($dumpFile, implode("\n", $output));
                     $dumpCreated = true;
                     $report['steps'][] = ['step' => 'db_dump', 'status' => 'success'];
                 } else {
-                    $dumpErr = implode(' ', array_slice($output, 0, 3));
-                    $report['steps'][] = ['step' => 'db_dump', 'status' => 'fail', 'error' => $dumpErr];
-                    $report['errors'][] = 'mysqldump failed: ' . $dumpErr;
+                    $errMsg = implode(' ', array_slice($shellOutput ?? [], 0, 3));
+                    if (empty($errMsg)) { $errMsg = "mysqldump failed with code $retval"; }
+                    $report['steps'][] = ['step' => 'db_dump', 'status' => 'fail', 'error' => $errMsg];
+                    $report['errors'][] = 'mysqldump failed: ' . $errMsg;
                 }
                 $report['backup_status'] = $dumpCreated ? 'created' : 'failed';
             } else {

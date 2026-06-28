@@ -96,7 +96,7 @@ $clientDocumentsUrl = '/company/documents?entity_type=client&entity_id=' . (int)
 <div class="modal-foot is-spaced">
   <div class="modal-foot-actions">
     <?php if ($clientCanArchive): ?>
-    <button type="button" class="btn btn-ghost" data-client-archive-btn>Архивировать</button>
+    <button type="button" class="btn btn-ghost" data-client-archive-btn>Удалить</button>
     <?php endif; ?>
   </div>
   <div class="modal-foot-actions">

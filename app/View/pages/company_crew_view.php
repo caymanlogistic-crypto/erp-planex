@@ -1,4 +1,4 @@
-﻿<?php if ($company === null): ?>
+<?php if ($company === null): ?>
 
 <div class="notice warn">
     Компания не найдена. Укажите корректный company_id.
@@ -195,9 +195,9 @@
         <div class="form-section">
             <h3 class="panel-head-title">Опасная зона</h3>
             <?php if (($crew['status'] ?? '') === 'archived'): ?>
-                <p class="text-muted">Экипаж уже находится в архиве.</p>
+                <p class="text-muted">Экипаж уже удалён.</p>
             <?php else: ?>
-                <p class="text-muted" style="margin-bottom:8px;">Архивирование скроет запись из основных списков.</p>
+                <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
                 <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
                     <button type="submit" class="btn btn-danger">Удалить</button>
                 </form>
