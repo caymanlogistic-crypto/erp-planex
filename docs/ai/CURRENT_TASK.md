@@ -1,15 +1,16 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-06-28 — E9 Contractors Module Extraction
+## Актуализация 2026-06-28 — E10-E13 Batch Modular Refactor
 
-**Статус**: CONTRACTORS_MODULE_E9_ACCEPTED
+**Статус**: E10_E13_BATCH_ACCEPTED
 
 Выполнено:
-- Модуль Contractors выделен из монолитного route-файла в модульную структуру.
-- Все 22 маршрута сохранены, логика не изменена.
-- `company_contractors.php` уменьшен с 3212 до 51 строки.
-- Созданы `ContractorController`, `ContractorService`, 22 action-файла.
+- **E10 Drivers**: модульное выделение (Controller + Service + 17 action files). Route: ~2500 → 20 строк.
+- **E11 Vehicle Sets**: модульное выделение (Controller + Service + 8 action files). Route: 1844 → 11 строк.
+- **E12 Documents**: модульное выделение (Controller + 13 action files). Route: 1421 → 16 строк.
+- **E13 Superadmin**: модульное выделение (ManagementController + 11 action files). Route: 1544 → 27 строк.
 - `php -l` — 0 ошибок. `architecture_guard.php` — PASS.
+- Все модули соответствуют стандарту `Route → Controller → Service → View`.
 
 ## Что дальше
 
