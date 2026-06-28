@@ -4,8 +4,8 @@
 
 **Date**: 2026-06-28
 **Branch**: `refactor/e14-e15-final-architecture-review`
-**Head commit**: `68bc4ff` — `fix(documents): make document replace atomic and safe`
-**Previous commits**: `5d1cb73`, `7f8eca1`, `ad89ffe`, `e0dd83c`, `f3aaa65b`, `e7f61630`, `40085d4b`
+**Head commit**: `08b258a` — `docs(handoff): finalize replace safety metadata`
+**Previous commits**: `68bc4ff`, `5d1cb73`, `7f8eca1`, `ad89ffe`, `e0dd83c`, `f3aaa65b`, `e7f61630`
 **Working tree**: clean
 
 ---
@@ -91,7 +91,7 @@ All tests performed on PHP 8.5.6 built-in server.
 - `database/` — migrations (central + local)
 - `docs/` — all documentation (AI, UI, compose)
 - `tools/` — architecture guard, utilities
-- `composer.json`, `.env.example`, `AGENTS.md`
+- `.env.example`, `AGENTS.md`
 
 **Excluded** (strictly verified absent):
 - `.git/` — version control
@@ -112,7 +112,7 @@ All tests performed on PHP 8.5.6 built-in server.
 - `storage/` **absent** ✓
 - `logs/` **absent** ✓
 - `tmp_runtime_server.*` **absent** ✓
-- `docs/ai/FINAL_HANDOFF_PACKAGE_REPORT.md` contains head commit `68bc4ff` ✓
+- `docs/ai/FINAL_HANDOFF_PACKAGE_REPORT.md` contains head commit `08b258a` ✓
 
 ---
 
