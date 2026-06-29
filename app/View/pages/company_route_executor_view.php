@@ -132,7 +132,8 @@
                             <code><?= e($crew['primary_plate'] ?? '—') ?></code>
                             <?php if (!empty($crew['secondary_plate'])): ?>
                                 + <code><?= e($crew['secondary_plate']) ?></code>
-                            <?php endif; ?>
+<?php endif; ?>
+<?php require base_path('app/View/partials/delete_confirm_modal.php'); ?>
                         </a>
                     <?php else: ?>
                         —
@@ -178,8 +179,8 @@
             <div class="form-actions">
                 <a href="/company/route-executors/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
                 <?php if (($crew['status'] ?? '') !== 'archived'): ?>
-                <form method="post" action="/company/route-executors/<?= $crew['id'] ?>/archive" style="display:inline;" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
-                    <button type="submit" class="btn btn-danger">Удалить</button>
+                <form method="post" action="/company/route-executors/<?= $crew['id'] ?>/archive" style="display:inline;">
+                    <button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button>
                 </form>
                 <?php else: ?>
                     <p class="text-muted">Исполнитель рейса уже удалён.</p>

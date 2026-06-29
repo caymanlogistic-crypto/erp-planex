@@ -159,7 +159,8 @@
                                 <span class="badge badge-ok"><span class="dot"></span>Активен</span>
                             <?php else: ?>
                                 <span class="badge"><span class="dot"></span><?= e($rs['status'] ?? 'Неактивен') ?></span>
-                            <?php endif; ?>
+<?php endif; ?>
+<?php require base_path('app/View/partials/delete_confirm_modal.php'); ?>
                         </td>
                         <td class="col-actions">
                             <a href="/company/vehicle-sets/<?= $rs['id'] ?>" class="btn btn-toolbar">Просмотр</a>
@@ -226,8 +227,8 @@
         <div class="form-section">
             <h3 class="panel-head-title">Опасная зона</h3>
             <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
-            <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
-                <button type="submit" class="btn btn-danger">Удалить</button>
+            <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive">
+                <button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button>
             </form>
         </div>
 

@@ -12,3 +12,4 @@ $router->get('/company/vehicle-sets/{id}/modal-view', [$c, 'modalView']);
 $router->get('/company/vehicle-sets/{id}/modal-edit', [$c, 'modalEditForm']);
 $router->post('/company/vehicle-sets/{id}/modal-edit', [$c, 'modalEditSubmit']);
 $router->post('/company/vehicle-sets/{id}/modal-archive', [$c, 'modalArchive']);
+$router->post('/company/vehicle-sets/{id}/archive', [$c, 'modalArchive']);

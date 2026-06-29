@@ -24,7 +24,7 @@ try {
     $roleCode = (string) ($_SESSION['role_code'] ?? '');
     $userId = (int) ($_SESSION['user_id'] ?? 0);
     if ($roleCode === 'logist' && (int) ($client['created_by_user_id'] ?? 0) !== $userId) {
-        throw new \RuntimeException('Логист может архивировать только записи, созданные им самим.');
+        throw new \RuntimeException('Логист может удалять только записи, созданные им самим.');
     }
 
     $service->archiveClient($localPdo, (int) $id);

@@ -36,7 +36,8 @@ require_once __DIR__ . '/../components/status_badge.php';
         <h3 class="panel-head-title">Водители+ТС</h3>
         <?php if (empty($vehicleSetBlocks)): ?><p class="text-muted">Транспорт не используется в связках Водитель+ТС.</p><?php else: ?>
         <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Водитель</th><th>Статус связки</th><th></th></tr></thead><tbody><?php foreach ($vehicleSetBlocks as $vsb): ?><tr><td class="cell-double"><a href="/company/drivers/<?= $vsb['driver_id'] ?>"><?= e($vsb['driver_name'] ?? '—') ?></a></td><td><?= renderStatusBadge($vsb['block_status'] ?? 'active') ?></td><td class="col-actions"><a href="/company/driver-vehicle-blocks/<?= $vsb['block_id'] ?>" class="btn btn-toolbar">Просмотр</a></td></tr><?php endforeach; ?></tbody></table></div>
-        <?php endif; ?>
+<?php endif; ?>
+<?php require base_path('app/View/partials/delete_confirm_modal.php'); ?>
     </div>
     <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
     <div class="form-section">
@@ -45,6 +46,6 @@ require_once __DIR__ . '/../components/status_badge.php';
         <form method="post" action="/company/access-grants/grant" class="grant-form"><input type="hidden" name="entity_type" value="vehicle_set"><input type="hidden" name="entity_id" value="<?= $vehicleSet['id'] ?>"><input type="hidden" name="redirect" value="/company/vehicle-sets/<?= $vehicleSet['id'] ?>"><div class="field inline-field"><select name="granted_to_user_id" class="field-select"><option value="">— Выберите логиста —</option><?php foreach($logists as $l): ?><option value="<?= $l['id'] ?>"><?= e($l['full_name']) ?> (<?= e($l['login']) ?>)</option><?php endforeach; ?></select></div><div class="field inline-field"><select name="access_level" class="field-select"><option value="view">Просмотр</option><option value="edit">Редактирование</option></select></div><button type="submit" class="btn btn-ghost">Дать доступ</button></form>
     </div>
     <?php endif; ?>
-    <div class="form-section"><h3 class="panel-head-title">Удаление</h3><p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p><form method="post" action="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')"><button type="submit" class="btn btn-danger">Удалить</button></form></div>
+    <div class="form-section"><h3 class="panel-head-title">Удаление</h3><p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p><form method="post" action="/company/vehicle-sets/<?= $vehicleSet['id'] ?>/archive"><button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button></form></div>
 </div></div>
 <?php endif; ?>

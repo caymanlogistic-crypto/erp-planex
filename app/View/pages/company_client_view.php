@@ -222,8 +222,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <h3 class="panel-head-title">Опасная зона</h3>
             <?php if ($client['status'] !== 'archived'): ?>
                 <p class="text-muted hint-before-action">Запись будет удалена из списка.</p>
-                <form method="post" action="/company/clients/<?= $client['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
-                    <button type="submit" class="btn btn-danger">Удалить</button>
+                <form method="post" action="/company/clients/<?= $client['id'] ?>/archive">
+                    <button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button>
                 </form>
             <?php else: ?>
                 <p class="text-muted">Клиент уже удалён.</p>
@@ -234,3 +234,4 @@ require_once __DIR__ . '/../components/status_badge.php';
 </div>
 
 <?php endif; ?>
+<?php require base_path('app/View/partials/delete_confirm_modal.php'); ?>

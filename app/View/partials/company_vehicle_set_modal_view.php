@@ -15,7 +15,7 @@ if ($vehicleTitle === '') {
 $statusMap = [
     'active' => 'Активен',
     'inactive' => 'Неактивен',
-    'archived' => 'Архив',
+    'archived' => 'Удалён',
 ];
 
 $buildUnitLine = static function (array $unit) use ($na): string {
