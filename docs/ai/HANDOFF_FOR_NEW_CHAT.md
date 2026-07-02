@@ -1,5 +1,19 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
+## Актуализация 2026-07-02 — linear trips accepted, branch model normalized
+
+**Статус**: LINEAR_TRIPS_ACCEPTED_ON_DEVELOP
+
+Ключевое, что новый чат обязан знать первым:
+- Принятый commit проекта: `fd511031 feat(trips): add accepted linear routes module`.
+- Ветки нормализованы: `develop` — единственная ветка разработки и тестирования, `master` — стабильная deploy/server ветка.
+- `develop` и `master` сейчас стоят на одном HEAD `fd511031`, но `master` нельзя трогать без отдельной прямой команды владельца.
+- После завершения любого следующего блока сначала commit в `develop`, и только потом владелец отдельно решает, когда синхронизировать `master`.
+- Модуль `Рейсы → Линейные` принят после browser-click runtime.
+- Accepted behavior модуля: меню `Рейсы → Линейные`, линейные и агентские рейсы, повторяемые блоки принципалов/оплат/документов, целочисленные суммы, browser-click flow create/view/edit/documents/delete.
+- `public/index.php` остаётся тонким front controller (`92` строки), источник маршрутов — `app/Http/Routes/*.php`.
+- Короткий sanity-check 2026-07-02 не завершён только из-за недоступного runtime `http://127.0.0.1:8016` (`ERR_CONNECTION_REFUSED`, порт не слушает). Это operational blocker, а не откат accepted-статуса.
+
 ## Актуализация 2026-06-28 — E14-E15 Final Architecture Review
 
 **Статус**: E14_E15_FINAL_ARCHITECTURE_ACCEPTED
@@ -465,15 +479,7 @@ cmd /c start "erp-runtime" /min cmd /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\S
 
 Все изменяемые файлы с русским текстом сохранять строго в UTF-8 без BOM.
 
-Не допускать mojibake:
-
-```text
-Рџ
-РЎ
-Ð
-Ñ
-�
-```
+Не допускать битую кириллицу, кракозябры и повреждённый UTF-8.
 
 После правок обязательно проверять изменённые файлы на битую кириллицу.
 

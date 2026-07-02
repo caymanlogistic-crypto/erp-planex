@@ -1,8 +1,25 @@
 # ERP PLANEX — текущее состояние проекта
 
-## Актуализация 2026-06-28 — E14-E15 Final Architecture Review
+## Актуализация 2026-07-02 — accepted linear trips on normalized branches
 
-**Статус**: E14_E15_FINAL_ARCHITECTURE_ACCEPTED
+**Статус**: LINEAR_TRIPS_ACCEPTED_ON_DEVELOP
+
+Выполнено:
+- Принятый commit проекта: `fd511031 feat(trips): add accepted linear routes module`.
+- Рабочая модель веток теперь фиксирована: `develop` — вся разработка и тестирование, `master` — только стабильная deploy/server ветка.
+- `develop` и `master` сейчас находятся на одном HEAD `fd511031`.
+- Модуль `Рейсы → Линейные` принят после browser-click runtime.
+- Подтверждён accepted behavior модуля: меню `Рейсы → Линейные`, линейные и агентские рейсы, повторяемые блоки принципалов/оплат/документов, целочисленные суммы, flow create/view/edit/documents/delete.
+- `public/index.php` остаётся тонким front controller (`92` строки), регистрация маршрутов живёт в `app/Http/Routes`.
+- Правило продолжения: после завершения каждого нового блока сначала commit в `develop`, решение о синхронизации `master` принимает владелец отдельно.
+- Короткий sanity-check 2026-07-02 не завершён только из-за недоступного runtime `http://127.0.0.1:8016` (`ERR_CONNECTION_REFUSED`); это не отменяет принятого статуса модуля.
+
+Предыдущие этапы:
+- E14-E15: Final architecture review
+- E10-E13: Drivers, Vehicle Sets, Documents, Superadmin модули
+- E8/E9: Clients и Contractors модули
+- E7: Архитектурное разделение
+- E1-E6: Базовая архитектура
 
 Выполнено:
 - **E14**: Action bridge assessment — все контроллеры используют единый паттерн делегирования action-файлам через require. Action bridge признан accepted transitional pattern. __НЕ_УБИРАТЬ__: рефакторинг потребует перемещения тысяч строк логики из action-файлов в контроллеры/сервисы.
@@ -11,12 +28,6 @@
 - Runtime smoke: PASS (owner, senior_logist, logist, superadmin — все страницы 200).
 - Mojibake scan: PASS (все файлы валидный UTF-8).
 - `php -l` — 0 ошибок. `architecture_guard.php` — PASS (0 errors, 3 warnings).
-
-Предыдущие этапы:
-- E10-E13: Drivers, Vehicle Sets, Documents, Superadmin модули
-- E8/E9: Clients и Contractors модули
-- E7: Архитектурное разделение
-- E1-E6: Базовая архитектура
 
 Выполнено:
 - Модуль Contractors выделен из монолитного route-файла `company_contractors.php` (3212 → 51 строка) в модульную структуру `Route → Controller → Service → View`.
@@ -119,7 +130,7 @@ docs/ui/DESIGN_STANDARD.md
 ## Последний подтверждённый commit по текущей ветке работ
 
 ```text
-(будет создан при фиксации E14-E15 — refactor(core): finalize modular architecture review)
+fd511031 — feat(trips): add accepted linear routes module
 ```
 
 ## Важные commits из текущей цепочки
@@ -150,15 +161,16 @@ BLOCK_E1 — ВЫПОЛНЕН: архитектурный план «Испол�
 BLOCK_E2 — ВЫПОЛНЕН: UI/menu facade «Исполнители рейса» (f462a7c).
 BLOCK_E3 — ВЫПОЛНЕН: полный CRUD workflow «Исполнители рейса» (1488d55).
 BLOCK_E4 — ВЫПОЛНЕН: переназначение ответственных логистов (вкладки: Исполнители рейса / Подрядчики / Водители / ТС).
+BLOCK_LINEAR_TRIPS — ПРИНЯТ И ЗАКОММИЧЕН (`fd511031`): модуль `Рейсы → Линейные`.
 ```
 
 ## Текущая активная задача
 
 ```text
-ROUTE_EXECUTOR_VEHICLE_SETS_HOTFIX_V4 — применить пакет, проверить runtime и закоммитить исправления.
+FOLLOWUP_BLOCKS_AFTER_LINEAR_TRIPS — новые задачи выполняются только в `develop`, `master` синхронизируется только по отдельной команде владельца.
 ```
 
-Следующий шаг: владелец применяет архив v4, проверяет создание исполнителя рейса под логистом и кнопку добавления транспорта, затем делает commit точки исправления.
+Следующий шаг: выполнять новые блоки только в `develop`; после приёмки сначала commit в `develop`, затем владелец отдельно решает, когда синхронизировать `master`.
 
 ## CRITICAL UI LOCK RULE
 
@@ -220,7 +232,7 @@ Stage 7 docs refresh — IN PROGRESS / закрывается этим обно�
 
 - Status: `COMPLETE, RUNTIME REGRESSION PASS`.
 - Branch: `refactor/stabilize-modular-structure`.
-- `public/index.php`: `80` lines in current tree.
+- `public/index.php`: `80` lines на момент этапа E7.1; в текущем принятом дереве после модуля `Рейсы → Линейные` — `92` строки.
 - `app/Http/Routes/*.php`: `19` files after extracting `legacy_redirects.php`.
 - Controllers added:
   - `app/Http/Controllers/AuthController.php`

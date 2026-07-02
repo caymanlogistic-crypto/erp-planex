@@ -1,16 +1,23 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-06-28 — Final Handoff Package
+## Актуализация 2026-07-02 — sanity-check after branch normalization
 
-**Статус**: FINAL_HANDOFF_PACKAGE_READY
+**Статус**: LINEAR_TRIPS_ACCEPTED_DOCS_REFRESH_IN_PROGRESS
 
 Выполнено:
-- **Bugfix**: `Class "App\Service\ContractorService" not found` — added missing `require_once` for 7 service files in `public/index.php` (ccc159b)
-- **Runtime smoke**: PASS — all roles, all pages, legacy redirects confirmed (302)
-- **Docs**: updated with latest commits (E8 `41e075a`, E9 `b384802`, E10-E13 `3f4e51b`, `8d4c0e03`, E14-E15 `3f73688e`, fix `ccc159b`)
-- **Archive**: `erp_final_handoff.zip` created (excludes .git, vendor, .env, storage, tmp, logs, *.sql dumps)
-- **Final checks**: php-lint 0 errors, architecture_guard PASS (0 err/3 warn), git diff --check clean
+- Принятый модуль `Рейсы → Линейные` зафиксирован в commit `fd511031 feat(trips): add accepted linear routes module`.
+- Рабочая модель веток нормализована: `develop` — единственная ветка разработки и тестирования, `master` — стабильная deploy/server ветка.
+- `develop` и `master` сейчас указывают на один и тот же HEAD `fd511031`.
+- `public/index.php` остаётся тонким front controller (`92` строки), маршруты вынесены в `app/Http/Routes`.
+- Модуль `Рейсы → Линейные` принят после browser-click runtime: меню `Рейсы → Линейные`, линейные и агентские рейсы, повторяемые блоки принципалов/оплат/документов, целочисленные суммы, flow create/view/edit/documents/delete.
+
+Ограничения текущей короткой проверки:
+- Sanity-check через `http://127.0.0.1:8016` сегодня не завершён: runtime недоступен, `ERR_CONNECTION_REFUSED`, слушатель на порту `8016` отсутствует.
+- `master` в этой задаче не менять, не коммитить и не синхронизировать без отдельной прямой команды владельца.
 
 ## Что дальше
 
-Передача внешнему ревизору ChatGPT.
+- Продолжать любую новую разработку только в `develop`.
+- После завершения следующего блока сначала делать commit в `develop`.
+- Отдельное решение о синхронизации `master` принимает только владелец.
+- Если нужен повторный sanity runtime, сначала поднять/вернуть существующий сервер на `127.0.0.1:8016`.
