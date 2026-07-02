@@ -56,6 +56,7 @@ final class DocumentService
         'crew',
         'client',
         'contractor',
+        'linear_route',
     ];
 
     // -------------------------------------------------------------------------

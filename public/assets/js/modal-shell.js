@@ -196,6 +196,7 @@ window.ModalShell = (function () {
                             bindEditButtons();
                         } else {
                             state.refreshOnClose = true;
+                            getShell()._refreshListOnClose = true;
                             setContent(html);
                             bindViewButtons();
                         }
@@ -365,8 +366,9 @@ window.ModalShell = (function () {
 
         function close() {
             var s = getShell();
-            var shouldRefresh = s._refreshListOnClose === true;
+            var shouldRefresh = s._refreshListOnClose === true || state.refreshOnClose === true;
             window.closeModal(config.modalId);
+            state.refreshOnClose = false;
             if (!shouldRefresh) return;
             s._refreshListOnClose = false;
             saveGridState();

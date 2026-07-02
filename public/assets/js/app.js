@@ -1657,6 +1657,513 @@ document.addEventListener('keydown', function (e) {
 })();
 
 // ============================================================
+// Linear trips: create form + ModalShell adapter
+// ============================================================
+(function () {
+    async function fetchLinearTripCargoSuggestions(query) {
+        var response = await fetch('/company/trips/linear/cargo-types?q=' + encodeURIComponent(query), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) return [];
+        var data = await response.json();
+        return Array.isArray(data.items) ? data.items : [];
+    }
+
+    function syncDueFields(row) {
+        var dueTypeSelect = row.querySelector('[data-payment-due-type]');
+        if (!dueTypeSelect) return;
+        var showDays = dueTypeSelect.value === 'После загрузки' || dueTypeSelect.value === 'После выгрузки';
+        var daysField = row.querySelector('[data-payment-due-days-wrapper]');
+        var kindField = row.querySelector('[data-payment-due-days-kind-wrapper]');
+        if (daysField) daysField.classList.toggle('is-hidden', !showDays);
+        if (kindField) kindField.classList.toggle('is-hidden', !showDays);
+    }
+
+    function updateRemoveButtons(container, selector) {
+        var rows = container.querySelectorAll(selector);
+        rows.forEach(function (row, index) {
+            var btn = row.querySelector('[data-remove-payment-row], [data-remove-principal-row]');
+            if (!btn) return;
+            btn.classList.toggle('is-hidden', rows.length <= 1);
+        });
+    }
+
+    function renumberPaymentRows(container, baseName) {
+        container.querySelectorAll('[data-payment-row]').forEach(function (row, index) {
+            row.querySelectorAll('[name]').forEach(function (field) {
+                var currentName = field.getAttribute('name') || '';
+                field.setAttribute('name', currentName.replace(/^(.*)\[\d+\]\[(.+)\]$/, baseName + '[' + index + '][$2]'));
+            });
+        });
+        updateRemoveButtons(container, '[data-payment-row]');
+    }
+
+    function buildPaymentRow(baseName) {
+        var row = document.createElement('div');
+        row.className = 'linear-trip-payment-row';
+        row.setAttribute('data-payment-row', '');
+        row.innerHTML = '' +
+            '<div class="field">' +
+                '<label class="field-label">Сумма <span class="req">*</span></label>' +
+                '<input type="text" name="' + baseName + '[0][amount]" class="field-input" inputmode="numeric" placeholder="125000">' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="field">' +
+                '<label class="field-label">Тип оплаты <span class="req">*</span></label>' +
+                '<select name="' + baseName + '[0][payment_type]" class="field-input">' +
+                    '<option value="Без НДС">Без НДС</option>' +
+                    '<option value="Нал">Нал</option>' +
+                    '<option value="НДС 0%">НДС 0%</option>' +
+                    '<option value="НДС 5%">НДС 5%</option>' +
+                    '<option value="НДС 7%">НДС 7%</option>' +
+                    '<option value="НДС 20%">НДС 20%</option>' +
+                    '<option value="НДС 22%">НДС 22%</option>' +
+                '</select>' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="field">' +
+                '<label class="field-label">Срок оплаты <span class="req">*</span></label>' +
+                '<select name="' + baseName + '[0][payment_due_type]" class="field-input" data-payment-due-type>' +
+                    '<option value="">— Выберите срок —</option>' +
+                    '<option value="Предоплата на загрузке">Предоплата на загрузке</option>' +
+                    '<option value="После загрузки">После загрузки</option>' +
+                    '<option value="До выгрузки">До выгрузки</option>' +
+                    '<option value="После выгрузки">После выгрузки</option>' +
+                '</select>' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="field is-hidden" data-payment-due-days-wrapper>' +
+                '<label class="field-label">Дней <span class="req">*</span></label>' +
+                '<input type="number" min="1" name="' + baseName + '[0][payment_due_days]" class="field-input">' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="field is-hidden" data-payment-due-days-kind-wrapper>' +
+                '<label class="field-label">Тип дней <span class="req">*</span></label>' +
+                '<select name="' + baseName + '[0][payment_due_days_kind]" class="field-input">' +
+                    '<option value="">— Выберите тип —</option>' +
+                    '<option value="working">Рабочие дни</option>' +
+                    '<option value="calendar">Календарные дни</option>' +
+                '</select>' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<button type="button" class="linear-trip-row-remove" data-remove-payment-row aria-label="Удалить оплату">×</button>';
+        return row;
+    }
+
+    function buildCustomDocRow() {
+        var row = document.createElement('div');
+        row.className = 'file-item custom-doc-row document-file-row is-empty';
+        row.innerHTML = '' +
+            '<div class="file-type-badge file-type-badge-empty">—</div>' +
+            '<div class="file-info">' +
+                '<div class="field custom-doc-title-field">' +
+                    '<input type="text" name="custom_doc_type[]" class="field-input custom-doc-type-input" placeholder="Введите название">' +
+                    '<div class="field-msg"></div>' +
+                '</div>' +
+                '<div class="file-meta is-hidden"></div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-secondary file-action-btn js-custom-file-pick-btn"><span>Выбрать</span></button>' +
+            '<input type="file" class="file-input-hidden js-custom-file-input" name="custom_doc_file[]">' +
+            '<button type="button" class="file-remove" title="Удалить документ">×</button>';
+        return row;
+    }
+
+    function initCustomDocRow(row) {
+        var pickBtn = row.querySelector('.js-custom-file-pick-btn');
+        var fileInput = row.querySelector('.js-custom-file-input');
+        var removeBtn = row.querySelector('.file-remove');
+        if (pickBtn && fileInput) {
+            pickBtn.addEventListener('click', function () {
+                fileInput.click();
+            });
+            fileInput.addEventListener('change', function () {
+                var badge = row.querySelector('.file-type-badge');
+                var meta = row.querySelector('.file-meta');
+                if (!fileInput.files || !fileInput.files[0]) return;
+                row.classList.remove('is-empty');
+                row.classList.add('has-file');
+                if (badge) {
+                    badge.className = 'file-type-badge is-other';
+                    badge.textContent = 'FILE';
+                }
+                if (meta) {
+                    meta.textContent = fileInput.files[0].name;
+                    meta.classList.remove('is-hidden');
+                }
+            });
+        }
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                if (row.parentNode) row.parentNode.removeChild(row);
+            });
+        }
+    }
+
+    function buildPrincipalRow(form) {
+        var clientSelect = form.querySelector('select[name="client_id"]');
+        var carrierSelect = form.querySelector('select[name="carrier_contractor_id"]');
+        var clientOption = clientSelect && clientSelect.selectedOptions[0] && clientSelect.value
+            ? '<option value="client:' + clientSelect.value + '">Заказчик: ' + clientSelect.selectedOptions[0].textContent + '</option>'
+            : '';
+        var carrierOption = carrierSelect && carrierSelect.selectedOptions[0] && carrierSelect.value
+            ? '<option value="contractor:' + carrierSelect.value + '">Перевозчик: ' + carrierSelect.selectedOptions[0].textContent + '</option>'
+            : '';
+
+        var row = document.createElement('div');
+        row.className = 'linear-trip-principal-card';
+        row.setAttribute('data-principal-row', '');
+        row.innerHTML = '' +
+            '<div class="linear-trip-block-head">' +
+                '<div>' +
+                    '<div class="linear-trip-block-title">Принципал</div>' +
+                    '<div class="field-msg"></div>' +
+                '</div>' +
+                '<button type="button" class="linear-trip-row-remove" data-remove-principal-row aria-label="Удалить принципала">×</button>' +
+            '</div>' +
+            '<div class="field">' +
+                '<label class="field-label">Юрлицо принципала <span class="req">*</span></label>' +
+                '<select class="field-input" data-principal-entity-select>' +
+                    '<option value="">— Выберите юрлицо —</option>' +
+                    clientOption +
+                    carrierOption +
+                '</select>' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="linear-trip-payment-card linear-trip-payment-card--nested">' +
+                '<div class="linear-trip-block-head">' +
+                    '<div class="linear-trip-block-title">Оплаты принципала</div>' +
+                    '<button type="button" class="btn btn-ghost" data-add-principal-payment-row>+ Добавить оплату</button>' +
+                '</div>' +
+                '<div class="linear-trip-payment-rows" data-principal-payment-container></div>' +
+            '</div>';
+
+        var paymentsContainer = row.querySelector('[data-principal-payment-container]');
+        paymentsContainer.appendChild(buildPaymentRow('principal_rows[0][payments]'));
+        renumberPrincipalRows(form);
+        return row;
+    }
+
+    function renumberPrincipalRows(form) {
+        var principalContainer = form.querySelector('[data-principal-container]');
+        if (!principalContainer) return;
+        principalContainer.querySelectorAll('[data-principal-row]').forEach(function (principalRow, principalIndex) {
+            var select = principalRow.querySelector('[data-principal-entity-select]');
+            if (select) {
+                select.setAttribute('name', 'principal_rows[' + principalIndex + '][entity_key]');
+            }
+            var paymentContainer = principalRow.querySelector('[data-principal-payment-container]');
+            if (paymentContainer) {
+                renumberPaymentRows(paymentContainer, 'principal_rows[' + principalIndex + '][payments]');
+            }
+        });
+        updateRemoveButtons(principalContainer, '[data-principal-row]');
+    }
+
+    window.initLinearTripForm = function (form) {
+        if (!form || form.dataset.linearTripFormReady === '1') return form;
+        form.dataset.linearTripFormReady = '1';
+
+        if (typeof window.initDriverInputValidation === 'function') {
+            window.initDriverInputValidation(form);
+        }
+
+        var routeTypeSelect = form.querySelector('[data-linear-trip-route-type]');
+        var cargoInput = form.querySelector('[data-linear-trip-cargo-input]');
+        var cargoSuggestions = form.querySelector('[data-linear-trip-cargo-suggestions]');
+
+        function syncAgencyBlocks() {
+            var isAgency = routeTypeSelect && routeTypeSelect.value === 'agency';
+            form.querySelectorAll('.is-agency-only').forEach(function (block) {
+                block.classList.toggle('is-hidden', !isAgency);
+            });
+        }
+
+        function bindPaymentContainer(container, baseName) {
+            if (!container) return;
+            container.querySelectorAll('[data-payment-row]').forEach(function (row) {
+                syncDueFields(row);
+            });
+            container.addEventListener('change', function (event) {
+                if (event.target.matches('[data-payment-due-type]')) {
+                    syncDueFields(event.target.closest('[data-payment-row]'));
+                }
+            });
+            container.addEventListener('click', function (event) {
+                var removeBtn = event.target.closest('[data-remove-payment-row]');
+                if (!removeBtn) return;
+                var row = removeBtn.closest('[data-payment-row]');
+                if (!row) return;
+                if (container.querySelectorAll('[data-payment-row]').length <= 1) return;
+                row.parentNode.removeChild(row);
+                renumberPaymentRows(container, baseName);
+            });
+        }
+
+        bindPaymentContainer(form.querySelector('[data-payment-container="customer_payments"]'), 'customer_payments');
+        bindPaymentContainer(form.querySelector('[data-payment-container="carrier_payments"]'), 'carrier_payments');
+
+        form.querySelectorAll('[data-add-payment-row]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var scope = btn.getAttribute('data-add-payment-row');
+                var container = form.querySelector('[data-payment-container="' + scope + '"]');
+                if (!container) return;
+                container.appendChild(buildPaymentRow(scope));
+                renumberPaymentRows(container, scope);
+            });
+        });
+
+        var principalContainer = form.querySelector('[data-principal-container]');
+        if (principalContainer) {
+            principalContainer.querySelectorAll('[data-principal-payment-container]').forEach(function (container, principalIndex) {
+                bindPaymentContainer(container, 'principal_rows[' + principalIndex + '][payments]');
+            });
+
+            principalContainer.addEventListener('click', function (event) {
+                var addBtn = event.target.closest('[data-add-principal-payment-row]');
+                if (addBtn) {
+                    var principalRow = addBtn.closest('[data-principal-row]');
+                    var paymentContainer = principalRow ? principalRow.querySelector('[data-principal-payment-container]') : null;
+                    if (!paymentContainer) return;
+                    paymentContainer.appendChild(buildPaymentRow('principal_rows[0][payments]'));
+                    renumberPrincipalRows(form);
+                    return;
+                }
+
+                var removePrincipalBtn = event.target.closest('[data-remove-principal-row]');
+                if (removePrincipalBtn) {
+                    if (principalContainer.querySelectorAll('[data-principal-row]').length <= 1) return;
+                    var principalRow = removePrincipalBtn.closest('[data-principal-row]');
+                    if (principalRow && principalRow.parentNode) {
+                        principalRow.parentNode.removeChild(principalRow);
+                        renumberPrincipalRows(form);
+                    }
+                }
+            });
+        }
+
+        var addPrincipalBtn = form.querySelector('[data-add-principal-row]');
+        if (addPrincipalBtn && principalContainer) {
+            addPrincipalBtn.addEventListener('click', function () {
+                principalContainer.appendChild(buildPrincipalRow(form));
+                renumberPrincipalRows(form);
+            });
+        }
+
+        var customDocContainer = form.querySelector('[data-custom-docs-container]');
+        var addCustomDocBtn = form.querySelector('[data-add-custom-doc-btn]');
+        if (customDocContainer && addCustomDocBtn) {
+            addCustomDocBtn.addEventListener('click', function () {
+                var row = buildCustomDocRow();
+                customDocContainer.appendChild(row);
+                initCustomDocRow(row);
+            });
+        }
+
+        form.querySelectorAll('.document-file-row input[type="file"]').forEach(function (input) {
+            if (input.classList.contains('js-custom-file-input')) return;
+            input.addEventListener('change', function () {
+                var row = input.closest('.document-file-row');
+                if (!row || !input.files || !input.files[0]) return;
+                var badge = row.querySelector('.file-type-badge');
+                var meta = row.querySelector('.file-meta');
+                row.classList.remove('is-empty');
+                row.classList.add('has-file');
+                if (badge) {
+                    badge.className = 'file-type-badge is-other';
+                    badge.textContent = 'FILE';
+                }
+                if (meta) {
+                    meta.textContent = input.files[0].name;
+                }
+            });
+        });
+
+        if (cargoInput && cargoSuggestions) {
+            cargoInput.addEventListener('input', async function () {
+                var items = await fetchLinearTripCargoSuggestions(cargoInput.value.trim());
+                cargoSuggestions.innerHTML = '';
+                if (!items.length) {
+                    cargoSuggestions.classList.remove('is-open');
+                    return;
+                }
+                items.forEach(function (item) {
+                    var button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'custom-doc-suggestion';
+                    button.textContent = item.name || '';
+                    button.addEventListener('click', function () {
+                        cargoInput.value = item.name || '';
+                        cargoSuggestions.innerHTML = '';
+                        cargoSuggestions.classList.remove('is-open');
+                    });
+                    cargoSuggestions.appendChild(button);
+                });
+                cargoSuggestions.classList.add('is-open');
+            });
+            cargoInput.addEventListener('blur', function () {
+                setTimeout(function () {
+                    cargoSuggestions.classList.remove('is-open');
+                }, 150);
+            });
+        }
+
+        if (routeTypeSelect) {
+            routeTypeSelect.addEventListener('change', syncAgencyBlocks);
+        }
+
+        syncAgencyBlocks();
+        if (principalContainer) {
+            renumberPrincipalRows(form);
+        }
+        return form;
+    };
+
+    window.bindLinearTripCreateModalForm = function () {
+        var createModal = document.getElementById('linear-trip-create-modal');
+        if (!createModal) return;
+
+        var form = createModal.querySelector('#linear-trip-create-form');
+        if (!form || form.dataset.modalCreateSubmitReady === '1') return;
+
+        if (typeof window.initLinearTripForm === 'function') {
+            window.initLinearTripForm(form);
+        }
+
+        form.dataset.modalCreateSubmitReady = '1';
+        form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) return;
+
+            event.preventDefault();
+
+            var formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+                .then(function (response) {
+                    if (!response.ok) throw new Error(String(response.status));
+                    return response.text();
+                })
+                .then(function (html) {
+                    var tmp = document.createElement('div');
+                    tmp.innerHTML = html;
+
+                    var returnedModal = tmp.querySelector('#linear-trip-create-modal');
+                    var returnedForm = returnedModal ? returnedModal.querySelector('#linear-trip-create-form') : null;
+                    if (returnedForm && returnedModal && returnedModal.classList.contains('is-open')) {
+                        var returnedModalBody = returnedModal.querySelector('.modal-body');
+                        var returnedModalFoot = returnedModal.querySelector('.modal-foot');
+                        var modalBody = createModal.querySelector('.modal-body');
+                        var modalFoot = createModal.querySelector('.modal-foot');
+                        if (!modalBody || !modalFoot) {
+                            window.location.reload();
+                            return;
+                        }
+
+                        modalBody.innerHTML = returnedModalBody ? returnedModalBody.innerHTML : returnedForm.outerHTML;
+                        if (returnedModalFoot) {
+                            modalFoot.innerHTML = returnedModalFoot.innerHTML;
+                        }
+
+                        var newForm = createModal.querySelector('#linear-trip-create-form');
+                        if (newForm) {
+                            newForm.dataset.linearTripFormReady = '0';
+                            newForm.dataset.modalCreateSubmitReady = '0';
+                            window.initLinearTripForm(newForm);
+                        }
+
+                        window.bindLinearTripCreateModalForm();
+                        return;
+                    }
+
+                    window.location.reload();
+                })
+                .catch(function () {
+                    window.location.reload();
+                });
+        });
+    };
+
+    var createModal = document.getElementById('linear-trip-create-modal');
+    if (createModal) {
+        var createForm = createModal.querySelector('#linear-trip-create-form');
+        if (createForm) {
+            window.initLinearTripForm(createForm);
+        }
+        window.bindLinearTripCreateModalForm();
+    }
+})();
+
+(function () {
+    var linearTripGrid = document.querySelector('.table-card[data-erp-grid]');
+    if (!linearTripGrid || !document.querySelector('tr[data-linear-route-id]')) {
+        return;
+    }
+
+    var linearTripCtrl = ModalShell.create({
+        modalId: 'linear-trip-view-modal',
+        deleteConfirmId: 'linear-trip-delete-confirm-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u0420\u0435\u0439\u0441',
+        loadingClass: 'driver-modal-loading',
+        nameSelector: '.driver-view-name',
+        editFormSelector: '#linear-trip-edit-form',
+        gridSelector: '.table-card[data-erp-grid]',
+        gridStateKey: 'companyLinearTripsGridState',
+        viewBtnSelectors: {
+            edit: '[data-linear-trip-edit-btn]',
+            close: '[data-linear-trip-view-close-btn]',
+            delete: '[data-linear-trip-delete-btn]'
+        },
+        editBtnSelectors: {
+            cancel: '[data-linear-trip-cancel-edit-btn]'
+        },
+        endpoints: {
+            view: function (id) { return '/company/trips/linear/' + id + '/modal-view'; },
+            edit: function (id) { return '/company/trips/linear/' + id + '/modal-edit'; },
+            delete: function (id) { return '/company/trips/linear/' + id + '/modal-delete'; }
+        },
+        errorMessages: {
+            loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435 \u0440\u0435\u0439\u0441\u0430.',
+            saveFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0440\u0435\u0439\u0441.',
+            deleteFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0440\u0435\u0439\u0441.'
+        },
+        deleteConfirm: {
+            title: '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0440\u0435\u0439\u0441?',
+            warning: '\u0417\u0430\u043f\u0438\u0441\u044c \u0431\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u0430 \u0438\u0437 \u0441\u043f\u0438\u0441\u043a\u0430.',
+            instruction: '\u0414\u043b\u044f \u0437\u0430\u0449\u0438\u0442\u044b \u043e\u0442 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u043e\u0433\u043e \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u0432\u0432\u0435\u0434\u0438\u0442\u0435 <b>\u0423\u0414\u0410\u041b\u0418\u0422\u042c</b>.',
+            placeholder: '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0423\u0414\u0410\u041b\u0418\u0422\u042c',
+            confirmWord: '\u0423\u0414\u0410\u041b\u0418\u0422\u042c',
+            cancelBtn: '\u041e\u0442\u043c\u0435\u043d\u0430',
+            confirmBtn: '\u0423\u0434\u0430\u043b\u0438\u0442\u044c'
+        },
+        onContentLoaded: function (shell, mode) {
+            if (mode !== 'edit') return;
+            var form = shell.querySelector('#linear-trip-edit-form');
+            if (form && typeof window.initLinearTripForm === 'function') {
+                form.dataset.linearTripFormReady = '0';
+                form.dataset.modalSubmitReady = '0';
+                window.initLinearTripForm(form);
+            }
+        }
+    });
+    ModalShell.register('linearTrip', linearTripCtrl);
+
+    var tableBody = linearTripGrid.querySelector('tbody');
+    if (!tableBody) return;
+
+    tableBody.addEventListener('dblclick', function (event) {
+        if (event.target.closest('a, button, input, select, textarea, label')) return;
+        var row = event.target.closest('tr[data-linear-route-id]');
+        if (!row) return;
+        var routeId = row.getAttribute('data-linear-route-id');
+        if (routeId) linearTripCtrl.loadView(routeId);
+    });
+})();
+
+// ============================================================
 // Document preview popup windows
 // ============================================================
 document.addEventListener('click', function (event) {

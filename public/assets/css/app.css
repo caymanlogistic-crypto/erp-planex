@@ -3651,6 +3651,159 @@ a.nav-sub-item:visited {
 }
 
 /* ============================================================
+   SIDEBAR PARENT ITEMS
+   Parent sections stay neutral until the current page is inside them.
+   ============================================================ */
+.nav-item.is-parent {
+  color: var(--nav-text);
+}
+.nav-item.is-parent .nav-icon,
+.nav-item.is-parent .nav-count {
+  opacity: .72;
+}
+.nav-item.is-parent.is-active {
+  color: var(--nav-text-act);
+}
+.nav-item.is-parent.is-active .nav-icon,
+.nav-item.is-parent.is-active .nav-count {
+  opacity: .9;
+}
+
+/* ============================================================
+   LINEAR TRIPS FORM — compact transport/driver pattern
+   ============================================================ */
+.linear-trip-panel {
+  margin-bottom: 0;
+  border: none;
+  max-width: none;
+}
+
+.linear-trip-layout-main {
+  gap: 10px;
+}
+
+.linear-trip-layout-docs .file-list {
+  margin-top: 0;
+}
+
+.linear-trip-row .field,
+.linear-trip-payment-row .field {
+  margin-bottom: 0;
+}
+
+.linear-trip-row--compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.linear-trip-textarea {
+  min-height: 86px;
+}
+
+.linear-trip-lookup {
+  position: relative;
+}
+
+.linear-trip-payment-card,
+.linear-trip-principal-card {
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--surface) 0%, #f6f3ed 100%);
+}
+
+.linear-trip-payment-card + .linear-trip-payment-card,
+.linear-trip-principals-section {
+  margin-top: 10px;
+}
+
+.linear-trip-block-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.linear-trip-block-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.linear-trip-payment-rows,
+.linear-trip-principal-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linear-trip-payment-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr .75fr .95fr auto;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.linear-trip-payment-card--nested {
+  margin-top: 10px;
+  background: #fbfaf7;
+}
+
+.linear-trip-row-remove {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.linear-trip-row-remove.is-hidden {
+  visibility: hidden;
+}
+
+.linear-trip-layout .custom-doc-suggestions {
+  top: calc(100% + 2px);
+}
+
+.linear-trip-layout .document-file-row {
+  min-height: 48px;
+}
+
+.linear-trip-layout .file-item {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+}
+
+@media (max-width: 1180px) {
+  .linear-trip-layout,
+  .driver-layout.linear-trip-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .linear-trip-layout-docs {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .linear-trip-payment-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .linear-trip-row--compact,
+  .linear-trip-payment-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
    MODAL FOOT ACTIONS — align buttons in driver create modal
    ============================================================ */
 .modal-required-note {

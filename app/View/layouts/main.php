@@ -12,13 +12,25 @@
 $appName = $config['app']['app_name'] ?? 'ERP PLANEX';
 $roleCode = $_SESSION['role_code'] ?? '';
 $companyId = $_SESSION['company_id'] ?? 0;
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$clientsActive = str_starts_with($requestPath, '/company/clients');
+$tripsActive = str_starts_with($requestPath, '/company/trips');
+$linearTripsActive = str_starts_with($requestPath, '/company/trips/linear');
+$departuresActive = str_starts_with($requestPath, '/company/trips/departures');
+$routeExecutorsActive = str_starts_with($requestPath, '/company/route-executors');
+$contractorsActive = str_starts_with($requestPath, '/company/contractors');
+$driversActive = str_starts_with($requestPath, '/company/drivers');
+$vehicleSetsActive = str_starts_with($requestPath, '/company/vehicle-sets');
+$logistsActive = str_starts_with($requestPath, '/company/logists');
+$responsibleAssignmentsActive = str_starts_with($requestPath, '/company/responsible-assignments');
 
 // Вычисление — раскрыта ли группа «Справочники» (любой подпункт активен)
 $directoriesOpen = ($roleCode !== 'superadmin') && (
-    str_starts_with($_SERVER['REQUEST_URI'], '/company/contractors')
-    || str_starts_with($_SERVER['REQUEST_URI'], '/company/drivers')
-    || str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets')
+    $contractorsActive
+    || $driversActive
+    || $vehicleSetsActive
 );
+$tripsOpen = ($roleCode !== 'superadmin') && $tripsActive;
 
 $userName = $_SESSION['user_name'] ?? '';
 $roleLabel = match($roleCode) {
@@ -117,11 +129,11 @@ if ($crumbContext !== '') {
 
             <div class="nav-group">
                 <div class="nav-section-label">СИСТЕМА</div>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/superadmin/companies') && !str_contains($_SERVER['REQUEST_URI'], '/deleted') ? ' is-active' : '' ?>" href="/superadmin/companies">
+                <a class="nav-item<?= str_starts_with($requestPath, '/superadmin/companies') && !str_contains($requestPath, '/deleted') ? ' is-active' : '' ?>" href="/superadmin/companies">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 15V11H11V15" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M2 7H14" stroke="currentColor" stroke-width="1.4"/><rect x="5" y="5" width="2" height="2" rx=".3" fill="currentColor"/><rect x="9" y="5" width="2" height="2" rx=".3" fill="currentColor"/><rect x="5" y="9" width="2" height="2" rx=".3" fill="currentColor"/><rect x="9" y="9" width="2" height="2" rx=".3" fill="currentColor"/></svg>
                     <span class="nav-label">Компании</span>
                 </a>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/superadmin/deleted-data') ? ' is-active' : '' ?>" href="/superadmin/deleted-data">
+                <a class="nav-item<?= str_starts_with($requestPath, '/superadmin/deleted-data') ? ' is-active' : '' ?>" href="/superadmin/deleted-data">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4H14V13C14 13.6 13.6 14 13 14H3C2.4 14 2 13.6 2 13V4Z" stroke="currentColor" stroke-width="1.4"/><path d="M2 4L4 2H12L14 4" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 8L8 10L10 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                     <span class="nav-label">Удалённые данные</span>
                 </a>
@@ -131,11 +143,28 @@ if ($crumbContext !== '') {
 
             <div class="nav-group">
                 <div class="nav-section-label">ОПЕРАЦИИ</div>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/clients') ? ' is-active' : '' ?>" href="/company/clients">
+                <a class="nav-item<?= $clientsActive ? ' is-active' : '' ?>" href="/company/clients">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="5.5" width="12" height="8.5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5V4C5 3.4 5.4 3 6 3H10C10.6 3 11 3.4 11 4V5.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 9.5H14" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 9.5V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                     <span class="nav-label">Клиенты</span>
                 </a>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/route-executors') ? ' is-active' : '' ?>" href="/company/route-executors">
+                <div class="nav-item is-parent<?= $tripsOpen ? ' is-open is-active' : '' ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4.5H10.5L13.5 7.5V12.5C13.5 13.05 13.05 13.5 12.5 13.5H3.5C2.95 13.5 2.5 13.05 2.5 12.5V5C2.5 4.72 2.72 4.5 3 4.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                        <path d="M10.5 4.5V7.5H13.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                        <path d="M5 9H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Рейсы</span>
+                    <svg class="nav-chevron" viewBox="0 0 14 14" fill="none"><path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="nav-sub<?= $tripsOpen ? ' is-open' : '' ?>">
+                    <a class="nav-sub-item<?= $linearTripsActive ? ' is-active' : '' ?>" href="/company/trips/linear">
+                        <span>Линейные</span>
+                    </a>
+                    <a class="nav-sub-item<?= $departuresActive ? ' is-active' : '' ?>" href="/company/trips/departures">
+                        <span>Отходы</span>
+                    </a>
+                </div>
+                <a class="nav-item<?= $routeExecutorsActive ? ' is-active' : '' ?>" href="/company/route-executors">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
                         <path d="M1.5 3.5H5.5L7 5.5H14.5C15.05 5.5 15.5 5.95 15.5 6.5V12.5C15.5 13.05 15.05 13.5 14.5 13.5H1.5C0.95 13.5 0.5 13.05 0.5 12.5V4.5C0.5 3.95 0.95 3.5 1.5 3.5Z" stroke="currentColor" stroke-width="1.4"/>
                         <path d="M8 8.5L10 9.5V11L8 10L6 11V9.5L8 8.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
@@ -153,13 +182,13 @@ if ($crumbContext !== '') {
                     <svg class="nav-chevron" viewBox="0 0 14 14" fill="none"><path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <div class="nav-sub<?= $directoriesOpen ? ' is-open' : '' ?>">
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/contractors') ? ' is-active' : '' ?>" href="/company/contractors">
+                    <a class="nav-sub-item<?= $contractorsActive ? ' is-active' : '' ?>" href="/company/contractors">
                         <span>Подрядчики</span>
                     </a>
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/drivers') ? ' is-active' : '' ?>" href="/company/drivers">
+                    <a class="nav-sub-item<?= $driversActive ? ' is-active' : '' ?>" href="/company/drivers">
                         <span>Водители</span>
                     </a>
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
+                    <a class="nav-sub-item<?= $vehicleSetsActive ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                         <span>ТС</span>
                     </a>
                 </div>
@@ -169,7 +198,7 @@ if ($crumbContext !== '') {
 
             <div class="nav-group">
                 <div class="nav-section-label">СИСТЕМА</div>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/logists') ? ' is-active' : '' ?>" href="/company/logists">
+                <a class="nav-item<?= $logistsActive ? ' is-active' : '' ?>" href="/company/logists">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
                         <circle cx="6" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.4"/>
                         <path d="M1.5 13.5C1.5 10.5 4 8.5 6 8.5C8 8.5 10.5 10.5 10.5 13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
@@ -178,7 +207,7 @@ if ($crumbContext !== '') {
                     </svg>
                     <span class="nav-label">Логисты</span>
                 </a>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/responsible-assignments') ? ' is-active' : '' ?>" href="/company/responsible-assignments">
+                <a class="nav-item<?= $responsibleAssignmentsActive ? ' is-active' : '' ?>" href="/company/responsible-assignments">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
                         <path d="M4 2H10L12 4V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
                         <rect x="1.5" y="6" width="13" height="8" rx="1" stroke="currentColor" stroke-width="1.4"/>
@@ -192,11 +221,28 @@ if ($crumbContext !== '') {
 
             <div class="nav-group">
                 <div class="nav-section-label">ОПЕРАЦИИ</div>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/clients') ? ' is-active' : '' ?>" href="/company/clients">
+                <a class="nav-item<?= $clientsActive ? ' is-active' : '' ?>" href="/company/clients">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="5.5" width="12" height="8.5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5V4C5 3.4 5.4 3 6 3H10C10.6 3 11 3.4 11 4V5.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 9.5H14" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 9.5V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
                     <span class="nav-label">Клиенты</span>
                 </a>
-                <a class="nav-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/route-executors') ? ' is-active' : '' ?>" href="/company/route-executors">
+                <div class="nav-item is-parent<?= $tripsOpen ? ' is-open is-active' : '' ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4.5H10.5L13.5 7.5V12.5C13.5 13.05 13.05 13.5 12.5 13.5H3.5C2.95 13.5 2.5 13.05 2.5 12.5V5C2.5 4.72 2.72 4.5 3 4.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                        <path d="M10.5 4.5V7.5H13.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                        <path d="M5 9H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Рейсы</span>
+                    <svg class="nav-chevron" viewBox="0 0 14 14" fill="none"><path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="nav-sub<?= $tripsOpen ? ' is-open' : '' ?>">
+                    <a class="nav-sub-item<?= $linearTripsActive ? ' is-active' : '' ?>" href="/company/trips/linear">
+                        <span>Линейные</span>
+                    </a>
+                    <a class="nav-sub-item<?= $departuresActive ? ' is-active' : '' ?>" href="/company/trips/departures">
+                        <span>Отходы</span>
+                    </a>
+                </div>
+                <a class="nav-item<?= $routeExecutorsActive ? ' is-active' : '' ?>" href="/company/route-executors">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
                         <path d="M1.5 3.5H5.5L7 5.5H14.5C15.05 5.5 15.5 5.95 15.5 6.5V12.5C15.5 13.05 15.05 13.5 14.5 13.5H1.5C0.95 13.5 0.5 13.05 0.5 12.5V4.5C0.5 3.95 0.95 3.5 1.5 3.5Z" stroke="currentColor" stroke-width="1.4"/>
                         <path d="M8 8.5L10 9.5V11L8 10L6 11V9.5L8 8.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
@@ -214,13 +260,13 @@ if ($crumbContext !== '') {
                     <svg class="nav-chevron" viewBox="0 0 14 14" fill="none"><path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <div class="nav-sub<?= $directoriesOpen ? ' is-open' : '' ?>">
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/contractors') ? ' is-active' : '' ?>" href="/company/contractors">
+                    <a class="nav-sub-item<?= $contractorsActive ? ' is-active' : '' ?>" href="/company/contractors">
                         <span>Подрядчики</span>
                     </a>
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/drivers') ? ' is-active' : '' ?>" href="/company/drivers">
+                    <a class="nav-sub-item<?= $driversActive ? ' is-active' : '' ?>" href="/company/drivers">
                         <span>Водители</span>
                     </a>
-                    <a class="nav-sub-item<?= str_starts_with($_SERVER['REQUEST_URI'], '/company/vehicle-sets') ? ' is-active' : '' ?>" href="/company/vehicle-sets">
+                    <a class="nav-sub-item<?= $vehicleSetsActive ? ' is-active' : '' ?>" href="/company/vehicle-sets">
                         <span>ТС</span>
                     </a>
                 </div>

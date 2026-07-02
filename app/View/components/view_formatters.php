@@ -92,6 +92,7 @@ function ui_entity_type(?string $type): string
         'contractor'           => 'Подрядчик',
         'client'               => 'Клиент',
         'driver_vehicle_block' => 'Водитель + ТС',
+        'linear_route'         => 'Линейный рейс',
         default                => trim((string) $type) !== '' ? (string) $type : '—',
     };
 }

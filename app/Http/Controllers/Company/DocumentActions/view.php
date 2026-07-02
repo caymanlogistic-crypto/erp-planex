@@ -9,6 +9,6 @@ if(!$doc){http_response_code(404);exit;}
 $relPath=$doc['relative_path'];if($relPath===null||$relPath===''||strpos($relPath,'..')!==false){http_response_code(404);exit;}
 $filePath=storage_path($relPath);if(!is_file($filePath)){http_response_code(404);exit;}
 $mime=$doc['mime_type']?:'application/octet-stream';
-$fs=$doc['file_size'];if(strpos($mime,'image/')===0||strpos($mime,'pdf')!==false){header('Content-Type: '.$mime);header('Content-Disposition: inline; filename="'.$doc['original_name'].'"');if($fs>0)header('Content-Length: '.$fs);readfile($filePath);exit;}
+$fs=$doc['file_size'];if(strpos($mime,'image/')===0||strpos($mime,'pdf')!==false||strpos($mime,'text/')===0){header('Content-Type: '.$mime);header('Content-Disposition: inline; filename="'.$doc['original_name'].'"');if($fs>0)header('Content-Length: '.$fs);readfile($filePath);exit;}
 header('Content-Type: '.$mime);header('Content-Disposition: attachment; filename="'.$doc['original_name'].'"');if($fs>0)header('Content-Length: '.$fs);readfile($filePath);exit;}
 catch(\Exception$e){http_response_code(500);exit;}

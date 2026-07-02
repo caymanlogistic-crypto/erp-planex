@@ -128,6 +128,7 @@
                     <option value="client" <?= ($old['entity_type'] ?? $existingType['entity_type'] ?? '') === 'client' ? 'selected' : '' ?>>Клиент</option>
                     <option value="crew" <?= ($old['entity_type'] ?? $existingType['entity_type'] ?? '') === 'crew' ? 'selected' : '' ?>>Экипаж</option>
                     <option value="driver_vehicle_block" <?= ($old['entity_type'] ?? $existingType['entity_type'] ?? '') === 'driver_vehicle_block' ? 'selected' : '' ?>>Водители+ТС</option>
+                    <option value="linear_route" <?= ($old['entity_type'] ?? $existingType['entity_type'] ?? '') === 'linear_route' ? 'selected' : '' ?>>Линейный рейс</option>
                 </select>
                 <div class="field-msg">Оставьте пустым, если тип документа применим к любым сущностям.</div>
             </div>

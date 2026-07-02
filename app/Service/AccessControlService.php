@@ -141,6 +141,7 @@ final class AccessControlService
         'vehicle_set',
         'driver_vehicle_block',
         'crew',
+        'linear_route',
         'logist',   // для grants на пользователей
     ];
 
@@ -156,6 +157,7 @@ final class AccessControlService
         'vehicle_set',
         'driver_vehicle_block',
         'crew',
+        'linear_route',
     ];
 
     // -------------------------------------------------------------------------

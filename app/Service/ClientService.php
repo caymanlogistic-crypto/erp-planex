@@ -82,11 +82,25 @@ final class ClientService
     {
         if ($isLogist) {
             $stmt = $localPdo->prepare(
-                "SELECT * FROM clients WHERE deleted_at IS NULL AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'client' AND granted_to_user_id = ? AND access_level = 'view')) ORDER BY created_at DESC"
+                "SELECT * FROM clients
+                  WHERE deleted_at IS NULL
+                    AND status = 'active'
+                    AND (
+                        created_by_user_id = ?
+                        OR id IN (
+                            SELECT entity_id
+                              FROM entity_access_grants
+                             WHERE entity_type = 'client'
+                               AND granted_to_user_id = ?
+                               AND access_level IN ('view','edit')
+                               AND revoked_at IS NULL
+                        )
+                    )
+                  ORDER BY created_at DESC"
             );
             $stmt->execute([$userId, $userId]);
         } else {
-            $stmt = $localPdo->query("SELECT * FROM clients WHERE deleted_at IS NULL ORDER BY created_at DESC");
+            $stmt = $localPdo->query("SELECT * FROM clients WHERE deleted_at IS NULL AND status = 'active' ORDER BY created_at DESC");
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
