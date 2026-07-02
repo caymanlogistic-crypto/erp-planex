@@ -1675,8 +1675,22 @@ document.addEventListener('keydown', function (e) {
         var showDays = dueTypeSelect.value === 'После загрузки' || dueTypeSelect.value === 'После выгрузки';
         var daysField = row.querySelector('[data-payment-due-days-wrapper]');
         var kindField = row.querySelector('[data-payment-due-days-kind-wrapper]');
+        var daysInput = daysField ? daysField.querySelector('input[name$="[payment_due_days]"]') : null;
+        var kindInput = kindField ? kindField.querySelector('select[name$="[payment_due_days_kind]"]') : null;
         if (daysField) daysField.classList.toggle('is-hidden', !showDays);
         if (kindField) kindField.classList.toggle('is-hidden', !showDays);
+        if (daysInput) {
+            daysInput.required = showDays;
+            if (!showDays) {
+                daysInput.value = '';
+            }
+        }
+        if (kindInput) {
+            kindInput.required = showDays;
+            if (!showDays) {
+                kindInput.value = '';
+            }
+        }
     }
 
     function updateRemoveButtons(container, selector) {
@@ -1802,12 +1816,6 @@ document.addEventListener('keydown', function (e) {
     function buildPrincipalRow(form) {
         var clientSelect = form.querySelector('select[name="client_id"]');
         var carrierSelect = form.querySelector('select[name="carrier_contractor_id"]');
-        var clientOption = clientSelect && clientSelect.selectedOptions[0] && clientSelect.value
-            ? '<option value="client:' + clientSelect.value + '">Заказчик: ' + clientSelect.selectedOptions[0].textContent + '</option>'
-            : '';
-        var carrierOption = carrierSelect && carrierSelect.selectedOptions[0] && carrierSelect.value
-            ? '<option value="contractor:' + carrierSelect.value + '">Перевозчик: ' + carrierSelect.selectedOptions[0].textContent + '</option>'
-            : '';
 
         var row = document.createElement('div');
         row.className = 'linear-trip-principal-card';
@@ -1824,8 +1832,6 @@ document.addEventListener('keydown', function (e) {
                 '<label class="field-label">Юрлицо принципала <span class="req">*</span></label>' +
                 '<select class="field-input" data-principal-entity-select>' +
                     '<option value="">— Выберите юрлицо —</option>' +
-                    clientOption +
-                    carrierOption +
                 '</select>' +
                 '<div class="field-msg"></div>' +
             '</div>' +
@@ -1837,9 +1843,24 @@ document.addEventListener('keydown', function (e) {
                 '<div class="linear-trip-payment-rows" data-principal-payment-container></div>' +
             '</div>';
 
+        var principalSelect = row.querySelector('[data-principal-entity-select]');
+        if (principalSelect) {
+            if (clientSelect && clientSelect.selectedOptions[0] && clientSelect.value) {
+                var clientOption = document.createElement('option');
+                clientOption.value = 'client:' + clientSelect.value;
+                clientOption.textContent = 'Заказчик: ' + clientSelect.selectedOptions[0].textContent;
+                principalSelect.appendChild(clientOption);
+            }
+            if (carrierSelect && carrierSelect.selectedOptions[0] && carrierSelect.value) {
+                var carrierOption = document.createElement('option');
+                carrierOption.value = 'contractor:' + carrierSelect.value;
+                carrierOption.textContent = 'Перевозчик: ' + carrierSelect.selectedOptions[0].textContent;
+                principalSelect.appendChild(carrierOption);
+            }
+        }
+
         var paymentsContainer = row.querySelector('[data-principal-payment-container]');
         paymentsContainer.appendChild(buildPaymentRow('principal_rows[0][payments]'));
-        renumberPrincipalRows(form);
         return row;
     }
 
@@ -1879,7 +1900,11 @@ document.addEventListener('keydown', function (e) {
         }
 
         function bindPaymentContainer(container, baseName) {
-            if (!container) return;
+            if (!container || container.dataset.paymentContainerReady === '1') return;
+            container.dataset.paymentContainerReady = '1';
+            var resolveBaseName = typeof baseName === 'function'
+                ? baseName
+                : function () { return baseName; };
             container.querySelectorAll('[data-payment-row]').forEach(function (row) {
                 syncDueFields(row);
             });
@@ -1895,7 +1920,7 @@ document.addEventListener('keydown', function (e) {
                 if (!row) return;
                 if (container.querySelectorAll('[data-payment-row]').length <= 1) return;
                 row.parentNode.removeChild(row);
-                renumberPaymentRows(container, baseName);
+                renumberPaymentRows(container, resolveBaseName());
             });
         }
 
@@ -1915,7 +1940,15 @@ document.addEventListener('keydown', function (e) {
         var principalContainer = form.querySelector('[data-principal-container]');
         if (principalContainer) {
             principalContainer.querySelectorAll('[data-principal-payment-container]').forEach(function (container, principalIndex) {
-                bindPaymentContainer(container, 'principal_rows[' + principalIndex + '][payments]');
+                bindPaymentContainer(container, function () {
+                    var principalRow = container.closest('[data-principal-row]');
+                    if (!principalRow || !principalRow.parentNode) {
+                        return 'principal_rows[' + principalIndex + '][payments]';
+                    }
+                    var rows = Array.prototype.slice.call(principalRow.parentNode.querySelectorAll('[data-principal-row]'));
+                    var currentIndex = rows.indexOf(principalRow);
+                    return 'principal_rows[' + Math.max(currentIndex, 0) + '][payments]';
+                });
             });
 
             principalContainer.addEventListener('click', function (event) {
@@ -1944,7 +1977,14 @@ document.addEventListener('keydown', function (e) {
         var addPrincipalBtn = form.querySelector('[data-add-principal-row]');
         if (addPrincipalBtn && principalContainer) {
             addPrincipalBtn.addEventListener('click', function () {
-                principalContainer.appendChild(buildPrincipalRow(form));
+                var principalRow = buildPrincipalRow(form);
+                principalContainer.appendChild(principalRow);
+                var paymentContainer = principalRow.querySelector('[data-principal-payment-container]');
+                bindPaymentContainer(paymentContainer, function () {
+                    var rows = Array.prototype.slice.call(principalContainer.querySelectorAll('[data-principal-row]'));
+                    var currentIndex = rows.indexOf(principalRow);
+                    return 'principal_rows[' + Math.max(currentIndex, 0) + '][payments]';
+                });
                 renumberPrincipalRows(form);
             });
         }

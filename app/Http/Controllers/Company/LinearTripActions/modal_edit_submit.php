@@ -93,22 +93,19 @@ try {
                 $errors[$scopeKey . '.' . $index . '.payment_due_type'] = 'Выберите корректный срок оплаты для блока «' . $scopeLabel . '».';
             }
 
-                        $paymentDueDays = null;
+            $paymentDueDays = null;
             if (LinearRouteService::paymentDueTypeRequiresDays($paymentDueType)) {
-                if ($paymentDueDaysRaw !== '' || $paymentDueDaysKind !== '') {
-                    if ($paymentDueDaysRaw === '' || !ctype_digit($paymentDueDaysRaw) || (int) $paymentDueDaysRaw <= 0) {
-                        $errors[$scopeKey . '.' . $index . '.payment_due_days'] = 'Укажите корректное количество дней для блока «' . $scopeLabel . '».';
-                    } else {
-                        $paymentDueDays = (int) $paymentDueDaysRaw;
-                    }
-
-                    if (!array_key_exists($paymentDueDaysKind, LinearRouteService::PAYMENT_DUE_DAYS_KINDS)) {
-                        $errors[$scopeKey . '.' . $index . '.payment_due_days_kind'] = 'Выберите тип дней для блока «' . $scopeLabel . '».';
-                    }
+                if ($paymentDueDaysRaw === '' || !ctype_digit($paymentDueDaysRaw) || (int) $paymentDueDaysRaw <= 0) {
+                    $errors[$scopeKey . '.' . $index . '.payment_due_days'] = 'Укажите количество дней целым положительным числом для блока «' . $scopeLabel . '».';
                 } else {
-                    $paymentDueDaysKind = null;
+                    $paymentDueDays = (int) $paymentDueDaysRaw;
+                }
+
+                if (!array_key_exists($paymentDueDaysKind, LinearRouteService::PAYMENT_DUE_DAYS_KINDS)) {
+                    $errors[$scopeKey . '.' . $index . '.payment_due_days_kind'] = 'Выберите тип дней для блока «' . $scopeLabel . '».';
                 }
             } else {
+                $paymentDueDays = null;
                 $paymentDueDaysKind = null;
             }
 

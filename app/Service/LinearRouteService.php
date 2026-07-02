@@ -57,10 +57,7 @@ final class LinearRouteService
         }
 
         if (preg_match('/^\d+$/', $value) !== 1) {
-            if (preg_match('/^\d+(?:[.,]00)?$/', $value) !== 1) {
-                return null;
-            }
-            $value = preg_replace('/[.,]00$/', '', $value) ?? $value;
+            return null;
         }
 
         return number_format((float) $value, 2, '.', '');
@@ -78,6 +75,18 @@ final class LinearRouteService
         }
 
         return number_format((float) $value, 0, '.', ' ');
+    }
+
+    public static function shouldShowPlannedUnloading(?string $plannedLoadingDate, ?string $plannedUnloadingDate): bool
+    {
+        $plannedLoadingDate = trim((string) $plannedLoadingDate);
+        $plannedUnloadingDate = trim((string) $plannedUnloadingDate);
+
+        if ($plannedUnloadingDate === '') {
+            return false;
+        }
+
+        return $plannedUnloadingDate !== $plannedLoadingDate;
     }
 
     public static function normalizeDate(?string $value): ?string

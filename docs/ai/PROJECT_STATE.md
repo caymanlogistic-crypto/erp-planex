@@ -7,7 +7,7 @@
 Выполнено:
 - Принятый commit проекта: `fd511031 feat(trips): add accepted linear routes module`.
 - Рабочая модель веток теперь фиксирована: `develop` — вся разработка и тестирование, `master` — только стабильная deploy/server ветка.
-- `develop` и `master` сейчас находятся на одном HEAD `fd511031`.
+- `master` остаётся на принятом runtime commit `fd511031`, а `develop` используется как единственная ветка дальнейшей разработки и уже может быть впереди по docs/corrective commits.
 - Модуль `Рейсы → Линейные` принят после browser-click runtime.
 - Подтверждён accepted behavior модуля: меню `Рейсы → Линейные`, линейные и агентские рейсы, повторяемые блоки принципалов/оплат/документов, целочисленные суммы, flow create/view/edit/documents/delete.
 - `public/index.php` остаётся тонким front controller (`92` строки), регистрация маршрутов живёт в `app/Http/Routes`.

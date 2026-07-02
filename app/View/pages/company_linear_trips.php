@@ -84,7 +84,7 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
                         <th>Тип</th>
                         <th>Заказчик</th>
                         <th>Перевозчик</th>
-                        <th>Принциалы</th>
+                        <th>Принципалы</th>
                         <th>Исполнитель рейса</th>
                         <th>Груз</th>
                         <th>Даты</th>
@@ -131,7 +131,9 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
                             <td><?= e($route['cargo_type_name'] ?? '—') ?></td>
                             <td class="cell-double">
                                 <span class="cell-main"><?= e(ui_date($route['planned_loading_date'] ?? null)) ?></span>
+                                <?php if (LinearRouteService::shouldShowPlannedUnloading($route['planned_loading_date'] ?? null, $route['planned_unloading_date'] ?? null)): ?>
                                 <span class="cell-sub"><?= e(ui_date($route['planned_unloading_date'] ?? null)) ?></span>
+                                <?php endif; ?>
                             </td>
                             <td class="cell-double">
                                 <?php foreach ($moneyParts as $index => $moneyPart): ?>

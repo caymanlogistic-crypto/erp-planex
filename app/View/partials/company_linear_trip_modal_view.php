@@ -57,7 +57,7 @@ $paymentLabel = static function (array $payment): string {
 
           <?php if (($route['route_type'] ?? '') === LinearRouteService::ROUTE_TYPE_AGENCY): ?>
           <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Принциалы</div>
+            <div class="driver-view-cell driver-view-cell-label">Принципалы</div>
             <div class="driver-view-cell driver-view-cell-value">
               <?php foreach (($route['principal_items'] ?? []) as $principal): ?>
               <div class="driver-view-inline-row">
@@ -91,10 +91,12 @@ $paymentLabel = static function (array $payment): string {
                 <div class="driver-view-inline-label">Загрузка</div>
                 <div><?= e(ui_date($route['planned_loading_date'] ?? null)) ?></div>
               </div>
+              <?php if (LinearRouteService::shouldShowPlannedUnloading($route['planned_loading_date'] ?? null, $route['planned_unloading_date'] ?? null)): ?>
               <div class="driver-view-inline-row">
                 <div class="driver-view-inline-label">Выгрузка</div>
                 <div><?= e(ui_date($route['planned_unloading_date'] ?? null)) ?></div>
               </div>
+              <?php endif; ?>
             </div>
           </div>
 

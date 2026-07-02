@@ -283,7 +283,7 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
             </div>
 
             <div class="linear-trip-principals-section is-agency-only<?= $isAgencyRoute ? '' : ' is-hidden' ?>">
-                <div class="section-title">Принциалы</div>
+                <div class="section-title">Принципалы</div>
                 <div class="field-msg"><?= e($errorOf('principal_rows')) ?></div>
                 <div class="linear-trip-principal-cards" data-principal-container>
                     <?php foreach ($principalRows as $principalIndex => $principalRow): ?>
