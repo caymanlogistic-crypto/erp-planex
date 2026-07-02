@@ -172,7 +172,7 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
 
                 <?php if ($routeFormMode === 'edit'): ?>
                 <div class="field<?= $errorOf('planned_unloading_date') !== '' ? ' is-error' : '' ?>">
-                    <label class="field-label">Плановая дата выгрузки <span class="req">*</span></label>
+                    <label class="field-label">Плановая дата выгрузки <span class="field-label-note">(опционально)</span></label>
                     <input type="text" name="planned_unloading_date" value="<?= e((string) ($old['planned_unloading_date'] ?? '')) ?>" class="field-input js-erp-date-picker" placeholder="дд.мм.гггг" inputmode="numeric" autocomplete="off">
                     <div class="field-msg"><?= e($errorOf('planned_unloading_date')) ?></div>
                 </div>

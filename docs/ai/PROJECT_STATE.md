@@ -1,13 +1,16 @@
 # ERP PLANEX — текущее состояние проекта
 
-## Актуализация 2026-07-02 — accepted linear trips on normalized branches
+## Актуализация 2026-07-02 — corrective linear trips accepted in develop
 
-**Статус**: LINEAR_TRIPS_ACCEPTED_ON_DEVELOP
+**Статус**: LINEAR_TRIPS_CORRECTIVE_ACCEPTED_IN_DEVELOP
 
 Выполнено:
 - Принятый commit проекта: `fd511031 feat(trips): add accepted linear routes module`.
+- Commit `3b96b77 docs(ai): record develop workflow and linear routes acceptance` зафиксировал новую workflow-документацию после нормализации веток.
+- Текущий принятый corrective HEAD в `develop`: `231ccb5 fix(trips): close linear route corrective findings`.
 - Рабочая модель веток теперь фиксирована: `develop` — вся разработка и тестирование, `master` — только стабильная deploy/server ветка.
-- `master` остаётся на принятом runtime commit `fd511031`, а `develop` используется как единственная ветка дальнейшей разработки и уже может быть впереди по docs/corrective commits.
+- `master` намеренно остаётся на принятом runtime commit `fd511031`, а `develop` намеренно идёт впереди и содержит актуальный corrective accepted HEAD `231ccb5`.
+- `master` можно трогать только по отдельной прямой команде владельца во время deployment/sync.
 - Модуль `Рейсы → Линейные` принят после browser-click runtime.
 - Подтверждён accepted behavior модуля: меню `Рейсы → Линейные`, линейные и агентские рейсы, повторяемые блоки принципалов/оплат/документов, целочисленные суммы, flow create/view/edit/documents/delete.
 - `public/index.php` остаётся тонким front controller (`92` строки), регистрация маршрутов живёт в `app/Http/Routes`.

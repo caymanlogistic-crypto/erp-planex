@@ -139,9 +139,6 @@ try {
     if ($plannedLoadingDate === null) {
         $validationErrors['planned_loading_date'] = 'Укажите плановую дату загрузки.';
     }
-    if ($plannedUnloadingDate === null) {
-        $validationErrors['planned_unloading_date'] = 'Укажите плановую дату выгрузки.';
-    }
     if ($plannedLoadingDate !== null && $plannedUnloadingDate !== null && $plannedUnloadingDate < $plannedLoadingDate) {
         $validationErrors['planned_unloading_date'] = 'Дата выгрузки не может быть раньше даты загрузки.';
     }
