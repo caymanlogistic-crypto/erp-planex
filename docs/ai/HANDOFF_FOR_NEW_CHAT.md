@@ -1,5 +1,31 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
+## Актуализация 2026-07-05 — DB pool usage journal (one-way consumption safety)
+
+**Статус**: DB_POOL_USAGE_JOURNAL_IMPLEMENTED
+
+Ключевое, что новый чат обязан знать:
+- **DB pool usage journal added.** Central table `company_db_pool_usage` tracks assigned pool DBs one-way. Previously used pool DBs are never reused, even if the company is deleted.
+- **New helper:** `ensureCompanyDbPoolUsageTable(PDO $pdo)` in `app/Support/company_database.php` creates the journal table idempotently.
+- **New helper:** `markPoolDbUsed(PDO $centralPdo, string $dbIdentifier, int $companyId)` records assignment with `INSERT IGNORE`. Note: `superadmin_create`.
+- **findFreePoolDb() updated:** Checks both `companies.db_identifier` and `company_db_pool_usage.db_identifier`. Pool DB is "free" only if absent from both.
+- **create_submit.php:** After pool DB assignment, calls `markPoolDbUsed()`. If journal insert fails, company row is rolled back and clear error shown.
+- **One-way consumption rule:** When pool runs out, owner must create new DBs and append to `COMPANY_DB_POOL_JSON`. Old pool DBs are never recycled.
+
+## Актуализация 2026-07-05 — DB pool support for superadmin expeditor creation
+
+**Статус**: DB_POOL_IMPLEMENTED
+
+Ключевое, что новый чат обязан знать:
+- **DB pool support added.** Superadmin expeditor creation now supports pre-created DBs from `COMPANY_DB_POOL_JSON` env variable when `CREATE DATABASE` fails (no privileges).
+- **New columns in `companies` table:** `db_host`, `db_port`, `db_username`, `db_password` — per-company DB credentials.
+- **New helper:** `companyDatabaseConfig($config, $company)` in `app/Support/company_database.php` builds DB config with per-company overrides. All `db_identifier` connection sites migrated to this helper (38+ files).
+- **Pool provisioning:** `create_submit.php` first tries `CREATE DATABASE`, falls back to pool. Free DB found via `findFreePoolDb()`. If pool exhausted: clear error `Нет свободных подготовленных баз данных для новой компании. Создайте новые базы и добавьте их в COMPANY_DB_POOL_JSON.`
+- **Delete behavior:** Pool DBs (with `db_username` set) are NOT dropped on delete. Only generated `erp_company_{id}` DBs are dropped.
+- **New migration:** `010_add_db_pool_columns_to_companies.sql` — MySQL 5.7 safe.
+- **`.env.example`** documents `COMPANY_DB_POOL_JSON` format.
+- **Security:** passwords never displayed in views, never committed.
+
 ## Актуализация 2026-07-05 — expeditor edit document uploads FINAL
 
 **Статус**: EXPEDITOR_EDIT_DOCUMENTS_ENABLED

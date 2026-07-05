@@ -66,8 +66,7 @@ $router->get('/company/logists', function () use ($config, $db) {
         // Release tempPdo to avoid any connection state interference
         $tempPdo = null;
 
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
@@ -269,8 +268,7 @@ $router->post('/company/logists/create', function () use ($config, $db) {
         // Release tempPdo to avoid any connection state interference
         $tempPdo = null;
 
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
@@ -438,8 +436,7 @@ $router->get('/company/logists/{id}', function ($id) use ($config, $db) {
         // Release tempPdo to avoid any connection state interference
         $tempPdo = null;
 
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -549,8 +546,7 @@ $router->get('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         // Release tempPdo to avoid any connection state interference
         $tempPdo = null;
 
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -659,8 +655,7 @@ $router->post('/company/logists/{id}/edit', function ($id) use ($config, $db) {
         // Release tempPdo to avoid any connection state interference
         $tempPdo = null;
 
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -839,8 +834,7 @@ $router->post('/company/logists/{id}/reset-password', function ($id) use ($confi
         // Release tempPdo to avoid any connection state interference
         $tempPdo = null;
 
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -935,8 +929,7 @@ $router->post('/company/logists/{id}/archive', function ($id) use ($config, $db)
         // Release tempPdo to avoid any connection state interference
         $tempPdo = null;
 
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);

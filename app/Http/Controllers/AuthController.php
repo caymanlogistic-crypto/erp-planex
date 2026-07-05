@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Core\Database;
 
+require_once BASE_PATH . '/app/Support/company_database.php';
+
 final class AuthController
 {
     public function __construct(
@@ -129,15 +131,14 @@ final class AuthController
                 }
             }
 
-            $companiesStmt = $pdo->query("SELECT id, db_identifier FROM companies WHERE status = 'active'");
+            $companiesStmt = $pdo->query("SELECT id, db_identifier, db_host, db_port, db_username, db_password FROM companies WHERE status = 'active'");
             $activeCompanies = $companiesStmt->fetchAll(\PDO::FETCH_ASSOC);
 
             $logistCandidates = [];
 
             foreach ($activeCompanies as $ac) {
                 try {
-                    $localDbConfig = $this->config['database'];
-                    $localDbConfig['database'] = $ac['db_identifier'];
+                    $localDbConfig = companyDatabaseConfig($this->config, $ac);
                     $localDb = new Database($localDbConfig);
                     $localPdo = $localDb->connection();
                     applyLocalMigrations($localPdo);

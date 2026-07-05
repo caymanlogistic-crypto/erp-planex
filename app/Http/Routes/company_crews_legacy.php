@@ -46,9 +46,7 @@ $router->post('/company/crews/create', function () use ($config, $db) {
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
@@ -231,9 +229,7 @@ $router->get('/company/crews/{id}', function ($crewId) use ($config, $db) {
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -394,9 +390,7 @@ $router->get('/company/crews/{id}/edit', function ($crewId) use ($config, $db) {
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -589,9 +583,7 @@ $router->post('/company/crews/{id}/edit', function ($crewId) use ($config, $db) 
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -851,9 +843,7 @@ $router->post('/company/crews/{id}/archive', function ($crewId) use ($config, $d
             exit;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);

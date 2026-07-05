@@ -25,10 +25,7 @@ $router->get('/company/dashboard', function () use ($config, $db) {
             $companyError = true;
         } else {
             $companyName = $company['name'];
-            $dbIdentifier = $company['db_identifier'];
-
-            $localDbConfig = $config['database'];
-            $localDbConfig['database'] = $dbIdentifier;
+            $localDbConfig = companyDatabaseConfig($config, $company);
             $localDb = new \App\Core\Database($localDbConfig);
             $localPdo = $localDb->connection();
             applyLocalMigrations($localPdo);
@@ -147,9 +144,7 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
             redirect_to($redirect);
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -218,8 +213,7 @@ $router->post('/company/access-grants/{id}/revoke', function ($id) use ($config,
 
         if (!$company || $company['status'] !== 'active') { redirect_to($redirect); }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 

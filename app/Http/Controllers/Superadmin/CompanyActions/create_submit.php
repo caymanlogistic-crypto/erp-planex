@@ -2,6 +2,8 @@
 
     requireRole('superadmin');
 
+    require_once base_path('app/Support/company_database.php');
+
     $isModal = ($_POST['is_modal'] ?? '') === '1';
 
     $pageTitle = 'Создать экспедитора';
@@ -70,6 +72,7 @@
 
         require base_path('app/Helpers/company_bank_guard.php');
         ensureCompanyBankColumns($pdo);
+        ensureCompanyDatabaseColumns($pdo);
 
         $key = 'company_' . uniqid();
 
@@ -106,26 +109,33 @@
 
         $newKey = 'company_' . $companyId;
 
+        $poolEntry = null;
+        $createdViaCreateDb = false;
+
         try {
             $dbConfig = $config['database'];
             $dbConfig['database'] = '';
             $sysDb = new \App\Core\Database($dbConfig);
             $sysPdo = $sysDb->connection();
             $sysPdo->exec('CREATE DATABASE IF NOT EXISTS `' . $dbName . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+            $createdViaCreateDb = true;
         } catch (\Exception $e) {
-            $pdo->prepare('DELETE FROM companies WHERE id = :id')
-                ->execute([':id' => $companyId]);
-            $formError = 'Не удалось создать рабочую базу данных компании. У текущего MySQL-пользователя нет права CREATE DATABASE. Режим общей БД с префиксами пока не включён, чтобы не смешивать данные компаний. Создайте БД erp_company_' . $companyId . ' в панели хостинга или выдайте право CREATE DATABASE, затем повторите создание.';
+            $poolEntry = findFreePoolDb($pdo);
+            if ($poolEntry === null) {
+                $pdo->prepare('DELETE FROM companies WHERE id = :id')
+                    ->execute([':id' => $companyId]);
+                $formError = 'Нет свободных подготовленных баз данных для новой компании. Создайте новые базы и добавьте их в COMPANY_DB_POOL_JSON.';
 
-            if ($isModal) {
-                renderFormPartial($errors, $old, $formError, true);
+                if ($isModal) {
+                    renderFormPartial($errors, $old, $formError, true);
+                    return;
+                }
+                ob_start();
+                require base_path('app/View/pages/superadmin_companies_create.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
                 return;
             }
-            ob_start();
-            require base_path('app/View/pages/superadmin_companies_create.php');
-            $content = ob_get_clean();
-            require base_path('app/View/layouts/main.php');
-            return;
         }
 
         try {
@@ -133,7 +143,9 @@
                 mkdir($storageDir, 0755, true);
             }
         } catch (\Exception $e) {
-            $sysPdo->exec('DROP DATABASE IF EXISTS `' . $dbName . '`');
+            if ($createdViaCreateDb) {
+                $sysPdo->exec('DROP DATABASE IF EXISTS `' . $dbName . '`');
+            }
             $pdo->prepare('DELETE FROM companies WHERE id = :id')
                 ->execute([':id' => $companyId]);
 
@@ -150,14 +162,27 @@
             return;
         }
 
-        try {
+        if ($poolEntry !== null) {
+            $poolDbConfig = $config['database'];
+            $poolDbConfig['database'] = $poolEntry['database'];
+            if (!empty($poolEntry['host'])) { $poolDbConfig['host'] = $poolEntry['host']; }
+            if (!empty($poolEntry['port'])) { $poolDbConfig['port'] = $poolEntry['port']; }
+            $poolDbConfig['username'] = $poolEntry['username'];
+            $poolDbConfig['password'] = $poolEntry['password'];
+            $localDb = new \App\Core\Database($poolDbConfig);
+        } else {
             $localDbConfig = $config['database'];
             $localDbConfig['database'] = $dbName;
             $localDb = new \App\Core\Database($localDbConfig);
-            $localPdo = $localDb->connection();
+        }
+        $localPdo = $localDb->connection();
+
+        try {
             applyLocalMigrations($localPdo);
         } catch (\Exception $e) {
-            $sysPdo->exec('DROP DATABASE IF EXISTS `' . $dbName . '`');
+            if ($createdViaCreateDb) {
+                $sysPdo->exec('DROP DATABASE IF EXISTS `' . $dbName . '`');
+            }
             $pdo->prepare('DELETE FROM companies WHERE id = :id')
                 ->execute([':id' => $companyId]);
             $formError = 'Не удалось применить миграции в БД компании: ' . $e->getMessage();
@@ -172,14 +197,46 @@
             return;
         }
 
-        $pdo->prepare('UPDATE companies SET status = :status, db_identifier = :db, storage_path = :storage, `key` = :new_key WHERE id = :id')
-            ->execute([
-                ':status'  => 'active',
-                ':db'      => $dbName,
-                ':storage' => 'storage/companies/' . $companyId . '/',
-                ':new_key' => $newKey,
-                ':id'      => $companyId,
+        if ($poolEntry !== null) {
+            $finalDbName = $poolEntry['database'];
+            $stmt = $pdo->prepare('UPDATE companies SET status = :status, db_identifier = :db, db_host = :db_host, db_port = :db_port, db_username = :db_username, db_password = :db_password, storage_path = :storage, `key` = :new_key WHERE id = :id');
+            $stmt->execute([
+                ':status'      => 'active',
+                ':db'          => $finalDbName,
+                ':db_host'     => !empty($poolEntry['host']) ? $poolEntry['host'] : null,
+                ':db_port'     => !empty($poolEntry['port']) ? $poolEntry['port'] : null,
+                ':db_username' => $poolEntry['username'],
+                ':db_password' => $poolEntry['password'],
+                ':storage'     => 'storage/companies/' . $companyId . '/',
+                ':new_key'     => $newKey,
+                ':id'          => $companyId,
             ]);
+            try {
+                markPoolDbUsed($pdo, $finalDbName, $companyId);
+            } catch (\Exception $e) {
+                $pdo->prepare('DELETE FROM companies WHERE id = :id')
+                    ->execute([':id' => $companyId]);
+                $formError = 'Не удалось зарезервировать базу данных в пуле: ' . $e->getMessage();
+                if ($isModal) {
+                    renderFormPartial($errors, $old, $formError, true);
+                    return;
+                }
+                ob_start();
+                require base_path('app/View/pages/superadmin_companies_create.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
+                return;
+            }
+        } else {
+            $pdo->prepare('UPDATE companies SET status = :status, db_identifier = :db, storage_path = :storage, `key` = :new_key WHERE id = :id')
+                ->execute([
+                    ':status'  => 'active',
+                    ':db'      => $dbName,
+                    ':storage' => 'storage/companies/' . $companyId . '/',
+                    ':new_key' => $newKey,
+                    ':id'      => $companyId,
+                ]);
+        }
 
         require_once base_path('app/Support/legal_entity_document_upload.php');
 

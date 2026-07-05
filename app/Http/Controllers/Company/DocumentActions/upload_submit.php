@@ -12,7 +12,7 @@ $ext=strtolower(pathinfo($_FILES['doc_file']['name'],PATHINFO_EXTENSION));if(!in
 if($_FILES['doc_file']['size']>$maxSize){header('Location: /company/documents?entity_type='.urlencode($entityType).'&entity_id='.$entityId.'&error=file_too_large');exit;}
 try{$pdo=$db->connection();$stmt=$pdo->prepare('SELECT * FROM companies WHERE id=?');$stmt->execute([$companyId]);$company=$stmt->fetch(PDO::FETCH_ASSOC);
 if(!$company||$company['status']!=='active'){header('Location: /company/documents?entity_type='.urlencode($entityType).'&entity_id='.$entityId.'&error=company_inactive');exit;}
-$cfg=$config['database'];$cfg['database']=$company['db_identifier'];$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
+$cfg=companyDatabaseConfig($config, $company);$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
 try{$lpdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();}catch(\Exception$e){$lpdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql')));}
 try{$lpdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch();}catch(\Exception$e){$lpdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));$lpdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));}
 $storedName=uniqid('doc_',true).'.'.$ext;$relativeDir='companies/'.$companyId.'/documents/'.$entityType.'/'.$entityId;$absoluteDir=storage_path($relativeDir);

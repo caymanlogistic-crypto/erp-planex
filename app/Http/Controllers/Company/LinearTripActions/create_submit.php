@@ -185,8 +185,7 @@ try {
         exit;
     }
 
-    $localDbConfig = $config['database'];
-    $localDbConfig['database'] = $company['db_identifier'];
+    $localDbConfig = companyDatabaseConfig($config, $company);
     $localDb = new \App\Core\Database($localDbConfig);
     $localPdo = $localDb->connection();
     applyLocalMigrations($localPdo);

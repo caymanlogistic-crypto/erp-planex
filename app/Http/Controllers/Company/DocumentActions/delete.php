@@ -3,7 +3,7 @@ requireRole(['company_owner', 'senior_logist', 'logist']);
 $companyId=(int)(getSessionCompanyId()??0);$docId=(int)($_POST['id']??0);$entityType=$_POST['entity_type']??'';$entityId=(int)($_POST['entity_id']??0);
 if($companyId<=0||$docId<=0){header('Location: /company/documents');exit;}
 try{$pdo=$db->connection();$stmt=$pdo->prepare('SELECT * FROM companies WHERE id=?');$stmt->execute([$companyId]);$company=$stmt->fetch(PDO::FETCH_ASSOC);if(!$company||$company['status']!=='active'){header('Location: /company/documents');exit;}
-$cfg=$config['database'];$cfg['database']=$company['db_identifier'];$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
+$cfg=companyDatabaseConfig($config, $company);$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
 $docStmt=$lpdo->prepare("SELECT * FROM documents WHERE id=?");$docStmt->execute([$docId]);$doc=$docStmt->fetch(PDO::FETCH_ASSOC);
 $uid=(int)($_SESSION['user_id']??0);$rl=(string)($_SESSION['role_code']??'');
 $lpdo->prepare("UPDATE documents SET deleted_at=NOW(),deleted_by_user_id=?,deleted_by_role=? WHERE id=?")->execute([$uid,$rl,$docId]);

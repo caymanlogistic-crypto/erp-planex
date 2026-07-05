@@ -44,6 +44,7 @@ require_once base_path('app/Service/AuditService.php');
 require_once base_path('app/Service/LinearRouteService.php');
 
 require_once base_path('app/Support/core_runtime.php');
+require_once base_path('app/Support/company_database.php');
 require_once base_path('app/Support/http_runtime.php');
 require_once base_path('app/Support/legal_entity_document_upload.php');
 

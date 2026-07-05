@@ -29,8 +29,7 @@ final class DriverService
 
     public function getLocalPdo(array $company): PDO
     {
-        $localDbConfig = $this->config['database'];
-        $localDbConfig['database'] = $company['db_identifier'];
+        $localDbConfig = companyDatabaseConfig($this->config, $company);
         $localDb = new Database($localDbConfig);
         $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);

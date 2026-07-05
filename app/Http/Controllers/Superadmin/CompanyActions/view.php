@@ -1,6 +1,8 @@
 <?php
 
     requireRole('superadmin');
+
+    require_once base_path('app/Support/company_database.php');
     $pageTitle = 'Карточка компании';
     $pageContext = 'Реестр компаний';
 
@@ -61,8 +63,7 @@
 
         if (!empty($company['db_identifier'])) {
             try {
-                $localDbConfig = $config['database'];
-                $localDbConfig['database'] = $company['db_identifier'];
+                $localDbConfig = companyDatabaseConfig($config, $company);
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);

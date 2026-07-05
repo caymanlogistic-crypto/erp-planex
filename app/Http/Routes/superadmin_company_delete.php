@@ -29,6 +29,7 @@ $router->post('/superadmin/companies/{company_id}/users/owner/{user_id}/archive'
 
 $router->get('/superadmin/companies/{id}/delete', function ($id) use ($config, $db) {
     requireRole('superadmin');
+    require_once base_path('app/Support/company_database.php');
     $pageTitle = 'Удаление компании';
     $pageContext = 'Реестр компаний';
 
@@ -69,8 +70,7 @@ $router->get('/superadmin/companies/{id}/delete', function ($id) use ($config, $
 
     if (!empty($company['db_identifier'])) {
         try {
-            $localDbConfig = $config['database'];
-            $localDbConfig['database'] = $company['db_identifier'];
+            $localDbConfig = companyDatabaseConfig($config, $company);
             $localDb = new \App\Core\Database($localDbConfig);
             $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -115,6 +115,7 @@ $router->get('/superadmin/companies/{id}/delete', function ($id) use ($config, $
 
 $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, $db) {
     requireRole('superadmin');
+    require_once base_path('app/Support/company_database.php');
     $pageTitle = 'Удаление компании';
     $pageContext = 'Реестр компаний';
 
@@ -172,8 +173,7 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
 
         if (!empty($company['db_identifier'])) {
             try {
-                $localDbConfig = $config['database'];
-                $localDbConfig['database'] = $company['db_identifier'];
+                $localDbConfig = companyDatabaseConfig($config, $company);
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -215,8 +215,9 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
 
     // === PREFLIGHT: DB name validation ===
     $dbIdentifier = $company['db_identifier'] ?? '';
-    $hasSeparateDb = (strpos($dbIdentifier, 'erp_company_') === 0);
-    $hasSharedDb = !$hasSeparateDb && !empty($dbIdentifier);
+    $isPoolDb = !empty($company['db_username']);
+    $hasSeparateDb = (strpos($dbIdentifier, 'erp_company_') === 0) && !$isPoolDb;
+    $hasSharedDb = !$hasSeparateDb && !empty($dbIdentifier) && !$isPoolDb;
     // Allow deletion when db_identifier matches either separate DB pattern or shared DB pattern.
     // Deletion skips DROP DATABASE for shared DB but still removes central records and storage.
 
@@ -291,10 +292,11 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
     $dumpCreated = false;
     if (!empty($dbIdentifier)) {
         try {
-            $dbUser = $config['database']['username'] ?? 'root';
-            $dbPass = $config['database']['password'] ?? '';
-            $dbHost = $config['database']['host'] ?? '127.0.0.1';
-            $dbPort = $config['database']['port'] ?? '3306';
+            $localDbCfg = companyDatabaseConfig($config, $company);
+            $dbUser = $localDbCfg['username'] ?? 'root';
+            $dbPass = $localDbCfg['password'] ?? '';
+            $dbHost = $localDbCfg['host'] ?? '127.0.0.1';
+            $dbPort = $localDbCfg['port'] ?? '3306';
 
             $mysqldumpAvailable = false;
             $mysqldumpPath = trim(shell_exec('where mysqldump 2>NUL') ?? '');

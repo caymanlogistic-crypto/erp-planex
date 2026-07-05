@@ -22,8 +22,7 @@ try {
         exit;
     }
 
-    $cfg = $config['database'];
-    $cfg['database'] = $company['db_identifier'];
+    $cfg = companyDatabaseConfig($config, $company);
     $ldb = new \App\Core\Database($cfg);
     $lpdo = $ldb->connection();
     applyLocalMigrations($lpdo);

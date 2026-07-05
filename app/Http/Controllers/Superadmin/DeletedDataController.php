@@ -95,8 +95,7 @@ final class DeletedDataController
                 exit;
             }
 
-            $localDbConfig = $this->config['database'];
-            $localDbConfig['database'] = $company['db_identifier'];
+            $localDbConfig = companyDatabaseConfig($this->config, $company);
             $localDb = new Database($localDbConfig);
             $localPdo = $localDb->connection();
 

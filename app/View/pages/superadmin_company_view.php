@@ -276,6 +276,10 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= (int)$company['id'] ?></dd>
                 <dt>Локальная БД</dt>
                 <dd><?= e($company['db_identifier'] ?? '') ?: '—' ?></dd>
+                <dt>Хост БД</dt>
+                <dd><?= e($company['db_host'] ?? '') ?: '—' ?></dd>
+                <dt>Пользователь БД</dt>
+                <dd><?= e($company['db_username'] ?? '') ?: '—' ?></dd>
                 <dt>БД существует</dt>
                 <dd><span class="badge <?= $hasLocalDb ? 'badge-ok' : 'badge-danger' ?>"><?= $hasLocalDb ? 'YES' : 'NO' ?></span></dd>
                 <dt>Storage</dt>

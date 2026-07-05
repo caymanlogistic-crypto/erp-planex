@@ -50,9 +50,7 @@ $router->get('/company/vehicles', function () use ($config, $db) {
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -226,9 +224,7 @@ $router->post('/company/vehicles/create', function () use ($config, $db) {
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -375,9 +371,7 @@ $router->get('/company/vehicles/{id}', function ($vehicleId) use ($config, $db) 
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -541,9 +535,7 @@ $router->get('/company/vehicles/{id}/edit', function ($vehicleId) use ($config, 
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -647,9 +639,7 @@ $router->post('/company/vehicles/{id}/edit', function ($vehicleId) use ($config,
             return;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);
@@ -782,9 +772,7 @@ $router->post('/company/vehicles/{id}/archive', function ($vehicleId) use ($conf
             exit;
         }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
                 applyLocalMigrations($localPdo);

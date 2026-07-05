@@ -1,32 +1,31 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-07-05 — expeditor edit document uploads FINAL
+## Актуализация 2026-07-05 — DB pool usage journal (one-way consumption safety)
 
-**Статус**: EXPEDITOR_EDIT_DOCUMENTS_ENABLED
+**Статус**: DB_POOL_USAGE_JOURNAL_IMPLEMENTED
 
 Выполнено:
 
-### A. Full-page edit documents enabled
-- `app/View/pages/superadmin_company_edit.php`: `$leShowDocuments` изменён с `false` на `true`.
-- `app/Http/Controllers/Superadmin/CompanyActions/edit_submit.php`: после успешного UPDATE добавлена обработка документов через `processLegalEntityCreateDocuments()` с проверкой `db_identifier === 'erp_company_{id}'`.
-- Если `db_identifier` не совпадает — документы не обрабатываются, в `$_SESSION['company_edit_doc_warning']` записывается предупреждение.
+### A. Central usage journal table
+- `app/Support/company_database.php`: `ensureCompanyDbPoolUsageTable(PDO $pdo): void` creates `company_db_pool_usage` table in central DB if not exists.
+- Table: `company_db_pool_usage` with `id`, `db_identifier` (UNIQUE), `company_id`, `created_at`, `released_at`, `note`.
+- No passwords, host or user secrets stored in this table.
 
-### B. Modal edit documents enabled
-- `app/Http/Controllers/Superadmin/CompanyActions/modal_edit_submit.php`: после успешного UPDATE добавлена обработка документов.
-- `app/View/partials/superadmin_company_modal_view.php`: добавлен вывод `$docWarning` в модальном окне при ошибках документов.
+### B. findFreePoolDb() updated
+- Now calls `ensureCompanyDbPoolUsageTable()` first.
+- Considers a pool DB used if it exists in `companies.db_identifier` OR in `company_db_pool_usage.db_identifier`.
+- Returns only entries not consumed by either source.
 
-### C. Document helper loaded explicitly
-- `require_once base_path('app/Support/legal_entity_document_upload.php')` вызывается в обоих edit-обработчиках.
+### C. markPoolDbUsed() helper
+- `markPoolDbUsed(PDO $centralPdo, string $dbIdentifier, int $companyId): void`
+- Calls `ensureCompanyDbPoolUsageTable()` and inserts with `INSERT IGNORE` (idempotent).
+- Records `db_identifier`, `company_id`, note `superadmin_create`.
 
-### D. Edit documents enabled only when company runtime DB configured
-- Решение #90 заменено: edit-документы включены, но backend проверяет `db_identifier === 'erp_company_{id}'` перед обработкой.
+### D. Pool usage recorded in create_submit.php
+- After successful pool DB assignment and central company update, calls `markPoolDbUsed($pdo, $finalDbName, $companyId)`.
+- If marking fails, company row is rolled back (`DELETE FROM companies`) and clear error shown.
+- One-way consumption: pool DBs are never reused, even if company is deleted later.
 
-### E. Explicit helper load in create_submit.php
-- `app/Http/Controllers/Superadmin/CompanyActions/create_submit.php`: добавлен `require_once base_path('app/Support/legal_entity_document_upload.php')` перед вызовом `processLegalEntityCreateDocuments()`.
-
-### F. Flash warning display in superadmin_company_view.php
-- `app/View/pages/superadmin_company_view.php`: добавлен вывод и очистка `$_SESSION['company_edit_doc_warning']` в верхней части контента.
-
-### G. Fixed file detection for associative predef_doc keys
-- `edit_submit.php` и `modal_edit_submit.php`: исправлена проверка `$hasFiles` для ассоциативных ключей `predef_doc` (company_card и т.д.).
-- Добавлена локальная функция `hasAnyUploadedFiles()` — безопасно проверяет любую структуру `$_FILES`.
+### E. Docs updated
+- `docs/ai/CURRENT_TASK.md`, `docs/ai/DECISIONS.md`, `docs/ai/HANDOFF_FOR_NEW_CHAT.md` updated.
+- Pool DBs documented as one-time consumed; when exhausted owner must create new DBs and append to `COMPANY_DB_POOL_JSON`.

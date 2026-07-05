@@ -17,8 +17,7 @@ $router->post('/company/driver-vehicle-blocks/create', function () use ($config,
         if (!$company) { $company = null; $formError = 'Компания не найдена'; goto renderPostBlock; }
         if ($company['status'] !== 'active') { $formError = 'Создание недоступно'; goto renderPostBlock; }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 
@@ -141,8 +140,7 @@ $router->get('/company/driver-vehicle-blocks/{id}', function ($id) use ($config,
         if (!$company) { $company = null; $block = null; $dbError = null; goto renderViewBlock; }
         if ($company['status'] !== 'active') { $block = null; $dbError = null; goto renderViewBlock; }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 
@@ -232,8 +230,7 @@ $router->get('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($co
         if (!$company) { $company = null; $block = null; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
         if ($company['status'] !== 'active') { $block = null; $errors = []; $old = []; $formError = null; goto renderEditBlock; }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 
@@ -313,8 +310,7 @@ $router->post('/company/driver-vehicle-blocks/{id}/edit', function ($id) use ($c
         if (!$company) { $company = null; $block = null; $errors = []; $old = $_POST; $formError = 'Компания не найдена'; goto renderEditBlockPost; }
         if ($company['status'] !== 'active') { $block = null; $errors = []; $old = $_POST; $formError = 'Редактирование недоступно'; goto renderEditBlockPost; }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 
@@ -390,8 +386,7 @@ $router->post('/company/driver-vehicle-blocks/{id}/archive', function ($id) use 
         $stmt->execute([$companyId]); $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company || $company['status'] !== 'active') { header('Location: /company/driver-vehicle-blocks'); exit; }
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig); $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
 

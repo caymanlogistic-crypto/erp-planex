@@ -8,7 +8,7 @@ $entityWhitelist=['client','contractor','driver','vehicle_unit','vehicle_set','d
 if(!in_array($entityType,$entityWhitelist,true)){header('Location: /company/documents?entity_type='.urlencode($entityType).'&entity_id='.$entityId.'&error=invalid_entity');exit;}
 try{$pdo=$db->connection();$stmt=$pdo->prepare('SELECT * FROM companies WHERE id=?');$stmt->execute([$companyId]);$company=$stmt->fetch(PDO::FETCH_ASSOC);
 if(!$company||$company['status']!=='active'){header('Location: /company/documents?entity_type='.urlencode($entityType).'&entity_id='.$entityId.'&error=company_inactive');exit;}
-$cfg=$config['database'];$cfg['database']=$company['db_identifier'];$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
+$cfg=companyDatabaseConfig($config, $company);$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
 // Load existing document (must exist and not be deleted)
 $docStmt=$lpdo->prepare("SELECT * FROM documents WHERE id=? AND entity_type=? AND entity_id=? AND deleted_at IS NULL");$docStmt->execute([$replaceDocId,$entityType,$entityId]);$oldDoc=$docStmt->fetch(PDO::FETCH_ASSOC);
 if(!$oldDoc){header('Location: /company/documents?entity_type='.urlencode($entityType).'&entity_id='.$entityId.'&error=doc_not_found');exit;}

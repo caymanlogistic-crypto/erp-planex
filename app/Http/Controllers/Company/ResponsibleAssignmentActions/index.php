@@ -59,9 +59,7 @@
 
         $pageContext = 'Ответственные логисты › Компания: ' . $company['name'];
 
-        $dbIdentifier = $company['db_identifier'];
-        $localDbConfig = $config['database'];
-        $localDbConfig['database'] = $dbIdentifier;
+        $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);

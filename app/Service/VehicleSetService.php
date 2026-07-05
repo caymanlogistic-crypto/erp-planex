@@ -25,8 +25,7 @@ final class VehicleSetService
 
     public function getLocalPdo(array $company): PDO
     {
-        $cfg = $this->config['database'];
-        $cfg['database'] = $company['db_identifier'];
+        $cfg = companyDatabaseConfig($this->config, $company);
         $localDb = new Database($cfg);
         $pdo = $localDb->connection();
         applyLocalMigrations($pdo);
