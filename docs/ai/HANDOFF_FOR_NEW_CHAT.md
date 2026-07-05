@@ -408,7 +408,7 @@ Client and contractor full-page edit forms restructured to use compact Driver-li
 - No inline styles, no CSS changes, no input name/form action changes.
 - Design decision #70 added to DECISIONS.md.
 
-## 2026-07-05 — production deploy attempt blocked by web PHP
+## 2026-07-05 — production deploy attempt, PHP fixed, base path fix ready
 
 `develop` and `master` are synchronized on commit `9d1fcc2`.
 Server deploy was uploaded to `/home/s/spugovxsim/planexp/public_html/erp` (requested `/planexp/public_html/erp` inside the hosting account).
@@ -418,12 +418,30 @@ Verified on server:
 - CLI `/usr/bin/php8.3` with PDO MySQL works.
 - Central migrations applied: `companies`, `company_features`, `company_users`, `deleted_entities`, `features`, `superadmin_users`.
 
-Blocked:
-- `plan-ex.ru/erp` is served by Apache PHP 7.1.33, but ERP code requires PHP 8.x.
+Earlier blocker:
+- `plan-ex.ru/erp` was served by Apache PHP 7.1.33, but ERP code requires PHP 8.x.
 - `.htaccess` PHP 8 handlers and CGI wrapper inside `/erp` were tested and did not produce acceptable runtime.
-- No production app accounts were created because login/runtime returns HTTP 500 before PHP 8 web runtime is enabled.
 
-Next required action: switch the web runtime for `plan-ex.ru/erp` to PHP 8.1+ / 8.3 in hosting panel/support, then rerun full server QA (roles, CRUD, documents upload/change/delete).
+Current state:
+- Owner switched hosting to Apache PHP 8.3.31; HTTP probe confirmed `apache2handler` and `pdo_mysql=true`.
+- After PHP switch, `/erp/login` reached PHP but returned app-level 404 because routes are registered without `/erp` prefix.
+- Base path fix was implemented and deployed; production `.env` has `APP_BASE_PATH=/erp`.
+- Runtime accounts were created for superadmin, owner, senior logist and logist. Do not store their passwords in docs; owner received them in the final report.
+- Shared-hosting DB user cannot `CREATE DATABASE`; test company `prod_test_expeditor` uses `spugovxsim_plan` as `db_identifier`, with local company tables migrated into the provided DB.
+- HTTP smoke QA passed for all roles and key pages. CRUD/file QA passed for client create, document upload, replace and delete.
+
+**Base path support now implemented:**
+- Added `APP_BASE_PATH` env/config variable (production should set `APP_BASE_PATH=/erp`).
+- Router strips base path prefix before matching routes.
+- New helpers: `app_base_path()`, `app_url()`, `redirect_to()`, `current_app_path()`, HTML output rewrite helpers, Location header rewrite helpers.
+- Critical `header('Location: ...')` calls replaced with `redirect_to()`.
+- Simple view file form actions and links use `app_url()`, asset URLs use `app_url()`.
+- Legacy/dynamic `href/action/src="/..."` attributes are covered by output rewrite when `APP_BASE_PATH` is non-empty.
+- Legacy `Location: /...` redirects are covered by header rewrite when `APP_BASE_PATH` is non-empty.
+- Root deployment behaviour unchanged when `APP_BASE_PATH` is empty.
+- See `app/Support/helpers.php`, `app/Http/Router.php`, `app/Http/Routes/*.php`, `app/View/layouts/*.php`.
+
+Next required action: continue deeper business QA if needed (contractor/driver/vehicle/route executor full CRUD), but production smoke/runtime, auth, routing and document upload/replace/delete are working under `/erp`.
 
 ## Future-chat note: unified legal-entity create partial
 

@@ -17,12 +17,10 @@ final class AuthController
         if (isAuthenticated()) {
             $role = $_SESSION['role_code'] ?? '';
             if ($role === 'superadmin') {
-                header('Location: /superadmin/companies');
-                exit;
+                redirect_to('/superadmin/companies');
             }
 
-            header('Location: /company/dashboard');
-            exit;
+            redirect_to('/company/dashboard');
         }
 
         $loginValue = '';
@@ -63,8 +61,7 @@ final class AuthController
     public function login(): void
     {
         if (isAuthenticated()) {
-            header('Location: /company/dashboard');
-            exit;
+            redirect_to('/company/dashboard');
         }
 
         $loginValue = trim($_POST['login'] ?? '');
@@ -105,8 +102,7 @@ final class AuthController
                 $_SESSION['role_code'] = 'superadmin';
                 $_SESSION['company_id'] = null;
                 $_SESSION['user_name'] = $superUser['name'] ?? 'Super Admin';
-                header('Location: /superadmin/companies');
-                exit;
+                redirect_to('/superadmin/companies');
             }
 
             $ownerStmt = $pdo->prepare(
@@ -129,8 +125,7 @@ final class AuthController
                     $_SESSION['role_code'] = 'company_owner';
                     $_SESSION['company_id'] = (int) $owner['company_id'];
                     $_SESSION['user_name'] = $owner['full_name'];
-                    header('Location: /company/dashboard');
-                    exit;
+                    redirect_to('/company/dashboard');
                 }
             }
 
@@ -173,8 +168,7 @@ final class AuthController
                     $_SESSION['role_code'] = $candidate['user']['role_code'] ?? 'logist';
                     $_SESSION['company_id'] = $candidate['company_id'];
                     $_SESSION['user_name'] = $candidate['user']['full_name'];
-                    header('Location: /company/dashboard');
-                    exit;
+                    redirect_to('/company/dashboard');
                 }
                 $authError = 'Неверный логин или пароль.';
             } elseif (count($logistCandidates) > 1) {
@@ -195,7 +189,6 @@ final class AuthController
     public function logout(): void
     {
         session_destroy();
-        header('Location: /login', true, 302);
-        exit;
+        redirect_to('/login', 302);
     }
 }

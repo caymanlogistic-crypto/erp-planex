@@ -41,7 +41,7 @@
         <span class="page-title">Перевозчик не найден</span>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -351,7 +351,7 @@ if ($blockMode === 'new') {
                         <?php endforeach; ?>
                     </select>
                     <?php if (empty($drivers)): ?>
-                        <p class="field-hint">Нет доступных водителей. <a href="/company/drivers/create">Создать водителя</a></p>
+                        <p class="field-hint">Нет доступных водителей. <a href="<?= app_url('/company/drivers/create') ?>">Создать водителя</a></p>
                     <?php endif; ?>
                     <?php if (!empty($errors['driver_id'])): ?>
                         <div class="field-msg is-error"><?= e($errors['driver_id']) ?></div>
@@ -421,7 +421,7 @@ if ($blockMode === 'new') {
                         <?php endforeach; ?>
                     </select>
                     <?php if (empty($vehicleSets)): ?>
-                        <p class="field-hint">Нет доступного транспорта. <a href="/company/vehicle-sets/create">Создать транспорт</a></p>
+                        <p class="field-hint">Нет доступного транспорта. <a href="<?= app_url('/company/vehicle-sets/create') ?>">Создать транспорт</a></p>
                     <?php endif; ?>
                     <?php if (!empty($errors['vehicle_set_id'])): ?>
                         <div class="field-msg is-error"><?= e($errors['vehicle_set_id']) ?></div>

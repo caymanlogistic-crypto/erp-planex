@@ -130,13 +130,11 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
     $allowedEntityTypes = ['client', 'contractor', 'driver', 'vehicle_unit', 'vehicle_set', 'driver_vehicle_block', 'crew'];
 
     if (!in_array($entityType, $allowedEntityTypes, true)) {
-        header('Location: ' . $redirect);
-        exit;
+        redirect_to($redirect);
     }
 
     if ($entityId <= 0 || $grantedToUserId <= 0 || $companyId <= 0) {
-        header('Location: ' . $redirect);
-        exit;
+        redirect_to($redirect);
     }
 
     try {
@@ -146,8 +144,7 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$company || $company['status'] !== 'active') {
-            header('Location: ' . $redirect);
-            exit;
+            redirect_to($redirect);
         }
 
         $dbIdentifier = $company['db_identifier'];
@@ -201,8 +198,7 @@ $router->post('/company/access-grants/grant', function () use ($config, $db) {
         }
     }
 
-    header('Location: ' . $redirect);
-    exit;
+    redirect_to($redirect);
 });
 
 // Revoke access grant
@@ -212,7 +208,7 @@ $router->post('/company/access-grants/{id}/revoke', function ($id) use ($config,
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $redirect = $_GET['redirect'] ?? '/company/dashboard';
 
-    if ($companyId <= 0) { header('Location: ' . $redirect); exit; }
+    if ($companyId <= 0) { redirect_to($redirect); }
 
     try {
         $pdo = $db->connection();
@@ -220,7 +216,7 @@ $router->post('/company/access-grants/{id}/revoke', function ($id) use ($config,
         $stmt->execute([$companyId]);
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$company || $company['status'] !== 'active') { header('Location: ' . $redirect); exit; }
+        if (!$company || $company['status'] !== 'active') { redirect_to($redirect); }
 
         $dbIdentifier = $company['db_identifier'];
         $localDbConfig = $config['database']; $localDbConfig['database'] = $dbIdentifier;
@@ -231,8 +227,7 @@ $router->post('/company/access-grants/{id}/revoke', function ($id) use ($config,
         $update->execute([(int)$_SESSION['user_id'], (int)$id]);
     } catch (\Exception $e) {}
 
-    header('Location: ' . $redirect);
-    exit;
+    redirect_to($redirect);
 });
 
 // ============================================================

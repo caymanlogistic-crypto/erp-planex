@@ -1,5 +1,5 @@
 <?php
-requireRole('superadmin');$cid=(int)$id;$pdo=$db->connection();$company=SuperadminCompanyService::loadCompany($pdo,$cid);
+requireRole('superadmin');$cid=(int)$id;$pdo=$db->connection();$company=\App\Service\SuperadminCompanyService::loadCompany($pdo,$cid);
 if(!$company){http_response_code(404);exit;}
 $fullName=trim($_POST['full_name']??'');$login=trim($_POST['login']??'');$password=trim($_POST['password']??'');
 if($fullName===''||$login===''||$password===''){header('Location: /superadmin/companies/'.$cid.'/users/logists/create?error=required_fields');exit;}

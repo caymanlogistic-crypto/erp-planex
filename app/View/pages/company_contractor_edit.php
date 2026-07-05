@@ -13,7 +13,7 @@ $contactErrors = $errors['contacts'] ?? [];
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Компания не найдена. <a href="/company/contractors">← К списку</a>
+            Компания не найдена. <a href="<?= app_url('/company/contractors') ?>">← К списку</a>
         </div>
     </div>
 </div>
@@ -39,7 +39,7 @@ $contactErrors = $errors['contacts'] ?? [];
             <?= e($dbError) ?>
         </div>
         <div class="form-actions mt-4">
-            <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+            <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
 </div>
@@ -52,7 +52,7 @@ $contactErrors = $errors['contacts'] ?? [];
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 

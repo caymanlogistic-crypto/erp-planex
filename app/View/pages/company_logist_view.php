@@ -18,7 +18,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -34,7 +34,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -50,7 +50,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -104,7 +104,7 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
     <div class="page-head-actions">
         <a href="/company/logists/<?= $logist['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -156,7 +156,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
         <div class="form-actions mt-4">
             <a href="/company/logists/<?= $logist['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-            <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+            <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
         </div>
 
     </div>

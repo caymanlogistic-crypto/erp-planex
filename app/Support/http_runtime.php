@@ -11,8 +11,7 @@ if (!function_exists('requireRole')) {
     function requireRole(string|array $roles): void
     {
         if (!isAuthenticated()) {
-            header('Location: /login');
-            exit;
+            redirect_to('/login');
         }
 
         $allowed = is_array($roles) ? $roles : [$roles];

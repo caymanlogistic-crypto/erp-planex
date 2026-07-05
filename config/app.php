@@ -5,6 +5,7 @@ return [
     'app_env'  => env('APP_ENV', 'local'),
     'app_debug' => env('APP_DEBUG', true),
 
-    'base_path'    => BASE_PATH,
-    'storage_path' => STORAGE_PATH,
+    'base_path'     => BASE_PATH,
+    'storage_path'  => STORAGE_PATH,
+    'app_base_path' => env('APP_BASE_PATH', ''),
 ];

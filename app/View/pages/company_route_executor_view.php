@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -54,7 +54,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -64,8 +64,8 @@
             <p class="empty-title">Доступ запрещён</p>
             <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
             <div class="form-actions">
-                <a href="/company/route-executors" class="btn btn-ghost">← К списку исполнителей рейса</a>
-                <a href="/company/dashboard" class="btn btn-primary">На главную</a>
+                <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку исполнителей рейса</a>
+                <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-primary">На главную</a>
             </div>
         </div>
     </div>
@@ -81,7 +81,7 @@
     </div>
     <div class="page-head-actions">
         <a href="/company/route-executors/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-        <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -185,7 +185,7 @@
                 <?php else: ?>
                     <p class="text-muted">Исполнитель рейса уже удалён.</p>
                 <?php endif; ?>
-                <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
+                <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
             </div>
         </div>
 

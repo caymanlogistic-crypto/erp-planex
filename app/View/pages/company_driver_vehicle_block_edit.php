@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -44,7 +44,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -71,7 +71,7 @@
         </div>
         <div class="form-actions mt-4">
             <a href="/company/driver-vehicle-blocks/<?= $block['id'] ?>" class="btn btn-primary">← К просмотру</a>
-            <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
+            <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
 </div>

@@ -9,7 +9,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Компания не найдена. <a href="/company/contractors">← К списку</a>
+            Компания не найдена. <a href="<?= app_url('/company/contractors') ?>">← К списку</a>
         </div>
     </div>
 </div>
@@ -35,7 +35,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <?= e($dbError) ?>
         </div>
         <div class="form-actions mt-4">
-            <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+            <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
 </div>
@@ -48,7 +48,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -68,7 +68,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -79,8 +79,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="empty-title">Доступ запрещён</p>
             <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
             <div class="form-actions">
-                <a href="/company/contractors" class="btn btn-ghost">← К списку перевозчиков</a>
-                <a href="/company/dashboard" class="btn btn-primary">На главную</a>
+                <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку перевозчиков</a>
+                <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-primary">На главную</a>
             </div>
         </div>
     </div>
@@ -96,7 +96,7 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/<?= $contractor['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-        <a href="/company/contractors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
         <a href="/company/documents?entity_type=contractor&entity_id=<?= $contractor['id'] ?>" class="btn btn-ghost">Документы</a>
     </div>
 </div>

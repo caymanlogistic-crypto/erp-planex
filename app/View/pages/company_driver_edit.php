@@ -9,7 +9,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Компания не найдена. <a href="/company/drivers">← К списку</a>
+            Компания не найдена. <a href="<?= app_url('/company/drivers') ?>">← К списку</a>
         </div>
     </div>
 </div>
@@ -35,7 +35,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <?= e($dbError) ?>
         </div>
         <div class="form-actions mt-4">
-            <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+            <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
 </div>
@@ -48,7 +48,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 

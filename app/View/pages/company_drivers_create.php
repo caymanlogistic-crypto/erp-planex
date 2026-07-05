@@ -12,7 +12,7 @@
         <h1 class="page-title">Создать водителя</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers" class="btn btn-secondary">← К списку</a>
+        <a href="<?= app_url('/company/drivers') ?>" class="btn btn-secondary">← К списку</a>
     </div>
 </div>
 
@@ -36,8 +36,8 @@
         <h1 class="page-title">Водитель создан</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers/create" class="btn btn-secondary">Создать ещё</a>
-        <a href="/company/drivers" class="btn btn-primary">← К списку</a>
+        <a href="<?= app_url('/company/drivers/create') ?>" class="btn btn-secondary">Создать ещё</a>
+        <a href="<?= app_url('/company/drivers') ?>" class="btn btn-primary">← К списку</a>
     </div>
 </div>
 
@@ -115,7 +115,7 @@
         <h1 class="page-title">Создать водителя</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers" class="btn btn-secondary">← К списку</a>
+        <a href="<?= app_url('/company/drivers') ?>" class="btn btn-secondary">← К списку</a>
     </div>
 </div>
 

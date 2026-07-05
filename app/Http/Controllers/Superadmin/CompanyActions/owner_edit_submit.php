@@ -122,8 +122,7 @@
             ':id'        => (int) $owner['id'],
         ]);
 
-        header('Location: /superadmin/companies/' . $id . '/owner?success=1');
-        exit;
+        redirect_to('/superadmin/companies/' . $id . '/owner?success=1');
     } catch (\Exception $e) {
         $company = $company ?? null;
         $owner = $owner ?? null;

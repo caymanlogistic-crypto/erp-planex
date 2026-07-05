@@ -40,7 +40,7 @@
     </div>
     <?php if (!$isLogist): ?>
     <div class="page-head-actions">
-        <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>
+        <a href="<?= app_url('/company/crews/create') ?>" class="btn btn-primary">Создать экипаж</a>
     </div>
     <?php endif; ?>
 </div>
@@ -62,7 +62,7 @@
     <div class="empty-state">
         <p class="empty-title">Экипажи ещё не созданы.</p>
         <p class="empty-desc">Создайте экипаж, чтобы объединить подрядчика, водителя и транспортный комплект.</p>
-        <a href="/company/crews/create" class="btn btn-primary">Создать первый экипаж</a>
+        <a href="<?= app_url('/company/crews/create') ?>" class="btn btn-primary">Создать первый экипаж</a>
     </div>
     <?php endif; ?>
 </div>
@@ -75,7 +75,7 @@
         <div class="page-summary"><span>Экипажи: перевозчик + водитель + транспорт · Управление рейсами</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/crews/create" class="btn btn-primary">Создать экипаж</a>
+        <a href="<?= app_url('/company/crews/create') ?>" class="btn btn-primary">Создать экипаж</a>
     </div>
 </div>
 

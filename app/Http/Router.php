@@ -32,6 +32,15 @@ class Router
     {
         $uri = parse_url($uri, PHP_URL_PATH);
         $uri = $uri !== null ? $uri : '/';
+
+        $basePath = trim(getenv('APP_BASE_PATH') ?: '');
+        if ($basePath !== '') {
+            $basePath = '/' . trim($basePath, '/');
+            if (path_starts_with_base_path($uri, $basePath)) {
+                $uri = substr($uri, strlen($basePath));
+            }
+        }
+
         $uri = rtrim($uri, '/') ?: '/';
 
         foreach ($this->routes as $route) {

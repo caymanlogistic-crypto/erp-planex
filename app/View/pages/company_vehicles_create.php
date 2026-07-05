@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles" class="btn btn-primary">← К списку</a>
+        <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-primary">← К списку</a>
     </div>
 </div>
 
@@ -78,8 +78,8 @@
         </div>
 
         <div class="form-actions mt-4">
-            <a href="/company/vehicles" class="btn btn-primary">← К списку</a>
-            <a href="/company/vehicles/create" class="btn btn-ghost">Добавить ещё</a>
+            <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-primary">← К списку</a>
+            <a href="<?= app_url('/company/vehicles/create') ?>" class="btn btn-ghost">Добавить ещё</a>
         </div>
     </div>
 </div>
@@ -92,7 +92,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -100,7 +100,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/vehicles/create" class="panel">
+<form method="post" action="<?= app_url('/company/vehicles/create') ?>" class="panel">
     <div class="panel-body">
 
         <div class="form-section">

@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -54,7 +54,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -65,8 +65,8 @@
             <p class="empty-title">Доступ запрещён</p>
             <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
             <div class="form-actions">
-                <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
-                <a href="/company/dashboard" class="btn btn-primary">На главную</a>
+                <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
+                <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-primary">На главную</a>
             </div>
         </div>
     </div>
@@ -82,7 +82,7 @@
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles/<?= $vehicle['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-        <a href="/company/vehicles" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
         <a href="/company/documents?entity_type=vehicle_unit&entity_id=<?= $vehicle['id'] ?>" class="btn btn-ghost">Документы</a>
     </div>
 </div>
@@ -207,7 +207,7 @@
             <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
-            <form method="post" action="/company/access-grants/grant" class="grant-form">
+            <form method="post" action="<?= app_url('/company/access-grants/grant') ?>" class="grant-form">
                 <input type="hidden" name="entity_type" value="vehicle_unit">
                 <input type="hidden" name="entity_id" value="<?= $vehicle['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/vehicles/<?= $vehicle['id'] ?>">

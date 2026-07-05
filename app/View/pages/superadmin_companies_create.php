@@ -4,7 +4,7 @@
         <span class="page-title">Создать экспедитора</span>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies" class="btn btn-ghost">&larr; К реестру</a>
+        <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">&larr; К реестру</a>
     </div>
 </div>
 

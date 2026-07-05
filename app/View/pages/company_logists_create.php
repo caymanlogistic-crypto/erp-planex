@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-primary">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-primary">← К списку</a>
     </div>
 </div>
 
@@ -69,8 +69,8 @@
         </div>
 
         <div class="form-actions mt-4">
-            <a href="/company/logists" class="btn btn-primary">← К списку пользователей</a>
-            <a href="/company/logists/create" class="btn btn-ghost">Создать ещё</a>
+            <a href="<?= app_url('/company/logists') ?>" class="btn btn-primary">← К списку пользователей</a>
+            <a href="<?= app_url('/company/logists/create') ?>" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
 </div>
@@ -85,7 +85,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -93,7 +93,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/logists/create" class="panel">
+<form method="post" action="<?= app_url('/company/logists/create') ?>" class="panel">
     <div class="panel-body">
 
         <div class="form-section">
@@ -175,7 +175,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать пользователя</button>
-            <a href="/company/logists" class="btn btn-ghost">Отмена</a>
+            <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">Отмена</a>
         </div>
 
     </div>

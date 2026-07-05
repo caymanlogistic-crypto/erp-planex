@@ -8,7 +8,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            <?= e($dbError ?? 'Компания не найдена.') ?> <a href="/superadmin/companies">← К реестру</a>
+            <?= e($dbError ?? 'Компания не найдена.') ?> <a href="<?= app_url('/superadmin/companies') ?>">← К реестру</a>
         </div>
     </div>
 </div>

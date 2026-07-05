@@ -108,7 +108,7 @@ $isCouplingSelected = $selectedSetType === 'coupling';
         <h1 class="page-title">Создать транспорт</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicle-sets" class="btn btn-secondary">&larr; К списку</a>
+        <a href="<?= app_url('/company/vehicle-sets') ?>" class="btn btn-secondary">&larr; К списку</a>
     </div>
 </div>
 <div class="page-content">
@@ -128,7 +128,7 @@ $isCouplingSelected = $selectedSetType === 'coupling';
         <h1 class="page-title">Создать транспорт</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicle-sets" class="btn btn-secondary">&larr; К списку</a>
+        <a href="<?= app_url('/company/vehicle-sets') ?>" class="btn btn-secondary">&larr; К списку</a>
     </div>
 </div>
 <div class="page-content">
@@ -151,7 +151,7 @@ $isCouplingSelected = $selectedSetType === 'coupling';
         <h1 class="page-title">Транспорт создан</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicle-sets/create" class="btn btn-secondary">Создать ещё</a>
+        <a href="<?= app_url('/company/vehicle-sets/create') ?>" class="btn btn-secondary">Создать ещё</a>
         <a href="/company/vehicle-sets/<?= (int) ($createdVehicleSet['id'] ?? 0) ?>" class="btn btn-primary">Открыть карточку</a>
     </div>
 </div>
@@ -224,7 +224,7 @@ $isCouplingSelected = $selectedSetType === 'coupling';
         <h1 class="page-title">Создать транспорт</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicle-sets" class="btn btn-secondary">&larr; К списку</a>
+        <a href="<?= app_url('/company/vehicle-sets') ?>" class="btn btn-secondary">&larr; К списку</a>
     </div>
 </div>
 <div class="page-content">

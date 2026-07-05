@@ -45,7 +45,7 @@
 <div class="table-card table-card--toolbar-only">
     <div class="empty-state">
         <p class="empty-title">Клиенты ещё не созданы.</p>
-        <a href="/company/clients/create" class="btn btn-primary">Создать первого клиента</a>
+        <a href="<?= app_url('/company/clients/create') ?>" class="btn btn-primary">Создать первого клиента</a>
     </div>
 </div>
 

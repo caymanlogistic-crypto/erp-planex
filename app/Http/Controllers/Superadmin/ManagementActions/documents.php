@@ -1,6 +1,6 @@
 <?php
 requireRole('superadmin');$pageTitle='Документы компании';$pageContext='Superadmin › Компания';
-$companyId=(int)$id;$pdo=$db->connection();$company=SuperadminCompanyService::loadCompany($pdo,$companyId);
+$companyId=(int)$id;$pdo=$db->connection();$company=\App\Service\SuperadminCompanyService::loadCompany($pdo,$companyId);
 if(!$company){http_response_code(404);echo'Company not found';return;}
 $topbarCrumbs=[['label'=>'Superadmin','url'=>'/superadmin/dashboard'],['label'=>'Компании','url'=>'/superadmin/companies'],['label'=>$company['name'],'url'=>'/superadmin/companies/'.$companyId],['label'=>'Документы','url'=>null]];
 $dbIdentifier=$company['db_identifier'];$cfg=$config['database'];$cfg['database']=$dbIdentifier;$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);

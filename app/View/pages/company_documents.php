@@ -6,8 +6,8 @@
         <span class="page-title">Документы</span>
     </div>
     <div class="page-head-actions">
-        <a href="/company/dashboard" class="btn btn-ghost">← На главную</a>
-        <a href="/company/contractors" class="btn btn-secondary">К справочникам</a>
+        <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-ghost">← На главную</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-secondary">К справочникам</a>
     </div>
 </div>
 
@@ -16,7 +16,7 @@
         <div class="empty-state">
             <p class="empty-title">Документы</p>
             <p class="empty-desc">Для просмотра документов откройте карточку подрядчика, водителя, транспортной единицы, транспортного комплекта, блока «Водитель + ТС» или экипажа.</p>
-            <a href="/company/contractors" class="btn btn-primary">К справочникам</a>
+            <a href="<?= app_url('/company/contractors') ?>" class="btn btn-primary">К справочникам</a>
         </div>
     </div>
 </div>
@@ -148,7 +148,7 @@
                             <?php if (!$isDeleted): ?>
                             <a href="/company/documents/download?id=<?= $doc['id'] ?>" class="btn btn-toolbar">Скачать</a>
                             <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>&replace=<?= $doc['id'] ?>" class="btn btn-toolbar">Заменить</a>
-                            <form method="post" action="/company/documents/delete" class="inline-form" onsubmit="return confirm('Удалить документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
+                            <form method="post" action="<?= app_url('/company/documents/delete') ?>" class="inline-form" onsubmit="return confirm('Удалить документ «<?= e(addslashes($doc['original_name'])) ?>»?')">
                                 <input type="hidden" name="id" value="<?= $doc['id'] ?>">
                                 <input type="hidden" name="entity_type" value="<?= e($entityType) ?>">
                                 <input type="hidden" name="entity_id" value="<?= $entityId ?>">

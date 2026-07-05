@@ -41,8 +41,38 @@
 - Для logist пустой список — пустое состояние, не отказ доступа.
 - Модалки действий должны быть в DOM всегда, включая пустой список.
 
-## Что дальше
+## Актуализация 2026-07-05 — base path support
 
-- Переключить web PHP для `plan-ex.ru/erp` на PHP 8.1+ / 8.3 через панель хостинга или поддержку.
-- После переключения PHP повторить серверную runtime QA: роли, CRUD, документы upload/change/delete, доступы.
+**Статус**: PRODUCTION_RUNTIME_QA_SMOKE_PASSED
+
+Реализована поддержка развёртывания под поддиректорией (`/erp`):
+
+- `APP_BASE_PATH` — переменная окружения (пусто = корень, `/erp` = production).
+- Новые хелперы в `app/Support/helpers.php`:
+  - `app_base_path(): string`
+  - `app_url(string $path = ''): string`
+  - `redirect_to(string $path, int $status = 302): never`
+  - `current_app_path(): string`
+- Router (`app/Http/Router.php`) — dispatch удаляет base path из URI перед сопоставлением маршрутов.
+- `public/index.php` включает HTML output rewrite для `href/action/src="/..."`, чтобы старые динамические ссылки с PHP-вставками тоже работали под `/erp`.
+- `public/index.php` включает Location header rewrite, чтобы legacy `header('Location: /...')` автоматически возвращал `/erp/...` в production.
+- Критические редиректы заменены на `redirect_to()`:
+  - AuthController (login/logout/redirects)
+  - requireRole()
+  - core.php (корневой редирект)
+  - legacy_redirects.php
+  - company_dashboard.php
+  - Superadmin action files
+- Простые формы и ссылки во view-файлах используют `app_url()`; оставшиеся динамические absolute URLs покрываются HTML output rewrite, legacy redirects покрываются Location header rewrite.
+- Asset-ссылки (CSS, JS, fonts) в layouts используют `app_url()`.
+- `.env.example` обновлён: добавлен `APP_BASE_PATH=`.
+
+Что остаётся:
+- Web PHP для `plan-ex.ru/erp` уже переключён владельцем на PHP 8.3.31 (`apache2handler`, `pdo_mysql=true`).
+- Base path fix задеплоен; production `.env` содержит `APP_BASE_PATH=/erp`.
+- Создана тестовая активная компания-экспедитор `prod_test_expeditor`, `company_id=1`.
+- Из-за ограничения shared-hosting MySQL (`CREATE DATABASE` запрещён) `companies.db_identifier` для тестовой компании указывает на выданную БД `spugovxsim_plan`; локальные таблицы компании применены в этой БД.
+- Созданы runtime accounts: superadmin, owner, senior_logist, logist. Пароли не хранить в документации; см. финальный отчёт владельцу.
+- HTTP smoke QA passed: 4 роли логинятся, ключевые страницы superadmin/company возвращают 200, UTF-8 валиден.
+- CRUD/file QA passed: owner создал клиента, загрузил TXT-документ, заменил файл, удалил документ; redirects возвращают `/erp/...`.
 - Не выполнять backport проекта под PHP 7.1 без отдельного решения владельца: это широкий рискованный рефакторинг.

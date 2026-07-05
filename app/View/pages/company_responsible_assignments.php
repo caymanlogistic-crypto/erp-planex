@@ -93,7 +93,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
 <!-- Mass reassignment form (global bar above table) -->
 <div class="table-card table-card--standard" style="margin-top:12px;">
     <div class="table-toolbar">
-        <form id="massReassignToolbarForm" method="post" action="/company/responsible-assignments/reassign" class="inline-form" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;" onsubmit="return massReassignConfirm(this)">
+        <form id="massReassignToolbarForm" method="post" action="<?= app_url('/company/responsible-assignments/reassign') ?>" class="inline-form" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;" onsubmit="return massReassignConfirm(this)">
             <input type="hidden" name="entity_type" value="<?= e($activeTab) ?>">
             <?php if ($showCascade): ?>
             <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;white-space:nowrap;">
@@ -167,7 +167,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
                         <?php endif; ?>
                     </td>
                     <td>
-                        <form method="post" action="/company/responsible-assignments/reassign" class="inline-form" style="display:flex;align-items:center;gap:6px;">
+                        <form method="post" action="<?= app_url('/company/responsible-assignments/reassign') ?>" class="inline-form" style="display:flex;align-items:center;gap:6px;">
                             <input type="hidden" name="entity_type" value="<?= e($activeTab) ?>">
                             <input type="hidden" name="entity_ids[]" value="<?= $item[($activeTab === 'route_executor') ? 'crew_id' : 'id'] ?>">
                             <?php if ($showCascade): ?>

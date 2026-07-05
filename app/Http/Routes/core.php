@@ -7,18 +7,15 @@ $router->get('/favicon.ico', function () {
 
 $router->get('/', function () use ($config) {
     if (!isAuthenticated()) {
-        header('Location: /login');
-        exit;
+        redirect_to('/login');
     }
 
     $role = $_SESSION['role_code'] ?? '';
     if ($role === 'superadmin') {
-        header('Location: /superadmin/companies');
-        exit;
+        redirect_to('/superadmin/companies');
     }
 
-    header('Location: /company/dashboard');
-    exit;
+    redirect_to('/company/dashboard');
 });
 
 $router->get('/dev/ui-foundation', function () use ($config) {

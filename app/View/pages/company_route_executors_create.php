@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -47,7 +47,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors" class="btn btn-primary">← К списку</a>
+        <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-primary">← К списку</a>
     </div>
 </div>
 
@@ -78,8 +78,8 @@
 
         <div class="form-actions mt-4">
             <a href="/company/route-executors/<?= $createdExecutor['id'] ?>" class="btn btn-primary">Просмотреть</a>
-            <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
-            <a href="/company/route-executors/create" class="btn btn-ghost">Создать ещё</a>
+            <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
+            <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
 </div>
@@ -92,7 +92,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -100,7 +100,7 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/route-executors/create" class="panel">
+<form method="post" action="<?= app_url('/company/route-executors/create') ?>" class="panel">
     <div class="panel-body">
 
         <div class="form-section">
@@ -118,7 +118,7 @@
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($contractors)): ?>
-                    <p class="field-hint">Нет доступных подрядчиков. <a href="/company/contractors/create">Создать подрядчика</a></p>
+                    <p class="field-hint">Нет доступных подрядчиков. <a href="<?= app_url('/company/contractors/create') ?>">Создать подрядчика</a></p>
                 <?php endif; ?>
                 <?php if (!empty($errors['contractor_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['contractor_id']) ?></div>
@@ -136,7 +136,7 @@
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($drivers)): ?>
-                    <p class="field-hint">Нет доступных водителей. <a href="/company/drivers">Создать водителя</a></p>
+                    <p class="field-hint">Нет доступных водителей. <a href="<?= app_url('/company/drivers') ?>">Создать водителя</a></p>
                 <?php endif; ?>
                 <?php if (!empty($errors['driver_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['driver_id']) ?></div>
@@ -154,7 +154,7 @@
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($vehicleSets)): ?>
-                    <p class="field-hint">Нет доступных транспортных комплектов. <a href="/company/vehicle-sets">Создать ТС</a></p>
+                    <p class="field-hint">Нет доступных транспортных комплектов. <a href="<?= app_url('/company/vehicle-sets') ?>">Создать ТС</a></p>
                 <?php endif; ?>
                 <?php if (!empty($errors['vehicle_set_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['vehicle_set_id']) ?></div>

@@ -9,7 +9,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <span class="page-title">Реестр компаний</span>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/create" class="btn btn-primary">Создать экспедитора</a>
+        <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary">Создать экспедитора</a>
     </div>
 </div>
 
@@ -29,7 +29,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="notice success">Компания ID <?= (int)$_GET['deleted'] ?> полностью удалена.</div>
 <?php endif; ?>
 
-<form method="get" action="/superadmin/companies" class="filters-bar">
+<form method="get" action="<?= app_url('/superadmin/companies') ?>" class="filters-bar">
     <input type="text" class="field-input filter-input-search" placeholder="Поиск по названию или ИНН" name="search" value="<?= e($search ?? '') ?>">
     <select class="field-select filter-input-narrow" name="status">
         <option value="">Все статусы</option>
@@ -42,7 +42,7 @@ require_once __DIR__ . '/../components/status_badge.php';
     </select>
 
     <button type="submit" class="btn btn-toolbar">Применить</button>
-    <a href="/superadmin/companies" class="btn btn-ghost">Сбросить</a>
+    <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">Сбросить</a>
 </form>
 
 <?php if (empty($companies)): ?>
@@ -51,7 +51,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <div class="empty-state">
                 <p class="empty-title">Нет компаний</p>
                 <p class="empty-desc">Создайте первого экспедитора для начала работы системы.</p>
-                <a href="/superadmin/companies/create" class="btn btn-primary">Создать экспедитора</a>
+                <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary">Создать экспедитора</a>
             </div>
         </div>
     </div>

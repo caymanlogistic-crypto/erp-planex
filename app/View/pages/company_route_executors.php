@@ -39,7 +39,7 @@
         <div class="page-summary"><span>Исполнитель рейса: подрядчик + водитель + транспорт</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors/create" class="btn btn-primary">Создать исполнителя рейса</a>
+        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать исполнителя рейса</a>
     </div>
 </div>
 
@@ -54,13 +54,13 @@
     <div class="empty-state">
         <p class="empty-title">Исполнители рейса ещё не созданы или пока не доступны.</p>
         <p class="empty-desc">Можно создать исполнителя рейса из доступных вам подрядчиков, водителей и транспорта. Если нужных данных нет в списках, запросите доступ у руководителя.</p>
-        <a href="/company/route-executors/create" class="btn btn-primary">Создать исполнителя рейса</a>
+        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать исполнителя рейса</a>
     </div>
     <?php else: ?>
     <div class="empty-state">
         <p class="empty-title">Исполнители рейса ещё не созданы.</p>
         <p class="empty-desc">Создайте исполнителя рейса: выберите подрядчика, водителя и транспорт — система автоматически создаст связку.</p>
-        <a href="/company/route-executors/create" class="btn btn-primary">Создать первого исполнителя рейса</a>
+        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать первого исполнителя рейса</a>
     </div>
     <?php endif; ?>
 </div>
@@ -73,7 +73,7 @@
         <div class="page-summary"><span>Исполнитель рейса: подрядчик + водитель + транспорт</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors/create" class="btn btn-primary">Создать исполнителя рейса</a>
+        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать исполнителя рейса</a>
     </div>
 </div>
 

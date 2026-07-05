@@ -40,7 +40,7 @@
     </div>
     <?php if (!$isLogist): ?>
     <div class="page-head-actions">
-        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспортную единицу</a>
+        <a href="<?= app_url('/company/vehicles/create') ?>" class="btn btn-primary">Добавить транспортную единицу</a>
     </div>
     <?php endif; ?>
 </div>
@@ -51,7 +51,7 @@
             <p class="empty-title">Нет доступных транспортных единиц</p>
             <p class="empty-desc">У вас пока нет созданных транспортных единиц, либо руководитель ещё не выдал вам доступ к существующим.</p>
             <?php if (!$isLogist): ?>
-            <a href="/company/vehicles/create" class="btn btn-primary">Добавить первую единицу</a>
+            <a href="<?= app_url('/company/vehicles/create') ?>" class="btn btn-primary">Добавить первую единицу</a>
             <?php endif; ?>
         </div>
     </div>
@@ -65,7 +65,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/vehicles/create" class="btn btn-primary">Добавить транспортную единицу</a>
+        <a href="<?= app_url('/company/vehicles/create') ?>" class="btn btn-primary">Добавить транспортную единицу</a>
     </div>
 </div>
 

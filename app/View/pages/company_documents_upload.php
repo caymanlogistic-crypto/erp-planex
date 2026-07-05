@@ -6,8 +6,8 @@
         <span class="page-title">Загрузка документа</span>
     </div>
     <div class="page-head-actions">
-        <a href="/company/dashboard" class="btn btn-ghost">← На главную</a>
-        <a href="/company/contractors" class="btn btn-secondary">К справочникам</a>
+        <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-ghost">← На главную</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-secondary">К справочникам</a>
     </div>
 </div>
 
@@ -17,7 +17,7 @@
             <p class="empty-title">Загрузка документа</p>
             <p class="empty-desc">Сначала откройте карточку объекта, к которому относится документ, и нажмите «Документы» или «Загрузить документ».</p>
             <p class="empty-desc">Например: подрядчик, водитель, транспортная единица, транспортный комплект, водитель + ТС, экипаж.</p>
-            <a href="/company/contractors" class="btn btn-primary">К справочникам</a>
+            <a href="<?= app_url('/company/contractors') ?>" class="btn btn-primary">К справочникам</a>
         </div>
     </div>
 </div>
@@ -191,7 +191,7 @@
                 <input type="text" name="document_type" id="document_type_text" class="field-input" style="margin-top:0.5rem;"
                        value="<?= e($old['document_type'] ?? $replacedDoc['document_type'] ?? '') ?>"
                        placeholder="Или введите название типа вручную">
-                <div class="field-msg">Выберите тип из списка или введите свой. <a href="/company/document-types/create" target="_blank">Создать новый тип</a></div>
+                <div class="field-msg">Выберите тип из списка или введите свой. <a href="<?= app_url('/company/document-types/create') ?>" target="_blank">Создать новый тип</a></div>
                 <?php else: ?>
                 <input type="text" name="document_type" class="field-input"
                        value="<?= e($old['document_type'] ?? $replacedDoc['document_type'] ?? '') ?>"

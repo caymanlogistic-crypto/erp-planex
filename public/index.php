@@ -22,6 +22,8 @@ if (PHP_SAPI === 'cli-server') {
 }
 
 $config = require_once __DIR__ . '/../bootstrap/app.php';
+start_base_path_header_rewrite();
+start_base_path_output_rewrite();
 
 require_once base_path('app/Core/Database.php');
 require_once base_path('app/Http/Router.php');

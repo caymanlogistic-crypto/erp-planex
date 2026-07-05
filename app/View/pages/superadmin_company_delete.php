@@ -1,5 +1,5 @@
 <?php if ($company === null): ?>
-<div class="panel"><div class="panel-body"><div class="notice warn">Компания не найдена. <a href="/superadmin/companies">← К реестру</a></div></div></div>
+<div class="panel"><div class="panel-body"><div class="notice warn">Компания не найдена. <a href="<?= app_url('/superadmin/companies') ?>">← К реестру</a></div></div></div>
 
 <?php else: ?>
 

@@ -38,7 +38,7 @@
         <h1>Привязка перевозчиков</h1>
     </div>
     <div class="page-head-actions">
-        <a href="/company/contractors" class="btn btn-ghost">← К списку перевозчиков</a>
+        <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку перевозчиков</a>
     </div>
 </div>
 
@@ -65,7 +65,7 @@
             <p class="empty-title">Нет перевозчиков</p>
             <p class="empty-desc">В компании ещё нет перевозчиков. Создайте первого перевозчика.</p>
             <div class="form-actions">
-                <a href="/company/contractors/create" class="btn btn-primary">Создать перевозчика</a>
+                <a href="<?= app_url('/company/contractors/create') ?>" class="btn btn-primary">Создать перевозчика</a>
             </div>
         </div>
         <?php else: ?>

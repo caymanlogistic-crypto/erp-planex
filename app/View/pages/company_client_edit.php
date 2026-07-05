@@ -19,7 +19,7 @@ $contactErrors = $errors['contacts'] ?? [];
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/clients" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/clients') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -35,7 +35,7 @@ $contactErrors = $errors['contacts'] ?? [];
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/clients" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/clients') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 

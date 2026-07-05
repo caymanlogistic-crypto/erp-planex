@@ -60,7 +60,7 @@
     </div>
     <div class="page-head-actions">
         <button type="button" class="btn btn-primary" onclick="openModal('le-contractor-modal')">Создать перевозчика</button>
-        <a href="/company/contractors/create-full" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
+        <a href="<?= app_url('/company/contractors/create-full') ?>" class="btn btn-primary">Создать перевозчика + Водителя + Транспорт</a>
     </div>
 </div>
 

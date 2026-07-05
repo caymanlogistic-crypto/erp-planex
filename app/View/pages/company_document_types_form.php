@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/document-types" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/document-types') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/document-types" class="btn btn-primary">← К списку</a>
+        <a href="<?= app_url('/company/document-types') ?>" class="btn btn-primary">← К списку</a>
     </div>
 </div>
 
@@ -64,8 +64,8 @@
         </div>
 
         <div class="form-actions mt-4">
-            <a href="/company/document-types" class="btn btn-primary">← К списку типов</a>
-            <a href="/company/document-types/create" class="btn btn-ghost">Создать ещё</a>
+            <a href="<?= app_url('/company/document-types') ?>" class="btn btn-primary">← К списку типов</a>
+            <a href="<?= app_url('/company/document-types/create') ?>" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
 </div>
@@ -78,7 +78,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/document-types" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/document-types') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -144,7 +144,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary"><?= $isEdit ? 'Сохранить' : 'Создать тип' ?></button>
-            <a href="/company/document-types" class="btn btn-ghost">Отмена</a>
+            <a href="<?= app_url('/company/document-types') ?>" class="btn btn-ghost">Отмена</a>
         </div>
 
     </div>

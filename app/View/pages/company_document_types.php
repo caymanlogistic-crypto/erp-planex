@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/dashboard" class="btn btn-ghost">← На главную</a>
+        <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-ghost">← На главную</a>
     </div>
 </div>
 
@@ -39,7 +39,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/document-types/create" class="btn btn-primary">+ Создать тип</a>
+        <a href="<?= app_url('/company/document-types/create') ?>" class="btn btn-primary">+ Создать тип</a>
     </div>
 </div>
 
@@ -58,14 +58,14 @@
             <div class="empty-state">
                 <p class="empty-title">Типы документов не найдены</p>
                 <p class="empty-desc">Создайте типы документов для каталогизации.</p>
-                <a href="/company/document-types/create" class="btn btn-primary">Создать тип</a>
+                <a href="<?= app_url('/company/document-types/create') ?>" class="btn btn-primary">Создать тип</a>
             </div>
         <?php else: ?>
 
             <?php if (!empty($entityTypes)): ?>
             <div class="table-toolbar">
                 <div>
-                    <a href="/company/document-types" class="btn btn-ghost btn-sm<?= empty($filterEntity) ? ' btn-primary' : '' ?>">Все</a>
+                    <a href="<?= app_url('/company/document-types') ?>" class="btn btn-ghost btn-sm<?= empty($filterEntity) ? ' btn-primary' : '' ?>">Все</a>
                     <?php foreach ($entityTypes as $et): ?>
                     <a href="/company/document-types?entity_type=<?= e($et) ?>" class="btn btn-ghost btn-sm<?= $filterEntity === $et ? ' btn-primary' : '' ?>"><?= e(ui_entity_type($et)) ?></a>
                     <?php endforeach; ?>

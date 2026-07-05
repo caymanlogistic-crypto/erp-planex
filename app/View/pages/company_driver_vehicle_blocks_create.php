@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks" class="btn btn-primary">← К списку</a>
+        <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-primary">← К списку</a>
     </div>
 </div>
 
@@ -52,8 +52,8 @@
             </div>
         </div>
         <div class="form-actions mt-4">
-            <a href="/company/driver-vehicle-blocks" class="btn btn-primary">← К списку</a>
-            <a href="/company/driver-vehicle-blocks/create" class="btn btn-ghost">Создать ещё</a>
+            <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-primary">← К списку</a>
+            <a href="<?= app_url('/company/driver-vehicle-blocks/create') ?>" class="btn btn-ghost">Создать ещё</a>
         </div>
     </div>
 </div>
@@ -100,7 +100,7 @@ if (!empty($old['vehicle_set_id'])) {
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/driver-vehicle-blocks" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -108,7 +108,7 @@ if (!empty($old['vehicle_set_id'])) {
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/driver-vehicle-blocks/create">
+<form method="post" action="<?= app_url('/company/driver-vehicle-blocks/create') ?>">
 
     <!-- STEPPER INDICATORS -->
     <div class="stepper" id="stepper">
@@ -146,7 +146,7 @@ if (!empty($old['vehicle_set_id'])) {
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($drivers)): ?>
-                    <p class="field-hint">Нет доступных водителей. <a href="/company/drivers/create">Создать водителя</a></p>
+                    <p class="field-hint">Нет доступных водителей. <a href="<?= app_url('/company/drivers/create') ?>">Создать водителя</a></p>
                 <?php endif; ?>
                 <?php if (!empty($errors['driver_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['driver_id']) ?></div>
@@ -177,7 +177,7 @@ if (!empty($old['vehicle_set_id'])) {
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($vehicleSets)): ?>
-                    <p class="field-hint">Нет доступного транспорта. <a href="/company/vehicle-sets/create">Создать транспорт</a></p>
+                    <p class="field-hint">Нет доступного транспорта. <a href="<?= app_url('/company/vehicle-sets/create') ?>">Создать транспорт</a></p>
                 <?php endif; ?>
                 <?php if (!empty($errors['vehicle_set_id'])): ?>
                     <div class="field-msg is-error"><?= e($errors['vehicle_set_id']) ?></div>

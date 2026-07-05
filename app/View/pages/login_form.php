@@ -65,7 +65,7 @@
         </div>
         <?php endif; ?>
 
-        <form method="post" action="/login" class="login-form" novalidate>
+        <form method="post" action="<?= app_url('/login') ?>" class="login-form" novalidate>
             <div class="field<?= isset($errors['login']) ? ' is-error' : '' ?>">
                 <label class="field-label" for="login">Логин</label>
                 <input type="text" id="login" name="login"

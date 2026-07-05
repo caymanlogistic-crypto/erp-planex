@@ -9,7 +9,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Компания не найдена. <a href="/company/drivers">← К списку</a>
+            Компания не найдена. <a href="<?= app_url('/company/drivers') ?>">← К списку</a>
         </div>
     </div>
 </div>
@@ -35,7 +35,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <?= e($dbError) ?>
         </div>
         <div class="form-actions mt-4">
-            <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+            <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
         </div>
     </div>
 </div>
@@ -48,7 +48,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -68,7 +68,7 @@ require_once __DIR__ . '/../components/status_badge.php';
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -79,8 +79,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="empty-title">Доступ запрещён</p>
             <p class="empty-desc"><?= e($accessDenied) ?> Для получения доступа обратитесь к руководителю компании.</p>
             <div class="form-actions">
-                <a href="/company/drivers" class="btn btn-ghost">← К списку водителей</a>
-                <a href="/company/dashboard" class="btn btn-primary">На главную</a>
+                <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку водителей</a>
+                <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-primary">На главную</a>
             </div>
         </div>
     </div>
@@ -96,7 +96,7 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
     <div class="page-head-actions">
         <a href="/company/drivers/<?= $driver['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-        <a href="/company/drivers" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
         <a href="/company/documents?entity_type=driver&entity_id=<?= $driver['id'] ?>" class="btn btn-ghost">Документы</a>
     </div>
 </div>
@@ -262,7 +262,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                 </table>
             </div>
             <?php endif; ?>
-            <a href="/company/driver-vehicle-blocks/create" class="btn btn-primary mt-4">Создать связку</a>
+            <a href="<?= app_url('/company/driver-vehicle-blocks/create') ?>" class="btn btn-primary mt-4">Создать связку</a>
         </div>
 
         <?php if (($_SESSION['role_code'] ?? '') === 'company_owner'): ?>
@@ -287,7 +287,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <p class="text-muted">Доступ логистам не выдан.</p>
             <?php endif; ?>
 
-            <form method="post" action="/company/access-grants/grant" class="grant-form">
+            <form method="post" action="<?= app_url('/company/access-grants/grant') ?>" class="grant-form">
                 <input type="hidden" name="entity_type" value="driver">
                 <input type="hidden" name="entity_id" value="<?= $driver['id'] ?>">
                 <input type="hidden" name="redirect" value="/company/drivers/<?= $driver['id'] ?>">

@@ -3,7 +3,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Компания не найдена. <a href="/superadmin/companies">← К реестру</a>
+            Компания не найдена. <a href="<?= app_url('/superadmin/companies') ?>">← К реестру</a>
         </div>
     </div>
 </div>
@@ -16,7 +16,7 @@
             <?= e($dbError) ?>
         </div>
         <div class="form-actions mt-4">
-            <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
+            <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">← К реестру</a>
         </div>
     </div>
 </div>

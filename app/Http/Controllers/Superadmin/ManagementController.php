@@ -21,7 +21,7 @@ final class ManagementController
         if ($company['status'] !== 'active') {
             $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')->execute(['active', (int)$id]);
         }
-        header('Location: /superadmin/companies?status_changed=1'); exit;
+        redirect_to('/superadmin/companies?status_changed=1');
     }
 
     public function block(string $id): void
@@ -33,7 +33,7 @@ final class ManagementController
         if (in_array($company['status'], ['active', 'inactive'], true)) {
             $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')->execute(['blocked', (int)$id]);
         }
-        header('Location: /superadmin/companies?status_changed=1'); exit;
+        redirect_to('/superadmin/companies?status_changed=1');
     }
 
     public function archive(string $id): void
@@ -43,7 +43,7 @@ final class ManagementController
         $company = SuperadminCompanyService::loadCompany($pdo, (int)$id);
         if (!$company) { http_response_code(404); echo 'Company not found'; return; }
         $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')->execute(['archived', (int)$id]);
-        header('Location: /superadmin/companies?status_changed=1'); exit;
+        redirect_to('/superadmin/companies?status_changed=1');
     }
 
     public function deactivate(string $id): void
@@ -51,11 +51,11 @@ final class ManagementController
         requireRole('superadmin');
         $pdo = $this->db->connection();
         $company = SuperadminCompanyService::loadCompany($pdo, (int)$id);
-        if (!$company) { header('Location: /superadmin/companies'); exit; }
+        if (!$company) { redirect_to('/superadmin/companies'); }
         if ($company['status'] === 'active') {
             $pdo->prepare('UPDATE companies SET status = ?, updated_at = NOW() WHERE id = ?')->execute(['inactive', (int)$id]);
         }
-        header('Location: /superadmin/companies?status_changed=1'); exit;
+        redirect_to('/superadmin/companies?status_changed=1');
     }
 
     // --- Directory/entity browsing pages ---
@@ -131,7 +131,7 @@ final class ManagementController
         $pdo = $this->db->connection();
         $pdo->prepare("UPDATE entity_access_grants SET revoked_at = NOW(), revoked_by_user_id = ? WHERE id = ? AND revoked_at IS NULL")
             ->execute([(int)($_SESSION['user_id'] ?? 0), (int)$grantId]);
-        header('Location: /superadmin/companies/' . (int)$id . '/access-grants'); exit;
+        redirect_to('/superadmin/companies/' . (int)$id . '/access-grants');
     }
 
     // --- Logist management ---
@@ -174,7 +174,7 @@ final class ManagementController
         $pdo = $this->db->connection();
         $pdo->prepare("UPDATE company_users SET status = 'active', updated_at = NOW() WHERE id = ? AND company_id = ?")
             ->execute([(int)$userId, (int)$companyId]);
-        header('Location: /superadmin/companies/' . (int)$companyId . '/users'); exit;
+        redirect_to('/superadmin/companies/' . (int)$companyId . '/users');
     }
 
     public function logistBlock(string $companyId, string $userId): void
@@ -183,7 +183,7 @@ final class ManagementController
         $pdo = $this->db->connection();
         $pdo->prepare("UPDATE company_users SET status = 'blocked', updated_at = NOW() WHERE id = ? AND company_id = ?")
             ->execute([(int)$userId, (int)$companyId]);
-        header('Location: /superadmin/companies/' . (int)$companyId . '/users'); exit;
+        redirect_to('/superadmin/companies/' . (int)$companyId . '/users');
     }
 
     public function logistArchive(string $companyId, string $userId): void
@@ -192,7 +192,7 @@ final class ManagementController
         $pdo = $this->db->connection();
         $pdo->prepare("UPDATE company_users SET status = 'archived', updated_at = NOW() WHERE id = ? AND company_id = ?")
             ->execute([(int)$userId, (int)$companyId]);
-        header('Location: /superadmin/companies/' . (int)$companyId . '/users'); exit;
+        redirect_to('/superadmin/companies/' . (int)$companyId . '/users');
     }
 
     public function logistCreateSubmit(string $id): void

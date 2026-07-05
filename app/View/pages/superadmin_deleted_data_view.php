@@ -10,7 +10,7 @@ if (!empty($record['snapshot_json'])) {
 <div class="page-head">
     <div>
         <h1>Просмотр удалённой записи</h1>
-        <p class="text-muted"><a href="/superadmin/deleted-data">← К списку удалённых данных</a></p>
+        <p class="text-muted"><a href="<?= app_url('/superadmin/deleted-data') ?>">← К списку удалённых данных</a></p>
     </div>
 </div>
 

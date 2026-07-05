@@ -38,7 +38,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/create" class="btn btn-primary">Создать пользователя</a>
+        <a href="<?= app_url('/company/logists/create') ?>" class="btn btn-primary">Создать пользователя</a>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
     <div class="panel-body">
         <div class="empty-state">
             <p>Логисты ещё не созданы.</p>
-            <a href="/company/logists/create" class="btn btn-primary">Создать первого пользователя</a>
+            <a href="<?= app_url('/company/logists/create') ?>" class="btn btn-primary">Создать первого пользователя</a>
         </div>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists/create" class="btn btn-primary">Создать пользователя</a>
+        <a href="<?= app_url('/company/logists/create') ?>" class="btn btn-primary">Создать пользователя</a>
     </div>
 </div>
 

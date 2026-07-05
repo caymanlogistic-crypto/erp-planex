@@ -112,8 +112,7 @@
                 ':id'      => $companyId,
             ]);
 
-        header('Location: /superadmin/companies');
-        exit;
+        redirect_to('/superadmin/companies');
     } catch (\Exception $e) {
         $formError = 'Не удалось создать экспедитора: ' . $e->getMessage();
 

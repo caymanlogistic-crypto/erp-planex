@@ -12,7 +12,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/logists" class="btn btn-ghost">← К списку</a>
+        <a href="<?= app_url('/company/logists') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
 

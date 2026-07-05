@@ -3,7 +3,7 @@
 <div class="panel">
     <div class="panel-body">
         <div class="notice warn">
-            Компания не найдена. <a href="/superadmin/companies">← К реестру</a>
+            Компания не найдена. <a href="<?= app_url('/superadmin/companies') ?>">← К реестру</a>
         </div>
     </div>
 </div>
@@ -16,7 +16,7 @@
         <span class="page-title">Создать Руководителя</span>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
+        <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">← К реестру</a>
     </div>
 </div>
 
@@ -28,7 +28,7 @@
             Дублирование невозможно.
         </div>
         <div class="form-actions">
-            <a href="/superadmin/companies" class="btn btn-secondary">← К реестру компаний</a>
+            <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-secondary">← К реестру компаний</a>
         </div>
     </div>
 </div>
@@ -42,7 +42,7 @@
         <span class="page-title">Руководитель создан</span>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies" class="btn btn-ghost">← К реестру</a>
+        <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">← К реестру</a>
     </div>
 </div>
 
@@ -72,7 +72,7 @@
         </div>
 
         <div class="form-actions">
-            <a href="/superadmin/companies" class="btn btn-secondary">← К реестру компаний</a>
+            <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-secondary">← К реестру компаний</a>
         </div>
     </div>
 </div>
@@ -187,7 +187,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать Руководителя</button>
-            <a href="/superadmin/companies" class="btn btn-ghost">Отмена</a>
+            <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">Отмена</a>
         </div>
 
     </div>
