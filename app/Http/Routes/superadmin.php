@@ -12,6 +12,9 @@ $router->post('/superadmin/companies/create', [$companyController, 'createSubmit
 $router->get('/superadmin/companies/{id}', [$companyController, 'view']);
 $router->get('/superadmin/companies/{id}/edit', [$companyController, 'editForm']);
 $router->post('/superadmin/companies/{id}/edit', [$companyController, 'editSubmit']);
+$router->get('/superadmin/companies/{id}/modal-view', [$companyController, 'modalView']);
+$router->get('/superadmin/companies/{id}/modal-edit', [$companyController, 'modalEditForm']);
+$router->post('/superadmin/companies/{id}/modal-edit', [$companyController, 'modalEditSubmit']);
 
 $router->get('/superadmin/companies/{id}/create-owner', [$ownerController, 'createForm']);
 $router->post('/superadmin/companies/{id}/create-owner', [$ownerController, 'createSubmit']);

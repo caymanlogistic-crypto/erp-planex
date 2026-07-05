@@ -1,5 +1,23 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
+## Актуализация 2026-07-05 — superadmin companies modal view/edit
+
+**Статус**: SUPERADMIN_COMPANIES_MODAL_VIEW_EDIT_IMPLEMENTED
+
+Ключевое, что новый чат обязан знать:
+- Исправлена модалка создания экспедитора: удалён `style="display:none"`, блокировавший открытие.
+- Реализован двойной клик по строке на `/superadmin/companies` — открывается view/edit popup через ModalShell.
+- Удалена колонка "Открыть" из таблицы компаний.
+- Каждая строка имеет `data-company-id`.
+- Новые эндпоинты: `GET /superadmin/companies/{id}/modal-view`, `GET /superadmin/companies/{id}/modal-edit`, `POST /superadmin/companies/{id}/modal-edit`.
+- Новые partials: `app/View/partials/superadmin_company_modal_view.php`, `app/View/partials/superadmin_company_modal_edit.php`.
+- Новые action files: `modal_view.php`, `modal_edit_form.php`, `modal_edit_submit.php`.
+- ModalShell зарегистрирован как `'superadminCompany'` в `public/assets/js/app.js`.
+- Добавлен `window.ERP_BASE_PATH` в шаблон страницы для корректной работы fetch при `APP_BASE_PATH`.
+- Full-page view/edit/create routes сохранены как fallback.
+- Production deploy выполнен в `/home/s/spugovxsim/planexp/public_html/erp`.
+- Browser smoke пройден: click "Создать экспедитора" открывает create popup; double-click по строке открывает company view popup; "Редактировать" открывает edit popup со status select.
+
 ## Актуализация 2026-07-02 — corrective linear trips accepted, master intentionally behind
 
 **Статус**: LINEAR_TRIPS_CORRECTIVE_ACCEPTED_IN_DEVELOP

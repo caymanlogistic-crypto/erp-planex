@@ -70,12 +70,11 @@ require_once __DIR__ . '/../components/status_badge.php';
                         <th>Руководитель</th>
                         <th class="col-tight col-num">Польз.</th>
                         <th class="col-tight">Создан</th>
-                        <th class="col-tight"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($companies as $c): ?>
-                    <tr>
+                    <tr data-company-id="<?= $c['id'] ?>">
                         <td class="cell-double">
                             <span class="cell-main"><?= e($c['name']) ?></span>
                             <span class="cell-sub">ИНН <?= e($c['inn']) ?></span>
@@ -90,11 +89,6 @@ require_once __DIR__ . '/../components/status_badge.php';
                         </td>
                         <td class="col-tight col-num"><?= (int)($c['user_count'] ?? 0) ?></td>
                         <td class="col-tight col-muted"><?= e(substr($c['created_at'] ?? '', 0, 10)) ?></td>
-                        <td class="col-tight">
-                            <div class="row-actions">
-                                <a href="/superadmin/companies/<?= $c['id'] ?>" class="btn btn-ghost btn-sm">Открыть</a>
-                            </div>
-                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -105,7 +99,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 </div><!-- /.page-content -->
 
-<div class="modal-overlay" id="sa-company-create-modal" data-close-on-overlay="1" data-close-on-escape="1" style="display:none;">
+<div class="modal-overlay" id="sa-company-create-modal" data-close-on-overlay="1" data-close-on-escape="1">
   <div class="modal modal-lg">
     <div class="modal-head">
       <span class="modal-title">Создать экспедитора</span>
@@ -118,6 +112,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 </div>
 
 <script>
+window.ERP_BASE_PATH = '<?= app_base_path() ?>';
+
 (function initSaCompanyModal() {
     var config = { modalId: 'sa-company-create-modal', formAction: '<?= app_url('/superadmin/companies/create') ?>', typeField: 'contractor_type' };
     if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {

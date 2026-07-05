@@ -1,46 +1,45 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-07-05 — superadmin expeditor creation popup + Dadata wiring
+## Актуализация 2026-07-05 — superadmin companies: create popup fix + double-click view/edit modal
 
-**Статус**: SUPADMIN_EXPEDITOR_MODAL_IMPLEMENTED
+**Статус**: SUPERADMIN_COMPANIES_MODAL_VIEW_EDIT_IMPLEMENTED
 
 Выполнено:
-- Добавлен endpoint `/superadmin/requisites/lookup-by-inn` (GET+POST) для superadmin-safe DaData/INN autofill.
-- Создан `CompanyActions/lookup_inn.php` для superadmin контроллера — использует `CompanyInnLookupService`, не требует company session.
-- Маршрут добавлен в `app/Http/Routes/superadmin.php`.
-- Метод `lookupInn()` добавлен в `CompanyController`.
 
-- На `/superadmin/companies` кнопки "Создать экспедитора" (page-head и empty-state) открывают модальное окно вместо перехода на full-page.
-- Добавлен modal overlay `#sa-company-create-modal` в DOM всегда (включая пустой список).
-- Модалка загружает форму через AJAX (GET `/superadmin/companies/create` с `X-Requested-With: XMLHttpRequest`).
-- При успешном создании модалка закрывается, страница перезагружается.
-- При ошибках форма возвращается внутри модалки с сообщением об ошибке.
-- Full-page `/superadmin/companies/create` сохранён как fallback.
+### A. Fix create popup
+- Удалён `style="display:none"` из модалки `#sa-company-create-modal`, который блокировал открытие (CSS `.is-open` не переопределяет inline display).
+- Кнопки "Создать экспедитора" (page-head и empty-state) теперь надёжно открывают модалку.
 
-- `legal_entity_create_form.php`: INN autofill message и кнопка "Заполнить по ИНН" теперь показаны для company/expeditor (ранее были скрыты).
-- В форму добавлен `data-inn-lookup-url`, по умолчанию `app_url('/company/requisites/lookup-by-inn')`.
-- `superadmin_companies_create.php` устанавливает `$leInnLookupUrl = app_url('/superadmin/requisites/lookup-by-inn')`.
+### B. Company view/edit popup by double-click
+- На `/superadmin/companies` каждая строка таблицы теперь имеет `data-company-id`.
+- Двойной клик по строке открывает view-popup через ModalShell.
+- Удалена колонка действий с кнопкой "Открыть".
+- View-popup показывает: ИНН, статус, КПП, ОГРН, руководитель, должность, адреса, комментарий.
+- Footer view-popup: "Закрыть", "Редактировать".
+- Edit-popup позволяет редактировать: name, inn, kpp, ogrn, legal_address, physical_address, director_position, director_full_name, status, comments.
+- Валидация: name (обязательное), inn (обязательное, уникальное).
+- При успешном сохранении возвращается view-partial; при ошибках — edit-partial с ошибками.
+- Full-page маршруты сохранены как fallback.
 
-- `legal-entity-inn.js`: читает `form.dataset.innLookupUrl` перед fallback к `/company/requisites/lookup-by-inn`.
-- `legal-entity-modal.js`: fallback-код также использует `form.dataset.innLookupUrl`.
+Новые файлы:
+- `app/Http/Controllers/Superadmin/CompanyActions/modal_view.php`
+- `app/Http/Controllers/Superadmin/CompanyActions/modal_edit_form.php`
+- `app/Http/Controllers/Superadmin/CompanyActions/modal_edit_submit.php`
+- `app/View/partials/superadmin_company_modal_view.php`
+- `app/View/partials/superadmin_company_modal_edit.php`
 
-- `CompanyActions/create_form.php`: для XHR-запросов возвращает только form partial (без layout); для обычных — полную страницу.
-- `CompanyActions/create_submit.php`: поддерживает `is_modal=1` — возвращает `<div data-le-create-success="1"></div>` при успехе, form partial при ошибках.
+Изменённые файлы:
+- `app/View/pages/superadmin_companies.php` — data-company-id, удалена колонка Открыть, удалён style=display:none, добавлен ERP_BASE_PATH
+- `app/Http/Controllers/Superadmin/CompanyController.php` — методы modalView, modalEditForm, modalEditSubmit
+- `app/Http/Routes/superadmin.php` — маршруты modal-view, modal-edit, modal-edit POST
+- `public/assets/js/app.js` — ModalShell.create для superadmin company
+
+### C. Docs
+- Текущий файл обновлён.
+- DECISIONS.md и HANDOFF_FOR_NEW_CHAT.md обновлены.
 
 Production deploy/check:
 - Изменённые файлы загружены в `/home/s/spugovxsim/planexp/public_html/erp`.
 - Remote `php -l` по изменённым PHP-файлам прошёл без ошибок.
-- HTTP smoke: superadmin login -> `/erp/superadmin/companies` 200; modal markup присутствует; XHR `/erp/superadmin/companies/create` 200 и содержит форму `le-sa-company-create-form`, кнопку INN autofill и `data-inn-lookup-url`.
-- `/erp/superadmin/requisites/lookup-by-inn` отвечает JSON 200.
-- `DADATA_API_KEY` настроен в локальном `.env` и production `.env` без сохранения ключа в документации/репозитории.
-- Runtime check `/erp/superadmin/requisites/lookup-by-inn` с тестовым ИНН вернул `ok:true`, данные организации получены.
-
-Ограничения:
-- `master` не менять, не коммитить и не синхронизировать без отдельной команды владельца.
-- Не выполнять backport проекта под PHP 7.1 без отдельного решения владельца.
-
-### Предыдущий контекст: production deploy / base path support (принят)
-
-- Production `APP_BASE_PATH=/erp`, PHP 8.3.31, smoke QA passed.
-- CRUD/file QA passed для owner (клиент, документы).
-- Созданы runtime accounts: superadmin, owner, senior_logist, logist.
+- HTTP smoke: `/erp/superadmin/companies` 200; `#sa-company-create-modal` без `style="display:none"`; строки имеют `data-company-id`; кнопка "Открыть" в строках отсутствует; modal-view/modal-edit endpoints 200.
+- Browser smoke: superadmin login OK; click "Создать экспедитора" открывает create popup и загружает форму; double-click по строке открывает company view popup; "Редактировать" открывает edit popup со status select.

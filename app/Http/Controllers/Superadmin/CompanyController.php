@@ -65,4 +65,28 @@ final class CompanyController
 
         require base_path('app/Http/Controllers/Superadmin/CompanyActions/lookup_inn.php');
     }
+
+    public function modalView(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/modal_view.php');
+    }
+
+    public function modalEditForm(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/modal_edit_form.php');
+    }
+
+    public function modalEditSubmit(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/modal_edit_submit.php');
+    }
 }
