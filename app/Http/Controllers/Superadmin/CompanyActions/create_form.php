@@ -20,8 +20,9 @@
         $leFormError = $formError;
         $leSubmitLabel = 'Создать компанию';
         $leShowContacts = false;
-        $leShowBankDetails = false;
-        $leShowDocuments = false;
+        $leShowBankDetails = true;
+        $leShowDocuments = true;
+        $leShowInlineActions = false;
         $leInnLookupUrl = app_url('/superadmin/requisites/lookup-by-inn');
         require base_path('app/View/partials/legal_entity_create_form.php');
         return;

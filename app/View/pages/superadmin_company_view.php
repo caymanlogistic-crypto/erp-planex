@@ -106,6 +106,15 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-content">
 
+<?php if (!empty($_SESSION['company_edit_doc_warning'])): ?>
+<div class="panel">
+    <div class="panel-body">
+        <div class="notice warn"><?= e($_SESSION['company_edit_doc_warning']) ?></div>
+    </div>
+</div>
+<?php unset($_SESSION['company_edit_doc_warning']); ?>
+<?php endif; ?>
+
 <div class="section-nav">
     <a href="#overview" class="section-nav-item is-active">Обзор</a>
     <a href="#owner" class="section-nav-item">Руководитель</a>
@@ -168,6 +177,24 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <dd><?= renderStatusBadge($company['status']) ?></dd>
                 <dt>Комментарий</dt>
                 <dd><?= e($company['comments'] ?? '') ?: '—' ?></dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-head">
+            <span class="panel-head-title">Банковские реквизиты</span>
+        </div>
+        <div class="panel-body">
+            <dl class="kv">
+                <dt>Расчётный счёт</dt>
+                <dd><?= e($company['bank_account'] ?? '') ?: '—' ?></dd>
+                <dt>БИК</dt>
+                <dd><?= e($company['bank_bik'] ?? '') ?: '—' ?></dd>
+                <dt>Банк</dt>
+                <dd><?= e($company['bank_name'] ?? '') ?: '—' ?></dd>
+                <dt>Корр. счёт</dt>
+                <dd><?= e($company['bank_corr_account'] ?? '') ?: '—' ?></dd>
             </dl>
         </div>
     </div>

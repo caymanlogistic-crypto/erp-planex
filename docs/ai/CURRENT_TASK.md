@@ -1,45 +1,32 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-07-05 — superadmin companies: create popup fix + double-click view/edit modal
+## Актуализация 2026-07-05 — expeditor edit document uploads FINAL
 
-**Статус**: SUPERADMIN_COMPANIES_MODAL_VIEW_EDIT_IMPLEMENTED
+**Статус**: EXPEDITOR_EDIT_DOCUMENTS_ENABLED
 
 Выполнено:
 
-### A. Fix create popup
-- Удалён `style="display:none"` из модалки `#sa-company-create-modal`, который блокировал открытие (CSS `.is-open` не переопределяет inline display).
-- Кнопки "Создать экспедитора" (page-head и empty-state) теперь надёжно открывают модалку.
+### A. Full-page edit documents enabled
+- `app/View/pages/superadmin_company_edit.php`: `$leShowDocuments` изменён с `false` на `true`.
+- `app/Http/Controllers/Superadmin/CompanyActions/edit_submit.php`: после успешного UPDATE добавлена обработка документов через `processLegalEntityCreateDocuments()` с проверкой `db_identifier === 'erp_company_{id}'`.
+- Если `db_identifier` не совпадает — документы не обрабатываются, в `$_SESSION['company_edit_doc_warning']` записывается предупреждение.
 
-### B. Company view/edit popup by double-click
-- На `/superadmin/companies` каждая строка таблицы теперь имеет `data-company-id`.
-- Двойной клик по строке открывает view-popup через ModalShell.
-- Удалена колонка действий с кнопкой "Открыть".
-- View-popup показывает: ИНН, статус, КПП, ОГРН, руководитель, должность, адреса, комментарий.
-- Footer view-popup: "Закрыть", "Редактировать".
-- Edit-popup позволяет редактировать: name, inn, kpp, ogrn, legal_address, physical_address, director_position, director_full_name, status, comments.
-- Валидация: name (обязательное), inn (обязательное, уникальное).
-- При успешном сохранении возвращается view-partial; при ошибках — edit-partial с ошибками.
-- Full-page маршруты сохранены как fallback.
+### B. Modal edit documents enabled
+- `app/Http/Controllers/Superadmin/CompanyActions/modal_edit_submit.php`: после успешного UPDATE добавлена обработка документов.
+- `app/View/partials/superadmin_company_modal_view.php`: добавлен вывод `$docWarning` в модальном окне при ошибках документов.
 
-Новые файлы:
-- `app/Http/Controllers/Superadmin/CompanyActions/modal_view.php`
-- `app/Http/Controllers/Superadmin/CompanyActions/modal_edit_form.php`
-- `app/Http/Controllers/Superadmin/CompanyActions/modal_edit_submit.php`
-- `app/View/partials/superadmin_company_modal_view.php`
-- `app/View/partials/superadmin_company_modal_edit.php`
+### C. Document helper loaded explicitly
+- `require_once base_path('app/Support/legal_entity_document_upload.php')` вызывается в обоих edit-обработчиках.
 
-Изменённые файлы:
-- `app/View/pages/superadmin_companies.php` — data-company-id, удалена колонка Открыть, удалён style=display:none, добавлен ERP_BASE_PATH
-- `app/Http/Controllers/Superadmin/CompanyController.php` — методы modalView, modalEditForm, modalEditSubmit
-- `app/Http/Routes/superadmin.php` — маршруты modal-view, modal-edit, modal-edit POST
-- `public/assets/js/app.js` — ModalShell.create для superadmin company
+### D. Edit documents enabled only when company runtime DB configured
+- Решение #90 заменено: edit-документы включены, но backend проверяет `db_identifier === 'erp_company_{id}'` перед обработкой.
 
-### C. Docs
-- Текущий файл обновлён.
-- DECISIONS.md и HANDOFF_FOR_NEW_CHAT.md обновлены.
+### E. Explicit helper load in create_submit.php
+- `app/Http/Controllers/Superadmin/CompanyActions/create_submit.php`: добавлен `require_once base_path('app/Support/legal_entity_document_upload.php')` перед вызовом `processLegalEntityCreateDocuments()`.
 
-Production deploy/check:
-- Изменённые файлы загружены в `/home/s/spugovxsim/planexp/public_html/erp`.
-- Remote `php -l` по изменённым PHP-файлам прошёл без ошибок.
-- HTTP smoke: `/erp/superadmin/companies` 200; `#sa-company-create-modal` без `style="display:none"`; строки имеют `data-company-id`; кнопка "Открыть" в строках отсутствует; modal-view/modal-edit endpoints 200.
-- Browser smoke: superadmin login OK; click "Создать экспедитора" открывает create popup и загружает форму; double-click по строке открывает company view popup; "Редактировать" открывает edit popup со status select.
+### F. Flash warning display in superadmin_company_view.php
+- `app/View/pages/superadmin_company_view.php`: добавлен вывод и очистка `$_SESSION['company_edit_doc_warning']` в верхней части контента.
+
+### G. Fixed file detection for associative predef_doc keys
+- `edit_submit.php` и `modal_edit_submit.php`: исправлена проверка `$hasFiles` для ассоциативных ключей `predef_doc` (company_card и т.д.).
+- Добавлена локальная функция `hasAnyUploadedFiles()` — безопасно проверяет любую структуру `$_FILES`.

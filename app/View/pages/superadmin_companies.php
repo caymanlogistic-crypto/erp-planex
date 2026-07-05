@@ -70,6 +70,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                         <th>Руководитель</th>
                         <th class="col-tight col-num">Польз.</th>
                         <th class="col-tight">Создан</th>
+                        <th class="col-tight"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -89,6 +90,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                         </td>
                         <td class="col-tight col-num"><?= (int)($c['user_count'] ?? 0) ?></td>
                         <td class="col-tight col-muted"><?= e(substr($c['created_at'] ?? '', 0, 10)) ?></td>
+                        <td class="col-tight"><a href="<?= app_url('/superadmin/companies/' . $c['id']) ?>" class="btn btn-ghost btn-sm">Полная информация</a></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -99,14 +101,21 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 </div><!-- /.page-content -->
 
-<div class="modal-overlay" id="sa-company-create-modal" data-close-on-overlay="1" data-close-on-escape="1">
-  <div class="modal modal-lg">
+<div class="modal-overlay" id="sa-company-create-modal" data-close-on-overlay="0" data-close-on-escape="0" data-reset-on-close="1">
+  <div class="modal modal-lg driver-create-modal">
     <div class="modal-head">
       <span class="modal-title">Создать экспедитора</span>
-      <button type="button" class="modal-close" onclick="closeModal('sa-company-create-modal')">&times;</button>
+      <button type="button" class="modal-close" onclick="closeModal('sa-company-create-modal')">✕</button>
     </div>
     <div class="modal-body" id="sa-company-create-modal-body">
       <div class="driver-modal-loading">...</div>
+    </div>
+    <div class="modal-foot is-spaced">
+      <div class="modal-required-note"><span class="req">*</span> — обязательные поля</div>
+      <div class="modal-foot-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('sa-company-create-modal')">Отмена</button>
+        <button type="submit" form="le-sa-company-create-form" class="btn btn-primary">Создать компанию</button>
+      </div>
     </div>
   </div>
 </div>

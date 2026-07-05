@@ -4,6 +4,9 @@ $companyId = (int) ($company['id'] ?? 0);
 $companyName = $company['name'] ?? 'Компания';
 ?>
 <div class="modal-body driver-modal-body">
+  <?php if (!empty($docWarning)): ?>
+  <div class="notice warn mt-3"><?= e($docWarning) ?></div>
+  <?php endif; ?>
   <div class="driver-modal-layout">
     <div class="driver-modal-main">
       <h3 class="driver-view-name"><?= e($companyName) ?></h3>
@@ -50,6 +53,30 @@ $companyName = $company['name'] ?? 'Компания';
           <?php endif; ?>
         </div>
       </div>
+
+      <?php if (!empty($company['bank_account']) || !empty($company['bank_name']) || !empty($company['bank_bik']) || !empty($company['bank_corr_account'])): ?>
+      <div class="driver-view-card mt-3">
+        <h4 class="driver-view-section-title">Банковские реквизиты</h4>
+        <div class="driver-view-grid">
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">Расчётный счёт</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($company['bank_account']) ? '<code>' . e($company['bank_account']) . '</code>' : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">БИК</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($company['bank_bik']) ? '<code>' . e($company['bank_bik']) . '</code>' : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">Банк</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($company['bank_name']) ? e($company['bank_name']) : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">Корр. счёт</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($company['bank_corr_account']) ? '<code>' . e($company['bank_corr_account']) . '</code>' : '<span class="is-na">—</span>' ?></div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
     </div>
   </div>
 </div>

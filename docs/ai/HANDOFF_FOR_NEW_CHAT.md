@@ -1,5 +1,23 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
+## Актуализация 2026-07-05 — expeditor edit document uploads FINAL
+
+**Статус**: EXPEDITOR_EDIT_DOCUMENTS_ENABLED
+
+Ключевое, что новый чат обязан знать:
+- **Edit expeditor documents enabled.** Полная обработка документов при редактировании экспедитора включена: и full-page (`superadmin_company_edit.php`), и modal edit (`superadmin_company_modal_edit.php`).
+- Оба backend-обработчика (`edit_submit.php`, `modal_edit_submit.php`) вызывают `processLegalEntityCreateDocuments()` после успешного UPDATE центральной компании.
+- Обработка документов выполняется только при совпадении `db_identifier === 'erp_company_{id}'` (отдельная рабочая БД компании).
+- Если `db_identifier` не совпадает или есть ошибки БД — документы не обрабатываются, показывается предупреждение («Документы не сохранены: рабочая база компании не настроена.»).
+- `$leShowDocuments = true` во всех edit-контекстах (и full-page, и modal).
+- Модальное окно после сохранения показывает `$docWarning` в верхней части view-режима.
+- Full-page edit после сохранения редиректит на карточку компании; `$_SESSION['company_edit_doc_warning']` содержит предупреждение для отображения (если нужно).
+- `require_once base_path('app/Support/legal_entity_document_upload.php')` явно загружается в обоих edit-обработчиках и в `create_submit.php`.
+- В `superadmin_company_view.php` отображается и очищается `$_SESSION['company_edit_doc_warning']`.
+- Добавлена локальная функция `hasAnyUploadedFiles()` для безопасной проверки файлов с ассоциативными ключами `predef_doc`.
+- Решение #90 заменено: edit-документы включены с защитой по `db_identifier`.
+- Fake shared DB fallback удалён, решение #88 отменено.
+
 ## Актуализация 2026-07-05 — superadmin companies modal view/edit
 
 **Статус**: SUPERADMIN_COMPANIES_MODAL_VIEW_EDIT_IMPLEMENTED

@@ -215,13 +215,10 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
 
     // === PREFLIGHT: DB name validation ===
     $dbIdentifier = $company['db_identifier'] ?? '';
-    $expectedDb = 'erp_company_' . $companyId;
-    if ($dbIdentifier !== $expectedDb) {
-        $confirmError = 'BLOCKED: db_identifier не соответствует шаблону erp_company_{id}. Удаление невозможно.';
-        ob_start(); echo '<div class="panel panel-danger"><div class="panel-body"><div class="notice danger">' . e($confirmError) . '</div><a href="/superadmin/companies/' . $companyId . '/delete" class="btn btn-ghost">← Назад</a></div></div>';
-        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-        exit;
-    }
+    $hasSeparateDb = (strpos($dbIdentifier, 'erp_company_') === 0);
+    $hasSharedDb = !$hasSeparateDb && !empty($dbIdentifier);
+    // Allow deletion when db_identifier matches either separate DB pattern or shared DB pattern.
+    // Deletion skips DROP DATABASE for shared DB but still removes central records and storage.
 
     // === PREFLIGHT: storage path validation ===
     $expectedStorageSuffix = 'companies/' . $companyId;
@@ -375,8 +372,8 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
     // === Write partial report before destructive steps ===
     file_put_contents($reportFile, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-    // === STEP 4: Drop local DB ===
-    if (!empty($dbIdentifier)) {
+    // === STEP 4: Drop local DB (only for separate databases) ===
+    if ($hasSeparateDb) {
         try {
             $dbConfig = $config['database'];
             $dbConfig['database'] = '';
@@ -389,6 +386,8 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
             $report['errors'][] = 'drop_database: ' . $e->getMessage();
             $overallSuccess = false;
         }
+    } else {
+        $report['steps'][] = ['step' => 'drop_database', 'status' => 'skipped', 'reason' => 'shared DB mode — no separate database to drop'];
     }
 
     // === STEP 5: Remove central company_users ===

@@ -13,6 +13,8 @@ $leIsModal         = $leIsModal ?? true;
 $leShowContacts    = $leShowContacts ?? true;
 $leShowBankDetails = $leShowBankDetails ?? true;
 $leShowDocuments   = $leShowDocuments ?? true;
+$leShowInlineActions = $leShowInlineActions ?? true;
+$leShowStatus       = $leShowStatus ?? false;
 $leSubmitLabel     = $leSubmitLabel ?? 'Создать';
 
 $isCompany = $leEntityType === 'company' || $leEntityType === 'expeditor';
@@ -53,7 +55,7 @@ $leTypeOptions = [
 <input type="hidden" name="is_modal" value="1">
 <?php endif; ?>
 
-<div class="entity-form-layout driver-layout">
+<div class="entity-form-layout driver-layout<?= !$leShowDocuments ? ' driver-layout--no-docs' : '' ?>">
 
     <div class="entity-form-main driver-layout-main">
         <div class="driver-fields">
@@ -159,7 +161,7 @@ $leTypeOptions = [
             </div>
 <?php endif; ?>
 
-<?php if ($leShowBankDetails && !$isCompany): ?>
+<?php if ($leShowBankDetails): ?>
             <div class="mt-3">
                 <div class="section-title">Банковские реквизиты</div>
                 <div class="form-grid-4">
@@ -186,19 +188,36 @@ $leTypeOptions = [
             </div>
 <?php endif; ?>
 
+<?php if ($leShowStatus): ?>
+            <div class="field mt-3" data-field="status">
+                <label class="field-label">Статус <span class="req">*</span></label>
+                <select name="status" class="field-select">
+                    <?php $currentStatus = $leOld['status'] ?? 'active'; ?>
+                    <option value="active" <?= $currentStatus === 'active' ? 'selected' : '' ?>>Активен</option>
+                    <option value="inactive" <?= $currentStatus === 'inactive' ? 'selected' : '' ?>>Неактивен</option>
+                    <option value="blocked" <?= $currentStatus === 'blocked' ? 'selected' : '' ?>>Заблокирован</option>
+                    <option value="archived" <?= $currentStatus === 'archived' ? 'selected' : '' ?>>Архивирован</option>
+                    <option value="provisioning" <?= $currentStatus === 'provisioning' ? 'selected' : '' ?>>Настройка</option>
+                    <option value="error" <?= $currentStatus === 'error' ? 'selected' : '' ?>>Ошибка</option>
+                </select>
+            </div>
+<?php endif; ?>
+
             <div class="field mt-3" data-field="comments">
                 <label class="field-label">Комментарий</label>
                 <textarea name="comments" class="field-textarea driver-textarea" rows="2" placeholder="Примечания"><?= e($leOld['comments'] ?? '') ?></textarea>
             </div>
 
+<?php if ($leShowInlineActions): ?>
             <div class="form-actions mt-4">
                 <button type="submit" class="btn btn-primary"><?= e($leSubmitLabel) ?></button>
             </div>
+<?php endif; ?>
 
         </div>
     </div>
 
-<?php if ($leShowDocuments && !$isCompany): ?>
+<?php if ($leShowDocuments): ?>
     <div class="entity-form-docs driver-layout-docs">
         <div>
             <div class="section-title">Документы</div>
