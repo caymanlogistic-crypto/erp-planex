@@ -408,6 +408,23 @@ Client and contractor full-page edit forms restructured to use compact Driver-li
 - No inline styles, no CSS changes, no input name/form action changes.
 - Design decision #70 added to DECISIONS.md.
 
+## 2026-07-05 — production deploy attempt blocked by web PHP
+
+`develop` and `master` are synchronized on commit `9d1fcc2`.
+Server deploy was uploaded to `/home/s/spugovxsim/planexp/public_html/erp` (requested `/planexp/public_html/erp` inside the hosting account).
+
+Verified on server:
+- MySQL 5.7 connection works.
+- CLI `/usr/bin/php8.3` with PDO MySQL works.
+- Central migrations applied: `companies`, `company_features`, `company_users`, `deleted_entities`, `features`, `superadmin_users`.
+
+Blocked:
+- `plan-ex.ru/erp` is served by Apache PHP 7.1.33, but ERP code requires PHP 8.x.
+- `.htaccess` PHP 8 handlers and CGI wrapper inside `/erp` were tested and did not produce acceptable runtime.
+- No production app accounts were created because login/runtime returns HTTP 500 before PHP 8 web runtime is enabled.
+
+Next required action: switch the web runtime for `plan-ex.ru/erp` to PHP 8.1+ / 8.3 in hosting panel/support, then rerun full server QA (roles, CRUD, documents upload/change/delete).
+
 ## Future-chat note: unified legal-entity create partial
 
 Единый partial `app/View/partials/legal_entity_create_form.php` — source of truth для создания клиента, перевозчика и экспедитора/компании (superadmin).
