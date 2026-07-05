@@ -139,3 +139,5 @@
 75. **Superadmin expeditor creation popup + Dadata wiring (2026-07-05).** На `/superadmin/companies` кнопки "Создать экспедитора" открывают модальное окно. INN autofill (DaData) доступен в форме создания экспедитора. `data-inn-lookup-url` — кастомный атрибут формы, позволяющий задавать lookup-URL для разных контекстов (company и superadmin). Full-page `/superadmin/companies/create` сохранён как fallback. Добавлен endpoint `/superadmin/requisites/lookup-by-inn` — superadmin-safe, не требует company session.
 
 76. **DaData runtime requires environment API key.** Кодовые endpoints Дадаты используют `CompanyInnLookupService` и переменную окружения `DADATA_API_KEY`. Если ключ пустой, UI и endpoint остаются доступными, но lookup возвращает безопасный `ok:false` и предлагает заполнить реквизиты вручную. API-ключ не хранить в документации и репозитории.
+
+77. **DaData key configured outside repository (2026-07-05).** `DADATA_API_KEY` настроен в локальном `.env` и production `.env`. Ключ не хранится в git/docs. Production runtime check через `/erp/superadmin/requisites/lookup-by-inn` вернул `ok:true`.

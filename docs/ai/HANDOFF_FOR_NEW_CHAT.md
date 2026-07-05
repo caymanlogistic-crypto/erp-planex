@@ -416,7 +416,8 @@ tmp/codex-stage-docs/*
 - `CompanyActions/create_submit.php` поддерживает `is_modal=1`: success возвращает `<div data-le-create-success="1"></div>`, ошибки возвращают form partial.
 - Production deploy выполнен в `/home/s/spugovxsim/planexp/public_html/erp`; remote `php -l` по изменённым PHP-файлам прошёл.
 - HTTP smoke на `http://plan-ex.ru/erp`: superadmin login -> `/superadmin/companies` 200, modal markup есть, XHR form есть, `data-inn-lookup-url` и кнопка INN autofill есть, `/superadmin/requisites/lookup-by-inn` отвечает JSON 200.
-- Важный runtime остаток: на сервере пустой `DADATA_API_KEY`, поэтому реальный DaData lookup возвращает `ok:false` до установки ключа в `.env`. Ключи не хранить в docs/repo.
+- `DADATA_API_KEY` настроен в локальном `.env` и production `.env`; ключ не хранить в docs/repo.
+- Runtime check `/erp/superadmin/requisites/lookup-by-inn` с тестовым ИНН вернул `ok:true`, данные организации получены.
 - Изменённые файлы:
   - `app/Http/Routes/superadmin.php` — добавлен маршрут lookup-by-inn
   - `app/Http/Controllers/Superadmin/CompanyController.php` — метод lookupInn()

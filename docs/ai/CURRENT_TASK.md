@@ -32,7 +32,8 @@ Production deploy/check:
 - Remote `php -l` по изменённым PHP-файлам прошёл без ошибок.
 - HTTP smoke: superadmin login -> `/erp/superadmin/companies` 200; modal markup присутствует; XHR `/erp/superadmin/companies/create` 200 и содержит форму `le-sa-company-create-form`, кнопку INN autofill и `data-inn-lookup-url`.
 - `/erp/superadmin/requisites/lookup-by-inn` отвечает JSON 200.
-- Остаточная настройка окружения: на сервере `DADATA_API_KEY` пустой, поэтому endpoint подключён, но реальные данные Дадаты не будут возвращаться до установки API-ключа.
+- `DADATA_API_KEY` настроен в локальном `.env` и production `.env` без сохранения ключа в документации/репозитории.
+- Runtime check `/erp/superadmin/requisites/lookup-by-inn` с тестовым ИНН вернул `ok:true`, данные организации получены.
 
 Ограничения:
 - `master` не менять, не коммитить и не синхронизировать без отдельной команды владельца.
