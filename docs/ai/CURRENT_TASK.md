@@ -75,4 +75,5 @@
 - Созданы runtime accounts: superadmin, owner, senior_logist, logist. Пароли не хранить в документации; см. финальный отчёт владельцу.
 - HTTP smoke QA passed: 4 роли логинятся, ключевые страницы superadmin/company возвращают 200, UTF-8 валиден.
 - CRUD/file QA passed: owner создал клиента, загрузил TXT-документ, заменил файл, удалил документ; redirects возвращают `/erp/...`.
+- Fixed static CSS font URLs: `public/assets/css/app.css` now uses relative `../fonts/...` paths so fonts load under `/erp/assets/css/app.css`.
 - Не выполнять backport проекта под PHP 7.1 без отдельного решения владельца: это широкий рискованный рефакторинг.
