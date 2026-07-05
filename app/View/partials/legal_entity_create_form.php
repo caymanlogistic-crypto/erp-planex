@@ -48,7 +48,7 @@ $leTypeOptions = [
     'private_person' => 'Физическое лицо',
 ];
 ?>
-<form id="<?= e($leFormId) ?>" method="post" action="<?= e($leFormAction) ?>" class="" enctype="multipart/form-data" data-le-create-form="<?= e($leEntityType) ?>">
+<form id="<?= e($leFormId) ?>" method="post" action="<?= e($leFormAction) ?>" class="" enctype="multipart/form-data" data-le-create-form="<?= e($leEntityType) ?>" data-inn-lookup-url="<?= e($leInnLookupUrl ?? app_url('/company/requisites/lookup-by-inn')) ?>">
 <?php if ($leIsModal): ?>
 <input type="hidden" name="is_modal" value="1">
 <?php endif; ?>
@@ -70,14 +70,12 @@ $leTypeOptions = [
             </div>
 <?php endif; ?>
 
-<?php if (!$isCompany): ?>
             <div class="form-alert alert-warning is-hidden" data-inn-autofill-message>
                 <div class="alert-body">
                     <div class="alert-body-title" data-inn-autofill-title></div>
                     <div class="alert-body-sub" data-inn-autofill-sub></div>
                 </div>
             </div>
-<?php endif; ?>
 
             <div class="driver-contact-top-row">
                 <div class="field field-w-name<?= !empty($leErrors['name']) ? ' is-error' : '' ?>" data-field="name">
@@ -85,7 +83,6 @@ $leTypeOptions = [
                     <input type="text" name="name" class="field-input" placeholder='ООО "РОМАШКА"' value="<?= e($leOld['name'] ?? '') ?>">
                     <div class="field-msg"><?= !empty($leErrors['name']) ? e($leErrors['name']) : '' ?></div>
                 </div>
-<?php if (!$isCompany): ?>
                 <div class="driver-contact-stack">
                     <div class="driver-contact-main-row">
                         <div class="field field-w-phone<?= !empty($leErrors['inn']) ? ' is-error' : '' ?>" data-field="inn">
@@ -96,17 +93,6 @@ $leTypeOptions = [
                         <button type="button" class="btn btn-ghost phone-add-btn" data-inn-autofill-btn>Заполнить по ИНН</button>
                     </div>
                 </div>
-<?php else: ?>
-                <div class="driver-contact-stack">
-                    <div class="driver-contact-main-row">
-                        <div class="field field-w-phone<?= !empty($leErrors['inn']) ? ' is-error' : '' ?>" data-field="inn">
-                            <label class="field-label">ИНН <span class="req">*</span></label>
-                            <input type="text" name="inn" class="field-input" inputmode="numeric" placeholder="7701234567" value="<?= e($leOld['inn'] ?? '') ?>">
-                            <div class="field-msg"><?= !empty($leErrors['inn']) ? e($leErrors['inn']) : '' ?></div>
-                        </div>
-                    </div>
-                </div>
-<?php endif; ?>
             </div>
 
             <div class="form-grid-3 mt-3">

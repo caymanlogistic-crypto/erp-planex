@@ -9,8 +9,8 @@ require_once __DIR__ . '/../components/status_badge.php';
         <span class="page-title">Реестр компаний</span>
     </div>
     <div class="page-head-actions">
-        <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary">Создать экспедитора</a>
-    </div>
+            <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary" onclick="event.preventDefault();openModal('sa-company-create-modal');">Создать экспедитора</a>
+        </div>
 </div>
 
 <div class="page-content">
@@ -51,7 +51,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <div class="empty-state">
                 <p class="empty-title">Нет компаний</p>
                 <p class="empty-desc">Создайте первого экспедитора для начала работы системы.</p>
-                <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary">Создать экспедитора</a>
+                <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary" onclick="event.preventDefault();openModal('sa-company-create-modal');">Создать экспедитора</a>
             </div>
         </div>
     </div>
@@ -103,4 +103,31 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 <?php endif; ?>
 
+</div><!-- /.page-content -->
+
+<div class="modal-overlay" id="sa-company-create-modal" data-close-on-overlay="1" data-close-on-escape="1" style="display:none;">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <span class="modal-title">Создать экспедитора</span>
+      <button type="button" class="modal-close" onclick="closeModal('sa-company-create-modal')">&times;</button>
+    </div>
+    <div class="modal-body" id="sa-company-create-modal-body">
+      <div class="driver-modal-loading">...</div>
+    </div>
+  </div>
 </div>
+
+<script>
+(function initSaCompanyModal() {
+    var config = { modalId: 'sa-company-create-modal', formAction: '<?= app_url('/superadmin/companies/create') ?>', typeField: 'contractor_type' };
+    if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
+        window.LegalEntityModal.init(config);
+        return;
+    }
+    window.addEventListener('load', function () {
+        if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
+            window.LegalEntityModal.init(config);
+        }
+    }, { once: true });
+})();
+</script>

@@ -125,7 +125,9 @@
             button.textContent = loadingText;
         }
 
-        return fetch('/company/requisites/lookup-by-inn', {
+        var lookupUrl = form.dataset.innLookupUrl || '/company/requisites/lookup-by-inn';
+
+        return fetch(lookupUrl, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {

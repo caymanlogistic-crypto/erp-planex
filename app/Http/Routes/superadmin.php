@@ -19,3 +19,6 @@ $router->get('/superadmin/companies/{id}/owner', [$ownerController, 'view']);
 $router->get('/superadmin/companies/{id}/owner/edit', [$ownerController, 'editForm']);
 $router->post('/superadmin/companies/{id}/owner/edit', [$ownerController, 'editSubmit']);
 $router->post('/superadmin/companies/{id}/owner/reset-password', [$ownerController, 'resetPassword']);
+
+$router->get('/superadmin/requisites/lookup-by-inn', [$companyController, 'lookupInn']);
+$router->post('/superadmin/requisites/lookup-by-inn', [$companyController, 'lookupInn']);

@@ -400,6 +400,35 @@ tmp/codex-stage-docs/*
 но НЕЛЬЗЯ удалять из рабочей среды. Удаление приводит к осиротевшим записям в БД
 и 404 при просмотре/скачивании.
 
+## 2026-07-05 — superadmin expeditor creation popup + Dadata wiring
+
+**Статус**: реализовано.
+
+- На `/superadmin/companies` кнопки "Создать экспедитора" теперь открывают модальное окно.
+- Full-page `/superadmin/companies/create` сохранён как fallback.
+- Модалка загружает форму через AJAX, отправляет через AJAX, показывает ошибки внутри, перезагружает страницу при успехе.
+- Добавлен endpoint `/superadmin/requisites/lookup-by-inn` — superadmin-safe, использует `CompanyInnLookupService`, не требует company session.
+- INN autofill (DaData) работает в форме создания экспедитора (как full-page, так и modal).
+- `data-inn-lookup-url` атрибут на форме: для company-контекста по умолчанию `/company/requisites/lookup-by-inn`, для superadmin — `/superadmin/requisites/lookup-by-inn`.
+- JS-код (`legal-entity-inn.js`, `legal-entity-modal.js`) читает `form.dataset.innLookupUrl` перед hardcoded fallback.
+- В `legal_entity_create_form.php` INN autofill message и кнопка "Заполнить по ИНН" теперь показаны для company/expeditor.
+- `CompanyActions/create_form.php` возвращает только form partial для XHR-запросов.
+- `CompanyActions/create_submit.php` поддерживает `is_modal=1`: success возвращает `<div data-le-create-success="1"></div>`, ошибки возвращают form partial.
+- Production deploy выполнен в `/home/s/spugovxsim/planexp/public_html/erp`; remote `php -l` по изменённым PHP-файлам прошёл.
+- HTTP smoke на `http://plan-ex.ru/erp`: superadmin login -> `/superadmin/companies` 200, modal markup есть, XHR form есть, `data-inn-lookup-url` и кнопка INN autofill есть, `/superadmin/requisites/lookup-by-inn` отвечает JSON 200.
+- Важный runtime остаток: на сервере пустой `DADATA_API_KEY`, поэтому реальный DaData lookup возвращает `ok:false` до установки ключа в `.env`. Ключи не хранить в docs/repo.
+- Изменённые файлы:
+  - `app/Http/Routes/superadmin.php` — добавлен маршрут lookup-by-inn
+  - `app/Http/Controllers/Superadmin/CompanyController.php` — метод lookupInn()
+  - `app/Http/Controllers/Superadmin/CompanyActions/lookup_inn.php` — новый action файл
+  - `app/Http/Controllers/Superadmin/CompanyActions/create_form.php` — XHR partial support
+  - `app/Http/Controllers/Superadmin/CompanyActions/create_submit.php` — is_modal support
+  - `app/View/pages/superadmin_companies.php` — modal overlay + кнопки modal
+  - `app/View/pages/superadmin_companies_create.php` — $leInnLookupUrl для superadmin
+  - `app/View/partials/legal_entity_create_form.php` — INN autofill для company, data-inn-lookup-url
+  - `public/assets/js/legal-entity-inn.js` — form.dataset.innLookupUrl
+  - `public/assets/js/legal-entity-modal.js` — form.dataset.innLookupUrl
+
 ## 2026-07-05 — compact legal-entity full-page edit UX
 
 Client and contractor full-page edit forms restructured to use compact Driver-like layout:

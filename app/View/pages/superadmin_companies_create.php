@@ -28,6 +28,7 @@ $leSubmitLabel = 'Создать компанию';
 $leShowContacts = false;
 $leShowBankDetails = false;
 $leShowDocuments = false;
+$leInnLookupUrl = app_url('/superadmin/requisites/lookup-by-inn');
 require base_path('app/View/partials/legal_entity_create_form.php');
 ?>
 <div class="field-hint">Данные руководителя используются в реквизитах, счетах и документах. Доступ в ERP для руководителя создаётся отдельно.</div>

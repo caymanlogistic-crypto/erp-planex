@@ -97,7 +97,8 @@
             if (!inn || !inn.value.trim()) return;
             btn.disabled = true;
             btn.textContent = '\u041f\u043e\u0438\u0441\u043a...';
-            fetch('/company/requisites/lookup-by-inn', {
+            var lookupUrl = form.dataset.innLookupUrl || '/company/requisites/lookup-by-inn';
+            fetch(lookupUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },

@@ -1,11 +1,31 @@
 <?php
 
     requireRole('superadmin');
+
+    $isModal = ($_POST['is_modal'] ?? '') === '1';
+
     $pageTitle = 'Создать экспедитора';
     $pageContext = 'Реестр компаний';
     $errors = [];
     $old = $_POST;
     $formError = null;
+
+    function renderFormPartial($errors, $old, $formError, $isModal): void
+    {
+        $leEntityType = 'company';
+        $leFormAction = '/superadmin/companies/create';
+        $leFormId = 'le-sa-company-create-form';
+        $leIsModal = $isModal;
+        $leOld = $old;
+        $leErrors = $errors;
+        $leFormError = $formError;
+        $leSubmitLabel = 'Создать компанию';
+        $leShowContacts = false;
+        $leShowBankDetails = false;
+        $leShowDocuments = false;
+        $leInnLookupUrl = app_url('/superadmin/requisites/lookup-by-inn');
+        require base_path('app/View/partials/legal_entity_create_form.php');
+    }
 
     $name = trim($_POST['name'] ?? '');
     $inn  = trim($_POST['inn'] ?? '');
@@ -19,6 +39,10 @@
     }
 
     if (!empty($errors)) {
+        if ($isModal) {
+            renderFormPartial($errors, $old, $formError, true);
+            return;
+        }
         ob_start();
         require base_path('app/View/pages/superadmin_companies_create.php');
         $content = ob_get_clean();
@@ -74,6 +98,10 @@
 
             $formError = 'Ошибка создания инфраструктуры. База данных не создана. Запись сохранена со статусом "Ошибка".';
 
+            if ($isModal) {
+                renderFormPartial($errors, $old, $formError, true);
+                return;
+            }
             ob_start();
             require base_path('app/View/pages/superadmin_companies_create.php');
             $content = ob_get_clean();
@@ -96,6 +124,10 @@
 
             $formError = 'База данных создана, но не удалось создать storage-папку. Запись сохранена со статусом "Ошибка".';
 
+            if ($isModal) {
+                renderFormPartial($errors, $old, $formError, true);
+                return;
+            }
             ob_start();
             require base_path('app/View/pages/superadmin_companies_create.php');
             $content = ob_get_clean();
@@ -112,10 +144,19 @@
                 ':id'      => $companyId,
             ]);
 
+        if ($isModal) {
+            echo '<div data-le-create-success="1"></div>';
+            return;
+        }
+
         redirect_to('/superadmin/companies');
     } catch (\Exception $e) {
         $formError = 'Не удалось создать экспедитора: ' . $e->getMessage();
 
+        if ($isModal) {
+            renderFormPartial($errors, $old, $formError, true);
+            return;
+        }
         ob_start();
         require base_path('app/View/pages/superadmin_companies_create.php');
         $content = ob_get_clean();

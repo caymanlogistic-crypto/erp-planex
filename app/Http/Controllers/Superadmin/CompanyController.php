@@ -58,4 +58,11 @@ final class CompanyController
 
         require base_path('app/Http/Controllers/Superadmin/CompanyActions/edit_submit.php');
     }
+
+    public function lookupInn(): void
+    {
+        $config = $this->config;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/lookup_inn.php');
+    }
 }
