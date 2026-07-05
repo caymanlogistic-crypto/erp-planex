@@ -263,8 +263,8 @@ require_once __DIR__ . '/../components/status_badge.php';
             </dl>
         </div>
 
-        <details class="panel-section" style="margin-top:12px;">
-            <summary class="section-title" style="cursor:pointer;">Банковские реквизиты</summary>
+        <details class="panel-section mt-3">
+            <summary class="section-title">Банковские реквизиты</summary>
             <dl class="kv">
                 <dt>Расчётный счёт</dt>
                 <dd><?= e($contractor['bank_account'] ?? '') ?: '—' ?></dd>
@@ -420,7 +420,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
         <div class="form-section">
             <h3 class="panel-head-title">Удаление записи</h3>
-            <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
+            <p class="text-muted">Запись будет удалена из списка.</p>
             <form method="post" action="/company/contractors/<?= $contractor['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
                 <button type="submit" class="btn btn-danger">Удалить</button>
             </form>

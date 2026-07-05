@@ -83,11 +83,11 @@ $clientDocumentsUrl = '/company/documents?entity_type=client&entity_id=' . (int)
       </div>
       <?php endif; ?>
 
-      <div class="form-actions" style="margin-top:12px">
+      <div class="form-actions mt-3">
         <a href="<?= e($clientDocumentsUrl) ?>" class="btn btn-secondary">Документы</a>
       </div>
       <?php if ($clientArchiveBlocked !== ''): ?>
-      <div class="notice warn" style="margin-top:12px"><?= e($clientArchiveBlocked) ?></div>
+      <div class="notice warn mt-3"><?= e($clientArchiveBlocked) ?></div>
       <?php endif; ?>
     </div>
   </div>

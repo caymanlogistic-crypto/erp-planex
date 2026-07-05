@@ -81,75 +81,88 @@ $contactErrors = $errors['contacts'] ?? [];
         <div class="form-section">
             <h3 class="panel-head-title">Основные данные</h3>
 
-            <div class="field">
-                <label class="field-label">Наименование <span class="req">*</span></label>
-                <input type="text" name="name" class="field-input<?= !empty($errors['name']) ? ' is-error' : '' ?>" required
-                       value="<?= e($old['name'] ?? $client['name']) ?>">
-                <?php if (!empty($errors['name'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['name']) ?></div>
-                <?php endif; ?>
-            </div>
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">Наименование <span class="req">*</span></label>
+                    <input type="text" name="name" class="field-input<?= !empty($errors['name']) ? ' is-error' : '' ?>" required
+                           value="<?= e($old['name'] ?? $client['name']) ?>">
+                    <?php if (!empty($errors['name'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['name']) ?></div>
+                    <?php endif; ?>
+                </div>
 
-            <div class="field">
-                <label class="field-label">ИНН <span class="req">*</span></label>
-                <input type="text" name="inn" class="field-input<?= !empty($errors['inn']) ? ' is-error' : '' ?>" required
-                       value="<?= e($old['inn'] ?? $client['inn']) ?>">
-                <?php if (!empty($errors['inn'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['inn']) ?></div>
-                <?php endif; ?>
+                <div class="field">
+                    <label class="field-label">Статус <span class="req">*</span></label>
+                    <select name="status" class="field-select<?= !empty($errors['status']) ? ' is-error' : '' ?>">
+                        <?php
+                        $statuses = ['active' => 'Активен', 'inactive' => 'Неактивен', 'archived' => 'Архив'];
+                        $currentStatus = $old['status'] ?? $client['status'];
+                        foreach ($statuses as $val => $label):
+                        ?>
+                        <option value="<?= $val ?>" <?= $currentStatus === $val ? 'selected' : '' ?>><?= e($label) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (!empty($errors['status'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['status']) ?></div>
+                    <?php endif; ?>
+                </div>
             </div>
+        </div>
 
-            <div class="field">
-                <label class="field-label">КПП</label>
-                <input type="text" name="kpp" class="field-input"
-                       value="<?= e($old['kpp'] ?? $client['kpp'] ?? '') ?>">
-            </div>
+        <div class="form-section">
+            <h3 class="panel-head-title">Реквизиты</h3>
 
-            <div class="field">
-                <label class="field-label">ОГРН</label>
-                <input type="text" name="ogrn" class="field-input"
-                       value="<?= e($old['ogrn'] ?? $client['ogrn'] ?? '') ?>">
-            </div>
+            <div class="form-grid-3">
+                <div class="field">
+                    <label class="field-label">ИНН <span class="req">*</span></label>
+                    <input type="text" name="inn" class="field-input<?= !empty($errors['inn']) ? ' is-error' : '' ?>" required
+                           value="<?= e($old['inn'] ?? $client['inn']) ?>">
+                    <?php if (!empty($errors['inn'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['inn']) ?></div>
+                    <?php endif; ?>
+                </div>
 
-            <div class="field">
-                <label class="field-label">Статус <span class="req">*</span></label>
-                <select name="status" class="field-select<?= !empty($errors['status']) ? ' is-error' : '' ?>">
-                    <?php
-                    $statuses = ['active' => 'Активен', 'inactive' => 'Неактивен', 'archived' => 'Архив'];
-                    $currentStatus = $old['status'] ?? $client['status'];
-                    foreach ($statuses as $val => $label):
-                    ?>
-                    <option value="<?= $val ?>" <?= $currentStatus === $val ? 'selected' : '' ?>><?= e($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (!empty($errors['status'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['status']) ?></div>
-                <?php endif; ?>
-            </div>
+                <div class="field">
+                    <label class="field-label">КПП</label>
+                    <input type="text" name="kpp" class="field-input"
+                           value="<?= e($old['kpp'] ?? $client['kpp'] ?? '') ?>">
+                </div>
 
-            <div class="field">
-                <label class="field-label">Комментарий</label>
-                <textarea name="comments" class="field-textarea" rows="3"><?= e($old['comments'] ?? $client['comments'] ?? '') ?></textarea>
+                <div class="field">
+                    <label class="field-label">ОГРН</label>
+                    <input type="text" name="ogrn" class="field-input"
+                           value="<?= e($old['ogrn'] ?? $client['ogrn'] ?? '') ?>">
+                </div>
             </div>
         </div>
 
         <div class="form-section">
             <h3 class="panel-head-title">Адреса</h3>
 
-            <div class="field">
-                <label class="field-label">Юридический адрес</label>
-                <textarea name="legal_address" class="field-textarea" rows="2"><?= e($old['legal_address'] ?? $client['legal_address'] ?? '') ?></textarea>
-            </div>
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">Юридический адрес</label>
+                    <textarea name="legal_address" class="field-textarea" rows="2"><?= e($old['legal_address'] ?? $client['legal_address'] ?? '') ?></textarea>
+                </div>
 
-            <div class="field">
-                <label class="field-label">Фактический адрес</label>
-                <textarea name="physical_address" class="field-textarea" rows="2"><?= e($old['physical_address'] ?? $client['physical_address'] ?? '') ?></textarea>
+                <div class="field">
+                    <label class="field-label">Фактический адрес</label>
+                    <textarea name="physical_address" class="field-textarea" rows="2"><?= e($old['physical_address'] ?? $client['physical_address'] ?? '') ?></textarea>
+                </div>
             </div>
         </div>
 
         <div class="form-section">
             <h3 class="panel-head-title">Контакты</h3>
             <?php renderClientContactFields($contactValues, $contactErrors); ?>
+        </div>
+
+        <div class="form-section">
+            <h3 class="panel-head-title">Комментарий</h3>
+
+            <div class="field">
+                <textarea name="comments" class="field-textarea" rows="2"><?= e($old['comments'] ?? $client['comments'] ?? '') ?></textarea>
+            </div>
         </div>
 
         <div class="form-actions">

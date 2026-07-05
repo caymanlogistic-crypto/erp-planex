@@ -114,3 +114,145 @@ docs/ui/DESIGN_STANDARD.md
 При очистке проекта/подготовке архива эти директории можно исключать из архива,
 но НЕЛЬЗЯ удалять из рабочей среды, иначе документы в БД станут осиротевшими
 и просмотр/скачивание будут возвращать 404.
+
+
+---
+
+## Codex Desktop + DeepSeek/OpenCode — схема супервизор/исполнитель
+
+Статус: добавлено для тестовой и рабочей связки, где Codex Desktop выступает главным контролёром, а DeepSeek через OpenCode — исполнителем точечных задач.
+
+### Роли
+
+```text
+Codex Desktop = supervisor / architect / reviewer
+OpenCode + DeepSeek = implementation worker
+```
+
+Codex Desktop не должен слепо принимать результат DeepSeek. Его задача:
+
+1. понять задачу владельца;
+2. проверить проект и текущий `git status`;
+3. сформулировать короткую техническую задачу для DeepSeek;
+4. сохранить задачу в `tmp/deepseek-task.md`;
+5. запустить DeepSeek через OpenCode;
+6. дождаться завершения работы OpenCode;
+7. проверить `git diff`;
+8. запустить обязательные проверки;
+9. при ошибках — дать DeepSeek корректирующий промт;
+10. принять результат только после проверки.
+
+### Правило экономии контекста и актуальности документации
+
+Codex Desktop не пишет код сам, если задачу можно безопасно перепоручить OpenCode/DeepSeek. Codex отвечает за постановку задачи, контроль diff, проверки, корректирующие промты и финальную приёмку.
+
+После каждой значимой модификации проекта Codex обязан обновить актуальную документацию проекта. Новые важные правила, решения, workflow и ограничения фиксируются в управляющих MD, а не остаются только в чате.
+
+### Команда запуска DeepSeek из Codex
+
+Codex Desktop на Windows может запускать команды через PowerShell, но для ERP PLANEX это нежелательно из-за риска битой кириллицы и некорректного вывода CLI.
+
+Все команды проекта должны запускаться через `cmd.exe /c`.
+
+Базовая команда для запуска DeepSeek:
+
+```text
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && opencode run --auto ""Read tmp\deepseek-task.md and implement it. After finishing, report changed files and checks performed."""
+```
+
+Если Codex создаёт или обновляет задачу для DeepSeek, файл задачи должен быть:
+
+```text
+tmp/deepseek-task.md
+```
+
+### Запрещено
+
+Codex Desktop и DeepSeek/OpenCode не должны:
+
+- запускать проектные Git/PHP/runtime-команды напрямую через PowerShell;
+- менять основную шапку;
+- менять шапку контентного блока;
+- менять существующую структуру или поведение меню;
+- переписывать backend/business logic, если задача только визуальная;
+- придумывать несуществующие файлы, маршруты, таблицы или поля;
+- игнорировать текущие правила из `docs/ai/*` и `docs/ui/DESIGN_STANDARD.md`;
+- запускать `php -S` в foreground;
+- запускать `start /B php -S`;
+- принимать mojibake как нормальный текст.
+
+### Обязательная защита кириллицы
+
+Все изменяемые файлы с русским текстом должны сохраняться в UTF-8 без BOM.
+
+Запрещены признаки битой кодировки:
+
+```text
+Рџ
+РЎ
+Ð
+Ñ
+�
+```
+
+Если Codex или DeepSeek видят такие символы в изменённых файлах, результат считается неприемлемым до исправления.
+
+### Обязательные проверки после работы DeepSeek
+
+Codex обязан выполнить:
+
+```text
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && git diff --check && git status --short"
+```
+
+Для каждого изменённого PHP-файла:
+
+```text
+cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l path\to\changed-file.php"
+```
+
+Для визуальных задач Codex дополнительно проверяет:
+
+- не изменены ли topbar/page-head/menu;
+- нет ли случайных inline-style, кроме допустимого `display:none`;
+- не изменены ли `input name`, `form action`, `method`, routes;
+- не добавлены ли случайные цвета/второй UI-kit;
+- используется ли `public/assets/css/erp-ui.css` и существующий дизайн-стандарт.
+
+### Исправляющий цикл
+
+Если после работы DeepSeek есть ошибки, Codex не должен исправлять всё молча сам.
+
+Правильный цикл:
+
+```text
+1. Codex фиксирует конкретные нарушения.
+2. Codex обновляет tmp/deepseek-task.md коротким correction prompt.
+3. Codex снова запускает OpenCode/DeepSeek.
+4. Codex повторяет git/php/runtime/design checks.
+5. Только после этого пишет итоговый отчёт.
+```
+
+### Финальный отчёт Codex
+
+Финальный отчёт Codex должен содержать:
+
+- какие файлы изменены;
+- что сделал DeepSeek;
+- что проверил Codex;
+- результат `git diff --check`;
+- результат `php -l` по изменённым PHP-файлам;
+- подтверждение, что кириллица не сломана;
+- подтверждение, что topbar/page-head/menu не тронуты;
+- статус: `ACCEPTED`, `NEEDS_CORRECTION` или `BLOCKED`.
+
+### Подтверждённые уроки runtime-тестирования
+
+На основе runtime-испытания связки Codex Desktop + OpenCode/DeepSeek подтверждены:
+
+- OpenCode эффективен для: аудит, точечные правки, runtime, DB fixtures, проверки, чистка артефактов.
+- Codex не должен слепо принимать отчёты OpenCode; отчёты сначала показываются владельцу, затем Codex даёт свою интерпретацию.
+- Промты OpenCode: точный scope, запреты, правила команд, матрица приёмки, чистка, формат отчёта.
+- OpenCode запрещено: PowerShell, curl, Unix-only, npm install, package-lock/node_modules, foreground php -S, широкие правки без разрешения.
+- При нарушении правил или фиктивном runtime — correction loop до приёмки.
+- Codex проверяет: git diff, git status, php -l, architecture_guard, git diff --check, mojibake, артефакты, runtime-доказательства.

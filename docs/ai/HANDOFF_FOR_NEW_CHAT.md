@@ -15,6 +15,9 @@
 - Accepted behavior модуля: меню `Рейсы → Линейные`, линейные и агентские рейсы, повторяемые блоки принципалов/оплат/документов, целочисленные суммы, browser-click flow create/view/edit/documents/delete.
 - `public/index.php` остаётся тонким front controller (`92` строки), источник маршрутов — `app/Http/Routes/*.php`.
 - Маленькая follow-up правка после static review: в edit-flow линейного рейса поле `Плановая дата выгрузки` должно оставаться опциональным, как и текущий accepted create-flow.
+- Codex Desktop работает как supervisor для OpenCode/DeepSeek: код и массовые правки по возможности поручаются OpenCode через `tmp/deepseek-task.md`, а Codex отвечает за ТЗ, проверки, correction loop, актуализацию документации и финальную приёмку.
+- После каждой значимой модификации проекта документация должна быть обновлена точечно в актуальных управляющих MD; новые важные правила и решения нельзя оставлять только в чате.
+- **Runtime-испытание OpenCode подтвердило правила**: OpenCode эффективен для аудита, правок, runtime, fixtures, проверок. Codex не принимает отчёты слепо — сначала владельцу. Промты: точный scope, запреты, правила команд, матрица приёмки. OpenCode запрещено: PowerShell, curl, Unix-only, npm install, package-lock/node_modules, foreground php -S, широкие правки без разрешения. При нарушениях — correction loop. Codex проверяет: git diff/status, php -l, architecture_guard, mojibake, артефакты, runtime-доказательства.
 
 ## Актуализация 2026-06-28 — E14-E15 Final Architecture Review
 
@@ -396,6 +399,22 @@ tmp/codex-stage-docs/*
 При очистке проекта/подготовке архива эти директории можно исключать из архива,
 но НЕЛЬЗЯ удалять из рабочей среды. Удаление приводит к осиротевшим записям в БД
 и 404 при просмотре/скачивании.
+
+## 2026-07-05 — compact legal-entity full-page edit UX
+
+Client and contractor full-page edit forms restructured to use compact Driver-like layout:
+- `app/View/pages/company_client_edit.php` — form-grid-2 for Основные данные, form-grid-3 for Реквизиты, form-grid-2 for Адреса, separate Комментарий section with rows=2.
+- `app/View/pages/company_contractor_edit.php` — form-grid-2 for Основные данные, form-grid-4 for Реквизиты (INN/KPP/OGRN/contractor_type), form-grid-2 for Адреса, form-grid-2 for Банковские реквизиты, separate Комментарий section with rows=2.
+- No inline styles, no CSS changes, no input name/form action changes.
+- Design decision #70 added to DECISIONS.md.
+
+## Future-chat note: unified legal-entity create partial
+
+Единый partial `app/View/partials/legal_entity_create_form.php` — source of truth для создания клиента, перевозчика и экспедитора/компании (superadmin).
+- Флаги: `$leIsModal` (умолч. true), `$leShowContacts`, `$leShowBankDetails`, `$leShowDocuments`.
+- Inline-стили вынесены в CSS-классы `mt-3` (12px) / `mt-4` (16px) из `app.css`.
+- Связанные view: `company_clients_create.php`, `company_contractors_create.php`, `superadmin_companies_create.php`.
+- JS-хелперы: `public/assets/js/legal-entity-inn.js`, `legal-entity-documents.js`.
 
 ## 2026-06-28 — правила написания промтов для MiMo Compose / DeepSeekV4 Flash / Codex
 

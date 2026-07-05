@@ -8,6 +8,8 @@ $contractorContactErrors = $errors['contacts'] ?? [];
   <form id="contractor-edit-form" method="post" action="/company/contractors/<?= (int) ($contractor['id'] ?? 0) ?>/modal-edit" enctype="multipart/form-data" data-contractor-modal-edit-form>
     <input type="hidden" name="status" value="<?= e((string) ($old['status'] ?? $contractor['status'] ?? 'active')) ?>">
 
+    <div class="driver-fields">
+
     <?php if (!empty($formError)): ?>
     <div class="form-alert alert-error">
       <div class="alert-body">
@@ -23,7 +25,7 @@ $contractorContactErrors = $errors['contacts'] ?? [];
       <div class="field-msg"><?= !empty($errors['name']) ? e($errors['name']) : '' ?></div>
     </div>
 
-    <div class="form-grid-4" style="margin-top:12px">
+    <div class="form-grid-4 mt-3">
       <div class="field<?= !empty($errors['inn']) ? ' is-error' : '' ?>">
         <label class="field-label">ИНН <span class="req">*</span></label>
         <input type="text" name="inn" class="field-input" value="<?= e($old['inn'] ?? $contractor['inn'] ?? '') ?>">
@@ -50,7 +52,7 @@ $contractorContactErrors = $errors['contacts'] ?? [];
       </div>
     </div>
 
-    <div class="form-grid-2" style="margin-top:12px">
+    <div class="form-grid-2 mt-3">
       <div class="field">
         <label class="field-label">Юридический адрес</label>
         <textarea name="legal_address" class="field-textarea driver-textarea" rows="2"><?= e($old['legal_address'] ?? $contractor['legal_address'] ?? '') ?></textarea>
@@ -61,12 +63,12 @@ $contractorContactErrors = $errors['contacts'] ?? [];
       </div>
     </div>
 
-    <div style="margin-top:12px">
+    <div class="mt-3">
       <div class="section-title">Контакты</div>
       <?php renderContractorContactFields($contractorContactValues, $contractorContactErrors); ?>
     </div>
 
-    <div class="form-grid-4" style="margin-top:12px">
+    <div class="form-grid-4 mt-3">
       <div class="field">
         <label class="field-label">Расчётный счёт</label>
         <input type="text" name="bank_account" class="field-input" value="<?= e($old['bank_account'] ?? $contractor['bank_account'] ?? '') ?>">
@@ -85,10 +87,12 @@ $contractorContactErrors = $errors['contacts'] ?? [];
       </div>
     </div>
 
-    <div class="field" style="margin-top:12px">
+    <div class="field mt-3">
       <label class="field-label">Комментарий</label>
       <textarea name="comments" class="field-textarea driver-textarea" rows="2"><?= e($old['comments'] ?? $contractor['comments'] ?? '') ?></textarea>
     </div>
+
+    </div><!-- /.driver-fields -->
   </form>
 </div>
 

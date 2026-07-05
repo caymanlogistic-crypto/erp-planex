@@ -1,21 +1,31 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-07-02 — small docs/UX fix before deployment prep
+## Актуализация 2026-07-05 — compact legal-entity full-page edit UX
 
-**Статус**: LINEAR_TRIPS_UNLOADING_DATE_ALIGNMENT_IN_PROGRESS
+**Статус**: LEGAL_ENTITY_EDIT_COMPACT_UX_IMPLEMENTED
 
 Выполнено:
-- Принятый модуль `Рейсы → Линейные` зафиксирован в commit `fd511031 feat(trips): add accepted linear routes module`.
-- Workflow-документация после нормализации веток зафиксирована в commit `3b96b77 docs(ai): record develop workflow and linear routes acceptance`.
-- Текущий corrective accepted HEAD в `develop`: `231ccb5 fix(trips): close linear route corrective findings`.
-- Рабочая модель веток нормализована: `develop` — единственная ветка разработки и тестирования, `master` — стабильная deploy/server ветка.
-- `master` намеренно остаётся на принятом runtime commit `fd511031`, а `develop` намеренно идёт впереди на `231ccb5`.
-- `public/index.php` остаётся тонким front controller (`92` строки), маршруты вынесены в `app/Http/Routes`.
-- Модуль `Рейсы → Линейные` принят после browser-click runtime: меню `Рейсы → Линейные`, линейные и агентские рейсы, повторяемые блоки принципалов/оплат/документов, целочисленные суммы, flow create/view/edit/documents/delete.
-- Текущий маленький corrective scope: в edit-форме `Плановая дата выгрузки` должна быть опциональной, чтобы edit-flow совпадал с уже принятым create-flow.
+- `app/View/pages/company_client_edit.php` — restructured to compact Driver-like layout using form-grid-2/form-grid-3.
+- `app/View/pages/company_contractor_edit.php` — restructured to compact Driver-like layout using form-grid-2/form-grid-4.
+- Sections: Основные данные (name + status in grid), Реквизиты (INN/KPP/OGRN/type in grid), Адреса (2-column textarea grid), Контакты, Банковские реквизиты (contractor), Комментарий (compact rows=2).
+- No inline styles, no CSS changes needed (all classes already exist).
+- All input names, form actions, methods, and contact mapping preserved.
 
-Ограничения текущей короткой проверки:
-- `master` в этой задаче не менять, не коммитить и не синхронизировать без отдельной прямой команды владельца.
+Ограничения:
+- `master` не менять, не коммитить и не синхронизировать без отдельной команды владельца.
+
+### Предыдущий контекст: unified legal-entity create form refactor (принят)
+
+**Статус**: LEGAL_ENTITY_CREATE_UNIFIED_PARTIAL_IMPLEMENTED (принят ранее)
+
+### Предыдущий контекст: Исполнители рейса (принят)
+
+Блоки E3 (исполнитель рейса CRUD) и E4 (переназначение ответственных логистов) приняты.
+Ключевые правила:
+- `driver_vehicle_blocks` не имеет `vehicle_id`.
+- `crews.vehicle_id` заполняется из `vehicle_sets.primary_vehicle_unit_id`.
+- Для logist пустой список — пустое состояние, не отказ доступа.
+- Модалки действий должны быть в DOM всегда, включая пустой список.
 
 ## Что дальше
 

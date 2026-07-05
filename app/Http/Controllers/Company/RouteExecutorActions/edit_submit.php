@@ -296,12 +296,27 @@
                 return;
             }
 
-            // 3. Update crew
+            // 3. Fetch primary_vehicle_unit_id for legacy crews.vehicle_id sync
+            $vsUnitStmt = $localPdo->prepare("SELECT primary_vehicle_unit_id FROM vehicle_sets WHERE id = ?");
+            $vsUnitStmt->execute([(int)$vehicleSetId]);
+            $primaryVehicleUnitId = $vsUnitStmt->fetchColumn();
+            if (!$primaryVehicleUnitId) {
+                $localPdo->rollBack();
+                $formError = 'Выбранный транспортный комплект не содержит транспортного средства.';
+                ob_start();
+                require base_path('app/View/pages/company_route_executor_edit.php');
+                $content = ob_get_clean();
+                require base_path('app/View/layouts/main.php');
+                return;
+            }
+
+            // 4. Update crew (including legacy driver_id/vehicle_id)
             $status = trim($_POST['status'] ?? 'active');
             $comments = trim($_POST['comments'] ?? '');
 
             $update = $localPdo->prepare(
                 'UPDATE crews SET contractor_id = :contractor_id, driver_vehicle_block_id = :driver_vehicle_block_id,
+                 driver_id = :driver_id, vehicle_id = :vehicle_id,
                  status = :status, comments = :comments,
                  updated_by_user_id = :uid, updated_by_role = :role
                  WHERE id = :id'
@@ -309,6 +324,8 @@
             $update->execute([
                 ':contractor_id' => (int)$contractorId,
                 ':driver_vehicle_block_id' => $newDvbId,
+                ':driver_id' => (int)$driverId,
+                ':vehicle_id' => (int)$primaryVehicleUnitId,
                 ':status' => $status,
                 ':comments' => $comments !== '' ? $comments : null,
                 ':uid' => $userId,

@@ -8,6 +8,8 @@ $clientContactErrors = $errors['contacts'] ?? [];
   <form id="client-edit-form" method="post" action="/company/clients/<?= (int) ($client['id'] ?? 0) ?>/modal-edit" enctype="multipart/form-data" data-client-modal-edit-form>
     <input type="hidden" name="status" value="<?= e((string) ($old['status'] ?? $client['status'] ?? 'active')) ?>">
 
+    <div class="driver-fields">
+
     <?php if (!empty($formError)): ?>
     <div class="form-alert alert-error">
       <div class="alert-body">
@@ -23,7 +25,7 @@ $clientContactErrors = $errors['contacts'] ?? [];
       <div class="field-msg"><?= !empty($errors['name']) ? e($errors['name']) : '' ?></div>
     </div>
 
-    <div class="form-grid-3" style="margin-top:12px">
+    <div class="form-grid-3 mt-3">
       <div class="field<?= !empty($errors['inn']) ? ' is-error' : '' ?>">
         <label class="field-label">ИНН <span class="req">*</span></label>
         <input type="text" name="inn" class="field-input" value="<?= e($old['inn'] ?? $client['inn'] ?? '') ?>">
@@ -39,7 +41,7 @@ $clientContactErrors = $errors['contacts'] ?? [];
       </div>
     </div>
 
-    <div class="form-grid-2" style="margin-top:12px">
+    <div class="form-grid-2 mt-3">
       <div class="field">
         <label class="field-label">Юридический адрес</label>
         <textarea name="legal_address" class="field-textarea driver-textarea" rows="2"><?= e($old['legal_address'] ?? $client['legal_address'] ?? '') ?></textarea>
@@ -50,15 +52,17 @@ $clientContactErrors = $errors['contacts'] ?? [];
       </div>
     </div>
 
-    <div style="margin-top:12px">
+    <div class="mt-3">
       <div class="section-title">Контакты</div>
       <?php renderClientContactFields($clientContactValues, $clientContactErrors); ?>
     </div>
 
-    <div class="field" style="margin-top:12px">
+    <div class="field mt-3">
       <label class="field-label">Комментарий</label>
       <textarea name="comments" class="field-textarea driver-textarea" rows="2"><?= e($old['comments'] ?? $client['comments'] ?? '') ?></textarea>
     </div>
+
+    </div><!-- /.driver-fields -->
   </form>
 </div>
 

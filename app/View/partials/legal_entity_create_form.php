@@ -1,18 +1,37 @@
 <?php
 require_once base_path('app/View/components/contact_fields.php');
-$leEntityType   = $leEntityType ?? 'contractor';
-$leFormAction   = $leFormAction ?? '/company/contractors/create';
-$leFormId       = $leFormId ?? 'le-create-form';
-$leOld          = $leOld ?? [];
-$leErrors       = $leErrors ?? [];
-$leFormError    = $leFormError ?? null;
-$leDocTypes     = $leDocTypes ?? [];
-$leContactValues = $leContactValues ?? [];
-$leContactErrors = $leContactErrors ?? [];
+$leEntityType      = $leEntityType ?? 'contractor';
+$leFormAction      = $leFormAction ?? '/company/contractors/create';
+$leFormId          = $leFormId ?? 'le-create-form';
+$leOld             = $leOld ?? [];
+$leErrors          = $leErrors ?? [];
+$leFormError       = $leFormError ?? null;
+$leDocTypes        = $leDocTypes ?? [];
+$leContactValues   = $leContactValues ?? [];
+$leContactErrors   = $leContactErrors ?? [];
+$leIsModal         = $leIsModal ?? true;
+$leShowContacts    = $leShowContacts ?? true;
+$leShowBankDetails = $leShowBankDetails ?? true;
+$leShowDocuments   = $leShowDocuments ?? true;
+$leSubmitLabel     = $leSubmitLabel ?? 'Создать';
 
-$leTypeFieldName = $leEntityType === 'client' ? 'entity_type' : 'contractor_type';
-$leTitle = $leEntityType === 'client' ? 'КЛИЕНТА' : 'ПЕРЕВОЗЧИКА';
-$leLabel = $leEntityType === 'client' ? 'клиента' : 'перевозчика';
+$isCompany = $leEntityType === 'company' || $leEntityType === 'expeditor';
+
+$leTypeFieldName = 'contractor_type';
+if ($leEntityType === 'client') {
+    $leTypeFieldName = 'entity_type';
+}
+
+if ($isCompany) {
+    $leTitle = 'ЭКСПЕДИТОРА';
+    $leLabel = 'экспедитора';
+} elseif ($leEntityType === 'client') {
+    $leTitle = 'КЛИЕНТА';
+    $leLabel = 'клиента';
+} else {
+    $leTitle = 'ПЕРЕВОЗЧИКА';
+    $leLabel = 'перевозчика';
+}
 
 $lePredefDocs = $lePredefDocs ?? [
     ['name' => 'Карточка предприятия', 'code' => 'company_card'],
@@ -30,7 +49,9 @@ $leTypeOptions = [
 ];
 ?>
 <form id="<?= e($leFormId) ?>" method="post" action="<?= e($leFormAction) ?>" class="" enctype="multipart/form-data" data-le-create-form="<?= e($leEntityType) ?>">
+<?php if ($leIsModal): ?>
 <input type="hidden" name="is_modal" value="1">
+<?php endif; ?>
 
 <div class="entity-form-layout driver-layout">
 
@@ -49,12 +70,14 @@ $leTypeOptions = [
             </div>
 <?php endif; ?>
 
+<?php if (!$isCompany): ?>
             <div class="form-alert alert-warning is-hidden" data-inn-autofill-message>
                 <div class="alert-body">
                     <div class="alert-body-title" data-inn-autofill-title></div>
                     <div class="alert-body-sub" data-inn-autofill-sub></div>
                 </div>
             </div>
+<?php endif; ?>
 
             <div class="driver-contact-top-row">
                 <div class="field field-w-name<?= !empty($leErrors['name']) ? ' is-error' : '' ?>" data-field="name">
@@ -62,6 +85,7 @@ $leTypeOptions = [
                     <input type="text" name="name" class="field-input" placeholder='ООО "РОМАШКА"' value="<?= e($leOld['name'] ?? '') ?>">
                     <div class="field-msg"><?= !empty($leErrors['name']) ? e($leErrors['name']) : '' ?></div>
                 </div>
+<?php if (!$isCompany): ?>
                 <div class="driver-contact-stack">
                     <div class="driver-contact-main-row">
                         <div class="field field-w-phone<?= !empty($leErrors['inn']) ? ' is-error' : '' ?>" data-field="inn">
@@ -72,9 +96,21 @@ $leTypeOptions = [
                         <button type="button" class="btn btn-ghost phone-add-btn" data-inn-autofill-btn>Заполнить по ИНН</button>
                     </div>
                 </div>
+<?php else: ?>
+                <div class="driver-contact-stack">
+                    <div class="driver-contact-main-row">
+                        <div class="field field-w-phone<?= !empty($leErrors['inn']) ? ' is-error' : '' ?>" data-field="inn">
+                            <label class="field-label">ИНН <span class="req">*</span></label>
+                            <input type="text" name="inn" class="field-input" inputmode="numeric" placeholder="7701234567" value="<?= e($leOld['inn'] ?? '') ?>">
+                            <div class="field-msg"><?= !empty($leErrors['inn']) ? e($leErrors['inn']) : '' ?></div>
+                        </div>
+                    </div>
+                </div>
+<?php endif; ?>
             </div>
 
-            <div class="form-grid-3" style="margin-top:12px">
+            <div class="form-grid-3 mt-3">
+<?php if (!$isCompany): ?>
                 <div class="field" data-field="<?= e($leTypeFieldName) ?>">
                     <label class="field-label">Тип <?= $leLabel ?></label>
                     <select name="<?= e($leTypeFieldName) ?>" class="field-select">
@@ -83,6 +119,12 @@ $leTypeOptions = [
                         <?php endforeach; ?>
                     </select>
                 </div>
+<?php else: ?>
+                <div class="field" data-field="">
+                    <label class="field-label">Тип</label>
+                    <input type="text" class="field-input" value="Экспедитор" disabled>
+                </div>
+<?php endif; ?>
                 <div class="field<?= !empty($leErrors['kpp']) ? ' is-error' : '' ?>" data-field="kpp">
                     <label class="field-label">КПП</label>
                     <input type="text" name="kpp" class="field-input" inputmode="numeric" placeholder="770101001" value="<?= e($leOld['kpp'] ?? '') ?>">
@@ -95,7 +137,7 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <div class="form-grid-2" style="margin-top:12px">
+            <div class="form-grid-2 mt-3">
                 <div class="field" data-field="director_full_name">
                     <label class="field-label">Руководитель</label>
                     <input type="text" name="director_full_name" class="field-input" placeholder="ФИО руководителя" value="<?= e($leOld['director_full_name'] ?? '') ?>">
@@ -106,7 +148,7 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <div class="form-grid-2" style="margin-top:12px">
+            <div class="form-grid-2 mt-3">
                 <div class="field" data-field="legal_address">
                     <label class="field-label">Юридический адрес</label>
                     <textarea name="legal_address" class="field-textarea driver-textarea" rows="2" placeholder="Юридический адрес"><?= e($leOld['legal_address'] ?? '') ?></textarea>
@@ -117,7 +159,8 @@ $leTypeOptions = [
                 </div>
             </div>
 
-            <div style="margin-top:12px">
+<?php if ($leShowContacts && !$isCompany): ?>
+            <div class="mt-3">
                 <div class="section-title">Контакты</div>
                 <?php renderContactFields([
                     'entity_type' => $leEntityType,
@@ -128,8 +171,10 @@ $leTypeOptions = [
                     'allow_document_email' => true,
                 ]); ?>
             </div>
+<?php endif; ?>
 
-            <div style="margin-top:12px">
+<?php if ($leShowBankDetails && !$isCompany): ?>
+            <div class="mt-3">
                 <div class="section-title">Банковские реквизиты</div>
                 <div class="form-grid-4">
                     <div class="field<?= !empty($leErrors['bank_account']) ? ' is-error' : '' ?>" data-field="bank_account">
@@ -153,19 +198,21 @@ $leTypeOptions = [
                     </div>
                 </div>
             </div>
+<?php endif; ?>
 
-            <div class="field" data-field="comments" style="margin-top:12px">
+            <div class="field mt-3" data-field="comments">
                 <label class="field-label">Комментарий</label>
                 <textarea name="comments" class="field-textarea driver-textarea" rows="2" placeholder="Примечания"><?= e($leOld['comments'] ?? '') ?></textarea>
             </div>
 
-            <div class="form-actions" style="margin-top:16px">
-                <button type="submit" class="btn btn-primary">Создать</button>
+            <div class="form-actions mt-4">
+                <button type="submit" class="btn btn-primary"><?= e($leSubmitLabel) ?></button>
             </div>
 
         </div>
     </div>
 
+<?php if ($leShowDocuments && !$isCompany): ?>
     <div class="entity-form-docs driver-layout-docs">
         <div>
             <div class="section-title">Документы</div>
@@ -196,6 +243,7 @@ $leTypeOptions = [
         <div id="le-custom-docs-container" class="file-list"></div>
         <button type="button" class="btn btn-ghost" id="le-add-custom-doc-btn">+ Добавить документ</button>
     </div>
+<?php endif; ?>
 
 </div>
 

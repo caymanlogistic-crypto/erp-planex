@@ -75,11 +75,11 @@ $contractorDocumentsUrl = '/company/documents?entity_type=contractor&entity_id='
       </div>
       <?php endif; ?>
 
-      <div class="form-actions" style="margin-top:12px">
+      <div class="form-actions mt-3">
         <a href="<?= e($contractorDocumentsUrl) ?>" class="btn btn-secondary">Документы</a>
       </div>
       <?php if ($contractorArchiveBlocked !== ''): ?>
-      <div class="notice warn" style="margin-top:12px"><?= e($contractorArchiveBlocked) ?></div>
+      <div class="notice warn mt-3"><?= e($contractorArchiveBlocked) ?></div>
       <?php endif; ?>
     </div>
   </div>

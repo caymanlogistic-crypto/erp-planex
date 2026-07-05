@@ -104,18 +104,13 @@
             $entityNotFound = true;
         }
 
-        // Access check for logist
+        // Access check for logist (cascade: crew/contractor/driver_vehicle_block/driver/vehicle_set)
         $accessDenied = null;
         if ($crew) {
             $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
             if ($isLogist) {
                 $userId = (int)$_SESSION['user_id'];
-                $hasGrant = false;
-                $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'crew' AND entity_id = ? AND granted_to_user_id = ? AND revoked_at IS NULL LIMIT 1");
-                $gc->execute([$crewId, $userId]);
-                $gr = $gc->fetch(PDO::FETCH_ASSOC);
-                $hasGrant = ($gr && in_array($gr['access_level'], ['view', 'edit']));
-                if ((int)$crew['created_by_user_id'] !== $userId && !$hasGrant) {
+                if (!hasRouteExecutorAccess($localPdo, $crew, $userId, 'view')) {
                     $accessDenied = 'У вас нет доступа к этой записи.';
                 }
             }

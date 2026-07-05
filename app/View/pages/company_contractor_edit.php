@@ -86,60 +86,86 @@ $contactErrors = $errors['contacts'] ?? [];
         <div class="form-section">
             <h3 class="panel-head-title">Основные данные</h3>
 
-            <div class="field">
-                <label class="field-label">Наименование <span class="req">*</span></label>
-                <input type="text" name="name" class="field-input<?= !empty($errors['name']) ? ' is-error' : '' ?>" required
-                       value="<?= e($old['name'] ?? $contractor['name']) ?>">
-                <?php if (!empty($errors['name'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['name']) ?></div>
-                <?php endif; ?>
-            </div>
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">Наименование <span class="req">*</span></label>
+                    <input type="text" name="name" class="field-input<?= !empty($errors['name']) ? ' is-error' : '' ?>" required
+                           value="<?= e($old['name'] ?? $contractor['name']) ?>">
+                    <?php if (!empty($errors['name'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['name']) ?></div>
+                    <?php endif; ?>
+                </div>
 
-            <div class="field">
-                <label class="field-label">ИНН <span class="req">*</span></label>
-                <input type="text" name="inn" class="field-input<?= !empty($errors['inn']) ? ' is-error' : '' ?>" required
-                       value="<?= e($old['inn'] ?? $contractor['inn']) ?>">
-                <?php if (!empty($errors['inn'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['inn']) ?></div>
-                <?php endif; ?>
+                <div class="field">
+                    <label class="field-label">Статус <span class="req">*</span></label>
+                    <select name="status" class="field-select<?= !empty($errors['status']) ? ' is-error' : '' ?>">
+                        <?php
+                        $statuses = ['active' => 'Активен', 'inactive' => 'Неактивен', 'archived' => 'Архив'];
+                        $currentStatus = $old['status'] ?? $contractor['status'];
+                        foreach ($statuses as $val => $label):
+                        ?>
+                        <option value="<?= $val ?>" <?= $currentStatus === $val ? 'selected' : '' ?>><?= e($label) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (!empty($errors['status'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['status']) ?></div>
+                    <?php endif; ?>
+                </div>
             </div>
+        </div>
 
-            <div class="field">
-                <label class="field-label">КПП</label>
-                <input type="text" name="kpp" class="field-input"
-                       value="<?= e($old['kpp'] ?? $contractor['kpp'] ?? '') ?>">
-            </div>
+        <div class="form-section">
+            <h3 class="panel-head-title">Реквизиты</h3>
 
-            <div class="field">
-                <label class="field-label">ОГРН</label>
-                <input type="text" name="ogrn" class="field-input"
-                       value="<?= e($old['ogrn'] ?? $contractor['ogrn'] ?? '') ?>">
-            </div>
+            <div class="form-grid-4">
+                <div class="field">
+                    <label class="field-label">ИНН <span class="req">*</span></label>
+                    <input type="text" name="inn" class="field-input<?= !empty($errors['inn']) ? ' is-error' : '' ?>" required
+                           value="<?= e($old['inn'] ?? $contractor['inn']) ?>">
+                    <?php if (!empty($errors['inn'])): ?>
+                        <div class="field-msg is-error"><?= e($errors['inn']) ?></div>
+                    <?php endif; ?>
+                </div>
 
-            <div class="field">
-                <label class="field-label">Тип перевозчика</label>
-                <select name="contractor_type" class="field-select">
-                    <?php $contractorType = $old['contractor_type'] ?? $contractor['contractor_type'] ?? ''; ?>
-                    <option value="">— Не указан —</option>
-                    <option value="legal_entity" <?= $contractorType === 'legal_entity' ? 'selected' : '' ?>>Юридическое лицо</option>
-                    <option value="individual" <?= $contractorType === 'individual' ? 'selected' : '' ?>>Индивидуальный предприниматель</option>
-                    <option value="self_employed" <?= $contractorType === 'self_employed' ? 'selected' : '' ?>>Самозанятый</option>
-                    <option value="private_person" <?= $contractorType === 'private_person' ? 'selected' : '' ?>>Физическое лицо</option>
-                </select>
+                <div class="field">
+                    <label class="field-label">КПП</label>
+                    <input type="text" name="kpp" class="field-input"
+                           value="<?= e($old['kpp'] ?? $contractor['kpp'] ?? '') ?>">
+                </div>
+
+                <div class="field">
+                    <label class="field-label">ОГРН</label>
+                    <input type="text" name="ogrn" class="field-input"
+                           value="<?= e($old['ogrn'] ?? $contractor['ogrn'] ?? '') ?>">
+                </div>
+
+                <div class="field">
+                    <label class="field-label">Тип перевозчика</label>
+                    <select name="contractor_type" class="field-select">
+                        <?php $contractorType = $old['contractor_type'] ?? $contractor['contractor_type'] ?? ''; ?>
+                        <option value="">— Не указан —</option>
+                        <option value="legal_entity" <?= $contractorType === 'legal_entity' ? 'selected' : '' ?>>Юридическое лицо</option>
+                        <option value="individual" <?= $contractorType === 'individual' ? 'selected' : '' ?>>Индивидуальный предприниматель</option>
+                        <option value="self_employed" <?= $contractorType === 'self_employed' ? 'selected' : '' ?>>Самозанятый</option>
+                        <option value="private_person" <?= $contractorType === 'private_person' ? 'selected' : '' ?>>Физическое лицо</option>
+                    </select>
+                </div>
             </div>
         </div>
 
         <div class="form-section">
             <h3 class="panel-head-title">Адреса</h3>
 
-            <div class="field">
-                <label class="field-label">Юридический адрес</label>
-                <textarea name="legal_address" class="field-textarea" rows="2"><?= e($old['legal_address'] ?? $contractor['legal_address'] ?? '') ?></textarea>
-            </div>
+            <div class="form-grid-2">
+                <div class="field">
+                    <label class="field-label">Юридический адрес</label>
+                    <textarea name="legal_address" class="field-textarea" rows="2"><?= e($old['legal_address'] ?? $contractor['legal_address'] ?? '') ?></textarea>
+                </div>
 
-            <div class="field">
-                <label class="field-label">Фактический адрес</label>
-                <textarea name="physical_address" class="field-textarea" rows="2"><?= e($old['physical_address'] ?? $contractor['physical_address'] ?? '') ?></textarea>
+                <div class="field">
+                    <label class="field-label">Фактический адрес</label>
+                    <textarea name="physical_address" class="field-textarea" rows="2"><?= e($old['physical_address'] ?? $contractor['physical_address'] ?? '') ?></textarea>
+                </div>
             </div>
         </div>
 
@@ -165,7 +191,7 @@ $contactErrors = $errors['contacts'] ?? [];
                 </div>
             </div>
 
-            <div class="form-grid-2">
+            <div class="form-grid-2 mt-3">
                 <div class="field">
                     <label class="field-label">Банк</label>
                     <input type="text" name="bank_name" class="field-input"
@@ -181,27 +207,10 @@ $contactErrors = $errors['contacts'] ?? [];
         </div>
 
         <div class="form-section">
-            <h3 class="panel-head-title">Статус и комментарий</h3>
+            <h3 class="panel-head-title">Комментарий</h3>
 
             <div class="field">
-                <label class="field-label">Статус <span class="req">*</span></label>
-                <select name="status" class="field-select<?= !empty($errors['status']) ? ' is-error' : '' ?>">
-                    <?php
-                    $statuses = ['active' => 'Активен', 'inactive' => 'Неактивен', 'archived' => 'Архив'];
-                    $currentStatus = $old['status'] ?? $contractor['status'];
-                    foreach ($statuses as $val => $label):
-                    ?>
-                    <option value="<?= $val ?>" <?= $currentStatus === $val ? 'selected' : '' ?>><?= e($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if (!empty($errors['status'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['status']) ?></div>
-                <?php endif; ?>
-            </div>
-
-            <div class="field">
-                <label class="field-label">Комментарий</label>
-                <textarea name="comments" class="field-textarea" rows="3"><?= e($old['comments'] ?? $contractor['comments'] ?? '') ?></textarea>
+                <textarea name="comments" class="field-textarea" rows="2"><?= e($old['comments'] ?? $contractor['comments'] ?? '') ?></textarea>
             </div>
         </div>
 
