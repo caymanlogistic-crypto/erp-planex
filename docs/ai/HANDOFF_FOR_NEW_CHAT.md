@@ -1,16 +1,22 @@
 # ERP PLANEX — HANDOFF_FOR_NEW_CHAT
 
-## Актуализация 2026-07-05 — DB pool usage journal (one-way consumption safety)
+## Актуализация 2026-07-06 — DB pool cleanup safety: release only after successful cleanup + full DB object cleanup
 
-**Статус**: DB_POOL_USAGE_JOURNAL_IMPLEMENTED
+**Статус**: DB_POOL_CLEANUP_SAFETY_FIXED
 
 Ключевое, что новый чат обязан знать:
-- **DB pool usage journal added.** Central table `company_db_pool_usage` tracks assigned pool DBs one-way. Previously used pool DBs are never reused, even if the company is deleted.
-- **New helper:** `ensureCompanyDbPoolUsageTable(PDO $pdo)` in `app/Support/company_database.php` creates the journal table idempotently.
-- **New helper:** `markPoolDbUsed(PDO $centralPdo, string $dbIdentifier, int $companyId)` records assignment with `INSERT IGNORE`. Note: `superadmin_create`.
-- **findFreePoolDb() updated:** Checks both `companies.db_identifier` and `company_db_pool_usage.db_identifier`. Pool DB is "free" only if absent from both.
-- **create_submit.php:** After pool DB assignment, calls `markPoolDbUsed()`. If journal insert fails, company row is rolled back and clear error shown.
-- **One-way consumption rule:** When pool runs out, owner must create new DBs and append to `COMPANY_DB_POOL_JSON`. Old pool DBs are never recycled.
+- **`releasePoolDb()` runs ONLY after successful `cleanCompanyPoolDatabase()`.** If cleanup fails, `released_at` stays `NULL`, the DB remains reserved, dirty DBs are never reused.
+- **`cleanCompanyPoolDatabase($poolPdo)`** now fully cleans a pool DB: drops triggers, views, tables (with FK_CHECKS=0), routines (procedures/functions), and events. Does NOT drop the database itself. Uses `try/finally` to restore `FOREIGN_KEY_CHECKS=1`.
+- **New helper `companyDbQuoteIdentifier($identifier)`** — safe backtick escaping for MySQL identifiers.
+- **`superadmin_company_delete.php` updated:** pool DB release is conditional on cleanup success. If cleanup fails, step is recorded as `pool_db_release` with status `skipped` and reason `cleanup_failed`.
+- **Pool DBs are reusable, not one-way consumed.** Previously used pool DBs are fully cleaned and released on company deletion, then become free for reuse.
+- **`findFreePoolDb()`** considers a DB busy if: (a) assigned to an active company in `companies.db_identifier`, OR (b) reserved with `released_at IS NULL` in `company_db_pool_usage`. Released rows do NOT block reuse.
+- **`markPoolDbUsed()`** updates an old released row if one exists, or throws if DB is already reserved for another company. Falls back to INSERT if no row exists.
+- **Previous one-way consumption** documented in DECISIONS.md #92 is replaced by the new reusable rule. Decision #94 documents the cleanup safety fix.
+
+## Актуализация 2026-07-05 — DB pool usage journal (one-way consumption safety)
+
+**Статус**: SUPERSEDED — replaced by reusable pool tracking (2026-07-06)
 
 ## Актуализация 2026-07-05 — DB pool support for superadmin expeditor creation
 
@@ -21,7 +27,7 @@
 - **New columns in `companies` table:** `db_host`, `db_port`, `db_username`, `db_password` — per-company DB credentials.
 - **New helper:** `companyDatabaseConfig($config, $company)` in `app/Support/company_database.php` builds DB config with per-company overrides. All `db_identifier` connection sites migrated to this helper (38+ files).
 - **Pool provisioning:** `create_submit.php` first tries `CREATE DATABASE`, falls back to pool. Free DB found via `findFreePoolDb()`. If pool exhausted: clear error `Нет свободных подготовленных баз данных для новой компании. Создайте новые базы и добавьте их в COMPANY_DB_POOL_JSON.`
-- **Delete behavior:** Pool DBs (with `db_username` set) are NOT dropped on delete. Only generated `erp_company_{id}` DBs are dropped.
+- **Delete behavior:** Pool DBs (with `db_username` set) are cleaned and released on delete, not dropped. Only generated `erp_company_{id}` DBs are dropped.
 - **New migration:** `010_add_db_pool_columns_to_companies.sql` — MySQL 5.7 safe.
 - **`.env.example`** documents `COMPANY_DB_POOL_JSON` format.
 - **Security:** passwords never displayed in views, never committed.
@@ -451,9 +457,9 @@ tmp/codex-stage-docs/*
 
 ## 2026-06-28 handoff note: E7 route split
 - public/index.php no longer contains route registration blocks.
-- New route source of truth: pp/Http/Routes/*.php.
+- New route source of truth: `app/Http/Routes/*.php.
 - If a route regression appears, inspect the dedicated route file first, not the old monolith.
-- Shared helpers and pplyLocalMigrations() still remain in public/index.php for now.
+- Shared helpers and `applyLocalMigrations() still remain in public/index.php for now.
 
 ## 2026-06-28 storage/companies rule
 

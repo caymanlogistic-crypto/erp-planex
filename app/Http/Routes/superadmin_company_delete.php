@@ -374,8 +374,36 @@ $router->post('/superadmin/companies/{id}/delete', function ($id) use ($config, 
     // === Write partial report before destructive steps ===
     file_put_contents($reportFile, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-    // === STEP 4: Drop local DB (only for separate databases) ===
-    if ($hasSeparateDb) {
+    // === STEP 4: Handle pool DB (clean + release) or drop separate DB ===
+    if ($isPoolDb && !empty($dbIdentifier)) {
+        $poolDbCleanOk = false;
+        try {
+            $localDbCfg = companyDatabaseConfig($config, $company);
+            $localDb = new \App\Core\Database($localDbCfg);
+            $localPdoClean = $localDb->connection();
+            cleanCompanyPoolDatabase($localPdoClean);
+            $report['steps'][] = ['step' => 'pool_db_clean', 'status' => 'success', 'db' => $dbIdentifier];
+            $poolDbCleanOk = true;
+        } catch (\Exception $e) {
+            $report['steps'][] = ['step' => 'pool_db_clean', 'status' => 'fail', 'error' => $e->getMessage()];
+            $report['errors'][] = 'pool_db_clean: ' . $e->getMessage();
+            $overallSuccess = false;
+        }
+
+        // Release pool DB ONLY after successful cleanup — prevents dirty DB reuse
+        if ($poolDbCleanOk) {
+            try {
+                releasePoolDb($pdo, $dbIdentifier, $companyId);
+                $report['steps'][] = ['step' => 'pool_db_release', 'status' => 'success', 'db' => $dbIdentifier];
+            } catch (\Exception $e) {
+                $report['steps'][] = ['step' => 'pool_db_release', 'status' => 'fail', 'error' => $e->getMessage()];
+                $report['errors'][] = 'pool_db_release: ' . $e->getMessage();
+                $overallSuccess = false;
+            }
+        } else {
+            $report['steps'][] = ['step' => 'pool_db_release', 'status' => 'skipped', 'reason' => 'cleanup_failed — DB remains reserved (released_at IS NULL)'];
+        }
+    } elseif ($hasSeparateDb) {
         try {
             $dbConfig = $config['database'];
             $dbConfig['database'] = '';

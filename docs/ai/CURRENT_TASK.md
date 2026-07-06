@@ -1,31 +1,31 @@
 # ERP PLANEX — текущая задача
 
-## Актуализация 2026-07-05 — DB pool usage journal (one-way consumption safety)
+## Актуализация 2026-07-06 — DB pool cleanup safety: release only after successful cleanup + full DB object cleanup
 
-**Статус**: DB_POOL_USAGE_JOURNAL_IMPLEMENTED
+**Статус**: DB_POOL_CLEANUP_SAFETY_FIXED
 
 Выполнено:
 
-### A. Central usage journal table
-- `app/Support/company_database.php`: `ensureCompanyDbPoolUsageTable(PDO $pdo): void` creates `company_db_pool_usage` table in central DB if not exists.
-- Table: `company_db_pool_usage` with `id`, `db_identifier` (UNIQUE), `company_id`, `created_at`, `released_at`, `note`.
-- No passwords, host or user secrets stored in this table.
+### A. `superadmin_company_delete.php`: release pool DB only after successful cleanup
+- `releasePoolDb()` now runs ONLY when `cleanCompanyPoolDatabase()` succeeds.
+- If cleanup fails, `released_at` stays `NULL`, the DB remains reserved, and `$overallSuccess = false`.
+- The delete report records `pool_db_release` as `skipped` with reason `cleanup_failed`.
+- This prevents dirty DBs from being reused by the next company.
 
-### B. findFreePoolDb() updated
-- Now calls `ensureCompanyDbPoolUsageTable()` first.
-- Considers a pool DB used if it exists in `companies.db_identifier` OR in `company_db_pool_usage.db_identifier`.
-- Returns only entries not consumed by either source.
+### B. `cleanCompanyPoolDatabase()` fully cleans a pool DB
+Now drops all of the following for the current database:
+- **Triggers** (from `information_schema.TRIGGERS`)
+- **Views** (from `SHOW FULL TABLES WHERE Table_type = 'VIEW'`)
+- **Base tables** (with `SET FOREIGN_KEY_CHECKS=0`)
+- **Routines** (procedures/functions from `information_schema.ROUTINES`)
+- **Events** (from `information_schema.EVENTS`)
+- `FOREIGN_KEY_CHECKS` restored to `1` even if an exception occurs (try/finally).
+- Backtick escaping helper `companyDbQuoteIdentifier()` added for safe identifier quoting.
+- Does NOT drop the database itself. MySQL 5.7 compatible.
 
-### C. markPoolDbUsed() helper
-- `markPoolDbUsed(PDO $centralPdo, string $dbIdentifier, int $companyId): void`
-- Calls `ensureCompanyDbPoolUsageTable()` and inserts with `INSERT IGNORE` (idempotent).
-- Records `db_identifier`, `company_id`, note `superadmin_create`.
+### C. New helper `companyDbQuoteIdentifier(string $identifier): string`
+- Safe backtick escaping for MySQL identifiers.
+- Double backticks inside names per MySQL standard.
 
-### D. Pool usage recorded in create_submit.php
-- After successful pool DB assignment and central company update, calls `markPoolDbUsed($pdo, $finalDbName, $companyId)`.
-- If marking fails, company row is rolled back (`DELETE FROM companies`) and clear error shown.
-- One-way consumption: pool DBs are never reused, even if company is deleted later.
-
-### E. Docs updated
-- `docs/ai/CURRENT_TASK.md`, `docs/ai/DECISIONS.md`, `docs/ai/HANDOFF_FOR_NEW_CHAT.md` updated.
-- Pool DBs documented as one-time consumed; when exhausted owner must create new DBs and append to `COMPANY_DB_POOL_JSON`.
+### D. Docs updated
+- All relevant docs state: DB is marked free only after successful cleanup; dirty/failed cleanup DB remains reserved.
