@@ -31,10 +31,13 @@ final class AuthController
         $multiLogistError = null;
         $devSeedPassword = null;
 
+        $allowDevSeed = ($this->config['app']['app_env'] ?? 'production') === 'local'
+            && filter_var(env('APP_ALLOW_DEV_SEED', false), FILTER_VALIDATE_BOOL);
+
         try {
             $pdo = $this->db->connection();
             $count = $pdo->query("SELECT COUNT(*) FROM superadmin_users")->fetchColumn();
-            if ((int) $count === 0) {
+            if ($allowDevSeed && (int) $count === 0) {
                 $tempPassword = generatePassword(10);
                 $hash = password_hash($tempPassword, PASSWORD_BCRYPT);
                 $stmt = $pdo->prepare(
@@ -104,14 +107,20 @@ final class AuthController
                 $_SESSION['role_code'] = 'superadmin';
                 $_SESSION['company_id'] = null;
                 $_SESSION['user_name'] = $superUser['name'] ?? 'Super Admin';
+                $_SESSION['user'] = [
+                    'user_id' => $_SESSION['user_id'],
+                    'role_code' => 'superadmin',
+                    'company_id' => null,
+                ];
                 redirect_to('/superadmin/companies');
             }
 
             $ownerStmt = $pdo->prepare(
-                "SELECT cu.*, c.status as company_status
+                "SELECT cu.*, c.name as company_name, c.status as company_status
                  FROM company_users cu
                  JOIN companies c ON cu.company_id = c.id
-                 WHERE cu.login = :login"
+                 WHERE cu.login = :login
+                   AND cu.role = 'company_owner'"
             );
             $ownerStmt->execute([':login' => $loginValue]);
             $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC);
@@ -127,11 +136,17 @@ final class AuthController
                     $_SESSION['role_code'] = 'company_owner';
                     $_SESSION['company_id'] = (int) $owner['company_id'];
                     $_SESSION['user_name'] = $owner['full_name'];
+                    $_SESSION['company_name'] = $owner['company_name'];
+                    $_SESSION['user'] = [
+                        'user_id' => $_SESSION['user_id'],
+                        'role_code' => 'company_owner',
+                        'company_id' => $_SESSION['company_id'],
+                    ];
                     redirect_to('/company/dashboard');
                 }
             }
 
-            $companiesStmt = $pdo->query("SELECT id, db_identifier, db_host, db_port, db_username, db_password FROM companies WHERE status = 'active'");
+            $companiesStmt = $pdo->query("SELECT id, name, db_identifier, db_host, db_port, db_username, db_password FROM companies WHERE status = 'active'");
             $activeCompanies = $companiesStmt->fetchAll(\PDO::FETCH_ASSOC);
 
             $logistCandidates = [];
@@ -141,7 +156,6 @@ final class AuthController
                     $localDbConfig = companyDatabaseConfig($this->config, $ac);
                     $localDb = new Database($localDbConfig);
                     $localPdo = $localDb->connection();
-                    applyLocalMigrations($localPdo);
 
                     $logistStmt = $localPdo->prepare(
                         "SELECT * FROM users WHERE login = :login AND status = 'active'"
@@ -153,6 +167,7 @@ final class AuthController
                         $logistCandidates[] = [
                             'user' => $logistUser,
                             'company_id' => (int) $ac['id'],
+                            'company_name' => $ac['name'],
                             'db_identifier' => $ac['db_identifier'],
                         ];
                     }
@@ -169,6 +184,12 @@ final class AuthController
                     $_SESSION['role_code'] = $candidate['user']['role_code'] ?? 'logist';
                     $_SESSION['company_id'] = $candidate['company_id'];
                     $_SESSION['user_name'] = $candidate['user']['full_name'];
+                    $_SESSION['company_name'] = $candidate['company_name'];
+                    $_SESSION['user'] = [
+                        'user_id' => $_SESSION['user_id'],
+                        'role_code' => $_SESSION['role_code'],
+                        'company_id' => $_SESSION['company_id'],
+                    ];
                     redirect_to('/company/dashboard');
                 }
                 $authError = 'Неверный логин или пароль.';
@@ -189,6 +210,11 @@ final class AuthController
 
     public function logout(): void
     {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+        }
         session_destroy();
         redirect_to('/login', 302);
     }
