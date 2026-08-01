@@ -25,8 +25,12 @@ if (file_exists($envFile)) {
         if (count($parts) === 2) {
             $name  = trim($parts[0]);
             $value = trim($parts[1]);
-            putenv("$name=$value");
-            $_ENV[$name] = $value;
+            // Non-overwrite semantics: an existing process environment variable
+            // always takes precedence over a value loaded from .env.
+            if (getenv($name) === false) {
+                putenv("$name=$value");
+                $_ENV[$name] = $value;
+            }
         }
     }
 }
