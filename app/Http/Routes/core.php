@@ -19,6 +19,11 @@ $router->get('/', function () use ($config) {
 });
 
 $router->get('/dev/ui-foundation', function () use ($config) {
+    if (($config['app']['app_env'] ?? 'production') !== 'local') {
+        http_response_code(404);
+        exit;
+    }
+    requireRole('superadmin');
     $pageTitle = 'UI foundation';
 
     ob_start();
@@ -29,11 +34,19 @@ $router->get('/dev/ui-foundation', function () use ($config) {
 });
 
 $router->get('/test', function () {
+    if (env('APP_ENV', 'production') !== 'local') {
+        http_response_code(404);
+        exit;
+    }
     header('Content-Type: text/plain');
     echo 'ERP PLANEX core is running';
 });
 
 $router->get('/test-db', function () use ($db) {
+    if (env('APP_ENV', 'production') !== 'local') {
+        http_response_code(404);
+        exit;
+    }
     header('Content-Type: text/plain');
     try {
         $db->connection();
@@ -42,7 +55,6 @@ $router->get('/test-db', function () use ($db) {
         echo 'DB connection FAILED';
     }
 });
-
 // ============================================================
 // SUPERADMIN: Companies list
 // ============================================================
