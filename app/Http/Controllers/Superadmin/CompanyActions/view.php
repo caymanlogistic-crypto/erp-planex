@@ -125,13 +125,8 @@
             }
         }
 
-        if (!empty($company['storage_path'])) {
-            $resolvedPath = base_path($company['storage_path']);
-            $storageExists = is_dir($resolvedPath);
-        } else {
-            $fallbackPath = storage_path('companies/' . (int)$id);
-            $storageExists = is_dir($fallbackPath);
-        }
+        $resolvedStoragePath = company_storage_path($company['storage_path'] ?? null, (int) $id);
+        $storageExists = is_dir($resolvedStoragePath);
 
         $dbError = null;
 

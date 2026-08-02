@@ -27,6 +27,23 @@ if (!function_exists('storage_path')) {
     }
 }
 
+if (!function_exists('company_storage_path')) {
+    function company_storage_path(?string $configuredPath, int $companyId): string
+    {
+        $configuredPath = rtrim(str_replace('\\', '/', trim((string) $configuredPath)), '/');
+
+        if ($configuredPath === '') {
+            return storage_path('companies/' . $companyId);
+        }
+
+        if (str_starts_with($configuredPath, 'storage/')) {
+            return storage_path(substr($configuredPath, strlen('storage/')));
+        }
+
+        return base_path($configuredPath);
+    }
+}
+
 if (!function_exists('e')) {
     function e(?string $value): string
     {
