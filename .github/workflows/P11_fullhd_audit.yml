@@ -1,5 +1,6 @@
 name: P11 Full HD audit
 
+# Same-repository PR trigger used to expose the protected run ID to the audit controller.
 on:
   push:
     branches:
