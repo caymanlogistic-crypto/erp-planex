@@ -77,24 +77,27 @@ jobs:
           from pathlib import Path
           path = Path('/tmp/P11_fullhd_audit_v4.js')
           text = path.read_text(encoding='utf-8')
-          old = '''            const stack = document.elementsFromPoint(cx, cy);
-            const hit = stack.find((node) => {
-                if (!(node instanceof Element)) return false;
-                if (node === element || element.contains(node) || node.contains(element)) return false;
-                if (!isActuallyVisible(node)) return false;
-                return true;
-            });
-            if (hit) {'''
-          new = '''            const hit = document.elementFromPoint(cx, cy);
+          start_token = 'const stack = document.elementsFromPoint(cx, cy);'
+          end_token = 'if (hit) {'
+          start = text.find(start_token)
+          if start < 0:
+              raise SystemExit('V4 overlap start token missing')
+          line_start = text.rfind('\n', 0, start) + 1
+          end = text.find(end_token, start)
+          if end < 0:
+              raise SystemExit('V4 overlap end token missing')
+          end += len(end_token)
+          replacement = '''            const hit = document.elementFromPoint(cx, cy);
             const isUnrelatedTopmost = hit instanceof Element
                 && hit !== element
                 && !element.contains(hit)
                 && !hit.contains(element)
                 && isActuallyVisible(hit);
             if (isUnrelatedTopmost) {'''
-          if text.count(old) != 1:
-              raise SystemExit('V4 overlap patch target was not unique')
-          path.write_text(text.replace(old, new), encoding='utf-8', newline='\n')
+          text = text[:line_start] + replacement + text[end:]
+          if start_token in text:
+              raise SystemExit('V4 legacy overlap detector remains')
+          path.write_text(text, encoding='utf-8', newline='\n')
           PY
           node --check /tmp/P11_fullhd_audit_v4.js
           grep -F 'document.elementFromPoint(cx, cy)' /tmp/P11_fullhd_audit_v4.js
