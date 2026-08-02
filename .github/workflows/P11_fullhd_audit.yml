@@ -1,0 +1,94 @@
+name: P11 Full HD audit
+
+on:
+  push:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p11/**'
+      - '.github/workflows/P11_fullhd_audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  P11_BASE_URL: https://plan-ex.ru/erpv2/
+  P11_OUT_DIR: P11_output
+
+jobs:
+  fullhd-readonly-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "${credentials}" ] && [ -n "${SSH_HOST:-}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            install -d -m 700 "${HOME}/.ssh"
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P11_erpv2_audit"
+            printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+            chmod 600 "${HOME}/.ssh/P11_erpv2_audit" "${HOME}/.ssh/known_hosts"
+            credentials="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P11_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "test -f /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 && cat /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 || true")"
+          fi
+          if [ -n "${credentials}" ]; then
+            echo "::add-mask::${credentials}"
+            printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+            echo "P11 credentials resolved securely."
+          else
+            echo "No secure P11 runtime credentials are available; runner will record RUNTIME_ACCESS_BLOCKED."
+          fi
+
+      - name: Execute read-only 1920x1080 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p11/P11_fullhd_audit.js | tee P11_runner_summary.json
+
+      - name: Record commit evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P11_output
+          printf '%s\n' "${GITHUB_SHA}" > P11_output/P11_START_HEAD.txt
+          printf '%s\n' "${GITHUB_SHA}" > P11_output/P11_FINAL_HEAD.txt
+          printf '%s\n' "${GITHUB_RUN_ID}" > P11_output/P11_AUDIT_RUN_ID.txt
+
+      - name: Upload P11 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P11_fullhd_evidence_${{ github.sha }}
+          path: |
+            P11_output/
+            P11_runner_summary.json
+          if-no-files-found: warn
+          retention-days: 30
