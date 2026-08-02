@@ -25,16 +25,13 @@
         $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
 
         $user = [
             'id' => $_SESSION['user_id'] ?? null,
             'role' => $_SESSION['role_code'] ?? null,
         ];
 
-        $operationId = \App\Service\FinanceCashService::createCashOperation($localPdo, $_POST, $user);
-
-
+        \App\Service\FinanceCashService::createCashOperation($localPdo, $_POST, $user);
 
         $typeLabel = $_POST['operation_type'] === 'INCOME' ? 'Приход' : 'Расход';
         $_SESSION['finance_success'] = $typeLabel . ' успешно проведён.';
