@@ -96,7 +96,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node /tmp/P11_fullhd_audit_v2.js | tee P11_runner_summary.json
+          NODE_PATH="${GITHUB_WORKSPACE}/node_modules" node /tmp/P11_fullhd_audit_v2.js | tee P11_runner_summary.json
 
       - name: Record commit evidence
         if: always()
