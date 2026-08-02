@@ -1,0 +1,128 @@
+name: P11 Final Full HD V4 audit
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P11_final_fullhd_v4_audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  P11_BASE_URL: https://plan-ex.ru/erpv2/
+  P11_OUT_DIR: P11_output
+  P11_MAX_PATTERNS: '120'
+
+jobs:
+  final-fullhd-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P11_erpv2_audit"
+            chmod 600 "${HOME}/.ssh/P11_erpv2_audit"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P11_erpv2_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P11_erpv2_audit"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Build corrected V4 runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            .github/p11/P11_fullhd_audit_v3.js.gz.b64 \
+            .github/p11/P11_fullhd_audit_v3.part1b.b64 \
+            .github/p11/P11_fullhd_audit_v3.part1c.b64 \
+            .github/p11/P11_fullhd_audit_v3.part1d.b64 \
+            .github/p11/P11_fullhd_audit_v3.part2.b64 \
+            .github/p11/P11_fullhd_audit_v3.part3.b64 \
+            .github/p11/P11_fullhd_audit_v3.part4.b64 \
+            .github/p11/P11_fullhd_audit_v3.part5.b64 \
+            | base64 -d | gzip -d > /tmp/P11_fullhd_audit_v4.js
+          python <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/P11_fullhd_audit_v4.js')
+          text = path.read_text(encoding='utf-8')
+          old = '''            const stack = document.elementsFromPoint(cx, cy);
+            const hit = stack.find((node) => {
+                if (!(node instanceof Element)) return false;
+                if (node === element || element.contains(node) || node.contains(element)) return false;
+                if (!isActuallyVisible(node)) return false;
+                return true;
+            });
+            if (hit) {'''
+          new = '''            const hit = document.elementFromPoint(cx, cy);
+            const isUnrelatedTopmost = hit instanceof Element
+                && hit !== element
+                && !element.contains(hit)
+                && !hit.contains(element)
+                && isActuallyVisible(hit);
+            if (isUnrelatedTopmost) {'''
+          if text.count(old) != 1:
+              raise SystemExit('V4 overlap patch target was not unique')
+          path.write_text(text.replace(old, new), encoding='utf-8', newline='\n')
+          PY
+          node --check /tmp/P11_fullhd_audit_v4.js
+          grep -F 'document.elementFromPoint(cx, cy)' /tmp/P11_fullhd_audit_v4.js
+          if grep -F 'document.elementsFromPoint(cx, cy)' /tmp/P11_fullhd_audit_v4.js; then exit 1; fi
+
+      - name: Execute final three-role 1920x1080 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          NODE_PATH="${GITHUB_WORKSPACE}/node_modules" node /tmp/P11_fullhd_audit_v4.js | tee P11_runner_summary.json
+
+      - name: Record final evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P11_output
+          printf '%s\n' '2b61d9dcd32efe3a861341da7939b26a7cd02499' > P11_output/P11_DEPLOYED_APPLICATION_HEAD.txt
+          printf '%s\n' "${GITHUB_SHA}" > P11_output/P11_AUDIT_SOURCE_HEAD.txt
+          printf '%s\n' "${GITHUB_RUN_ID}" > P11_output/P11_FINAL_AUDIT_RUN_ID.txt
+
+      - name: Upload final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P11_final_fullhd_v4_evidence
+          path: |
+            P11_output/
+            P11_runner_summary.json
+          if-no-files-found: warn
+          retention-days: 30
