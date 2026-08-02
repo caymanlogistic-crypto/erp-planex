@@ -32,7 +32,8 @@ $check = static function (string $name, bool $ok) use (&$pass, &$fail): void {
 
 $check('dashboard GET handler extracted', $getHandler !== '');
 $check('dashboard GET is migration-free', !str_contains($getHandler, 'applyLocalMigrations('));
-$check('central company lookup remains read-only', str_contains($getHandler, 'SELECT id, name, db_identifier, status FROM companies'));
+$check('central company lookup remains read-only', str_contains($getHandler, 'SELECT id, name, db_identifier, status, db_host, db_port, db_username, db_password'));
+$check('company lookup remains tenant-scoped', str_contains($getHandler, 'FROM companies WHERE id = ?'));
 $check('company database resolution remains configured', str_contains($getHandler, 'companyDatabaseConfig($config, $company)'));
 $check('company database connection remains enabled', str_contains($getHandler, '$localPdo = $localDb->connection()'));
 $check('owner metrics remain SELECT-only', str_contains($getHandler, 'SELECT COUNT(*) as total'));

@@ -17,7 +17,10 @@ $router->get('/company/dashboard', function () use ($config, $db) {
 
     try {
         $pdo = $db->connection();
-        $stmt = $pdo->prepare('SELECT id, name, db_identifier, status FROM companies WHERE id = ?');
+        $stmt = $pdo->prepare(
+            'SELECT id, name, db_identifier, status, db_host, db_port, db_username, db_password '
+            . 'FROM companies WHERE id = ?'
+        );
         $stmt->execute([$companyId]);
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
 
