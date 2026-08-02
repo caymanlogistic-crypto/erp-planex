@@ -12,9 +12,9 @@ $contactErrors = $errors['contacts'] ?? [];
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Создать клиента</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Создать клиента</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/clients') ?>" class="btn btn-ghost">← К списку</a>
@@ -33,9 +33,9 @@ $contactErrors = $errors['contacts'] ?? [];
 <?php elseif ($success): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиент создан</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиент создан</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/clients') ?>" class="btn btn-primary">← К списку</a>
@@ -90,9 +90,9 @@ $contactErrors = $errors['contacts'] ?? [];
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Создать клиента</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Создать клиента</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/clients') ?>" class="btn btn-ghost">← К списку</a>

@@ -61,7 +61,7 @@ window.ModalShell = (function () {
             if (oldFoot) oldFoot.remove();
             var el = document.createElement('div');
             el.className = 'modal-body';
-            el.innerHTML = '<div class="notice warn" style="margin:16px">' + msg + '</div>';
+            el.innerHTML = '<div class="notice warn modal-notice">' + msg + '</div>';
             modal.appendChild(el);
         }
 
@@ -125,6 +125,9 @@ window.ModalShell = (function () {
 
         function loadEdit(id) {
             showLoading('...');
+            setEntityId(id);
+            var s = getShell();
+            s.classList.add('is-open');
             fetchHtml(config.endpoints.edit(id))
                 .then(function (html) {
                     setContent(html);

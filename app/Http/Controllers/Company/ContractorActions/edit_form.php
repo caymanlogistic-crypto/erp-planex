@@ -74,6 +74,15 @@ try {
         return;
     }
 
+    if (($_SESSION['role_code'] ?? '') === 'logist' && !$service->checkLogistCanEdit(
+        $localPdo,
+        (int) $id,
+        (int) ($_SESSION['user_id'] ?? 0),
+        (int) ($contractor['created_by_user_id'] ?? 0)
+    )) {
+        denyEntityAccess();
+    }
+
     $contacts = ContractorContactService::loadByContractorId($localPdo, (int) $id);
     $errors = [];
     $old = $contractor;

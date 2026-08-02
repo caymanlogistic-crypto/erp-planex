@@ -14,6 +14,7 @@
     $leShowStatus = true;
     $leShowInlineActions = false;
     $leInnLookupUrl = app_url('/superadmin/requisites/lookup-by-inn');
+    $leExistingDocs = $leExistingDocs ?? [];
     require base_path('app/View/partials/legal_entity_create_form.php');
 ?>
 </div>

@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Типы документов</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Типы документов</h1>
+        <div class="page-summary"><span>Категории документов для разных типов сущностей</span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-ghost">← На главную</a>
@@ -23,8 +23,9 @@
 <?php elseif (!empty($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Типы документов</h1>
+    <div class="page-head-left">
+        <h1 class="page-title">Типы документов</h1>
+        <div class="page-summary"><span>Категории документов для разных типов сущностей</span></div>
     </div>
 </div>
 <div class="notice warn">
@@ -34,9 +35,9 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Типы документов</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Типы документов</h1>
+        <div class="page-summary"><span>Категории документов для разных типов сущностей</span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/document-types/create') ?>" class="btn btn-primary">+ Создать тип</a>
@@ -57,8 +58,7 @@
         <?php if (empty($types) && empty($filterEntity)): ?>
             <div class="empty-state">
                 <p class="empty-title">Типы документов не найдены</p>
-                <p class="empty-desc">Создайте типы документов для каталогизации.</p>
-                <a href="<?= app_url('/company/document-types/create') ?>" class="btn btn-primary">Создать тип</a>
+                <p class="empty-desc">Создайте типы документов для каталогизации загружаемых файлов.</p>
             </div>
         <?php else: ?>
 
@@ -74,9 +74,8 @@
             <?php endif; ?>
 
             <?php if (empty($types)): ?>
-                <div class="empty-state">
-                    <p class="empty-title">Нет типов для выбранного фильтра</p>
-                    <p class="empty-desc">Создайте новый тип документа или измените фильтр.</p>
+                <div class="empty-state compact">
+                    <p>По заданным условиям ничего не найдено. Попробуйте изменить фильтр.</p>
                 </div>
             <?php else: ?>
             <div class="table-scroll">
@@ -113,7 +112,7 @@
                             <td class="row-actions">
                                 <a href="/company/document-types/<?= $t['id'] ?>/edit" class="btn btn-ghost btn-sm">Редактировать</a>
                                 <?php if ($t['category'] !== 'predefined'): ?>
-                                <form method="post" action="/company/document-types/<?= $t['id'] ?>/delete" style="display:inline;" onsubmit="return confirm('Удалить тип документа «<?= e($t['name']) ?>»?')">
+                                <form method="post" action="/company/document-types/<?= $t['id'] ?>/delete" class="inline-form" onsubmit="return confirm('Удалить тип документа «<?= e($t['name']) ?>»?')">
                                     <button type="submit" class="btn btn-ghost btn-sm">Удалить</button>
                                 </form>
                                 <?php endif; ?>

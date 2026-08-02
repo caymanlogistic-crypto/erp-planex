@@ -50,26 +50,24 @@ try {
             http_response_code(403);
             exit;
         }
+    } elseif (!\App\Service\DocumentService::canCurrentUserView($lpdo, $doc)) {
+        http_response_code(403);
+        exit;
     }
 
     $relPath = (string) ($doc['relative_path'] ?? '');
-    if ($relPath === '' || strpos($relPath, '..') !== false) {
+    $filePath = \App\Service\DocumentService::resolveStoredPath($companyId, $relPath);
+    if ($filePath === null) {
         http_response_code(404);
         exit;
     }
 
-    $filePath = storage_path($relPath);
-    if (!is_file($filePath)) {
-        http_response_code(404);
-        exit;
-    }
-
-    $mime = (string) ($doc['mime_type'] ?: 'application/octet-stream');
+    $mime = \App\Service\DocumentService::responseMime($filePath);
     $fileSize = (int) ($doc['file_size'] ?? 0);
-    $originalName = (string) ($doc['original_name'] ?? 'document');
+    $originalName = \App\Service\DocumentService::safeDownloadName((string) ($doc['original_name'] ?? 'document'));
 
     header('Content-Type: ' . $mime);
-    header('Content-Disposition: attachment; filename="' . addcslashes($originalName, "\"\\") . '"');
+    header('Content-Disposition: attachment; filename="' . $originalName . '"');
     if ($fileSize > 0) {
         header('Content-Length: ' . $fileSize);
     }

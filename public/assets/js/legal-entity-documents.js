@@ -212,6 +212,12 @@
                 if (error) {
                     setDocumentError(input, error);
                 }
+                if (row.dataset.hasExisting === '1') {
+                    var deleteHidden = row.querySelector('[data-delete-predef-doc]');
+                    if (deleteHidden) {
+                        deleteHidden.value = '0';
+                    }
+                }
                 paintRow(row, fileSummary(input));
             });
         }
@@ -220,6 +226,13 @@
             clearButton.addEventListener('click', function () {
                 input.value = '';
                 clearDocumentError(input);
+
+                var deleteHidden = row.querySelector('[data-delete-predef-doc]');
+                if (row.dataset.hasExisting === '1' && deleteHidden) {
+                    deleteHidden.value = '1';
+                    paintRow(row, { text: 'Файл не выбран', badge: '—', badgeClassName: 'file-type-badge-empty', filled: false });
+                    return;
+                }
 
                 if (row.classList.contains('custom-doc-row')) {
                     var customType = row.querySelector('input[name="custom_doc_type_new[]"]');
@@ -244,11 +257,19 @@
     }
 
     function buildCustomRow(container, docTypes) {
-        var index = container.children.length;
-        var badgeId = 'le-custom-badge-' + index;
-        var metaId = 'le-custom-meta-' + index;
-        var labelId = 'le-custom-label-' + index;
-        var inputId = 'le-custom-input-' + index;
+        var form = container.closest('form');
+        var counter = 0;
+        if (form) {
+            if (!form._leDocCounter) form._leDocCounter = 0;
+            form._leDocCounter += 1;
+            counter = form._leDocCounter;
+        } else {
+            counter = container.children.length;
+        }
+        var badgeId = 'le-custom-badge-' + counter;
+        var metaId = 'le-custom-meta-' + counter;
+        var labelId = 'le-custom-label-' + counter;
+        var inputId = 'le-custom-input-' + counter;
         var row = document.createElement('div');
 
         row.className = 'file-item custom-doc-row document-file-row is-empty';
@@ -302,6 +323,18 @@
             });
         }
     };
+
+    // Init standalone full-page superadmin forms on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function () {
+        var createForm = document.getElementById('le-sa-company-create-form');
+        if (createForm && window.initLegalEntityDocuments) {
+            window.initLegalEntityDocuments(createForm);
+        }
+        var editForm = document.getElementById('company-edit-form');
+        if (editForm && window.initLegalEntityDocuments) {
+            window.initLegalEntityDocuments(editForm);
+        }
+    });
 
     window.validateLegalEntityDocuments = function (form) {
         if (!form) {

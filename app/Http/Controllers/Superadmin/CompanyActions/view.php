@@ -11,7 +11,7 @@
 
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        $company = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$company) {
             $company = null;
@@ -31,7 +31,7 @@
             "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
         );
         $ownerStmt->execute([(int) $id]);
-        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
 
         $userStats = ['total' => 0, 'active' => 0, 'blocked' => 0, 'owner_count' => 0, 'logist_count' => 0];
         $ownerCountStmt = $pdo->prepare(
@@ -41,7 +41,7 @@
              FROM company_users WHERE company_id = ?"
         );
         $ownerCountStmt->execute([(int)$id]);
-        $ownerCounts = $ownerCountStmt->fetch(PDO::FETCH_ASSOC);
+        $ownerCounts = $ownerCountStmt->fetch(\PDO::FETCH_ASSOC);
         $userStats['owner_count'] = (int)($ownerCounts['owner_total'] ?? 0);
         $userStats['total'] += $userStats['owner_count'];
         $userStats['active'] += (int)($ownerCounts['owner_active'] ?? 0);
@@ -58,6 +58,7 @@
         ];
         $docStats = ['total' => 0, 'active' => 0];
         $accessStats = ['total' => 0];
+        $companyDocs = [];
         $localDbExists = false;
         $storageExists = false;
 
@@ -76,7 +77,7 @@
                      FROM users WHERE role_code IN ('logist', 'senior_logist')"
                 );
                 $logistCountStmt->execute();
-                $logistCounts = $logistCountStmt->fetch(PDO::FETCH_ASSOC);
+                $logistCounts = $logistCountStmt->fetch(\PDO::FETCH_ASSOC);
                 $userStats['logist_count'] = (int)($logistCounts['logist_total'] ?? 0);
                 $userStats['total'] += $userStats['logist_count'];
                 $userStats['active'] += (int)($logistCounts['logist_active'] ?? 0);
@@ -91,7 +92,7 @@
                          FROM `{$table}`"
                     );
                     $dirStmt->execute();
-                    $row = $dirStmt->fetch(PDO::FETCH_ASSOC);
+                    $row = $dirStmt->fetch(\PDO::FETCH_ASSOC);
                     $dirs[$table . '_total'] = (int)($row['total'] ?? 0);
                     $dirs[$table . '_active'] = (int)($row['active'] ?? 0);
                     $dirs[$table . '_archived'] = (int)($row['archived'] ?? 0);
@@ -103,9 +104,19 @@
                      FROM documents"
                 );
                 $docCountStmt->execute();
-                $docRow = $docCountStmt->fetch(PDO::FETCH_ASSOC);
+                $docRow = $docCountStmt->fetch(\PDO::FETCH_ASSOC);
                 $docStats['total'] = (int)($docRow['total'] ?? 0);
                 $docStats['active'] = (int)($docRow['active'] ?? 0);
+
+                $companyDocsStmt = $localPdo->prepare(
+                    'SELECT d.*, dt.name AS type_name, dt.code AS type_code
+                     FROM documents d
+                     LEFT JOIN document_types dt ON d.document_type_id = dt.id
+                     WHERE d.entity_type = ? AND d.entity_id = ? AND d.deleted_at IS NULL
+                     ORDER BY d.created_at DESC LIMIT 20'
+                );
+                $companyDocsStmt->execute(['company', (int)$id]);
+                $companyDocs = $companyDocsStmt->fetchAll(\PDO::FETCH_ASSOC);
 
                 $accessCountStmt = $localPdo->prepare("SELECT COUNT(*) as total FROM entity_access_grants");
                 $accessCountStmt->execute();
@@ -115,7 +126,11 @@
         }
 
         if (!empty($company['storage_path'])) {
-            $storageExists = is_dir($company['storage_path']);
+            $resolvedPath = base_path($company['storage_path']);
+            $storageExists = is_dir($resolvedPath);
+        } else {
+            $fallbackPath = storage_path('companies/' . (int)$id);
+            $storageExists = is_dir($fallbackPath);
         }
 
         $dbError = null;

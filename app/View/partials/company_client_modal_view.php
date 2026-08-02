@@ -3,10 +3,10 @@ require_once base_path('app/View/components/status_badge.php');
 require_once base_path('app/View/components/view_formatters.php');
 
 $clientContacts = $contacts ?? [];
+$clientDocuments = $clientDocuments ?? [];
 $clientCanEdit = (bool) ($canEdit ?? false);
 $clientCanArchive = (bool) ($canArchive ?? false);
 $clientArchiveBlocked = (string) ($archiveBlockedMessage ?? '');
-$clientDocumentsUrl = '/company/documents?entity_type=client&entity_id=' . (int) ($client['id'] ?? 0);
 ?>
 <div class="modal-body driver-modal-body">
   <div class="driver-modal-layout">
@@ -83,9 +83,45 @@ $clientDocumentsUrl = '/company/documents?entity_type=client&entity_id=' . (int)
       </div>
       <?php endif; ?>
 
-      <div class="form-actions mt-3">
-        <a href="<?= e($clientDocumentsUrl) ?>" class="btn btn-secondary">Документы</a>
+      <div class="driver-doc-section-title mt-3">Документы</div>
+      <?php $clientDocs = $clientDocuments ?? []; ?>
+      <?php if (empty($clientDocs)): ?>
+      <div class="driver-docs-empty">Документы не загружены.</div>
+      <?php else: ?>
+      <div class="file-list">
+        <?php foreach ($clientDocs as $doc):
+          $docId = (int) ($doc['id'] ?? 0);
+          if ($docId <= 0) continue;
+          $name = $doc['original_name'] ?? $doc['stored_name'] ?? '';
+          $metaText = $name ?: 'Файл';
+          $parts = explode('.', $name);
+          $ext = count($parts) > 1 ? strtoupper(end($parts)) : '';
+          $mime = $doc['mime_type'] ?? '';
+          $badgeCls = 'file-type-badge';
+          $badgeTxt = '—';
+          if ($ext === '') {
+              if (strpos($mime, 'pdf') !== false) $ext = 'PDF';
+              elseif (strpos($mime, 'image') !== false) $ext = 'IMG';
+          }
+          if ($ext === 'PDF') { $badgeCls .= ' is-pdf'; $badgeTxt = 'PDF'; }
+          elseif ($ext === 'DOC' || $ext === 'DOCX' || $ext === 'RTF' || $ext === 'ODT') { $badgeCls .= ' is-doc'; $badgeTxt = 'DOC'; }
+          elseif ($ext === 'XLS' || $ext === 'XLSX' || $ext === 'CSV' || $ext === 'ODS') { $badgeCls .= ' is-xls'; $badgeTxt = 'XLS'; }
+          elseif (in_array($ext, ['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF', 'BMP', 'TIF', 'TIFF', 'HEIC', 'HEIF'], true)) { $badgeCls .= ' is-img'; $badgeTxt = 'IMG'; }
+          else { $badgeCls .= ' is-other'; $badgeTxt = $ext ?: 'FILE'; }
+          $rowTitle = $doc['type_name'] ?: $doc['document_type'] ?: 'Документ';
+        ?>
+        <div class="file-item file-item-predef document-file-row has-file has-existing-file driver-doc-view-item">
+          <div class="<?= $badgeCls ?>"><?= $badgeTxt ?></div>
+          <div class="file-info">
+            <div class="file-name"><?= e($rowTitle) ?></div>
+            <div class="file-meta"><?= e($metaText) ?></div>
+          </div>
+          <a href="<?= e(app_url('/company/documents/view?id=' . $docId)) ?>" class="btn btn-secondary file-action-btn js-doc-popup-window" target="_blank" rel="noopener">Просмотр</a>
+        </div>
+        <?php endforeach; ?>
       </div>
+      <?php endif; ?>
+
       <?php if ($clientArchiveBlocked !== ''): ?>
       <div class="notice warn mt-3"><?= e($clientArchiveBlocked) ?></div>
       <?php endif; ?>

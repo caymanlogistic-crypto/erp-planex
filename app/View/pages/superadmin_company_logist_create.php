@@ -12,11 +12,11 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Пользователь создан</span>
+        <h1 class="page-title">Пользователь создан</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-ghost">← К пользователям</a>
+        <a href="<?= app_url('/superadmin/companies/' . $company['id'] . '/users') ?>" class="btn btn-ghost">← К пользователям</a>
     </div>
 </div>
 
@@ -35,7 +35,7 @@
             <dt>Временный пароль</dt>
             <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
             <dt>Роль</dt>
-            <dd><?= e($old['role_label'] ?? 'Пользователь') ?></dd>
+            <dd><?= e(($old['role'] ?? 'logist') === 'senior_logist' ? 'Логист+' : 'Пользователь') ?></dd>
         </dl>
 
         <div class="notice warn">
@@ -43,7 +43,7 @@
         </div>
 
         <div class="form-actions">
-            <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-secondary">← К пользователям</a>
+            <a href="<?= app_url('/superadmin/companies/' . $company['id'] . '/users') ?>" class="btn btn-secondary">← К пользователям</a>
         </div>
     </div>
 </div>
@@ -53,11 +53,11 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Создать пользователя</span>
+        <h1 class="page-title">Создать пользователя</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-ghost">← К пользователям</a>
+        <a href="<?= app_url('/superadmin/companies/' . $company['id'] . '/users') ?>" class="btn btn-ghost">← К пользователям</a>
     </div>
 </div>
 
@@ -109,13 +109,13 @@
 
             <div class="field">
                 <label class="field-label">Роль <span class="req">*</span></label>
-                <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
-                    <option value="logist" <?= ($old['role_code'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Пользователь</option>
-                    <option value="senior_logist" <?= ($old['role_code'] ?? '') === 'senior_logist' ? 'selected' : '' ?>>Логист+</option>
+                <select name="role" class="field-select<?= !empty($errors['role']) ? ' is-error' : '' ?>">
+                    <option value="logist" <?= ($old['role'] ?? 'logist') === 'logist' ? 'selected' : '' ?>>Пользователь</option>
+                    <option value="senior_logist" <?= ($old['role'] ?? '') === 'senior_logist' ? 'selected' : '' ?>>Логист+</option>
                     <option value="company_owner" disabled>Руководитель (недоступно)</option>
                 </select>
-                <?php if (!empty($errors['role_code'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>
+                <?php if (!empty($errors['role'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['role']) ?></div>
                 <?php endif; ?>
             </div>
 
@@ -124,9 +124,9 @@
                 <label class="field-label">Пароль</label>
                 <div class="input-group">
                     <input type="password" name="password" id="password_field" class="field-input code-hi" placeholder="Оставьте пустым для автогенерации" value="<?= e($old['password'] ?? '') ?>">
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="var p=document.getElementById('password_field'); p.type=p.type==='password'?'text':'password';" style="margin-left:4px;">👁</button>
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('password_field').value)" style="margin-left:4px;">📋 Копировать</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="generatePasswordField()" style="margin-left:4px;">Сгенерировать</button>
+                    <button type="button" class="btn btn-ghost btn-sm button-offset" onclick="var p=document.getElementById('password_field'); p.type=p.type==='password'?'text':'password';">👁</button>
+                    <button type="button" class="btn btn-ghost btn-sm button-offset" onclick="navigator.clipboard.writeText(document.getElementById('password_field').value)">📋 Копировать</button>
+                    <button type="button" class="btn btn-secondary btn-sm button-offset" onclick="generatePasswordField()">Сгенерировать</button>
                 </div>
                 <div class="field-msg">Оставьте пустым — пароль будет сгенерирован автоматически. Сохраните пароль — после создания пользователя он не будет доступен повторно.</div>
             </div>
@@ -134,7 +134,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Создать</button>
-            <a href="/superadmin/companies/<?= $company['id'] ?>/users" class="btn btn-ghost">Отмена</a>
+            <a href="<?= app_url('/superadmin/companies/' . $company['id'] . '/users') ?>" class="btn btn-ghost">Отмена</a>
         </div>
 
     </div>

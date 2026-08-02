@@ -139,12 +139,12 @@
     <div class="notice warn"><?= e($formError) ?></div>
 <?php endif; ?>
 
-<form method="post" action="/company/route-executors/<?= $crewId ?>/edit" class="panel">
-    <div class="panel-body">
+<form id="route-executor-edit-form" method="post" action="<?= app_url('/company/route-executors/' . (int) $crewId . '/edit') ?>" class="panel" data-re-edit-form>
+    <div class="panel-body" data-re-edit-body>
 
         <div class="form-section">
             <h3 class="panel-head-title">Исполнитель рейса</h3>
-            <p class="text-muted" style="margin-bottom:16px;">Подрядчик + Водитель + ТС</p>
+            <p class="text-muted mb-section">Подрядчик + Водитель + ТС</p>
 
             <div class="field">
                 <label class="field-label">Подрядчик <span class="req">*</span></label>

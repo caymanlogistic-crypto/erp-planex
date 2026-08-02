@@ -124,8 +124,8 @@
                     <input type="password" name="password" id="password_field" class="field-input field-inline-grow code-hi"
                            value="<?= e($old['password'] ?? $generatedPassword ?? '') ?>"
                            placeholder="Оставьте пустым для автогенерации">
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="var p=document.getElementById('password_field'); p.type=p.type==='password'?'text':'password';" style="margin-left:4px;">👁</button>
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('password_field').value)" style="margin-left:4px;">📋 Копировать</button>
+                    <button type="button" class="btn btn-ghost btn-sm button-offset" onclick="var p=document.getElementById('password_field'); p.type=p.type==='password'?'text':'password';">👁</button>
+                    <button type="button" class="btn btn-ghost btn-sm button-offset" onclick="navigator.clipboard.writeText(document.getElementById('password_field').value)">📋 Копировать</button>
                     <button type="button" class="btn btn-ghost btn-sm btn-nowrap btn-align-top" onclick="generatePassword()">
                         Сгенерировать
                     </button>

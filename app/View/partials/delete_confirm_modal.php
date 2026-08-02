@@ -7,10 +7,10 @@
     <div class="modal-body">
       <div class="driver-delete-confirm-title">Запись будет удалена из списка.</div>
       <div class="driver-delete-confirm-text">Для подтверждения введите <b>УДАЛИТЬ</b>.</div>
-      <div class="field" style="margin-top:1rem;">
+      <div class="field mt-section">
         <input type="text" class="field-input" id="delete-confirm-input" autocomplete="off" placeholder="Введите УДАЛИТЬ" oninput="document.getElementById('delete-confirm-btn').disabled = this.value.trim() !== 'УДАЛИТЬ'">
       </div>
-      <div class="is-hidden" id="delete-confirm-error" style="color:var(--red);margin-top:8px;"></div>
+      <div class="is-hidden delete-confirm-error" id="delete-confirm-error"></div>
     </div>
     <div class="modal-foot is-spaced">
       <div class="modal-foot-actions">

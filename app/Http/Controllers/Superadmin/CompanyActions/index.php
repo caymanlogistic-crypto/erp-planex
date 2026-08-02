@@ -38,7 +38,7 @@
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $companies = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $dbError = null;
     } catch (\Exception $e) {
         $companies = [];

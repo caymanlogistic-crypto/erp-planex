@@ -7,7 +7,7 @@
 
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        $company = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$company) {
             http_response_code(404);
@@ -122,13 +122,48 @@
 
         $docWarning = null;
         $dbIdentifier = $company['db_identifier'] ?? '';
-        $expectedDb = 'erp_company_' . $id;
 
-        if ($dbIdentifier === $expectedDb) {
+        if ($dbIdentifier !== '') {
             try {
                 $localDbConfig = companyDatabaseConfig($config, $company);
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
+
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $roleCode = (string)($_SESSION['role_code'] ?? 'superadmin');
+
+                $deleteExistingDocs = $_POST['delete_existing_doc'] ?? [];
+                foreach ($deleteExistingDocs as $docId => $val) {
+                    if ($val !== '1') continue;
+                    softDeleteEntityDocument($localPdo, (int)$docId, 'company', (int)$id, $userId, 'Archived via superadmin modal edit');
+                }
+
+                $existingFiles = $_FILES['existing_doc_file'] ?? [];
+                if (!empty($existingFiles['name']) && is_array($existingFiles['name'])) {
+                    foreach ($existingFiles['name'] as $docId => $origName) {
+                        $uploadError = $existingFiles['error'][$docId] ?? UPLOAD_ERR_NO_FILE;
+                        if ($uploadError !== UPLOAD_ERR_OK || trim((string) $origName) === '') continue;
+                        try {
+                            replaceEntityDocument(
+                                $localPdo,
+                                (int)$docId,
+                                (int)$id,
+                                'company',
+                                (int)$id,
+                                [
+                                    'name' => (string) $origName,
+                                    'tmp_name' => (string) ($existingFiles['tmp_name'][$docId] ?? ''),
+                                    'type' => (string) ($existingFiles['type'][$docId] ?? ''),
+                                    'size' => (int) ($existingFiles['size'][$docId] ?? 0),
+                                ],
+                                $userId,
+                                $roleCode
+                            );
+                        } catch (\Exception $e) {
+                            $docWarning = ($docWarning ? $docWarning . '; ' : '') . 'Не удалось заменить документ #' . $docId;
+                        }
+                    }
+                }
 
                 $docResult = processLegalEntityCreateDocuments(
                     $localPdo,
@@ -137,8 +172,8 @@
                     (int) $id,
                     $_POST,
                     $_FILES,
-                    (int)($_SESSION['user_id'] ?? 0),
-                    (string)($_SESSION['role_code'] ?? 'superadmin')
+                    $userId,
+                    $roleCode
                 );
 
                 if (!empty($docResult['docErrors'])) {
@@ -148,7 +183,7 @@
                 $docWarning = 'Документы не сохранены: ' . $e->getMessage();
             }
         } else {
-            $hasFiles = hasAnyUploadedFiles($_FILES['predef_doc'] ?? []) || hasAnyUploadedFiles($_FILES['custom_doc_file'] ?? []);
+            $hasFiles = hasAnyUploadedFiles($_FILES['predef_doc'] ?? []) || hasAnyUploadedFiles($_FILES['custom_doc_file'] ?? []) || hasAnyUploadedFiles($_FILES['existing_doc_file'] ?? []);
             if ($hasFiles) {
                 $docWarning = 'Документы не сохранены: рабочая база компании не настроена.';
             }
@@ -156,9 +191,41 @@
 
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        $company = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         $canEdit = true;
+        $companyDocuments = [];
+        $documentsWarning = null;
+        $dbIdentifier = $company['db_identifier'] ?? '';
+        if ($dbIdentifier !== '') {
+            try {
+                $localDbConfig = companyDatabaseConfig($config, $company);
+                $localDb = new \App\Core\Database($localDbConfig);
+                $localPdo = $localDb->connection();
+                $docStmt = $localPdo->prepare(
+                    'SELECT d.*, dt.name AS type_name, dt.code AS type_code
+                     FROM documents d
+                     LEFT JOIN document_types dt ON d.document_type_id = dt.id
+                     WHERE d.entity_type = ? AND d.entity_id = ? AND d.deleted_at IS NULL
+                     ORDER BY d.created_at DESC'
+                );
+                $docStmt->execute(['company', (int)$id]);
+                $companyDocuments = $docStmt->fetchAll(\PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {
+                $documentsWarning = 'Не удалось загрузить документы: ' . $e->getMessage();
+            }
+        }
+
+        $docsByType = [];
+        $docTypeCodes = ['company_card', 'inn_cert', 'ogrn_cert', 'contract'];
+        foreach ($companyDocuments as $doc) {
+            $code = $doc['type_code'] ?? '';
+            if (in_array($code, $docTypeCodes, true)) {
+                $docsByType[$code][] = $doc;
+            } else {
+                $docsByType['other'][] = $doc;
+            }
+        }
 
         ob_start();
         require base_path('app/View/partials/superadmin_company_modal_view.php');

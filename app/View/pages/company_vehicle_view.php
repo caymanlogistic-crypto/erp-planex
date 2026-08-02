@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортные единицы</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортные единицы</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 
@@ -33,9 +33,9 @@
 <?php elseif ($entityNotFound): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспортная единица не найдена</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортная единица не найдена</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
@@ -49,9 +49,9 @@
 <?php elseif (isset($accessDenied)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Доступ запрещён</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/vehicles') ?>" class="btn btn-ghost">← К списку</a>
@@ -75,10 +75,9 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <div class="page-eyebrow">ТРАНСПОРТНЫЕ ЕДИНИЦЫ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Транспортная единица: <?= e($vehicle['plate_number']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортная единица: <?= e($vehicle['plate_number']) ?></h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/vehicles/<?= $vehicle['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -226,7 +225,7 @@
 
         <div class="form-section">
             <h3 class="panel-head-title">Опасная зона</h3>
-            <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
+            <p class="text-muted mb-compact">Запись будет удалена из списка.</p>
             <form method="post" action="/company/vehicles/<?= $vehicle['id'] ?>/archive">
                 <button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button>
             </form>

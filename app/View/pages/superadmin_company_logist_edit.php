@@ -30,8 +30,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Редактировать пользователя</span>
+        <h1 class="page-title">Редактировать пользователя</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>" class="btn btn-ghost">← К карточке</a>
@@ -83,16 +83,16 @@ require_once __DIR__ . '/../components/status_badge.php';
 
             <div class="field">
                 <label class="field-label">Роль <span class="req">*</span></label>
-                <select name="role_code" class="field-select<?= !empty($errors['role_code']) ? ' is-error' : '' ?>">
+                <select name="role" class="field-select<?= !empty($errors['role']) ? ' is-error' : '' ?>">
                     <?php
-                    $currentRole = $old['role_code'] ?? $logist['role_code'] ?? 'logist';
+                    $currentRole = $old['role'] ?? $logist['role'] ?? 'logist';
                     ?>
                     <option value="logist" <?= $currentRole === 'logist' ? 'selected' : '' ?>>Пользователь</option>
                     <option value="senior_logist" <?= $currentRole === 'senior_logist' ? 'selected' : '' ?>>Логист+</option>
                     <option value="company_owner" disabled>Руководитель (недоступно)</option>
                 </select>
-                <?php if (!empty($errors['role_code'])): ?>
-                    <div class="field-msg is-error"><?= e($errors['role_code']) ?></div>
+                <?php if (!empty($errors['role'])): ?>
+                    <div class="field-msg is-error"><?= e($errors['role']) ?></div>
                 <?php endif; ?>
             </div>
         </div>

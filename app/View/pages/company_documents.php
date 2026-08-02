@@ -2,8 +2,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ<?= !empty($company['name']) ? ' / ' . e($company['name']) : '' ?></span>
-        <span class="page-title">Документы</span>
+        <h1 class="page-title">Документы</h1>
+        <div class="page-summary"><span>Управление загруженными файлами</span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-ghost">← На главную</a>
@@ -16,6 +16,8 @@
         <div class="empty-state">
             <p class="empty-title">Документы</p>
             <p class="empty-desc">Для просмотра документов откройте карточку подрядчика, водителя, транспортной единицы, транспортного комплекта, блока «Водитель + ТС» или экипажа.</p>
+        </div>
+        <div class="form-actions">
             <a href="<?= app_url('/company/contractors') ?>" class="btn btn-primary">К справочникам</a>
         </div>
     </div>
@@ -36,9 +38,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Документы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Документы: <?= e($entityName) ?></h1>
+        <div class="page-summary"><span><?= e($entityLabel) ?> · Управление загруженными файлами</span></div>
     </div>
 </div>
 
@@ -49,9 +51,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Документы: <?= e($entityName) ?></h1>
-        <p class="text-muted"><?= e($entityLabel) ?> &bull; Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Документы: <?= e($entityName) ?></h1>
+        <div class="page-summary"><span><?= e($entityLabel) ?> · Управление загруженными файлами</span></div>
     </div>
 </div>
 
@@ -62,9 +64,9 @@
 <?php elseif ($entityNotFound): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Документы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Документы</h1>
+        <div class="page-summary"><span>Управление загруженными файлами</span></div>
     </div>
 </div>
 
@@ -75,10 +77,10 @@
 <?php elseif (empty($documents)): ?>
 
 <div class="page-head">
-    <div>
+    <div class="page-head-left">
         <a href="<?= e($backRoute) ?>" class="btn btn-ghost back-action">&larr; Назад к <?= e($entityLabelDative) ?></a>
-        <h1>Документы: <?= e($entityName) ?></h1>
-        <p class="text-muted"><?= e($entityLabel) ?> &bull; Компания: <?= e($company['name']) ?></p>
+        <h1 class="page-title">Документы: <?= e($entityName) ?></h1>
+        <div class="page-summary"><span><?= e($entityLabel) ?> · Управление загруженными файлами</span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-primary">Загрузить документ</a>
@@ -88,8 +90,8 @@
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
-            <p>Документы не загружены.</p>
-            <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-primary">Загрузить первый документ</a>
+            <p class="empty-title">Документы не загружены.</p>
+            <p class="empty-desc">Загрузите файлы для данной сущности через кнопку «Загрузить документ».</p>
         </div>
     </div>
 </div>
@@ -97,10 +99,10 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
+    <div class="page-head-left">
         <a href="<?= e($backRoute) ?>" class="btn btn-ghost back-action">&larr; Назад к <?= e($entityLabelDative) ?></a>
-        <h1>Документы: <?= e($entityName) ?></h1>
-        <p class="text-muted"><?= e($entityLabel) ?> &bull; Компания: <?= e($company['name']) ?></p>
+        <h1 class="page-title">Документы: <?= e($entityName) ?></h1>
+        <div class="page-summary"><span><?= e($entityLabel) ?> · Управление загруженными файлами</span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/documents/upload?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-primary">Загрузить документ</a>

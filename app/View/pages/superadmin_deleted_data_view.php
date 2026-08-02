@@ -15,7 +15,8 @@ if (!empty($record['snapshot_json'])) {
 </div>
 
 <?php if (!empty($_GET['error'])): ?>
-<div class="notice warn">Ошибка: <?= e($_GET['error']) ?></div>
+<?php $errorMsg = $_GET['error'] === 'company_deletion_final' ? 'Восстановление компании невозможно — компания была безвозвратно удалена.' : e($_GET['error']); ?>
+<div class="notice warn">Ошибка: <?= $errorMsg ?></div>
 <?php endif; ?>
 <?php if (!empty($_GET['restored'])): ?>
 <div class="notice success">Запись успешно восстановлена.
@@ -67,15 +68,17 @@ if (!empty($record['snapshot_json'])) {
 <div class="panel">
     <div class="panel-head">Снимок данных (snapshot)</div>
     <div class="panel-body">
-        <pre style="max-height:400px;overflow:auto;background:#f5f5f5;padding:12px;border-radius:6px;font-size:13px;line-height:1.5;"><?= e(json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
+        <pre class="code-block-scroll"><?= e(json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
     </div>
 </div>
 <?php endif; ?>
 
-<?php if ($record['status'] === 'archived'): ?>
+<?php if ($record['status'] === 'archived' && $record['entity_type'] !== 'company'): ?>
 <div class="form-actions">
-    <form method="post" action="/superadmin/deleted-data/<?= (int)$record['id'] ?>/restore" style="display:inline;" onsubmit="return confirm('Восстановить запись? Она снова появится в рабочем списке компании.')">
+    <form method="post" action="/superadmin/deleted-data/<?= (int)$record['id'] ?>/restore" class="inline-form" onsubmit="return confirm('Восстановить запись? Она снова появится в рабочем списке компании.')">
         <button type="submit" class="btn btn-primary">Восстановить запись</button>
     </form>
 </div>
+<?php elseif ($record['entity_type'] === 'company'): ?>
+<div class="notice warn"><strong>Компания была безвозвратно удалена.</strong> Восстановление невозможно. Все данные (БД, storage, пользователи) очищены окончательно.</div>
 <?php endif; ?>

@@ -117,7 +117,7 @@
                     <option value="">— Выберите единицу —</option>
                     <?php foreach ($vehicleUnits as $vu): ?>
                     <option value="<?= $vu['id'] ?>" <?= ($old['primary_vehicle_unit_id'] ?? '') == $vu['id'] ? 'selected' : '' ?>>
-                        <?= e($vu['plate_number']) ?> — <?= e($vu['brand'] ?? '') ?> <?= e($vu['model'] ?? '') ?> (<?= e($vu['unit_type'] ?? '—') ?>)
+                        <?= e($vu['plate_number']) ?> — <?= e($vu['brand'] ?? '') ?> <?= e($vu['model'] ?? '') ?> (<?= e(ui_unit_type($vu['unit_type'] ?? null)) ?>)
                     </option>
                     <?php endforeach; ?>
                 </select>
@@ -132,7 +132,7 @@
                     <option value="">— Выберите единицу —</option>
                     <?php foreach ($vehicleUnits as $vu): ?>
                     <option value="<?= $vu['id'] ?>" <?= ($old['secondary_vehicle_unit_id'] ?? '') == $vu['id'] ? 'selected' : '' ?>>
-                        <?= e($vu['plate_number']) ?> — <?= e($vu['brand'] ?? '') ?> <?= e($vu['model'] ?? '') ?> (<?= e($vu['unit_type'] ?? '—') ?>)
+                        <?= e($vu['plate_number']) ?> — <?= e($vu['brand'] ?? '') ?> <?= e($vu['model'] ?? '') ?> (<?= e(ui_unit_type($vu['unit_type'] ?? null)) ?>)
                     </option>
                     <?php endforeach; ?>
                 </select>

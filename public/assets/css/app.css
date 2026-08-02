@@ -323,6 +323,9 @@ body {
 .text-danger {
     color: var(--danger);
 }
+.text-success {
+    color: var(--success);
+}
 .col-truncate {
     max-width: 220px;
     overflow: hidden;
@@ -775,6 +778,36 @@ a.nav-item {
 /* Форма создания/редактирования — компактный рабочий блок */
 form.panel {
     max-width: 1200px;
+}
+
+/* ─── Bank statement settings: compact panel + form-grid-3 ─── */
+.bank-settings-panel {
+    max-width: 1280px;
+}
+
+.bank-settings-hint {
+    padding: 8px 11px;
+    margin-bottom: 10px;
+    background: var(--alert-info-field);
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.bank-settings-form-grid {
+    margin-top: 8px;
+}
+
+.bank-settings-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 10px;
+    margin-top: 4px;
+    border-top: 1px solid var(--line-soft);
 }
 
 /* ─── Двухколоночная форма: данные + документы ─── */
@@ -1506,6 +1539,8 @@ input.field-input:-webkit-autofill:active {
 
 /* Утилита для растягивания поля на 2 колонки в form-grid-3 */
 .span-2 { grid-column: span 2; }
+.field-actions-end { align-self: flex-end; }
+.field-flex-end { display: flex; align-items: flex-end; margin-bottom: 0; }
 
 /* ─── Горизонтальный ряд полей внутри form-section ─── */
 .field-row { display: flex; flex-wrap: nowrap; gap: 10px; align-items: flex-end; }
@@ -1754,6 +1789,7 @@ input.field-input:-webkit-autofill:active {
 .btn-nowrap { white-space: nowrap; }
 
 /* === spacing utilities === */
+.mt-2 { margin-top: 8px; }
 .mt-actions { margin-top: 6px; }
 .mt-4 { margin-top: 16px; }
 .mb-3 { margin-bottom: 12px; }
@@ -2919,7 +2955,7 @@ input:autofill,
 }
 .vehicle-set-unit-card-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: 0;
     align-items: start;
 }
@@ -3100,19 +3136,27 @@ input:autofill,
   flex-direction: column;
   gap: 6px;
 }
-.contractor-contact-row {
+.contractor-contact-row,
+.client-contact-row {
   display: grid;
-  grid-template-columns:
-    minmax(210px, 1.2fr)
-    128px
-    minmax(190px, .95fr)
-    minmax(140px, .7fr)
-    28px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px;
   align-items: start;
   column-gap: 6px;
-  row-gap: 0;
+  row-gap: 4px;
   width: 100%;
   max-width: 100%;
+}
+
+.contact-person-cell { grid-column: 1; grid-row: 1; }
+.contact-phone-cell { grid-column: 2; grid-row: 1; }
+.contact-email-cell { grid-column: 1; grid-row: 2; }
+.contact-comment-cell { grid-column: 2; grid-row: 2; }
+
+.contractor-contact-remove,
+.client-contact-remove {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: center;
 }
 
 /* Обёртка ячейки контакта — держит input + ошибку */
@@ -3122,8 +3166,7 @@ input:autofill,
   gap: 2px;
   min-width: 0;
 }
-.contact-cell-wrap.is-error .field-input,
-.contact-cell-wrap.is-error .contact-input-suffix > .field-input {
+.contact-cell-wrap.is-error .field-input {
   background: var(--danger-field);
   border-color: var(--danger-border);
 }
@@ -3143,62 +3186,40 @@ input:autofill,
   display: none;
 }
 
-/* Поле с встроенным чекбоксом-суффиксом */
-.contact-input-suffix {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px;
-  align-items: stretch;
-  min-width: 0;
-  height: var(--control-h);
-}
-.contact-input-suffix > .field-input {
-  min-width: 0;
-  height: var(--control-h);
-  min-height: var(--control-h);
-  border-right: 0;
-  border-radius: 2px 0 0 2px;
-}
-
-/* Чекбокс-суффикс (визуально слит с input) */
-.contact-inline-check {
-  width: 28px;
-  height: var(--control-h);
-  min-height: var(--control-h);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px solid #c2bbb0;
-  border-left: 1px solid var(--line-hair);
-  background: linear-gradient(180deg, var(--surface-field) 0%, #f7f5f0 100%);
-  border-radius: 0 2px 2px 0;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.contact-inline-check .checkbox-mark {
-  margin-top: 0;
-}
-.contact-inline-check .checkbox-label {
-  display: none;
-}
-
-/* Состояние ошибки для suffix */
-.contact-input-suffix.is-error > .field-input {
-  background: var(--danger-field);
-  border-color: var(--danger-border);
-}
-
-/* Обычные поля строки (phone, comment — голые input внутри wrap) */
+/* Все input внутри contact-cell-wrap */
 .contact-cell-wrap > .field-input {
   height: var(--control-h);
   min-height: var(--control-h);
   line-height: var(--control-h);
 }
-
-/* Ошибка на голом input внутри wrap */
 .contact-cell-wrap > .field-input.is-error {
   background: var(--danger-field);
   border-color: var(--danger-border);
+}
+
+/* Чекбоксы контактов — вторая строка */
+.contact-checkboxes {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding-top: 2px;
+}
+.contact-checkbox-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.contact-checkbox-item .checkbox-mark {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+.contact-checkbox-label {
+  font-size: 12px;
+  color: var(--text-main);
+  white-space: nowrap;
 }
 
 /* Кнопка удаления */
@@ -3240,13 +3261,6 @@ input:autofill,
 @media (max-width: 860px){
   .contractor-autofill-grid > [data-field="name"]{grid-column:auto;}
   .contractor-bank-grid{grid-template-columns:1fr;}
-  .contractor-contact-row {
-    grid-template-columns: 1fr 1fr;
-  }
-  .contractor-contact-row .contractor-contact-remove {
-    grid-column: 2;
-    justify-self: end;
-  }
 }
 
 /* ============================================================
@@ -3258,18 +3272,7 @@ input:autofill,
   gap: 6px;
 }
 .client-contact-row {
-  display: grid;
-  grid-template-columns:
-    minmax(210px, 1.2fr)
-    128px
-    minmax(190px, .95fr)
-    minmax(140px, .7fr)
-    28px;
-  align-items: start;
-  column-gap: 6px;
-  row-gap: 0;
-  width: 100%;
-  max-width: 100%;
+  /* grid layout shared with .contractor-contact-row above */
 }
 .client-contact-remove {
   width: 24px;
@@ -3303,11 +3306,24 @@ input:autofill,
 @media (max-width: 860px){
   .client-autofill-grid > [data-field="name"]{grid-column:auto;}
   .client-bank-grid{grid-template-columns:1fr;}
+}
+
+@media (max-width: 480px) {
+  .contractor-contact-row,
   .client-contact-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
-  .client-contact-row .client-contact-remove {
-    grid-column: 2;
+  .contact-person-cell,
+  .contact-phone-cell,
+  .contact-email-cell,
+  .contact-comment-cell {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .contractor-contact-remove,
+  .client-contact-remove {
+    grid-column: auto;
+    grid-row: auto;
     justify-self: end;
   }
 }
@@ -3463,11 +3479,18 @@ a.nav-sub-item:visited {
    TABLE-CARD with sort + footer (standard populated list)
    3-row grid: toolbar / scroll / footer.
    Row 1: 36px — table-toolbar (compact single-row controls)
-   Row 2: 1fr  — table-scroll
+   Row 2: auto — table-scroll (content-sized)
    Row 3: 34px — table-footer
    ============================================================ */
-.table-card--standard {
-    grid-template-rows: 36px 1fr 34px;
+.table-card.table-card--standard {
+    /* extra specificity to override later-loaded .table-card from erp-ui.css */
+    grid-template-rows: 36px auto 34px;
+}
+
+/* When .table-scroll is the only child (toolbar/pagination outside the card),
+   avoid collapsing the scroll area into the 36px toolbar row. */
+.table-card--standard > .table-scroll:only-child {
+    grid-row: 1 / -1;
 }
 
 /* ============================================================
@@ -3655,6 +3678,32 @@ a.nav-sub-item:visited {
   max-width: none;
 }
 
+/* Scoped: SUPERADMIN company create modal — legal entity form top row */
+#sa-company-create-modal .driver-contact-top-row {
+  grid-template-columns: minmax(200px, 1fr) minmax(180px, 1fr);
+}
+#sa-company-create-modal .driver-contact-main-row {
+  grid-template-columns: 1fr max-content;
+}
+#sa-company-create-modal .field-w-name,
+#sa-company-create-modal .driver-contact-main-row .field-w-phone {
+  width: 100%;
+}
+/* Scoped: bank fields — bank_account & bank_corr_account wider, BIK narrower */
+#sa-company-create-modal .form-grid-4 {
+  grid-template-columns: 2fr 1fr 2fr 2fr;
+}
+/* Scoped: restore intended popup width overriding erp-ui.css .modal-lg (820px) loaded after app.css */
+#sa-company-create-modal .driver-create-modal {
+  width: min(1100px, calc(100vw - 48px));
+}
+#driver-create-modal .driver-create-modal {
+  width: min(1100px, calc(100vw - 48px));
+}
+#vehicle-set-create-modal .driver-create-modal {
+  width: min(1100px, calc(100vw - 48px));
+}
+
 /* ============================================================
    SIDEBAR PARENT ITEMS
    Parent sections stay neutral until the current page is inside them.
@@ -3683,8 +3732,16 @@ a.nav-sub-item:visited {
   max-width: none;
 }
 
+.linear-trip-layout {
+  grid-template-columns: minmax(0, 1.4fr) 280px;
+}
+
 .linear-trip-layout-main {
   gap: 10px;
+}
+
+.linear-trip-layout-docs {
+  min-width: 0;
 }
 
 .linear-trip-layout-docs .file-list {
@@ -3748,7 +3805,7 @@ a.nav-sub-item:visited {
 
 .linear-trip-payment-row {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr .75fr .95fr auto;
+  grid-template-columns: 1.1fr 1fr 1fr .85fr 1.05fr auto;
   gap: 8px;
   align-items: flex-start;
 }
@@ -3829,6 +3886,48 @@ a.nav-sub-item:visited {
 }
 .driver-view-overlay .modal.driver-view-modal-inner .modal-body {
   padding: 0;
+}
+
+/* ── User view modal — compact polish ── */
+.user-view-modal-inner {
+  width: min(580px, calc(100vw - 48px));
+}
+.user-view-modal-inner .modal-body {
+  padding: 16px;
+}
+.user-view-card {
+  background: var(--surface-bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.user-view-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.user-view-item {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.user-view-item:nth-child(even):not(.user-view-item--wide) {
+  border-right: 1px solid var(--line);
+}
+.user-view-item--wide {
+  grid-column: 1 / -1;
+}
+.user-view-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.user-view-value {
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+.user-view-value code {
+  font-size: 13px;
 }
 
 .driver-modal-content {
@@ -4157,4 +4256,575 @@ a.nav-sub-item:visited {
 /* Pointer cursor on driver table rows */
 .table-card[data-erp-grid] tbody tr {
   cursor: pointer;
+}
+
+.db-usage-info {
+    margin-bottom: 14px;
+}
+.db-usage-info-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.db-usage-info-body p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+.db-usage-info-body p strong {
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+/* ============================================================
+   COMPANY DETAIL SHELL — compact dashboard for superadmin company view
+   Bounded content width, centered, prevents 1800px stretching.
+   ============================================================ */
+.company-detail-shell {
+    max-width: 1360px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* --- Bank accounts: controls panel --- */
+.bank-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 6px 10px;
+    min-height: 40px;
+    border-bottom: 1px solid var(--line-hair);
+    background: var(--surface-strong);
+}
+.bank-controls-summary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1 1 520px;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bank-summary-label {
+    color: var(--text-faint);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: 9.5px;
+}
+.bank-summary-account {
+    font-weight: 700;
+}
+.bank-summary-balance {
+    color: var(--accent);
+    font-weight: 700;
+}
+.bank-summary-separator {
+    color: var(--text-faint);
+    padding: 0 2px;
+}
+.bank-controls-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+.bank-control-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+.bank-date-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+}
+.bank-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+}
+.bank-control-meta {
+    font-size: 12px;
+    color: var(--text-faint);
+    white-space: nowrap;
+}
+.bank-control-meta b {
+    color: var(--text-main);
+    font-weight: 700;
+}
+.bank-date-input {
+    width: 122px;
+    height: var(--toolbar-h);
+    font-size: 12px;
+    padding: 0 7px;
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    background: var(--surface-muted);
+    color: var(--text-main);
+    font-family: var(--font-base);
+    outline: none;
+    box-sizing: border-box;
+}
+.bank-date-input:focus {
+    background: var(--surface-strong);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,71,24,.1);
+}
+.bank-controls-right .toolbar-search {
+    width: 220px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 9px;
+    flex: 0 0 auto;
+    height: var(--toolbar-h);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main);
+    background: var(--surface-muted);
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    outline: none;
+    box-sizing: border-box;
+    font-family: var(--font-base);
+    -webkit-appearance: none;
+    appearance: none;
+}
+.bank-controls-right .toolbar-search::placeholder {
+    color: var(--text-faint);
+    font-weight: 400;
+    font-size: 12px;
+}
+.bank-controls-right .toolbar-search:focus {
+    background: var(--surface-strong);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,71,24,.1);
+    outline: none;
+    outline-offset: 0;
+}
+@media (max-width: 1500px) {
+    .bank-controls-summary {
+        flex-basis: 100%;
+    }
+}
+@media (max-width: 900px) {
+    .bank-controls {
+        gap: 8px;
+        padding: 8px 10px;
+        align-items: flex-start;
+    }
+    .bank-controls-summary {
+        flex-basis: 100%;
+        white-space: normal;
+        overflow: visible;
+    }
+    .bank-controls-filter {
+        min-width: 0;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    .bank-controls-right {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    .bank-controls-right .toolbar-search {
+        width: min(100%, 260px);
+    }
+}
+/* --- Bank transactions table column widths --- */
+.bank-transactions-table .col-cparty-narrow {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bank-transactions-table .col-purpose-wide {
+    min-width: 200px;
+    max-width: none;
+    white-space: normal;
+    word-break: break-word;
+}
+.bank-transactions-table td.col-cparty-narrow {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* --- Transaction detail modal --- */
+.tx-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.tx-detail-row {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line-hair);
+    align-items: start;
+}
+.tx-detail-row:last-child {
+    border-bottom: none;
+}
+.tx-detail-row-wide {
+    grid-template-columns: 160px minmax(0, 1fr);
+}
+.tx-detail-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding-top: 2px;
+}
+.tx-detail-value {
+    font-size: 13px;
+    color: var(--text-main);
+    line-height: 1.5;
+}
+.tx-detail-purpose {
+    white-space: pre-wrap;
+}
+/* --- Card grid (removed from bank page but kept for compat) --- */
+.bank-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-4);
+}
+.bank-card {
+    padding: var(--space-4);
+}
+.bank-card-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: var(--space-1);
+}
+.bank-card-value {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+}
+.bank-card-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.col-truncate-lg {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --- Card grid: 3 columns, responsive --- */
+.company-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    align-items: start;
+}
+
+.company-card {
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.company-card--wide {
+    grid-column: span 3;
+}
+
+.company-card-head {
+    height: 30px;
+    padding: 0 11px;
+    background: linear-gradient(180deg, #f0ede6 0%, #e8e4da 100%);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-faint);
+    line-height: 1;
+}
+
+.company-card-body {
+    padding: 10px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* --- Mini-grid for compact key-value display --- */
+.cd-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px 10px;
+}
+
+.cd-mini-grid--cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cd-mini-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--line-hair);
+    min-width: 0;
+}
+
+.cd-mini-item--wide {
+    grid-column: span 3;
+}
+
+.cd-mini-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    line-height: 1.3;
+}
+
+.cd-mini-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-main);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.cd-mini-value--mono {
+    font-family: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
+    font-size: 11.5px;
+}
+
+/* --- Stat row (users) --- */
+.cd-stat-row {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+}
+
+.cd-stat-item {
+    flex: 1;
+    min-width: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    background: var(--surface-muted);
+    border: 1px solid var(--line-hair);
+    border-radius: 2px;
+}
+
+.cd-stat-num {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.1;
+}
+
+.cd-stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-faint);
+    line-height: 1.2;
+    text-align: center;
+}
+
+/* --- Notice inside card --- */
+.cd-notice {
+    padding: 6px 8px;
+    background: var(--alert-info-field);
+    border: 1px solid #bee3f8;
+    border-radius: 2px;
+    font-size: 11px;
+    color: var(--alert-info);
+    line-height: 1.4;
+}
+
+/* --- Action section (status/danger) --- */
+.company-action-section {
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.company-action-section--danger {
+    border-color: var(--danger);
+}
+
+.company-action-body {
+    padding: 10px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cd-action-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.cd-action-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* --- Danger zone row --- */
+.cd-danger-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.cd-danger-step {
+    min-height: 60px;
+    padding: 8px;
+    background: var(--surface-field);
+    border: 1px solid var(--line-hair);
+    border-radius: 2px;
+}
+
+.cd-danger-step strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text-main);
+    font-size: 11px;
+}
+
+.cd-danger-step span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 10.5px;
+    line-height: 1.4;
+}
+
+.cd-danger-step--terminal {
+    background: var(--surface-field);
+    border-color: var(--danger);
+}
+
+/* --- Directories table compact --- */
+.cd-dirs-tbl th,
+.cd-dirs-tbl td {
+    height: 26px;
+    padding: 0 6px;
+    font-size: 11.5px;
+}
+
+.cd-dirs-tbl th {
+    font-size: 9px;
+}
+
+.cd-dirs-tbl td .btn-sm {
+    height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+}
+
+/* Responsive: on narrow screens, cards go to 2 columns */
+@media (max-width: 1400px) {
+    .company-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .company-card--wide {
+        grid-column: span 2;
+    }
+    .cd-mini-item--wide {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 900px) {
+    .company-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .company-card--wide {
+        grid-column: span 1;
+    }
+    .cd-mini-item--wide {
+        grid-column: span 1;
+    }
+    .cd-mini-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .cd-danger-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* ── SUPERADMIN owner create modal ── */
+#sa-owner-create-modal .panel {
+    border: none; margin-bottom: 0; max-width: none;
+}
+#sa-owner-create-modal .modal-body[data-owner-create-success="1"] {
+    padding: 16px;
+    display: block;
+}
+
+/* ── SUPERADMIN user create modal: notice above form needs padding ── */
+#sa-logist-create-modal-content > .notice {
+    margin: 10px 16px 0;
+}
+#sa-logist-create-modal-content > .modal-body {
+    padding: 16px;
+}
+#sa-logist-create-modal-content > .notice + .modal-body {
+    padding-top: 0;
+}
+
+/* ── Superadmin user edit modal content padding ── */
+#sa-logist-view-modal .user-edit-modal-content,
+#sa-owner-view-modal .user-edit-modal-content {
+    padding: 16px;
+}
+
+/* ── Company user create modal: embed form body padding ── */
+#company-user-create-modal .modal-body {
+    padding: 16px;
+}
+
+@media (max-width: 700px) {
+    .entity-form-layout,
+    .driver-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .entity-form-docs,
+    .driver-layout-docs {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+    }
 }

@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипаж</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Экипаж</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипаж</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Экипаж</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 
@@ -33,9 +33,9 @@
 <?php elseif ($entityNotFound): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Экипаж не найден</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Экипаж не найден</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/crews') ?>" class="btn btn-ghost">← К списку</a>
@@ -49,9 +49,9 @@
 <?php elseif (isset($accessDenied)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Доступ запрещён</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/crews') ?>" class="btn btn-ghost">← К списку</a>
@@ -75,10 +75,9 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <div class="page-eyebrow">ЭКИПАЖИ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Экипаж #<?= $crew['id'] ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Экипаж #<?= $crew['id'] ?></h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/crews/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -197,7 +196,7 @@
             <?php if (($crew['status'] ?? '') === 'archived'): ?>
                 <p class="text-muted">Экипаж уже удалён.</p>
             <?php else: ?>
-                <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
+                <p class="text-muted mb-compact">Запись будет удалена из списка.</p>
                 <form method="post" action="/company/crews/<?= $crew['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
                     <button type="submit" class="btn btn-danger">Удалить</button>
                 </form>

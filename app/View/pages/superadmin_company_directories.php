@@ -25,8 +25,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Справочники компании</span>
+        <h1 class="page-title">Справочники компании</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>

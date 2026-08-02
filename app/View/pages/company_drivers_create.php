@@ -8,8 +8,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ПОДРЯДЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></span>
         <h1 class="page-title">Создать водителя</h1>
+        <div class="page-summary"><span>Подрядчики / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/drivers') ?>" class="btn btn-secondary">← К списку</a>
@@ -32,8 +32,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ПОДРЯДЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></span>
         <h1 class="page-title">Водитель создан</h1>
+        <div class="page-summary"><span>Подрядчики / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/drivers/create') ?>" class="btn btn-secondary">Создать ещё</a>
@@ -111,8 +111,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ПОДРЯДЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></span>
         <h1 class="page-title">Создать водителя</h1>
+        <div class="page-summary"><span>Подрядчики / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/drivers') ?>" class="btn btn-secondary">← К списку</a>

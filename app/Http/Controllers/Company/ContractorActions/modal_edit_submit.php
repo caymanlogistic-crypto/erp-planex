@@ -5,8 +5,21 @@ use App\Service\ContractorContactService;
 requireRole(['company_owner', 'senior_logist', 'logist']);
 
 $renderMessage = static function (string $message): void {
-    echo '<div class="modal-body"><div class="notice warn" style="margin:16px">' . e($message) . '</div></div>';
+    echo '<div class="modal-body"><div class="notice warn modal-notice">' . e($message) . '</div></div>';
     echo '<div class="modal-foot is-spaced"><div class="modal-foot-actions"><button type="button" class="btn btn-ghost" data-contractor-view-close-btn>Закрыть</button></div></div>';
+};
+
+$renderEditForm = static function (
+    array $contractor,
+    array $old,
+    array $errors,
+    ?string $formError,
+    array $leExistingDocs,
+    array $leDocTypes,
+    array $leContactValues,
+    array $leContactErrors
+): void {
+    require base_path('app/View/partials/company_contractor_modal_edit.php');
 };
 
 $companyId = $service->getCompanyId();
@@ -32,6 +45,7 @@ try {
 
     $roleCode = (string) ($_SESSION['role_code'] ?? '');
     $userId = (int) ($_SESSION['user_id'] ?? 0);
+    $canEditGrant = null;
     if ($roleCode === 'logist') {
         $grantStmt = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND access_level = 'edit' AND revoked_at IS NULL LIMIT 1");
         $grantStmt->execute([(int) $id, $userId]);
@@ -43,81 +57,149 @@ try {
     }
 
     $contacts = ContractorContactService::loadByContractorId($localPdo, (int) $id);
-    $errors = [];
-    $old = $_POST;
+    $old = array_merge($contractor, $_POST);
     $old['contacts'] = $_POST['contacts'] ?? ($contacts !== [] ? $contacts : contractorFormDefaultContacts());
     $formError = null;
 
     $contactPayload = ContractorContactService::normalizeSubmittedContacts($_POST['contacts'] ?? []);
     $submittedContacts = $contactPayload['contacts'];
+    $errors = $service->validateContractor($_POST, $localPdo, (int) $id);
     if (!empty($contactPayload['errors'])) {
         $errors['contacts'] = $contactPayload['errors'];
     }
 
-    $name = trim($_POST['name'] ?? '');
-    $inn = trim($_POST['inn'] ?? '');
-    if ($name === '') {
-        $errors['name'] = 'Обязательное поле';
+    $leDocTypes = [];
+    $leExistingDocs = [];
+    try {
+        $service->ensureDocumentTables($localPdo);
+        $leDocTypes = $service->getDocTypes($localPdo, 'contractor');
+    } catch (\Exception $e) {
+        $leDocTypes = [];
     }
-    if ($inn === '') {
-        $errors['inn'] = 'Обязательное поле';
-    } else {
-        $dupStmt = $localPdo->prepare('SELECT COUNT(*) FROM contractors WHERE inn = ? AND id != ?');
-        $dupStmt->execute([$inn, (int) $id]);
-        if ((int) $dupStmt->fetchColumn() > 0) {
-            $errors['inn'] = 'ИНН уже используется';
-        }
+
+    require_once base_path('app/Support/legal_entity_document_upload.php');
+    try {
+        $leExistingDocs = loadEntityDocuments($localPdo, (int) $id, 'contractor');
+    } catch (\Exception $e) {
+        $leExistingDocs = [];
     }
 
     if (!empty($errors)) {
-        require base_path('app/View/partials/company_contractor_modal_edit.php');
+        $leContactValues = $old['contacts'] ?? [];
+        $leContactErrors = $errors['contacts'] ?? [];
+        $renderEditForm($contractor, $old, $errors, $formError, $leExistingDocs, $leDocTypes, $leContactValues, $leContactErrors);
         return;
     }
 
-    $update = $localPdo->prepare(
-        'UPDATE contractors SET
-            name = :name,
-            inn = :inn,
-            kpp = :kpp,
-            ogrn = :ogrn,
-            contractor_type = :contractor_type,
-            legal_address = :legal_address,
-            physical_address = :physical_address,
-            bank_account = :bank_account,
-            bank_name = :bank_name,
-            bank_bik = :bank_bik,
-            bank_corr_account = :bank_corr_account,
-            status = :status,
-            comments = :comments,
-            updated_by_user_id = :updated_by_user_id,
-            updated_by_role = :updated_by_role
-         WHERE id = :id'
-    );
-    $update->execute([
-        ':name' => $name,
-        ':inn' => $inn,
-        ':kpp' => ($kpp = trim($_POST['kpp'] ?? '')) !== '' ? $kpp : null,
-        ':ogrn' => ($ogrn = trim($_POST['ogrn'] ?? '')) !== '' ? $ogrn : null,
-        ':contractor_type' => ($_POST['contractor_type'] ?? '') !== '' ? $_POST['contractor_type'] : null,
-        ':legal_address' => ($legalAddress = trim($_POST['legal_address'] ?? '')) !== '' ? $legalAddress : null,
-        ':physical_address' => ($physicalAddress = trim($_POST['physical_address'] ?? '')) !== '' ? $physicalAddress : null,
-        ':bank_account' => ($bankAccount = trim($_POST['bank_account'] ?? '')) !== '' ? $bankAccount : null,
-        ':bank_name' => ($bankName = trim($_POST['bank_name'] ?? '')) !== '' ? $bankName : null,
-        ':bank_bik' => ($bankBik = trim($_POST['bank_bik'] ?? '')) !== '' ? $bankBik : null,
-        ':bank_corr_account' => ($bankCorr = trim($_POST['bank_corr_account'] ?? '')) !== '' ? $bankCorr : null,
-        ':status' => $_POST['status'] ?? ($contractor['status'] ?? 'active'),
-        ':comments' => ($comments = trim($_POST['comments'] ?? '')) !== '' ? $comments : null,
-        ':updated_by_user_id' => $userId,
-        ':updated_by_role' => $roleCode,
-        ':id' => (int) $id,
-    ]);
+    $totalSizeError = '';
+    if (function_exists('validateTotalUploadSize')) {
+        $totalSizeError = validateTotalUploadSize();
+    }
+    if ($totalSizeError !== '') {
+        $formError = $totalSizeError;
+        $leContactValues = $old['contacts'] ?? [];
+        $leContactErrors = $errors['contacts'] ?? [];
+        $renderEditForm($contractor, $old, $errors, $formError, $leExistingDocs, $leDocTypes, $leContactValues, $leContactErrors);
+        return;
+    }
 
+    $customDocumentTitleError = null;
+    if (function_exists('validateLegalEntityCustomDocumentTitles')) {
+        $customDocumentTitleError = validateLegalEntityCustomDocumentTitles($_POST, $_FILES);
+    }
+    if ($customDocumentTitleError !== null) {
+        $formError = $customDocumentTitleError;
+        $leContactValues = $old['contacts'] ?? [];
+        $leContactErrors = $errors['contacts'] ?? [];
+        $renderEditForm($contractor, $old, $errors, $formError, $leExistingDocs, $leDocTypes, $leContactValues, $leContactErrors);
+        return;
+    }
+
+    $docErrors = [];
+
+    $deleteExistingDocs = $_POST['delete_existing_doc'] ?? [];
+    foreach ($deleteExistingDocs as $docId => $val) {
+        if ($val !== '1') {
+            continue;
+        }
+        try {
+            if (function_exists('softDeleteEntityDocument')) {
+                softDeleteEntityDocument($localPdo, (int) $docId, 'contractor', (int) $id, $userId, 'Archived via contractor modal edit');
+            }
+        } catch (\Exception $e) {
+            $docErrors[] = 'Не удалось удалить документ: ' . $e->getMessage();
+        }
+    }
+
+    $existingFiles = $_FILES['existing_doc_file'] ?? [];
+    if (!empty($existingFiles['name']) && is_array($existingFiles['name'])) {
+        foreach ($existingFiles['name'] as $docId => $origName) {
+            $uploadError = $existingFiles['error'][$docId] ?? UPLOAD_ERR_NO_FILE;
+            if ($uploadError !== UPLOAD_ERR_OK || trim((string) $origName) === '') {
+                continue;
+            }
+            try {
+                if (function_exists('replaceEntityDocument')) {
+                    replaceEntityDocument(
+                        $localPdo,
+                        (int) $docId,
+                        (int) $id,
+                        'contractor',
+                        $companyId,
+                        [
+                            'name' => (string) $origName,
+                            'tmp_name' => (string) ($existingFiles['tmp_name'][$docId] ?? ''),
+                            'type' => (string) ($existingFiles['type'][$docId] ?? ''),
+                            'size' => (int) ($existingFiles['size'][$docId] ?? 0),
+                        ],
+                        $userId,
+                        $roleCode
+                    );
+                }
+            } catch (\Exception $e) {
+                $docErrors[] = 'Не удалось заменить документ: ' . $e->getMessage();
+            }
+        }
+    }
+
+    if (function_exists('processLegalEntityCreateDocuments')) {
+        $docResult = processLegalEntityCreateDocuments(
+            $localPdo,
+            $companyId,
+            'contractor',
+            (int) $id,
+            $_POST,
+            $_FILES,
+            $userId,
+            $roleCode
+        );
+        if (!empty($docResult['docErrors'])) {
+            $docErrors = array_merge($docErrors, $docResult['docErrors']);
+        }
+    }
+
+    if (!empty($docErrors)) {
+        $formError = 'Ошибка при обработке документов:<br>' . implode('<br>', array_map('htmlspecialchars', $docErrors));
+        try {
+            $service->ensureDocumentTables($localPdo);
+            $leDocTypes = $service->getDocTypes($localPdo, 'contractor');
+            $leExistingDocs = loadEntityDocuments($localPdo, (int) $id, 'contractor');
+        } catch (\Exception $e) {
+            $leExistingDocs = [];
+        }
+        $leContactValues = $old['contacts'] ?? [];
+        $leContactErrors = $errors['contacts'] ?? [];
+        $renderEditForm($contractor, $old, $errors, $formError, $leExistingDocs, $leDocTypes, $leContactValues, $leContactErrors);
+        return;
+    }
+
+    $service->updateContractor($localPdo, (int) $id, $_POST, $userId, $roleCode);
     ContractorContactService::replaceForContractor($localPdo, (int) $id, $submittedContacts, $userId, $roleCode);
 
     $contractor = $service->getContractorById($localPdo, (int) $id) ?: $contractor;
     $contacts = ContractorContactService::loadByContractorId($localPdo, (int) $id);
-    $canEdit = $roleCode !== 'logist' || (int) ($contractor['created_by_user_id'] ?? 0) === $userId;
-    $canArchive = $roleCode === 'company_owner' || $roleCode === 'senior_logist' || ($roleCode === 'logist' && (int) ($contractor['created_by_user_id'] ?? 0) === $userId);
+    $canEdit = $roleCode !== 'logist' || (int) ($contractor['created_by_user_id'] ?? 0) === $userId || $canEditGrant;
+    $canArchive = $roleCode === 'company_owner' || $roleCode === 'senior_logist' || ($roleCode === 'logist' && ((int) ($contractor['created_by_user_id'] ?? 0) === $userId || $canEditGrant));
     $archiveBlockedMessage = '';
     try {
         $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
@@ -138,5 +220,23 @@ try {
     $contacts = $old['contacts'];
     $contractor = $contractor ?? ['id' => (int) $id, 'status' => 'active'];
     $formError = 'Ошибка сохранения: ' . $e->getMessage();
-    require base_path('app/View/partials/company_contractor_modal_edit.php');
+
+    $leDocTypes = [];
+    $leExistingDocs = [];
+    try {
+        if (isset($localPdo)) {
+            $service->ensureDocumentTables($localPdo);
+            $leDocTypes = $service->getDocTypes($localPdo, 'contractor');
+            if (function_exists('loadEntityDocuments')) {
+                $leExistingDocs = loadEntityDocuments($localPdo, (int) $id, 'contractor');
+            }
+        }
+    } catch (\Exception $ex) {
+        $leDocTypes = [];
+        $leExistingDocs = [];
+    }
+
+    $leContactValues = $old['contacts'] ?? [];
+    $leContactErrors = $errors['contacts'] ?? [];
+    $renderEditForm($contractor, $old, $errors, $formError, $leExistingDocs, $leDocTypes, $leContactValues, $leContactErrors);
 }

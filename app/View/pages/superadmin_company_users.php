@@ -31,7 +31,7 @@ require_once __DIR__ . '/../components/status_badge.php';
     $ownerUser = null;
     $regularUsers = [];
     foreach ($users as $user) {
-        if (($user['type'] ?? '') === 'owner') {
+        if (($user['role'] ?? '') === 'company_owner') {
             $ownerUser = $user;
         } else {
             $regularUsers[] = $user;
@@ -41,17 +41,15 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Пользователи компании</span>
-        <span class="page-summary">
-            <b><?= (int)$totalCount ?> всего</b>
-            <span class="sep">·</span>
-            <span><?= $ownerUser ? 'Руководитель назначен' : 'Нет руководителя' ?></span>
-        </span>
+        <h1 class="page-title">Пользователи компании</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $id ?>/users/logists/create" class="btn btn-primary">Создать пользователя</a>
-        <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
+        <?php if (!$ownerUser): ?>
+        <button type="button" class="btn btn-primary" data-owner-create-modal data-company-id="<?= (int)$id ?>">Создать руководителя</button>
+        <?php endif; ?>
+        <button type="button" class="btn btn-primary" data-sa-logist-create-modal data-company-id="<?= (int)$id ?>">Создать пользователя</button>
+        <a href="<?= app_url('/superadmin/companies/' . $id) ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
 
@@ -81,36 +79,35 @@ require_once __DIR__ . '/../components/status_badge.php';
                 <span><?= renderStatusBadge($ownerUser['status']) ?></span>
             </div>
             <div class="subject-actions">
-                <a href="/superadmin/companies/<?= $id ?>/owner" class="btn btn-secondary btn-sm">Карточка</a>
-                <a href="/superadmin/companies/<?= $id ?>/owner/edit" class="btn btn-ghost btn-sm">Редактировать</a>
+                <a href="<?= app_url('/superadmin/companies/' . $id . '/owner') ?>" class="btn btn-secondary btn-sm">Карточка</a>
+                <a href="<?= app_url('/superadmin/companies/' . $id . '/owner/edit') ?>" class="btn btn-ghost btn-sm">Редактировать</a>
             </div>
         </div>
         <div class="notice info mt-actions">
             Руководитель управляется отдельно от обычных пользователей: это первичный доступ компании и главный контакт для восстановления управляемости.
         </div>
         <div class="risk-actions">
-            <form method="post" action="/superadmin/companies/<?= $id ?>/owner/reset-password" onsubmit="return confirm('Сбросить пароль Руководителя?')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/owner/reset-password') ?>" onsubmit="return confirm('Сбросить пароль Руководителя?')">
                 <button type="submit" class="btn btn-secondary btn-sm">Сбросить пароль</button>
             </form>
             <?php if ($ownerUser['status'] !== 'active'): ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $ownerUser['id'] ?>/activate" onsubmit="return confirm('Активировать руководителя?')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/users/owner/' . $ownerUser['id'] . '/activate') ?>" onsubmit="return confirm('Активировать руководителя?')">
                 <button type="submit" class="btn btn-ghost btn-sm">Активировать</button>
             </form>
             <?php endif; ?>
             <?php if ($ownerUser['status'] === 'active'): ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $ownerUser['id'] ?>/block" onsubmit="return confirm('Заблокировать руководителя?')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/users/owner/' . $ownerUser['id'] . '/block') ?>" onsubmit="return confirm('Заблокировать руководителя?')">
                 <button type="submit" class="btn btn-secondary btn-sm">Заблокировать</button>
             </form>
             <?php endif; ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/users/owner/<?= $ownerUser['id'] ?>/archive" onsubmit="return confirm('Архивировать руководителя?')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/users/owner/' . $ownerUser['id'] . '/archive') ?>" onsubmit="return confirm('Архивировать руководителя?')">
                 <button type="submit" class="btn btn-danger btn-sm">Архивировать</button>
             </form>
         </div>
         <?php else: ?>
-        <div class="empty-state empty-state-left">
+        <div class="empty-state">
             <p class="empty-title">Руководитель не создан</p>
             <p class="empty-desc">Это не обычная пустая таблица, а блокер готовности компании. Создайте руководителя, чтобы у компании появился первичный доступ и ответственный контакт.</p>
-            <a href="/superadmin/companies/<?= $id ?>/create-owner" class="btn btn-primary">Создать руководителя</a>
         </div>
         <?php endif; ?>
     </div>
@@ -124,10 +121,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 
     <?php if (empty($regularUsers)): ?>
     <div class="panel-body">
-        <div class="empty-state empty-state-left">
+        <div class="empty-state">
             <p class="empty-title">Рабочие пользователи не созданы</p>
             <p class="empty-desc">Для новой компании это нормальный следующий шаг после руководителя. Пользователь получает рабочий доступ, но не заменяет руководителя.</p>
-            <a href="/superadmin/companies/<?= $id ?>/users/logists/create" class="btn btn-secondary">Создать пользователя</a>
         </div>
     </div>
     <?php else: ?>
@@ -144,11 +140,11 @@ require_once __DIR__ . '/../components/status_badge.php';
             </thead>
             <tbody>
                 <?php foreach ($regularUsers as $u): ?>
-                <tr>
+                <tr data-sa-user-id="<?= (int)$u['id'] ?>" data-sa-user-type="logist">
                     <td class="cell-double">
                         <span class="cell-main">
                             <?= e($u['full_name']) ?>
-                            <span class="badge">Логист</span>
+                            <span class="badge"><?= e(($u['role'] ?? 'logist') === 'senior_logist' ? 'Логист+' : 'Логист') ?></span>
                         </span>
                         <span class="cell-sub"><?= e($u['login']) ?></span>
                     </td>
@@ -160,9 +156,9 @@ require_once __DIR__ . '/../components/status_badge.php';
                     <td class="col-tight col-muted"><?= e(substr($u['created_at'] ?? '', 0, 10)) ?></td>
                     <td class="col-tight col-actions">
                         <div class="row-actions">
-                            <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>" class="btn btn-secondary btn-sm">Карточка</a>
-                            <a href="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/edit" class="btn btn-ghost btn-sm">Редактировать</a>
-                            <form method="post" action="/superadmin/companies/<?= $id ?>/users/logists/<?= $u['id'] ?>/reset-password" onsubmit="return confirm('Сбросить пароль пользователя?')">
+                            <a href="<?= app_url('/superadmin/companies/' . $id . '/users/logists/' . $u['id']) ?>" class="btn btn-secondary btn-sm">Карточка</a>
+                            <a href="<?= app_url('/superadmin/companies/' . $id . '/users/logists/' . $u['id'] . '/edit') ?>" class="btn btn-ghost btn-sm">Редактировать</a>
+                            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/users/logists/' . $u['id'] . '/reset-password') ?>" onsubmit="return confirm('Сбросить пароль пользователя?')">
                                 <button type="submit" class="btn btn-ghost btn-sm">Пароль</button>
                             </form>
                         </div>
@@ -177,5 +173,44 @@ require_once __DIR__ . '/../components/status_badge.php';
 </div>
 
 </div><!-- /.page-content -->
+
+<!-- Logist view modal -->
+<div class="modal-overlay driver-view-overlay" id="sa-logist-view-modal" data-company-id="<?= (int)$id ?>" data-close-on-overlay="0" data-close-on-escape="0" data-reset-on-close="1">
+  <div class="modal modal-lg driver-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Пользователь</span>
+      <button type="button" class="modal-close" data-sa-logist-view-close>✕</button>
+    </div>
+    <div class="modal-content"></div>
+  </div>
+</div>
+
+<!-- Logist create modal -->
+<div class="modal-overlay driver-view-overlay" id="sa-logist-create-modal" data-close-on-overlay="0" data-close-on-escape="0" data-reset-on-close="1">
+  <div class="modal modal-lg driver-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Создать пользователя</span>
+      <button type="button" class="modal-close" data-sa-logist-create-close>✕</button>
+    </div>
+    <div id="sa-logist-create-modal-content">
+      <div class="modal-body"><div class="driver-modal-loading">...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Owner create modal -->
+<div class="modal-overlay driver-view-overlay" id="sa-owner-create-modal" data-close-on-overlay="0" data-close-on-escape="0" data-reset-on-close="1">
+  <div class="modal modal-lg driver-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Создать руководителя</span>
+      <button type="button" class="modal-close" data-owner-create-close>✕</button>
+    </div>
+    <div id="sa-owner-create-modal-content">
+      <div class="modal-body">
+        <div class="driver-modal-loading">...</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <?php endif; ?>

@@ -45,66 +45,61 @@ require_once __DIR__ . '/../components/status_badge.php';
             'label' => 'Руководитель',
             'ok' => $hasOwner,
             'desc' => $hasOwner ? 'Есть ответственный за компанию.' : 'Критический шаг: без руководителя компания не готова к работе.',
-            'href' => $hasOwner ? "/superadmin/companies/{$id}/owner" : "/superadmin/companies/{$id}/create-owner",
+            'href' => $hasOwner ? app_url("/superadmin/companies/{$id}/owner") : app_url("/superadmin/companies/{$id}/create-owner"),
             'action' => $hasOwner ? 'Открыть' : 'Создать',
         ],
         [
             'label' => 'Локальная БД',
             'ok' => $hasLocalDb,
             'desc' => $hasLocalDb ? 'Рабочая база компании доступна.' : 'Данные пользователей, документов и справочников недоступны.',
-            'href' => "/superadmin/companies/{$id}",
+            'href' => app_url("/superadmin/companies/{$id}"),
             'action' => 'Проверить',
         ],
         [
             'label' => 'Пользователи',
             'ok' => $hasUsers,
             'desc' => $hasUsers ? 'Есть рабочие пользователи компании.' : 'Можно создать обычных пользователей после руководителя.',
-            'href' => "/superadmin/companies/{$id}/users",
+            'href' => app_url("/superadmin/companies/{$id}/users"),
             'action' => $hasUsers ? 'Открыть' : 'Создать',
         ],
         [
             'label' => 'Справочники',
             'ok' => $dirsTotal > 0,
             'desc' => $dirsTotal > 0 ? 'Справочники содержат рабочие записи.' : 'Пусто: это нормально для новой компании, но важно для запуска операций.',
-            'href' => "/superadmin/companies/{$id}/directories",
+            'href' => app_url("/superadmin/companies/{$id}/directories"),
             'action' => 'Аудит',
         ],
         [
             'label' => 'Документы',
             'ok' => $hasDocuments,
             'desc' => $hasDocuments ? 'Есть активные документы.' : 'Документы ещё не загружены или недоступны.',
-            'href' => "/superadmin/companies/{$id}/documents",
+            'href' => app_url("/superadmin/companies/{$id}/documents"),
             'action' => 'Открыть',
         ],
     ];
     $nextAction = !$hasOwner
-        ? ['title' => 'Создать руководителя', 'desc' => 'Это главный блокер: руководитель получает первичный доступ к компании.', 'href' => "/superadmin/companies/{$id}/create-owner", 'class' => 'btn-primary']
+        ? ['title' => 'Создать руководителя', 'desc' => 'Это главный блокер: руководитель получает первичный доступ к компании.', 'href' => app_url("/superadmin/companies/{$id}/create-owner"), 'class' => 'btn-primary']
         : (!$hasLocalDb
-            ? ['title' => 'Проверить рабочую БД', 'desc' => 'Без локальной БД нельзя подтвердить пользователей, документы и справочники.', 'href' => "/superadmin/companies/{$id}", 'class' => 'btn-secondary']
+            ? ['title' => 'Проверить рабочую БД', 'desc' => 'Без локальной БД нельзя подтвердить пользователей, документы и справочники.', 'href' => app_url("/superadmin/companies/{$id}"), 'class' => 'btn-secondary']
             : (!$hasUsers
-                ? ['title' => 'Создать пользователя', 'desc' => 'После руководителя можно выдать рабочий доступ сотруднику компании.', 'href' => "/superadmin/companies/{$id}/users/logists/create", 'class' => 'btn-primary']
-                : ['title' => 'Проверить операционные данные', 'desc' => 'Компания готова к администрированию: проверьте справочники и документы.', 'href' => "/superadmin/companies/{$id}/directories", 'class' => 'btn-secondary']));
+                ? ['title' => 'Создать пользователя', 'desc' => 'После руководителя можно выдать рабочий доступ сотруднику компании.', 'href' => app_url("/superadmin/companies/{$id}/users/logists/create"), 'class' => 'btn-primary']
+                : ['title' => 'Проверить операционные данные', 'desc' => 'Компания готова к администрированию: проверьте справочники и документы.', 'href' => app_url("/superadmin/companies/{$id}/directories"), 'class' => 'btn-secondary']));
 ?>
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / Реестр компаний</span>
-        <span class="page-title"><?= e($company['name']) ?></span>
-        <span class="page-summary">
-            <b>ID <?= (int)$company['id'] ?></b>
-            <span class="sep">·</span>
-            <?= renderStatusBadge($company['status']) ?>
-            <span class="sep">·</span>
-            <span><?= $isOperational ? 'Компания готова к работе' : 'Требуется настройка' ?></span>
-        </span>
+        <h1 class="page-title"><?= e($company['name']) ?></h1>
+        <div class="page-summary"><span>ID <?= (int)$company['id'] ?> · <?= renderStatusBadge($company['status']) ?> · <?= $isOperational ? 'Компания готова к работе' : 'Требуется настройка' ?></span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $company['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
+        <a href="<?= app_url('/superadmin/companies/' . $company['id'] . '/edit') ?>" class="btn btn-primary">Редактировать</a>
         <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">← К реестру</a>
     </div>
 </div>
 
 <div class="page-content">
+
+<div class="company-detail-shell">
 
 <?php if (!empty($_SESSION['company_edit_doc_warning'])): ?>
 <div class="panel">
@@ -117,10 +112,12 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="section-nav">
     <a href="#overview" class="section-nav-item is-active">Обзор</a>
+    <a href="#legal" class="section-nav-item">Юр. данные</a>
     <a href="#owner" class="section-nav-item">Руководитель</a>
     <a href="#users" class="section-nav-item">Пользователи</a>
-    <a href="#directories" class="section-nav-item">Справочники</a>
+    <a href="#tech" class="section-nav-item">Техническое</a>
     <a href="#documents" class="section-nav-item">Документы</a>
+    <a href="#directories" class="section-nav-item">Справочники</a>
     <a href="#danger" class="section-nav-item is-danger">Опасная зона</a>
 </div>
 
@@ -140,7 +137,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                             <span class="readiness-title"><?= e($item['label']) ?></span>
                             <span class="readiness-desc"><?= e($item['desc']) ?></span>
                         </div>
-                        <a href="<?= e($item['href']) ?>" class="btn btn-ghost btn-sm"><?= e($item['action']) ?></a>
+                        <a href="<?= e($item['href']) ?>" class="btn btn-ghost btn-sm"<?= (!$item['ok'] && str_contains($item['href'], '/create-owner')) ? ' data-owner-create-modal data-company-id="' . (int)$id . '"' : '' ?>><?= e($item['action']) ?></a>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -152,188 +149,220 @@ require_once __DIR__ . '/../components/status_badge.php';
             <span class="next-action-label">Следующее действие</span>
             <strong><?= e($nextAction['title']) ?></strong>
             <span><?= e($nextAction['desc']) ?></span>
-            <a href="<?= e($nextAction['href']) ?>" class="btn <?= e($nextAction['class']) ?>"><?= e($nextAction['title']) ?></a>
+            <a href="<?= e($nextAction['href']) ?>" class="btn <?= e($nextAction['class']) ?>"<?= str_contains($nextAction['href'], '/create-owner') ? ' data-owner-create-modal data-company-id="' . (int)$id . '"' : '' ?>><?= e($nextAction['title']) ?></a>
         </div>
     </div>
 </div>
 
-<div class="view-grid">
+<div class="company-card-grid">
 
-    <div class="panel">
-        <div class="panel-head">
-            <span class="panel-head-title">Основные данные</span>
-        </div>
-        <div class="panel-body">
-            <dl class="kv">
-                <dt>Название</dt>
-                <dd><?= e($company['name']) ?></dd>
-                <dt>ИНН</dt>
-                <dd><?= e($company['inn'] ?? '') ?></dd>
-                <dt>КПП</dt>
-                <dd><?= e($company['kpp'] ?? '') ?: '—' ?></dd>
-                <dt>ОГРН</dt>
-                <dd><?= e($company['ogrn'] ?? '') ?: '—' ?></dd>
-                <dt>Статус</dt>
-                <dd><?= renderStatusBadge($company['status']) ?></dd>
-                <dt>Комментарий</dt>
-                <dd><?= e($company['comments'] ?? '') ?: '—' ?></dd>
-            </dl>
+    <div class="company-card company-card--wide" id="legal">
+        <div class="company-card-head">Юридические данные</div>
+        <div class="company-card-body">
+            <div class="cd-mini-grid">
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">Название</span>
+                    <span class="cd-mini-value"><?= e($company['name']) ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">ИНН</span>
+                    <span class="cd-mini-value"><?= e($company['inn'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">КПП</span>
+                    <span class="cd-mini-value"><?= e($company['kpp'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">ОГРН</span>
+                    <span class="cd-mini-value"><?= e($company['ogrn'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Статус</span>
+                    <span class="cd-mini-value"><?= renderStatusBadge($company['status']) ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Должность руководителя</span>
+                    <span class="cd-mini-value"><?= e($company['director_position'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">ФИО руководителя</span>
+                    <span class="cd-mini-value"><?= e($company['director_full_name'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">Юридический адрес</span>
+                    <span class="cd-mini-value"><?= e($company['legal_address'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">Фактический адрес</span>
+                    <span class="cd-mini-value"><?= e($company['physical_address'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Расчётный счёт</span>
+                    <span class="cd-mini-value cd-mini-value--mono"><?= e($company['bank_account'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">БИК</span>
+                    <span class="cd-mini-value cd-mini-value--mono"><?= e($company['bank_bik'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">Банк</span>
+                    <span class="cd-mini-value"><?= e($company['bank_name'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Корр. счёт</span>
+                    <span class="cd-mini-value cd-mini-value--mono"><?= e($company['bank_corr_account'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">Комментарий</span>
+                    <span class="cd-mini-value"><?= e($company['comments'] ?? '') ?: '—' ?></span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="panel">
-        <div class="panel-head">
-            <span class="panel-head-title">Банковские реквизиты</span>
-        </div>
-        <div class="panel-body">
-            <dl class="kv">
-                <dt>Расчётный счёт</dt>
-                <dd><?= e($company['bank_account'] ?? '') ?: '—' ?></dd>
-                <dt>БИК</dt>
-                <dd><?= e($company['bank_bik'] ?? '') ?: '—' ?></dd>
-                <dt>Банк</dt>
-                <dd><?= e($company['bank_name'] ?? '') ?: '—' ?></dd>
-                <dt>Корр. счёт</dt>
-                <dd><?= e($company['bank_corr_account'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
-    </div>
-
-    <div class="panel">
-        <div class="panel-head">
-            <span class="panel-head-title">Адреса и контакты</span>
-        </div>
-        <div class="panel-body">
-            <dl class="kv">
-                <dt>Юридический адрес</dt>
-                <dd><?= e($company['legal_address'] ?? '') ?: '—' ?></dd>
-                <dt>Фактический адрес</dt>
-                <dd><?= e($company['physical_address'] ?? '') ?: '—' ?></dd>
-                <dt>Контактное лицо</dt>
-                <dd><?= e($company['contact_person'] ?? '') ?: '—' ?></dd>
-                <dt>Телефон</dt>
-                <dd><?= e($company['contact_phone'] ?? '') ?: '—' ?></dd>
-                <dt>Email</dt>
-                <dd><?= e($company['contact_email'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
-    </div>
-
-    <div class="panel" id="owner">
-        <div class="panel-head">
-            <span class="panel-head-title">Руководитель</span>
+    <div class="company-card" id="owner" data-owner-id="<?= $owner ? (int)$company['id'] : '' ?>" data-erp-owner-card>
+        <div class="company-card-head">
+            <span>ERP-доступ руководителя</span>
             <?php if ($owner): ?>
-            <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost btn-sm">ERP-доступ</a>
+            <a href="<?= app_url('/superadmin/companies/' . (int)$company['id'] . '/owner') ?>" class="btn btn-ghost btn-sm">Открыть</a>
             <?php else: ?>
-            <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary btn-sm">Создать ERP-доступ</a>
+            <a href="<?= app_url('/superadmin/companies/' . (int)$company['id'] . '/create-owner') ?>" class="btn btn-primary btn-sm" data-owner-create-modal data-company-id="<?= (int)$company['id'] ?>">Создать ERP-доступ</a>
             <?php endif; ?>
         </div>
-        <div class="panel-body">
-            <dl class="kv">
-                <dt>Должность</dt>
-                <dd><?= e($company['director_position'] ?? '') ?: '—' ?></dd>
-                <dt>ФИО руководителя</dt>
-                <dd><?= e($company['director_full_name'] ?? '') ?: '—' ?></dd>
-                <?php if ($owner): ?>
-                <dt>Статус ERP-доступа</dt>
-                <dd><?= renderStatusBadge($owner['status']) ?></dd>
-                <?php endif; ?>
-            </dl>
-            <?php if (!$owner): ?>
-            <div class="notice info mt-2">ERP-доступ для руководителя не создан. Это можно сделать отдельно.</div>
+        <div class="company-card-body">
+            <?php if ($owner): ?>
+            <div class="cd-mini-grid cd-mini-grid--cols-2">
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">ФИО</span>
+                    <span class="cd-mini-value"><?= e($owner['full_name']) ?></span>
+                </div>
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">Логин</span>
+                    <span class="cd-mini-value cd-mini-value--mono"><?= e($owner['login']) ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Статус</span>
+                    <span class="cd-mini-value"><?= renderStatusBadge($owner['status']) ?></span>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="cd-notice">ERP-доступ не создан.</div>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="panel" id="users">
-        <div class="panel-head">
-            <span class="panel-head-title">Пользователи компании</span>
-            <a href="/superadmin/companies/<?= $id ?>/users" class="btn btn-ghost btn-sm">Все →</a>
+    <div class="company-card" id="users">
+        <div class="company-card-head">
+            <span>Пользователи компании</span>
+            <a href="<?= app_url('/superadmin/companies/' . $id . '/users') ?>" class="btn btn-ghost btn-sm">Все →</a>
         </div>
-        <div class="panel-body">
-            <dl class="kv">
-                <dt>Всего</dt>
-                <dd><?= (int)$userStats['total'] ?></dd>
-                <dt>Активных</dt>
-                <dd><?= (int)$userStats['active'] ?></dd>
-                <dt>Заблокированных</dt>
-                <dd><?= (int)$userStats['blocked'] ?></dd>
-                <dt>Руководитель</dt>
-                <dd><?= (int)$userStats['owner_count'] ?></dd>
-                <dt>Пользователей</dt>
-                <dd><?= (int)$userStats['logist_count'] ?></dd>
-            </dl>
-        </div>
-    </div>
-
-    <div class="panel">
-        <div class="panel-head">
-            <span class="panel-head-title">Техническая готовность</span>
-        </div>
-        <div class="panel-body">
-            <dl class="kv">
-                <dt>Company ID</dt>
-                <dd><?= (int)$company['id'] ?></dd>
-                <dt>Локальная БД</dt>
-                <dd><?= e($company['db_identifier'] ?? '') ?: '—' ?></dd>
-                <dt>Хост БД</dt>
-                <dd><?= e($company['db_host'] ?? '') ?: '—' ?></dd>
-                <dt>Пользователь БД</dt>
-                <dd><?= e($company['db_username'] ?? '') ?: '—' ?></dd>
-                <dt>БД существует</dt>
-                <dd><span class="badge <?= $hasLocalDb ? 'badge-ok' : 'badge-danger' ?>"><?= $hasLocalDb ? 'YES' : 'NO' ?></span></dd>
-                <dt>Storage</dt>
-                <dd><?= e($company['storage_path'] ?? '') ?: '—' ?></dd>
-                <dt>Storage существует</dt>
-                <dd><span class="badge <?= !empty($storageExists) ? 'badge-ok' : 'badge-warning' ?>"><?= !empty($storageExists) ? 'YES' : 'NO' ?></span></dd>
-                <dt>Provisioning</dt>
-                <dd>
-                    <?= e($company['status']) ?>
-                    <?php if ($company['status'] === 'error' && !empty($company['error_message'])): ?>
-                        <div class="notice warn mt-actions"><?= e($company['error_message']) ?></div>
-                    <?php endif; ?>
-                </dd>
-                <dt>Создана</dt>
-                <dd><?= e($company['created_at'] ?? '') ?></dd>
-                <dt>Обновлена</dt>
-                <dd><?= e($company['updated_at'] ?? '') ?></dd>
-            </dl>
+        <div class="company-card-body">
+            <div class="cd-stat-row">
+                <div class="cd-stat-item">
+                    <span class="cd-stat-num"><?= (int)$userStats['total'] ?></span>
+                    <span class="cd-stat-label">Всего</span>
+                </div>
+                <div class="cd-stat-item">
+                    <span class="cd-stat-num"><?= (int)$userStats['active'] ?></span>
+                    <span class="cd-stat-label">Активных</span>
+                </div>
+                <div class="cd-stat-item">
+                    <span class="cd-stat-num"><?= (int)$userStats['blocked'] ?></span>
+                    <span class="cd-stat-label">Заблок.</span>
+                </div>
+                <div class="cd-stat-item">
+                    <span class="cd-stat-num"><?= (int)$userStats['owner_count'] ?></span>
+                    <span class="cd-stat-label">Рук-ль</span>
+                </div>
+                <div class="cd-stat-item">
+                    <span class="cd-stat-num"><?= (int)$userStats['logist_count'] ?></span>
+                    <span class="cd-stat-label">Пользователей</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="panel" id="documents">
-        <div class="panel-head">
-            <span class="panel-head-title">Документы и доступы</span>
+    <div class="company-card" id="tech">
+        <div class="company-card-head">Техническая готовность</div>
+        <div class="company-card-body">
+            <div class="cd-mini-grid">
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Company ID</span>
+                    <span class="cd-mini-value cd-mini-value--mono"><?= (int)$company['id'] ?></span>
+                </div>
+                <div class="cd-mini-item cd-mini-item--wide">
+                    <span class="cd-mini-label">Локальная БД</span>
+                    <span class="cd-mini-value cd-mini-value--mono"><?= e($company['db_identifier'] ?? '') ?: '—' ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">БД существует</span>
+                    <span class="cd-mini-value"><span class="badge <?= $hasLocalDb ? 'badge-ok' : 'badge-danger' ?>"><?= $hasLocalDb ? 'YES' : 'NO' ?></span></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Storage существует</span>
+                    <span class="cd-mini-value"><span class="badge <?= !empty($storageExists) ? 'badge-ok' : 'badge-warning' ?>"><?= !empty($storageExists) ? 'YES' : 'NO' ?></span></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Создана</span>
+                    <span class="cd-mini-value"><?= e($company['created_at'] ?? '') ?></span>
+                </div>
+                <div class="cd-mini-item">
+                    <span class="cd-mini-label">Обновлена</span>
+                    <span class="cd-mini-value"><?= e($company['updated_at'] ?? '') ?></span>
+                </div>
+            </div>
         </div>
-        <div class="panel-body">
-            <dl class="kv">
-                <dt>Всего документов</dt>
-                <dd><?= (int)$docStats['total'] ?></dd>
-                <dt>Активных документов</dt>
-                <dd><?= (int)$docStats['active'] ?></dd>
-                <dt>Выданных доступов</dt>
-                <dd><?= (int)$accessStats['total'] ?></dd>
-            </dl>
-            <div class="form-actions">
-                <a href="/superadmin/companies/<?= $id ?>/documents" class="btn btn-secondary btn-sm">Документы</a>
-                <a href="/superadmin/companies/<?= $id ?>/access-grants" class="btn btn-secondary btn-sm">Доступы</a>
+    </div>
+
+    <div class="company-card company-card--wide" id="documents">
+        <div class="company-card-head">
+            <span>Документы компании</span>
+            <a href="<?= app_url('/superadmin/companies/' . $id . '/documents') ?>" class="btn btn-ghost btn-sm">Все →</a>
+        </div>
+        <div class="company-card-body">
+            <?php if (!empty($companyDocs)): ?>
+            <div class="file-list">
+                <?php foreach (array_slice($companyDocs, 0, 8) as $doc):
+                    $ext = strtoupper(pathinfo($doc['original_name'] ?? '', PATHINFO_EXTENSION));
+                    $badgeCls = 'file-type-badge';
+                    $badgeTxt = 'FILE';
+                    if ($ext === 'PDF') { $badgeCls .= ' is-pdf'; $badgeTxt = 'PDF'; }
+                    elseif (in_array($ext, ['DOC','DOCX','RTF','ODT'], true)) { $badgeCls .= ' is-doc'; $badgeTxt = 'DOC'; }
+                    elseif (in_array($ext, ['XLS','XLSX','CSV','ODS'], true)) { $badgeCls .= ' is-xls'; $badgeTxt = 'XLS'; }
+                    elseif (in_array($ext, ['JPG','JPEG','PNG','WEBP','GIF','BMP','TIF','TIFF','HEIC','HEIF'], true)) { $badgeCls .= ' is-img'; $badgeTxt = 'IMG'; }
+                    else { $badgeCls .= ' is-other'; $badgeTxt = $ext ?: 'FILE'; }
+                    $typeLabel = $doc['type_name'] ?? $doc['document_type'] ?? '';
+                ?>
+                <div class="file-item file-item-predef document-file-row has-file has-existing-file driver-doc-view-item">
+                    <div class="<?= $badgeCls ?>"><?= $badgeTxt ?></div>
+                    <div class="file-info">
+                        <div class="file-name"><?= e($typeLabel ?: $doc['original_name']) ?></div>
+                        <div class="file-meta"><?= e($doc['original_name']) ?></div>
+                    </div>
+                    <a href="<?= app_url('/superadmin/companies/' . (int)$id . '/documents/' . (int)$doc['id'] . '/view') ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window"><span>Просмотр</span></a>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="notice info">Документы компании не загружены.</div>
+            <?php endif; ?>
+            <div class="form-actions mt-2">
+                <a href="<?= app_url('/superadmin/companies/' . $id . '/documents') ?>" class="btn btn-secondary btn-sm">Все документы (<?= (int)$docStats['active'] ?>)</a>
+                <a href="<?= app_url('/superadmin/companies/' . $id . '/access-grants') ?>" class="btn btn-secondary btn-sm">Доступы (<?= (int)$accessStats['total'] ?>)</a>
             </div>
         </div>
     </div>
 
 </div>
 
-<div class="panel" id="directories">
-    <div class="panel-head">
-        <span class="panel-head-title">Справочники компании</span>
-        <a href="/superadmin/companies/<?= $id ?>/directories" class="btn btn-ghost btn-sm">Все →</a>
+<div class="company-card" id="directories">
+    <div class="company-card-head">
+        <span>Справочники компании</span>
+        <a href="<?= app_url('/superadmin/companies/' . $id . '/directories') ?>" class="btn btn-ghost btn-sm">Все →</a>
     </div>
-    <div class="panel-body">
-        <div class="notice info">
-            Справочники показывают не просто количество записей, а операционную наполненность компании: клиенты, подрядчики, водители, транспорт и экипажи.
-        </div>
-        <div class="tbl-wrap mt-actions">
-            <table class="tbl">
+    <div class="company-card-body">
+        <div class="tbl-wrap">
+            <table class="tbl cd-dirs-tbl">
                 <thead>
                     <tr>
                         <th>Справочник</th>
@@ -349,28 +378,28 @@ require_once __DIR__ . '/../components/status_badge.php';
                         <td class="col-num"><?= (int)$dirs['clients_total'] ?></td>
                         <td class="col-num"><?= (int)$dirs['clients_active'] ?></td>
                         <td class="col-num"><?= (int)$dirs['clients_archived'] ?></td>
-                        <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-tight"><a href="<?= app_url('/superadmin/companies/' . $id . '/clients') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Подрядчики</td>
                         <td class="col-num"><?= (int)$dirs['contractors_total'] ?></td>
                         <td class="col-num"><?= (int)$dirs['contractors_active'] ?></td>
                         <td class="col-num"><?= (int)$dirs['contractors_archived'] ?></td>
-                        <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-tight"><a href="<?= app_url('/superadmin/companies/' . $id . '/contractors') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Водители</td>
                         <td class="col-num"><?= (int)$dirs['drivers_total'] ?></td>
                         <td class="col-num"><?= (int)$dirs['drivers_active'] ?></td>
                         <td class="col-num"><?= (int)$dirs['drivers_archived'] ?></td>
-                        <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-tight"><a href="<?= app_url('/superadmin/companies/' . $id . '/drivers') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспортные единицы</td>
                         <td class="col-num"><?= (int)$dirs['vehicle_units_total'] ?></td>
                         <td class="col-num"><?= (int)$dirs['vehicle_units_active'] ?></td>
                         <td class="col-num"><?= (int)$dirs['vehicle_units_archived'] ?></td>
-                        <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-tight"><a href="<?= app_url('/superadmin/companies/' . $id . '/vehicles') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспортные комплекты</td>
@@ -391,7 +420,7 @@ require_once __DIR__ . '/../components/status_badge.php';
                         <td class="col-num"><?= (int)$dirs['crews_total'] ?></td>
                         <td class="col-num"><?= (int)$dirs['crews_active'] ?></td>
                         <td class="col-num"><?= (int)$dirs['crews_archived'] ?></td>
-                        <td class="col-tight"><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-tight"><a href="<?= app_url('/superadmin/companies/' . $id . '/crews') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                 </tbody>
             </table>
@@ -399,22 +428,18 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 </div>
 
-<div class="panel" id="status-actions">
-    <div class="panel-head">
-        <span class="panel-head-title">Управление статусом</span>
-    </div>
-    <div class="panel-body">
-        <div class="notice info">
-            Обычные действия меняют доступность компании, но не удаляют данные.
-        </div>
-        <div class="form-actions">
+<div class="company-action-section" id="status-actions">
+    <div class="company-card-head">Управление статусом</div>
+    <div class="company-action-body">
+        <span class="cd-action-hint">Обычные действия меняют доступность компании, но не удаляют данные.</span>
+        <div class="cd-action-buttons">
             <?php if ($company['status'] !== 'active'): ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/activate" onsubmit="return confirm('Активировать компанию?')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/activate') ?>" onsubmit="return confirm('Активировать компанию?')">
                 <button type="submit" class="btn btn-primary btn-sm">Активировать</button>
             </form>
             <?php endif; ?>
             <?php if ($company['status'] === 'active'): ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/deactivate" onsubmit="return confirm('Отключить компанию?')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/deactivate') ?>" onsubmit="return confirm('Отключить компанию?')">
                 <button type="submit" class="btn btn-secondary btn-sm">Отключить</button>
             </form>
             <?php endif; ?>
@@ -422,39 +447,64 @@ require_once __DIR__ . '/../components/status_badge.php';
     </div>
 </div>
 
-<div class="panel panel-danger" id="danger">
-    <div class="panel-head">
-        <span class="panel-head-title">Опасная зона</span>
-    </div>
-    <div class="panel-body">
-        <div class="danger-flow">
-            <div class="danger-step">
+<div class="company-action-section company-action-section--danger" id="danger">
+    <div class="company-card-head">Опасная зона</div>
+    <div class="company-action-body">
+        <div class="cd-danger-row">
+            <div class="cd-danger-step">
                 <strong>Ограничить доступ</strong>
                 <span>Блокировка не удаляет данные, но пользователи не смогут войти.</span>
             </div>
-            <div class="danger-step">
+            <div class="cd-danger-step">
                 <strong>Архивировать</strong>
                 <span>Компания сохраняется в системе как неактивная запись.</span>
             </div>
-            <div class="danger-step is-terminal">
+            <div class="cd-danger-step cd-danger-step--terminal">
                 <strong>Физически удалить</strong>
                 <span>Удаляет локальную БД, storage, пользователей, документы и справочники. Это отдельный подтверждаемый процесс.</span>
             </div>
         </div>
-        <div class="form-actions">
+        <div class="cd-action-buttons">
             <?php if (in_array($company['status'], ['active', 'inactive'], true)): ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/block" onsubmit="return confirm('Заблокировать компанию? Пользователи не смогут войти.')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/block') ?>" onsubmit="return confirm('Заблокировать компанию? Пользователи не смогут войти.')">
                 <button type="submit" class="btn btn-danger btn-sm">Заблокировать</button>
             </form>
             <?php endif; ?>
-            <form method="post" action="/superadmin/companies/<?= $id ?>/archive" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
+            <form method="post" action="<?= app_url('/superadmin/companies/' . $id . '/archive') ?>" onsubmit="return confirm('Архивировать компанию? Все данные сохранятся.')">
                 <button type="submit" class="btn btn-secondary btn-sm">Архивировать</button>
             </form>
-            <a href="/superadmin/companies/<?= $id ?>/delete" class="btn btn-danger btn-sm">Физическое удаление →</a>
+            <a href="<?= app_url('/superadmin/companies/' . $id . '/delete') ?>" class="btn btn-danger btn-sm">Физическое удаление →</a>
         </div>
     </div>
 </div>
 
+</div><!-- /.company-detail-shell -->
 </div><!-- /.page-content -->
+
+<!-- Owner create modal -->
+<div class="modal-overlay driver-view-overlay" id="sa-owner-create-modal" data-close-on-overlay="0" data-close-on-escape="0" data-reset-on-close="1">
+  <div class="modal modal-lg driver-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Создать руководителя</span>
+      <button type="button" class="modal-close" data-owner-create-close>✕</button>
+    </div>
+    <div id="sa-owner-create-modal-content">
+      <div class="modal-body">
+        <div class="driver-modal-loading">...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Owner view modal -->
+<div class="modal-overlay driver-view-overlay" id="sa-owner-view-modal" data-close-on-overlay="0" data-close-on-escape="0" data-reset-on-close="1">
+  <div class="modal modal-lg user-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Руководитель</span>
+      <button type="button" class="modal-close" data-owner-view-close>✕</button>
+    </div>
+    <div class="modal-content"></div>
+  </div>
+</div>
 
 <?php endif; ?>

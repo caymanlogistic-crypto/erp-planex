@@ -50,19 +50,337 @@ final class LocalMigrationService
 
     public static function apply(PDO $localPdo): void
     {
+        static $appliedConnections = [];
+        $connectionId = spl_object_id($localPdo);
+        if (isset($appliedConnections[$connectionId])) {
+            return;
+        }
+
+        $localPdo->exec(
+            "CREATE TABLE IF NOT EXISTS `schema_migrations` (
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `migration` VARCHAR(255) NOT NULL,
+                `checksum` VARCHAR(64) NOT NULL,
+                `executed_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `uk_local_migration` (`migration`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+
+
         $files = glob(base_path('database/migrations-local/*.sql')) ?: [];
         sort($files, SORT_STRING);
 
-        foreach ($files as $file) {
-            $fileName = basename($file);
-            try {
+        $databaseName = (string) $localPdo->query('SELECT DATABASE()')->fetchColumn();
+        $lockName = 'planex_migrate_' . substr(hash('sha256', $databaseName), 0, 32);
+        $lockStmt = $localPdo->prepare('SELECT GET_LOCK(?, 10)');
+        $lockStmt->execute([$lockName]);
+        if ((int) $lockStmt->fetchColumn() !== 1) {
+            throw new \RuntimeException('Cannot acquire local migration lock.');
+        }
+
+        try {
+            $applied = $localPdo->query('SELECT migration, checksum FROM schema_migrations')
+                ->fetchAll(PDO::FETCH_KEY_PAIR);
+
+            if ($applied === [] && self::tableExists($localPdo, 'vehicle_units')) {
+                self::baselinePreviouslyManagedSchema($localPdo, $files);
+                $applied = $localPdo->query('SELECT migration, checksum FROM schema_migrations')
+                    ->fetchAll(PDO::FETCH_KEY_PAIR);
+            }
+
+            foreach ($files as $file) {
+                $fileName = basename($file);
                 $sql = file_get_contents($file);
-                if ($sql !== false && trim($sql) !== '') {
-                    $localPdo->exec($sql);
+                if ($sql === false) {
+                    throw new \RuntimeException('Cannot read local migration ' . $fileName);
                 }
-            } catch (\Exception $e) {
-                error_log('Local migration ' . $fileName . ': ' . $e->getMessage());
+                $checksum = hash('sha256', $sql);
+
+                if (isset($applied[$fileName])) {
+                    if (!hash_equals((string) $applied[$fileName], $checksum)) {
+                        $knownAlt = self::knownAlternateChecksum($fileName, (string) $applied[$fileName]);
+                        if ($knownAlt === null) {
+                            if ($fileName === '019_update_crews.sql' && self::verifyMigration019Compatible($localPdo)) {
+                                // Schema is compatible with migration 019 final state — accept updated checksum
+                            } else {
+                                throw new \RuntimeException('Local migration checksum mismatch: ' . $fileName);
+                            }
+                        }
+                        $updateStmt = $localPdo->prepare(
+                            'UPDATE schema_migrations SET checksum = ? WHERE migration = ?'
+                        );
+                        $updateStmt->execute([$checksum, $fileName]);
+                    }
+                    continue;
+                }
+
+                if ($fileName === '019_update_crews.sql') {
+                    self::handleMigration019($localPdo);
+                } elseif (trim($sql) !== '') {
+                    try {
+                        $localPdo->exec($sql);
+                    } catch (\Throwable $execErr) {
+                        throw new \RuntimeException(
+                            sprintf('Migration %s failed: %s', $fileName, $execErr->getMessage()),
+                            0,
+                            $execErr
+                        );
+                    }
+                }
+
+                $stmt = $localPdo->prepare(
+                    'INSERT INTO schema_migrations (migration, checksum) VALUES (?, ?)'
+                );
+                $stmt->execute([$fileName, $checksum]);
+            }
+            $appliedConnections[$connectionId] = true;
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Local migration failed: ' . $e->getMessage(), 0, $e);
+        } finally {
+            $release = $localPdo->prepare('SELECT RELEASE_LOCK(?)');
+            $release->execute([$lockName]);
+        }
+    }
+
+    /**
+     * Older PLANEX builds ran idempotent SQL on every request and did not keep a
+     * migration journal. Replaying migration 005 against such a database would
+     * recreate the legacy `vehicles` table and make migration 016 ambiguous.
+     *
+     * This method marks all base migrations (up to 016) as applied without
+     * re-executing, since `vehicle_units` exists (proving the schema is already
+     * at that level). Migrations 017+ are left for the normal loop in apply()
+     * which handles them safely (all migrations are idempotent).
+     */
+    private static function baselinePreviouslyManagedSchema(PDO $localPdo, array $files): void
+    {
+        $insert = $localPdo->prepare(
+            'INSERT INTO schema_migrations (migration, checksum) VALUES (?, ?)'
+        );
+        $localPdo->beginTransaction();
+        try {
+            foreach ($files as $file) {
+                $sql = file_get_contents($file);
+                if ($sql === false) {
+                    throw new \RuntimeException('Cannot read local migration ' . basename($file));
+                }
+                $checksum = hash('sha256', $sql);
+                $fileName = basename($file);
+
+                // Extract migration number from filename (e.g., "016_rename..." → 16)
+                $migrationNum = 0;
+                if (preg_match('/^(\d+)/', $fileName, $numMatch)) {
+                    $migrationNum = (int) $numMatch[1];
+                }
+
+                // Migrations up to 016 (which creates vehicle_units) are already
+                // present in this legacy schema. Re-running 005 would recreate
+                // `vehicles` and make 016's conflict check fail.
+                if ($migrationNum <= 16) {
+                    $insert->execute([$fileName, $checksum]);
+                    continue;
+                }
+
+                // Migrations 017+ are not baselined here; they will be applied
+                // by the normal migration loop in apply() since all migrations
+                // are idempotent (CREATE TABLE IF NOT EXISTS, ALTER with
+                // INFORMATION_SCHEMA pre-checks).
+            }
+            $localPdo->commit();
+        } catch (\Throwable $e) {
+            if ($localPdo->inTransaction()) {
+                $localPdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private static function handleMigration019(PDO $localPdo): void
+    {
+        $addColumn = function (string $column, string $type) use ($localPdo): void {
+            $stmt = $localPdo->prepare(
+                'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+            );
+            $stmt->execute(['crews', $column]);
+            if ((int) $stmt->fetchColumn() === 0) {
+                $localPdo->exec("ALTER TABLE crews ADD COLUMN `{$column}` {$type}");
+            }
+        };
+
+        $addColumn('driver_vehicle_block_id', 'INT UNSIGNED DEFAULT NULL');
+        $addColumn('updated_by_user_id', 'INT UNSIGNED DEFAULT NULL');
+        $addColumn('updated_by_role', 'VARCHAR(20) DEFAULT NULL');
+
+        $backfillStmt = $localPdo->prepare(
+            'SELECT c.id, c.contractor_id, c.driver_id, c.vehicle_id
+               FROM crews c
+              WHERE c.driver_vehicle_block_id IS NULL'
+        );
+        $backfillStmt->execute();
+        $needBackfill = $backfillStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($needBackfill as $crew) {
+            $crewId = (int) $crew['id'];
+            $driverId = (int) $crew['driver_id'];
+            $vehicleId = (int) $crew['vehicle_id'];
+            $contractorId = (int) $crew['contractor_id'];
+
+            if ($vehicleId <= 0 || $driverId <= 0) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Migration 019: crew id=%d has no vehicle_id or driver_id, cannot backfill driver_vehicle_block_id.',
+                        $crewId
+                    )
+                );
+            }
+
+            $vsStmt = $localPdo->prepare(
+                'SELECT id FROM vehicle_sets WHERE primary_vehicle_unit_id = ? OR secondary_vehicle_unit_id = ?'
+            );
+            $vsStmt->execute([$vehicleId, $vehicleId]);
+            $vehicleSetIds = $vsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            if (count($vehicleSetIds) === 0) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Migration 019: crew id=%d vehicle_id=%d has no matching vehicle_sets.primary_vehicle_unit_id or secondary_vehicle_unit_id.',
+                        $crewId,
+                        $vehicleId
+                    )
+                );
+            }
+
+            if (count($vehicleSetIds) > 1) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Migration 019: crew id=%d vehicle_id=%d matches multiple vehicle_sets (ids=%s), ambiguous backfill.',
+                        $crewId,
+                        $vehicleId,
+                        implode(',', $vehicleSetIds)
+                    )
+                );
+            }
+
+            $vehicleSetId = (int) $vehicleSetIds[0];
+
+            $dvbLookup = $localPdo->prepare(
+                'SELECT id FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ? LIMIT 1'
+            );
+            $dvbLookup->execute([$driverId, $vehicleSetId]);
+            $existingDvbId = $dvbLookup->fetchColumn();
+
+            if ($existingDvbId !== false) {
+                $dvbId = (int) $existingDvbId;
+            } else {
+                $dvbInsert = $localPdo->prepare(
+                    'INSERT INTO driver_vehicle_blocks (driver_id, vehicle_set_id, status, created_by_user_id, created_by_role)
+                     VALUES (?, ?, \'active\', NULL, \'system\')'
+                );
+                $dvbInsert->execute([$driverId, $vehicleSetId]);
+                $dvbId = (int) $localPdo->lastInsertId();
+            }
+
+            $updateCrew = $localPdo->prepare(
+                'UPDATE crews SET driver_vehicle_block_id = ? WHERE id = ?'
+            );
+            $updateCrew->execute([$dvbId, $crewId]);
+        }
+
+        $checkIndexExists = function (string $indexName) use ($localPdo): bool {
+            $stmt = $localPdo->prepare(
+                'SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?'
+            );
+            $stmt->execute(['crews', $indexName]);
+            return (int) $stmt->fetchColumn() > 0;
+        };
+
+        if ($checkIndexExists('uk_crew')) {
+            $idxCols = $localPdo->query(
+                "SELECT COLUMN_NAME FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'crews' AND INDEX_NAME = 'uk_crew'
+                 ORDER BY SEQ_IN_INDEX"
+            )->fetchAll(PDO::FETCH_COLUMN);
+
+            $cols = implode(',', $idxCols);
+            if ($cols === 'contractor_id,driver_vehicle_block_id') {
+                return;
+            }
+
+            $localPdo->exec('ALTER TABLE crews DROP INDEX uk_crew');
+        }
+
+        if ($checkIndexExists('contractor_id_2')) {
+            $localPdo->exec('ALTER TABLE crews DROP INDEX contractor_id_2');
+        }
+
+        if (!$checkIndexExists('uk_crew')) {
+            $localPdo->exec('ALTER TABLE crews ADD UNIQUE KEY uk_crew (contractor_id, driver_vehicle_block_id)');
+        }
+    }
+
+    private static function verifyMigration019Compatible(PDO $localPdo): bool
+    {
+        if (!self::tableExists($localPdo, 'crews')) {
+            return false;
+        }
+
+        $requiredColumns = ['driver_vehicle_block_id', 'updated_by_user_id', 'updated_by_role'];
+        foreach ($requiredColumns as $column) {
+            $stmt = $localPdo->prepare(
+                'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+            );
+            $stmt->execute(['crews', $column]);
+            if ((int) $stmt->fetchColumn() === 0) {
+                return false;
             }
         }
+
+        $idxStmt = $localPdo->query(
+            "SELECT COLUMN_NAME FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'crews' AND INDEX_NAME = 'uk_crew'
+             ORDER BY SEQ_IN_INDEX"
+        );
+        $idxCols = $idxStmt->fetchAll(PDO::FETCH_COLUMN);
+        if (implode(',', $idxCols) !== 'contractor_id,driver_vehicle_block_id') {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function knownAlternateChecksum(string $fileName, string $storedChecksum): ?string
+    {
+        static $known = [
+            '019_update_crews.sql' => [
+                'f0b9579f3d440d165465010e8693efbb5958dbc730253f53e0ca5b3a8733c4f3',
+                '7d5e4768f5cdba4008facf9b394b51f8980b33c0d2076aa56bf0b2cdba15d8f7',
+            ],
+            '051_restrict_finance_invoice_links_fk.sql' => [
+                '2afc6d44bdcf704192e7a6f9c279cfef302ef1da1f98aa2f485ee88837c6f834',
+                'c5e8053a9fc5866780b83be7465aec6c7149b074c18954dc6bbbba0f4b7a174a',
+            ],
+        ];
+
+        $allowed = $known[$fileName] ?? [];
+        if (in_array($storedChecksum, $allowed, true)) {
+            $filePath = base_path('database/migrations-local/' . $fileName);
+            $sql = file_get_contents($filePath);
+            return $sql !== false ? hash('sha256', $sql) : null;
+        }
+
+        return null;
+    }
+
+    private static function tableExists(PDO $localPdo, string $table): bool
+    {
+        $stmt = $localPdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.TABLES '
+            . 'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
+        );
+        $stmt->execute([$table]);
+
+        return (int) $stmt->fetchColumn() > 0;
     }
 }

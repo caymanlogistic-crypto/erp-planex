@@ -8,8 +8,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Создать перевозчика + Водителя + Транспорт</span>
+        <h1 class="page-title">Создать перевозчика + Водителя + Транспорт</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
@@ -24,8 +24,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Созданы перевозчик, водитель и транспорт</span>
+        <h1 class="page-title">Созданы перевозчик, водитель и транспорт</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/contractors') ?>" class="btn btn-primary">← К списку</a>
@@ -167,8 +167,8 @@ if (!empty($old['vehicle_mode']) && $old['vehicle_mode'] === 'existing' && !empt
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Создать перевозчика + Водителя + Транспорт</span>
+        <h1 class="page-title">Создать перевозчика + Водителя + Транспорт</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>

@@ -18,9 +18,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Руководитель не создан</span>
-        <span class="page-summary"><b>Критический шаг</b><span class="sep">·</span>Компания не готова к работе</span>
+        <h1 class="page-title">Руководитель не создан</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span><span class="sep">·</span><b>Критический шаг</b><span class="sep">·</span>Компания не готова к работе</div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary">Создать руководителя</a>
@@ -35,10 +34,9 @@ require_once __DIR__ . '/../components/status_badge.php';
             <span class="badge badge-danger">Блокер</span>
         </div>
         <div class="panel-body">
-            <div class="empty-state empty-state-left">
+            <div class="empty-state">
                 <p class="empty-title">У компании нет руководителя</p>
                 <p class="empty-desc">Это не техническая заглушка: без руководителя у компании нет главного ответственного пользователя, которому можно передать первичный доступ и временный пароль.</p>
-                <a href="/superadmin/companies/<?= $company['id'] ?>/create-owner" class="btn btn-primary">Создать руководителя</a>
             </div>
         </div>
     </div>
@@ -61,8 +59,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title"><?= e($owner['full_name']) ?></span>
+        <h1 class="page-title"><?= e($owner['full_name']) ?></h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/owner" class="btn btn-ghost">← К карточке</a>
@@ -100,8 +98,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title"><?= e($owner['full_name']) ?></span>
+        <h1 class="page-title"><?= e($owner['full_name']) ?></h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $company['id'] ?>/owner/edit" class="btn btn-primary">Редактировать</a>

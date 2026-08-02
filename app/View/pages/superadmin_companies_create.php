@@ -1,7 +1,7 @@
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / Реестр компаний</span>
-        <span class="page-title">Создать экспедитора</span>
+        <h1 class="page-title">Создать экспедитора</h1>
+        <div class="page-summary"><span>SUPERADMIN / Реестр компаний</span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/superadmin/companies') ?>" class="btn btn-ghost">&larr; К реестру</a>

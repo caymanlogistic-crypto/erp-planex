@@ -5,7 +5,7 @@ use App\Service\LinearRouteService;
 
 $routeFormMode = $routeFormMode ?? 'create';
 $routeFormId = $routeFormId ?? 'linear-trip-create-form';
-$routeFormAction = $routeFormAction ?? '/company/trips/linear/create';
+$routeFormAction = $routeFormAction ?? app_url('/company/trips/linear/create');
 $routeFormDomPrefix = $routeFormDomPrefix ?? ($routeFormMode === 'edit' ? 'linear-trip-edit' : 'linear-trip');
 $routeFormClass = $routeFormClass ?? 'panel linear-trip-panel';
 $existingDocsByCode = $existingDocsByCode ?? [];
@@ -36,26 +36,51 @@ foreach ($contractors as $contractorRow) {
     $contractorNameById[(int) ($contractorRow['id'] ?? 0)] = (string) ($contractorRow['name'] ?? 'Перевозчик');
 }
 
+$resolvePaymentDefaults = static function (array $payment): array {
+    $payment['payment_method'] = $payment['payment_method'] ?? LinearRouteService::parsePaymentMethodFromLegacyType($payment['payment_type'] ?? 'Без НДС');
+    $payment['vat_rate'] = array_key_exists('vat_rate', $payment)
+        ? $payment['vat_rate']
+        : LinearRouteService::parseVatRateFromLegacyType($payment['payment_type'] ?? 'Без НДС');
+    if (!isset($payment['condition_type']) && isset($payment['payment_due_type'])) {
+        $payment['condition_type'] = LinearRouteService::legacyPaymentDueTypeToConditionType($payment['payment_due_type']);
+    }
+    return $payment;
+};
+
 $customerPayments = array_values((array) ($old['customer_payments'] ?? []));
 if ($customerPayments === []) {
-    $customerPayments = [[
+    $customerPayments = [$resolvePaymentDefaults([
         'amount' => '',
         'payment_type' => 'Без НДС',
-        'payment_due_type' => '',
-        'payment_due_days' => '',
-        'payment_due_days_kind' => '',
-    ]];
+        'condition_type' => '',
+        'days_count' => '',
+        'days_kind' => '',
+        'specific_due_date' => '',
+        'condition_comment' => '',
+    ])];
+} else {
+    foreach ($customerPayments as &$cp) {
+        $cp = $resolvePaymentDefaults($cp);
+    }
+    unset($cp);
 }
 
 $carrierPayments = array_values((array) ($old['carrier_payments'] ?? []));
 if ($carrierPayments === []) {
-    $carrierPayments = [[
+    $carrierPayments = [$resolvePaymentDefaults([
         'amount' => '',
         'payment_type' => 'Без НДС',
-        'payment_due_type' => '',
-        'payment_due_days' => '',
-        'payment_due_days_kind' => '',
-    ]];
+        'condition_type' => '',
+        'days_count' => '',
+        'days_kind' => '',
+        'specific_due_date' => '',
+        'condition_comment' => '',
+    ])];
+} else {
+    foreach ($carrierPayments as &$cp) {
+        $cp = $resolvePaymentDefaults($cp);
+    }
+    unset($cp);
 }
 
 $principalRows = array_values((array) ($old['principal_rows'] ?? []));
@@ -69,24 +94,42 @@ if ($principalRows === [] && $isAgencyRoute) {
 
     $principalRows = [[
         'entity_key' => $defaultEntityKey,
-        'payments' => [[
+        'payments' => [$resolvePaymentDefaults([
             'amount' => '',
             'payment_type' => 'Без НДС',
-            'payment_due_type' => '',
-            'payment_due_days' => '',
-            'payment_due_days_kind' => '',
-        ]],
+            'condition_type' => '',
+            'days_count' => '',
+            'days_kind' => '',
+            'specific_due_date' => '',
+            'condition_comment' => '',
+        ])],
     ]];
+} else {
+    foreach ($principalRows as &$pr) {
+        $prPayments = array_values((array) ($pr['payments'] ?? []));
+        foreach ($prPayments as &$pp) {
+            $pp = $resolvePaymentDefaults($pp);
+        }
+        unset($pp);
+        $pr['payments'] = $prPayments;
+    }
+    unset($pr);
 }
 
 $documentDefinitions = LinearRouteService::routeDocumentDefinitions($currentRouteType ?: LinearRouteService::ROUTE_TYPE_AGENCY);
 
-$renderPaymentRows = static function (string $scopeName, array $rows, string $domKey) use ($errorOf): void {
+$vatRateOptions = ['', '0', '5', '7', '20', '22'];
+
+$renderPaymentRows = static function (string $scopeName, array $rows, string $domKey) use ($errorOf, $vatRateOptions): void {
     foreach (array_values($rows) as $paymentIndex => $payment) {
         $fieldBase = $scopeName . '[' . $paymentIndex . ']';
         $errorBase = str_replace(['[', ']'], ['.', ''], $fieldBase);
-        $dueType = (string) ($payment['payment_due_type'] ?? '');
-        $showDays = LinearRouteService::paymentDueTypeRequiresDays($dueType);
+        $conditionType = (string) ($payment['condition_type'] ?? '');
+        $showDays = LinearRouteService::conditionTypeShowDays($conditionType);
+        $showSpecificDate = LinearRouteService::conditionTypeShowSpecificDate($conditionType);
+        $currentMethod = (string) ($payment['payment_method'] ?? 'cashless');
+        $currentVatRaw = $payment['vat_rate'] ?? null;
+        $currentVatStr = $currentVatRaw !== null ? (string) $currentVatRaw : '';
         ?>
         <div class="linear-trip-payment-row" data-payment-row>
             <div class="field<?= $errorOf($errorBase . '.amount') !== '' ? ' is-error' : '' ?>">
@@ -95,42 +138,65 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
                 <div class="field-msg"><?= e($errorOf($errorBase . '.amount')) ?></div>
             </div>
 
-            <div class="field<?= $errorOf($errorBase . '.payment_type') !== '' ? ' is-error' : '' ?>">
-                <label class="field-label">Тип оплаты <span class="req">*</span></label>
-                <select name="<?= e($fieldBase) ?>[payment_type]" class="field-input">
-                    <?php foreach (LinearRouteService::PAYMENT_TYPES as $paymentType): ?>
-                    <option value="<?= e($paymentType) ?>" <?= ((string) ($payment['payment_type'] ?? 'Без НДС') === $paymentType) ? 'selected' : '' ?>><?= e($paymentType) ?></option>
+            <div class="field<?= $errorOf($errorBase . '.payment_method') !== '' ? ' is-error' : '' ?>">
+                <label class="field-label">Способ оплаты <span class="req">*</span></label>
+                <select name="<?= e($fieldBase) ?>[payment_method]" class="field-input">
+                    <?php foreach (LinearRouteService::PAYMENT_METHODS as $methodVal => $methodLabel): ?>
+                    <option value="<?= e($methodVal) ?>" <?= ($currentMethod === $methodVal) ? 'selected' : '' ?>><?= e($methodLabel) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <div class="field-msg"><?= e($errorOf($errorBase . '.payment_type')) ?></div>
+                <div class="field-msg"><?= e($errorOf($errorBase . '.payment_method')) ?></div>
             </div>
 
-            <div class="field<?= $errorOf($errorBase . '.payment_due_type') !== '' ? ' is-error' : '' ?>">
+            <div class="field<?= $errorOf($errorBase . '.vat_rate') !== '' ? ' is-error' : '' ?>">
+                <label class="field-label">НДС <span class="req">*</span></label>
+                <select name="<?= e($fieldBase) ?>[vat_rate]" class="field-input">
+                    <?php foreach ($vatRateOptions as $v): ?>
+                    <?php $vatLabel = $v === '' ? 'Без НДС' : 'НДС ' . $v . '%'; ?>
+                    <option value="<?= e($v) ?>" <?= ($currentVatStr === $v) ? 'selected' : '' ?>><?= e($vatLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="field-msg"><?= e($errorOf($errorBase . '.vat_rate')) ?></div>
+            </div>
+
+            <div class="field<?= $errorOf($errorBase . '.condition_type') !== '' ? ' is-error' : '' ?>">
                 <label class="field-label">Срок оплаты <span class="req">*</span></label>
-                <select name="<?= e($fieldBase) ?>[payment_due_type]" class="field-input" data-payment-due-type>
+                <select name="<?= e($fieldBase) ?>[condition_type]" class="field-input" data-condition-type>
                     <option value="">— Выберите срок —</option>
-                    <?php foreach (LinearRouteService::PAYMENT_DUE_TYPES as $dueType): ?>
-                    <option value="<?= e($dueType) ?>" <?= ($dueType === (string) ($payment['payment_due_type'] ?? '')) ? 'selected' : '' ?>><?= e($dueType) ?></option>
+                    <?php foreach (\App\Service\DateCalculationService::CONDITION_LABELS as $ctVal => $ctLabel): ?>
+                    <option value="<?= e($ctVal) ?>" <?= ($conditionType === $ctVal) ? 'selected' : '' ?>><?= e($ctLabel) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <div class="field-msg"><?= e($errorOf($errorBase . '.payment_due_type')) ?></div>
+                <div class="field-msg"><?= e($errorOf($errorBase . '.condition_type')) ?></div>
             </div>
 
-            <div class="field<?= $errorOf($errorBase . '.payment_due_days') !== '' ? ' is-error' : '' ?><?= $showDays ? '' : ' is-hidden' ?>" data-payment-due-days-wrapper>
+            <div class="field<?= $errorOf($errorBase . '.days_count') !== '' ? ' is-error' : '' ?><?= $showDays ? '' : ' is-hidden' ?>" data-days-count-wrapper>
                 <label class="field-label">Дней <span class="req">*</span></label>
-                <input type="number" min="1" name="<?= e($fieldBase) ?>[payment_due_days]" value="<?= e((string) ($payment['payment_due_days'] ?? '')) ?>" class="field-input">
-                <div class="field-msg"><?= e($errorOf($errorBase . '.payment_due_days')) ?></div>
+                <input type="number" min="1" name="<?= e($fieldBase) ?>[days_count]" value="<?= e((string) ($payment['days_count'] ?? $payment['payment_due_days'] ?? '')) ?>" class="field-input">
+                <div class="field-msg"><?= e($errorOf($errorBase . '.days_count')) ?></div>
             </div>
 
-            <div class="field<?= $errorOf($errorBase . '.payment_due_days_kind') !== '' ? ' is-error' : '' ?><?= $showDays ? '' : ' is-hidden' ?>" data-payment-due-days-kind-wrapper>
+            <div class="field<?= $errorOf($errorBase . '.days_kind') !== '' ? ' is-error' : '' ?><?= $showDays ? '' : ' is-hidden' ?>" data-days-kind-wrapper>
                 <label class="field-label">Тип дней <span class="req">*</span></label>
-                <select name="<?= e($fieldBase) ?>[payment_due_days_kind]" class="field-input">
+                <select name="<?= e($fieldBase) ?>[days_kind]" class="field-input">
                     <option value="">— Выберите тип —</option>
                     <?php foreach (LinearRouteService::PAYMENT_DUE_DAYS_KINDS as $daysKind => $daysLabel): ?>
-                    <option value="<?= e($daysKind) ?>" <?= ((string) ($payment['payment_due_days_kind'] ?? '') === $daysKind) ? 'selected' : '' ?>><?= e($daysLabel) ?></option>
+                    <option value="<?= e($daysKind) ?>" <?= ((string) ($payment['days_kind'] ?? $payment['payment_due_days_kind'] ?? '') === $daysKind) ? 'selected' : '' ?>><?= e($daysLabel) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <div class="field-msg"><?= e($errorOf($errorBase . '.payment_due_days_kind')) ?></div>
+                <div class="field-msg"><?= e($errorOf($errorBase . '.days_kind')) ?></div>
+            </div>
+
+            <div class="field<?= $errorOf($errorBase . '.specific_due_date') !== '' ? ' is-error' : '' ?><?= $showSpecificDate ? '' : ' is-hidden' ?>" data-specific-date-wrapper>
+                <label class="field-label">Конкретная дата <span class="req">*</span></label>
+                <input type="text" name="<?= e($fieldBase) ?>[specific_due_date]" value="<?= e((string) ($payment['specific_due_date'] ?? '')) ?>" class="field-input js-erp-date-picker" placeholder="дд.мм.гггг" inputmode="numeric" autocomplete="off">
+                <div class="field-msg"><?= e($errorOf($errorBase . '.specific_due_date')) ?></div>
+            </div>
+
+            <div class="field<?= $errorOf($errorBase . '.condition_comment') !== '' ? ' is-error' : '' ?>">
+                <label class="field-label">Комментарий к сроку</label>
+                <input type="text" name="<?= e($fieldBase) ?>[condition_comment]" value="<?= e((string) ($payment['condition_comment'] ?? '')) ?>" class="field-input" placeholder="Опциональный комментарий">
+                <div class="field-msg"><?= e($errorOf($errorBase . '.condition_comment')) ?></div>
             </div>
 
             <button type="button" class="linear-trip-row-remove<?= count($rows) > 1 ? '' : ' is-hidden' ?>" data-remove-payment-row aria-label="Удалить оплату">×</button>
@@ -254,6 +320,7 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
             </div>
             <?php endif; ?>
 
+            <?php if ($isFinanceRealm): ?>
             <div class="section-title">Финансовые условия</div>
 
             <div class="linear-trip-payment-card">
@@ -341,6 +408,7 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
 
                 <button type="button" class="btn btn-ghost" data-add-principal-row>+ Добавить принципала</button>
             </div>
+            <?php endif; ?>
 
             <div class="section-title">Комментарий</div>
             <div class="field field-w-comment">
@@ -382,8 +450,8 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
                         <div class="file-meta"><?= e($fileMeta) ?></div>
                         <?php if ($hasExistingDoc): ?>
                         <div class="driver-doc-meta">
-                            <a href="/company/documents/view?id=<?= (int) $existingDoc['id'] ?>" target="_blank" rel="noopener" class="js-doc-popup-window">Просмотр</a>
-                            <a href="/company/documents/download?id=<?= (int) $existingDoc['id'] ?>" download>Скачать</a>
+                            <a href="<?= app_url('/company/documents/view?id=' . (int) $existingDoc['id']) ?>" target="_blank" rel="noopener" class="js-doc-popup-window">Просмотр</a>
+                            <a href="<?= app_url('/company/documents/download?id=' . (int) $existingDoc['id']) ?>" download>Скачать</a>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -403,9 +471,9 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
                         <div class="file-name"><?= e($otherDocument['document_type'] ?? $otherDocument['type_name'] ?? 'Документ') ?></div>
                         <div class="file-meta"><?= e($otherDocument['original_name'] ?? $otherDocument['stored_name'] ?? 'Файл') ?></div>
                         <div class="driver-doc-meta">
-                            <a href="/company/documents/view?id=<?= (int) $otherDocument['id'] ?>" target="_blank" rel="noopener" class="js-doc-popup-window">Просмотр</a>
-                            <a href="/company/documents/download?id=<?= (int) $otherDocument['id'] ?>" download>Скачать</a>
-                            <a href="/company/documents/upload?entity_type=linear_route&entity_id=<?= (int) ($old['id'] ?? 0) ?>&replace=<?= (int) $otherDocument['id'] ?>">Заменить</a>
+                            <a href="<?= app_url('/company/documents/view?id=' . (int) $otherDocument['id']) ?>" target="_blank" rel="noopener" class="js-doc-popup-window">Просмотр</a>
+                            <a href="<?= app_url('/company/documents/download?id=' . (int) $otherDocument['id']) ?>" download>Скачать</a>
+                            <a href="<?= app_url('/company/documents/upload?entity_type=linear_route&entity_id=' . (int) ($old['id'] ?? 0) . '&replace=' . (int) $otherDocument['id']) ?>">Заменить</a>
                         </div>
                     </div>
                 </div>

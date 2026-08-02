@@ -17,9 +17,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Перевозчик</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Перевозчик</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 
@@ -43,9 +43,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($contractor === null): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Перевозчик не найден</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Перевозчик не найден</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
@@ -63,9 +63,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif (isset($accessDenied)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Доступ запрещён</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
@@ -89,10 +89,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <div class="page-eyebrow">ПЕРЕВОЗЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Перевозчик: <?= e($contractor['name']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Перевозчик: <?= e($contractor['name']) ?></h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/<?= $contractor['id'] ?>/edit" class="btn btn-primary">Редактировать</a>

@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортные единицы</h1>
+        <div class="page-summary"><span>Реестр транспортных средств компании</span></div>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортные единицы</h1>
+        <div class="page-summary"><span>Реестр транспортных средств компании</span></div>
     </div>
 </div>
 
@@ -34,9 +34,9 @@
 <?php $isLogist = ($_SESSION['role_code'] ?? '') === 'logist'; ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортные единицы</h1>
+        <div class="page-summary"><span>Реестр транспортных средств компании</span></div>
     </div>
     <?php if (!$isLogist): ?>
     <div class="page-head-actions">
@@ -50,9 +50,6 @@
         <div class="empty-state">
             <p class="empty-title">Нет доступных транспортных единиц</p>
             <p class="empty-desc">У вас пока нет созданных транспортных единиц, либо руководитель ещё не выдал вам доступ к существующим.</p>
-            <?php if (!$isLogist): ?>
-            <a href="<?= app_url('/company/vehicles/create') ?>" class="btn btn-primary">Добавить первую единицу</a>
-            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -60,9 +57,9 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Транспортные единицы</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Транспортные единицы</h1>
+        <div class="page-summary"><span>Реестр транспортных средств компании</span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/vehicles/create') ?>" class="btn btn-primary">Добавить транспортную единицу</a>

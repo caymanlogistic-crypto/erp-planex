@@ -16,9 +16,11 @@ $documentTitles = [
     'principal_document' => 'Договор/заявка с принципалом',
 ];
 $paymentLabel = static function (array $payment): string {
+    $paymentMethod = LinearRouteService::paymentMethodLabel($payment['payment_method'] ?? null);
+    $vatLabel = LinearRouteService::vatRateLabel(isset($payment['vat_rate']) ? (string) $payment['vat_rate'] : null);
     $parts = [
         LinearRouteService::formatAmount($payment['amount'] ?? null),
-        (string) ($payment['payment_type'] ?? '—'),
+        $paymentMethod . ' / ' . $vatLabel,
         (string) ($payment['payment_due_type'] ?? '—'),
     ];
     if (!empty($payment['payment_due_days'])) {
@@ -27,6 +29,7 @@ $paymentLabel = static function (array $payment): string {
 
     return implode(' · ', array_filter($parts, static fn(string $part): bool => trim($part) !== ''));
 };
+$financeSectionRendered = false;
 ?>
 <div class="modal-body driver-modal-body">
   <div class="driver-modal-layout">
@@ -114,6 +117,7 @@ $paymentLabel = static function (array $payment): string {
             </div>
           </div>
 
+          <?php if ($isFinanceRealm): ?>
           <div class="driver-view-row">
             <div class="driver-view-cell driver-view-cell-label">Оплаты заказчика</div>
             <div class="driver-view-cell driver-view-cell-value">
@@ -154,6 +158,82 @@ $paymentLabel = static function (array $payment): string {
           </div>
           <?php endforeach; ?>
 
+          <?php
+          $allFinancePayments = array_merge(
+              $route['payments']['customer'] ?? [],
+              $route['payments']['carrier'] ?? [],
+              ...array_map(static fn(array $p): array => $p, array_values($route['payments']['principals'] ?? []))
+          );
+          $paymentDetailLines = static function (array $payment): void {
+              $methodLabel = LinearRouteService::paymentMethodLabel($payment['payment_method'] ?? null);
+              $vatLabel = LinearRouteService::vatRateLabel(isset($payment['vat_rate']) ? (string) $payment['vat_rate'] : null);
+              $dueType = (string) ($payment['payment_due_type'] ?? '—');
+              $dueDate = $payment['calculated_due_date'] ?? null;
+              $dueDateStr = $dueDate !== null ? date('d.m.Y', strtotime($dueDate)) : '—';
+              $dueDaysStr = '';
+              if (!empty($payment['payment_due_days'])) {
+                  $dueDaysStr = (int) $payment['payment_due_days'] . ' ' . ((string) ($payment['payment_due_days_kind'] ?? '') === 'calendar' ? 'кал.' : 'раб.');
+              }
+              ?>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Статус</div>
+                <div>
+                  <span class="<?= e(LinearRouteService::paymentStatusBadgeClass($payment['payment_status'] ?? 'unpaid')) ?>"><?= e(LinearRouteService::paymentStatusLabel($payment['payment_status'] ?? 'unpaid')) ?></span>
+                </div>
+              </div>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Сумма</div>
+                <div><?= e(LinearRouteService::formatAmount($payment['amount'] ?? null)) ?></div>
+              </div>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Оплата / НДС</div>
+                <div><?= e($methodLabel) ?> / <?= e($vatLabel) ?></div>
+              </div>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Срок</div>
+                <div><?= e($dueType) ?><?= $dueDaysStr !== '' ? ' · ' . e($dueDaysStr) : '' ?></div>
+              </div>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Расч. дата</div>
+                <div><?= e($dueDateStr) ?></div>
+              </div>
+              <?php
+          };
+          ?>
+          <?php if (!empty($allFinancePayments)): ?>
+          <?php $financeSectionRendered = true; ?>
+          <div class="driver-view-row driver-view-row-wide">
+            <div class="driver-view-cell driver-view-cell-label">Финансы рейса</div>
+            <div class="driver-view-cell driver-view-cell-value">
+              <?php foreach (($route['payments']['customer'] ?? []) as $payment): ?>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Заказчик</div>
+                <div></div>
+              </div>
+              <?php $paymentDetailLines($payment); ?>
+              <?php endforeach; ?>
+              <?php foreach (($route['payments']['carrier'] ?? []) as $payment): ?>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Перевозчик</div>
+                <div></div>
+              </div>
+              <?php $paymentDetailLines($payment); ?>
+              <?php endforeach; ?>
+              <?php foreach (($route['principal_items'] ?? []) as $principal): ?>
+                <?php $principalPayments = $route['payments']['principals'][(int) ($principal['id'] ?? 0)] ?? []; ?>
+                <?php foreach ($principalPayments as $payment): ?>
+              <div class="driver-view-inline-row">
+                <div class="driver-view-inline-label">Принципал</div>
+                <div></div>
+              </div>
+              <?php $paymentDetailLines($payment); ?>
+                <?php endforeach; ?>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <?php endif; ?>
+          <?php endif; ?>
+
           <?php if (!empty($route['comments'])): ?>
           <div class="driver-view-row driver-view-row-wide">
             <div class="driver-view-cell driver-view-cell-label">Комментарий</div>
@@ -178,10 +258,10 @@ $paymentLabel = static function (array $payment): string {
             <div class="file-name"><?= e($docTitle) ?></div>
             <div class="file-meta"><?= e($document['original_name'] ?? $document['stored_name'] ?? 'Файл') ?></div>
           </div>
-          <a href="/company/documents/view?id=<?= (int) $document['id'] ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window">
+          <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window">
             <span>Просмотр</span>
           </a>
-          <a href="/company/documents/download?id=<?= (int) $document['id'] ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">
+          <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M8 2.5V9.5M8 9.5L5.5 7M8 9.5L10.5 7M3 12.5H13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -198,10 +278,10 @@ $paymentLabel = static function (array $payment): string {
             <div class="file-name"><?= e($document['document_type'] ?? $document['type_name'] ?? 'Документ') ?></div>
             <div class="file-meta"><?= e($document['original_name'] ?? $document['stored_name'] ?? 'Файл') ?></div>
           </div>
-          <a href="/company/documents/view?id=<?= (int) $document['id'] ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window">
+          <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window">
             <span>Просмотр</span>
           </a>
-          <a href="/company/documents/download?id=<?= (int) $document['id'] ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">
+          <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M8 2.5V9.5M8 9.5L5.5 7M8 9.5L10.5 7M3 12.5H13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>

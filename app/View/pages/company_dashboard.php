@@ -14,8 +14,8 @@
 if ($companyError): ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ДАШБОРД</span>
-        <span class="page-title">Обзор</span>
+        <h1 class="page-title">Обзор</h1>
+        <div class="page-summary"><span>Ключевые показатели компании</span></div>
     </div>
 </div>
 <div class="page-content">
@@ -25,8 +25,8 @@ if ($companyError): ?>
 <?php elseif ($logistNoAccess): ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ДАШБОРД</span>
-        <span class="page-title">Обзор</span>
+        <h1 class="page-title">Обзор</h1>
+        <div class="page-summary"><span>Ключевые показатели компании</span></div>
     </div>
 </div>
 <div class="page-content">
@@ -40,8 +40,8 @@ if ($companyError): ?>
 <?php elseif ($roleCode === 'company_owner'): ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ДАШБОРД</span>
-        <span class="page-title">Обзор</span>
+        <h1 class="page-title">Обзор</h1>
+        <div class="page-summary"><span>Ключевые показатели компании</span></div>
     </div>
 </div>
 <div class="page-content">
@@ -128,8 +128,8 @@ if ($companyError): ?>
 <?php else: /* logist with data */ ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ДАШБОРД</span>
-        <span class="page-title">Обзор</span>
+        <h1 class="page-title">Обзор</h1>
+        <div class="page-summary"><span>Ключевые показатели компании</span></div>
     </div>
 </div>
 <div class="page-content">

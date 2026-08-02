@@ -9,7 +9,7 @@
 
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        $company = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$company) {
             $company = null;
@@ -29,7 +29,7 @@
             "SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner'"
         );
         $ownerStmt->execute([(int) $id]);
-        $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
 
         if (!$owner) {
             $dbError = null;

@@ -71,12 +71,12 @@ if (!function_exists('handleCompanyDriverCreate')) {
                 return;
             }
 
-            $topbarCrumbs = [
-                ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
-                ['label' => 'Подрядчики', 'url' => null],
-                ['label' => 'Водители', 'url' => '/company/drivers'],
-                ['label' => 'Создать водителя', 'url' => null],
-            ];
+            //$topbarCrumbs = [
+            //    ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
+            //    ['label' => 'Подрядчики', 'url' => null],
+            //    ['label' => 'Водители', 'url' => '/company/drivers'],
+            //    ['label' => 'Создать водителя', 'url' => null],
+            //];
 
             if ($company['status'] !== 'active') {
                 $formError = 'Создание водителей недоступно';

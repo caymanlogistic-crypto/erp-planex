@@ -50,30 +50,31 @@ try {
             http_response_code(403);
             exit;
         }
+    } elseif (!\App\Service\DocumentService::canCurrentUserView($lpdo, $doc)) {
+        http_response_code(403);
+        exit;
     }
 
     $relPath = (string) ($doc['relative_path'] ?? '');
-    if ($relPath === '' || strpos($relPath, '..') !== false) {
+    $filePath = \App\Service\DocumentService::resolveStoredPath($companyId, $relPath);
+    if ($filePath === null) {
         http_response_code(404);
         exit;
     }
 
-    $filePath = storage_path($relPath);
-    if (!is_file($filePath)) {
-        http_response_code(404);
-        exit;
-    }
-
-    $mime = (string) ($doc['mime_type'] ?: 'application/octet-stream');
+    $mime = \App\Service\DocumentService::responseMime($filePath);
     $fileSize = (int) ($doc['file_size'] ?? 0);
-    $originalName = (string) ($doc['original_name'] ?? 'document');
+    $originalName = \App\Service\DocumentService::safeDownloadName((string) ($doc['original_name'] ?? 'document'));
 
     header('Content-Type: ' . $mime);
     header(
         'Content-Disposition: '
-        . ((strpos($mime, 'image/') === 0 || strpos($mime, 'pdf') !== false || strpos($mime, 'text/') === 0) ? 'inline' : 'attachment')
-        . '; filename="' . addcslashes($originalName, "\"\\") . '"'
+        . (\App\Service\DocumentService::canRenderInline($mime) ? 'inline' : 'attachment')
+        . '; filename="' . $originalName . '"'
     );
+    if (\App\Service\DocumentService::canRenderInline($mime)) {
+        header("Content-Security-Policy: sandbox; default-src 'none'; img-src 'self' data:");
+    }
     if ($fileSize > 0) {
         header('Content-Length: ' . $fileSize);
     }

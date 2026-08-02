@@ -15,9 +15,36 @@ if (!function_exists('companyDatabaseConfig')) {
             $cfg['username'] = $company['db_username'];
         }
         if (!empty($company['db_password'])) {
-            $cfg['password'] = $company['db_password'];
+            $cfg['password'] = companyDbResolvePassword((string) $company['db_password']);
         }
         return $cfg;
+    }
+}
+
+if (!function_exists('companyDbResolvePassword')) {
+    function companyDbResolvePassword(string $storedPassword): string
+    {
+        if ($storedPassword === '') {
+            return '';
+        }
+
+        if (str_starts_with($storedPassword, 'v2:')) {
+            return cryptoDecrypt($storedPassword);
+        }
+
+        // Compatibility with existing installations. New writes are always encrypted.
+        return $storedPassword;
+    }
+}
+
+if (!function_exists('companyDbStorePassword')) {
+    function companyDbStorePassword(string $plaintext): string
+    {
+        if ($plaintext === '') {
+            return '';
+        }
+
+        return cryptoEncrypt($plaintext);
     }
 }
 
@@ -65,7 +92,7 @@ if (!function_exists('ensureCompanyDatabaseColumns')) {
             'db_host'     => 'VARCHAR(255) NULL',
             'db_port'     => 'INT NULL',
             'db_username' => 'VARCHAR(255) NULL',
-            'db_password' => 'VARCHAR(255) NULL',
+            'db_password' => 'VARCHAR(1024) NULL',
         ];
         $existing = $pdo->query("SHOW COLUMNS FROM companies")->fetchAll(PDO::FETCH_COLUMN, 0);
         $existingMap = array_flip($existing);
@@ -94,7 +121,7 @@ if (!function_exists('ensureCompanyDbPoolUsageTable')) {
 }
 
 if (!function_exists('findFreePoolDb')) {
-    function findFreePoolDb(PDO $centralPdo): ?array
+    function findFreePoolDb(PDO $centralPdo, ?int $reserveForCompanyId = null): ?array
     {
         $pool = parseCompanyDbPool();
         if (empty($pool)) {
@@ -102,21 +129,37 @@ if (!function_exists('findFreePoolDb')) {
         }
         ensureCompanyDbPoolUsageTable($centralPdo);
 
-        $assignedStmt = $centralPdo->query("SELECT db_identifier FROM companies WHERE db_identifier IS NOT NULL AND db_identifier != ''");
-        $assigned = $assignedStmt->fetchAll(PDO::FETCH_COLUMN);
-        $assignedMap = array_flip($assigned);
-
-        $reservedStmt = $centralPdo->query("SELECT db_identifier FROM company_db_pool_usage WHERE released_at IS NULL");
-        $reserved = $reservedStmt->fetchAll(PDO::FETCH_COLUMN);
-        $reservedMap = array_flip($reserved);
-
-        foreach ($pool as $entry) {
-            $dbId = $entry['database'];
-            if (!isset($assignedMap[$dbId]) && !isset($reservedMap[$dbId])) {
-                return $entry;
-            }
+        $lockName = 'planex_company_db_pool';
+        $lockStmt = $centralPdo->prepare('SELECT GET_LOCK(?, 10)');
+        $lockStmt->execute([$lockName]);
+        if ((int) $lockStmt->fetchColumn() !== 1) {
+            throw new \RuntimeException('Cannot acquire company database pool lock.');
         }
-        return null;
+
+        try {
+            $assignedStmt = $centralPdo->query("SELECT db_identifier FROM companies WHERE db_identifier IS NOT NULL AND db_identifier != ''");
+            $assigned = $assignedStmt->fetchAll(PDO::FETCH_COLUMN);
+            $assignedMap = array_flip($assigned);
+
+            $reservedStmt = $centralPdo->query("SELECT db_identifier FROM company_db_pool_usage WHERE released_at IS NULL");
+            $reserved = $reservedStmt->fetchAll(PDO::FETCH_COLUMN);
+            $reservedMap = array_flip($reserved);
+
+            foreach ($pool as $entry) {
+                $dbId = $entry['database'];
+                if (!isset($assignedMap[$dbId]) && !isset($reservedMap[$dbId])) {
+                    if ($reserveForCompanyId !== null && $reserveForCompanyId > 0) {
+                        markPoolDbUsed($centralPdo, $dbId, $reserveForCompanyId);
+                    }
+                    return $entry;
+                }
+            }
+
+            return null;
+        } finally {
+            $releaseStmt = $centralPdo->prepare('SELECT RELEASE_LOCK(?)');
+            $releaseStmt->execute([$lockName]);
+        }
     }
 }
 
@@ -155,16 +198,15 @@ if (!function_exists('markPoolDbUsed')) {
 }
 
 if (!function_exists('releasePoolDb')) {
-    function releasePoolDb(PDO $centralPdo, string $dbIdentifier, int $companyId): void
+    function releasePoolDb(PDO $centralPdo, string $dbIdentifier, ?int $companyId = null): void
     {
         ensureCompanyDbPoolUsageTable($centralPdo);
         $stmt = $centralPdo->prepare(
-            "UPDATE company_db_pool_usage SET released_at = NOW(), note = :note WHERE db_identifier = :db AND company_id = :cid"
+            "UPDATE company_db_pool_usage SET company_id = NULL, released_at = NOW(), note = :note WHERE db_identifier = :db"
         );
         $stmt->execute([
             ':note' => 'superadmin_delete',
             ':db'   => $dbIdentifier,
-            ':cid'  => $companyId,
         ]);
     }
 }

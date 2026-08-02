@@ -5,7 +5,7 @@ use App\Service\ContractorContactService;
 requireRole(['company_owner', 'senior_logist', 'logist']);
 
 $renderMessage = static function (string $message): void {
-    echo '<div class="modal-body"><div class="notice warn" style="margin:16px">' . e($message) . '</div></div>';
+    echo '<div class="modal-body"><div class="notice warn modal-notice">' . e($message) . '</div></div>';
     echo '<div class="modal-foot is-spaced"><div class="modal-foot-actions"><button type="button" class="btn btn-ghost" data-contractor-view-close-btn>Закрыть</button></div></div>';
 };
 

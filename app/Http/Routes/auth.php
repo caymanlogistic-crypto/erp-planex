@@ -6,4 +6,4 @@ $controller = new \App\Http\Controllers\AuthController($config, $db);
 
 $router->get('/login', [$controller, 'showLogin']);
 $router->post('/login', [$controller, 'login']);
-$router->get('/logout', [$controller, 'logout']);
+$router->post('/logout', [$controller, 'logout']);

@@ -30,8 +30,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Транспортные единицы</span>
+        <h1 class="page-title">Транспортные единицы</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
@@ -43,10 +43,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php if (empty($items)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state empty-state-left">
+            <div class="empty-state">
                 <p class="empty-title">Нет транспорта</p>
                 <p class="empty-desc">Без транспорта невозможно сформировать рабочие экипажи. Проверьте, должен ли владелец компании уже заполнить этот справочник.</p>
-                <a href="/superadmin/companies/<?= $id ?>/directories" class="btn btn-secondary">← К аудиту справочников</a>
             </div>
         </div>
     </div>

@@ -11,8 +11,8 @@
 ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ДАШБОРД</span>
-        <span class="page-title">Обзор</span>
+        <h1 class="page-title">Обзор</h1>
+        <div class="page-summary"><span>ДАШБОРД</span></div>
     </div>
 </div>
 
@@ -24,36 +24,36 @@
             <span class="panel-head-title">Компании</span>
         </div>
         <div class="panel-body">
-            <div class="metric-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+            <div class="metric-grid">
 
-                <div class="metric-card" style="background:var(--surface-strong, #f8f6f0); padding:12px; border:1px solid var(--line-soft, #d9d5cc); border-radius:2px;">
-                    <div class="metric-value" style="font-size:24px; font-weight:600;"><?= (int)($metrics['total_companies'] ?? 0) ?></div>
-                    <div class="metric-label" style="font-size:11px; color:var(--text-faint, #999); text-transform:uppercase;">Всего компаний</div>
+                <div class="metric-card">
+                    <div class="metric-value"><?= (int)($metrics['total_companies'] ?? 0) ?></div>
+                    <div class="metric-label">Всего компаний</div>
                 </div>
 
-                <div class="metric-card" style="background:var(--surface-strong, #f8f6f0); padding:12px; border:1px solid var(--line-soft, #d9d5cc); border-radius:2px;">
-                    <div class="metric-value" style="font-size:24px; font-weight:600;"><?= (int)($metrics['active_companies'] ?? 0) ?></div>
-                    <div class="metric-label" style="font-size:11px; color:var(--text-faint, #999); text-transform:uppercase;">Активных</div>
+                <div class="metric-card">
+                    <div class="metric-value"><?= (int)($metrics['active_companies'] ?? 0) ?></div>
+                    <div class="metric-label">Активных</div>
                 </div>
 
-                <div class="metric-card" style="background:var(--surface-strong, #f8f6f0); padding:12px; border:1px solid var(--line-soft, #d9d5cc); border-radius:2px;">
-                    <div class="metric-value" style="font-size:24px; font-weight:600;"><?= (int)($metrics['blocked_companies'] ?? 0) ?></div>
-                    <div class="metric-label" style="font-size:11px; color:var(--text-faint, #999); text-transform:uppercase;">Заблокировано</div>
+                <div class="metric-card">
+                    <div class="metric-value"><?= (int)($metrics['blocked_companies'] ?? 0) ?></div>
+                    <div class="metric-label">Заблокировано</div>
                 </div>
 
-                <div class="metric-card" style="background:var(--surface-strong, #f8f6f0); padding:12px; border:1px solid var(--line-soft, #d9d5cc); border-radius:2px;">
-                    <div class="metric-value" style="font-size:24px; font-weight:600;"><?= (int)($metrics['archived_companies'] ?? 0) ?></div>
-                    <div class="metric-label" style="font-size:11px; color:var(--text-faint, #999); text-transform:uppercase;">Архивных</div>
+                <div class="metric-card">
+                    <div class="metric-value"><?= (int)($metrics['archived_companies'] ?? 0) ?></div>
+                    <div class="metric-label">Архивных</div>
                 </div>
 
-                <div class="metric-card" style="background:var(--surface-strong, #f8f6f0); padding:12px; border:1px solid var(--line-soft, #d9d5cc); border-radius:2px;">
-                    <div class="metric-value" style="font-size:24px; font-weight:600;"><?= (int)($metrics['companies_without_owner'] ?? 0) ?></div>
-                    <div class="metric-label" style="font-size:11px; color:var(--text-faint, #999); text-transform:uppercase;">Без руководителя</div>
+                <div class="metric-card">
+                    <div class="metric-value"><?= (int)($metrics['companies_without_owner'] ?? 0) ?></div>
+                    <div class="metric-label">Без руководителя</div>
                 </div>
 
-                <div class="metric-card" style="background:var(--surface-strong, #f8f6f0); padding:12px; border:1px solid var(--line-soft, #d9d5cc); border-radius:2px;">
-                    <div class="metric-value" style="font-size:24px; font-weight:600;"><?= (int)($metrics['companies_without_users'] ?? 0) ?></div>
-                    <div class="metric-label" style="font-size:11px; color:var(--text-faint, #999); text-transform:uppercase;">Без пользователей</div>
+                <div class="metric-card">
+                    <div class="metric-value"><?= (int)($metrics['companies_without_users'] ?? 0) ?></div>
+                    <div class="metric-label">Без пользователей</div>
                 </div>
 
             </div><!-- .metric-grid -->

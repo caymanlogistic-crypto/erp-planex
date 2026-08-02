@@ -77,6 +77,16 @@ try {
         return;
     }
 
+    if (!$service->canAccessClient(
+        $localPdo,
+        $client,
+        (int) ($_SESSION['user_id'] ?? 0),
+        (string) ($_SESSION['role_code'] ?? ''),
+        'edit'
+    )) {
+        denyEntityAccess();
+    }
+
     $contacts = ClientContactService::loadByClientId($localPdo, (int) $id);
     $errors = [];
     $old = $_POST;

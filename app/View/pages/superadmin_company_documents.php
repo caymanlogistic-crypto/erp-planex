@@ -44,8 +44,8 @@ function docStatusBadge(string $status): string
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Документы компании</span>
+        <h1 class="page-title">Документы компании</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
@@ -61,10 +61,9 @@ function docStatusBadge(string $status): string
 <?php elseif (empty($documents)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state empty-state-left">
+            <div class="empty-state">
                 <p class="empty-title">Нет документов</p>
                 <p class="empty-desc">Документы загружаются пользователями компании к клиентам, подрядчикам, водителям, транспорту или экипажам. Для новой компании это нормально; для рабочей — проверьте, есть ли заполненные справочники и доступные пользователи.</p>
-                <a href="/superadmin/companies/<?= $id ?>" class="btn btn-secondary">← К готовности компании</a>
             </div>
         </div>
     </div>

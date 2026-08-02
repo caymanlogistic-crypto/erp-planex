@@ -21,6 +21,15 @@ try {
 
     $client = $service->getClientById($localPdo, (int) $id);
     if ($client) {
+        if (!$service->canAccessClient(
+            $localPdo,
+            $client,
+            (int) ($_SESSION['user_id'] ?? 0),
+            (string) ($_SESSION['role_code'] ?? ''),
+            'archive'
+        )) {
+            denyEntityAccess();
+        }
         $service->archiveClient($localPdo, (int) $id);
         $displayName = $client['name'] ?? $client['full_name'] ?? '#' . $id;
         $snapshot = json_encode($client, JSON_UNESCAPED_UNICODE);

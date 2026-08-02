@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use PDO;
+
 /**
  * DocumentService — будущий единый сервис для работы с документами.
  *
@@ -127,6 +129,31 @@ final class DocumentService
         return $bytes > 0 && $bytes <= self::MAX_FILE_SIZE_BYTES;
     }
 
+    public static function validateUploadedFile(array $file, bool $requireHttpUpload = true): ?string
+    {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return 'no_file';
+        $tmp = (string) ($file['tmp_name'] ?? '');
+        if ($tmp === '' || !is_file($tmp) || ($requireHttpUpload && !is_uploaded_file($tmp))) return 'invalid_upload';
+        if (!self::isFileSizeValid((int) ($file['size'] ?? filesize($tmp)))) return 'file_too_large';
+        $originalName = (string) ($file['name'] ?? '');
+        if (!self::isSafeOriginalName($originalName)) return 'invalid_filename';
+        $ext = self::extractExtension($originalName);
+        $allowed = [
+            'pdf'=>['application/pdf'],'jpg'=>['image/jpeg'],'jpeg'=>['image/jpeg'],'png'=>['image/png'],
+            'webp'=>['image/webp'],'gif'=>['image/gif'],'bmp'=>['image/bmp','image/x-ms-bmp'],
+            'tif'=>['image/tiff'],'tiff'=>['image/tiff'],'txt'=>['text/plain'],
+            'csv'=>['text/plain','text/csv','application/csv'],'rtf'=>['text/rtf','application/rtf'],
+            'doc'=>['application/msword'],'xls'=>['application/vnd.ms-excel'],
+            'docx'=>['application/zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            'xlsx'=>['application/zip','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            'odt'=>['application/zip','application/vnd.oasis.opendocument.text'],
+            'ods'=>['application/zip','application/vnd.oasis.opendocument.spreadsheet'],
+        ];
+        if (!isset($allowed[$ext])) return 'invalid_extension';
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp);
+        return is_string($mime) && in_array(strtolower($mime), $allowed[$ext], true) ? null : 'invalid_mime';
+    }
+
     // -------------------------------------------------------------------------
     // Безопасное имя файла
     // -------------------------------------------------------------------------
@@ -192,6 +219,138 @@ final class DocumentService
     public static function buildStoredFilePath(int $companyId, string $entityType, int $entityId, string $storedName): string
     {
         return self::buildRelativePath($companyId, $entityType, $entityId) . '/' . $storedName;
+    }
+
+    public static function canCurrentUserView(PDO $localPdo, array $document): bool
+    {
+        return self::canCurrentUserAccess($localPdo, $document, false);
+    }
+
+    public static function canCurrentUserEdit(PDO $localPdo, array $document): bool
+    {
+        return self::canCurrentUserAccess($localPdo, $document, true);
+    }
+
+    private static function canCurrentUserAccess(PDO $localPdo, array $document, bool $requireEdit): bool
+    {
+        $role = (string) ($_SESSION['role_code'] ?? '');
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        if (in_array($role, ['company_owner', 'senior_logist'], true)) {
+            return true;
+        }
+        if ($role !== 'logist' || $userId <= 0) {
+            return false;
+        }
+
+        $entityType = (string) ($document['entity_type'] ?? '');
+        $entityId = (int) ($document['entity_id'] ?? 0);
+        if ($entityId <= 0) {
+            return false;
+        }
+
+        $tables = [
+            'client' => 'clients',
+            'contractor' => 'contractors',
+            'driver' => 'drivers',
+            'vehicle_set' => 'vehicle_sets',
+            'driver_vehicle_block' => 'driver_vehicle_blocks',
+            'crew' => 'crews',
+        ];
+
+        if (isset($tables[$entityType])) {
+            $table = $tables[$entityType];
+            $stmt = $localPdo->prepare("SELECT created_by_user_id FROM `{$table}` WHERE id = ? AND deleted_at IS NULL");
+            $stmt->execute([$entityId]);
+            $createdBy = $stmt->fetchColumn();
+            if ($createdBy !== false && (int) $createdBy === $userId) {
+                return true;
+            }
+
+            $levels = $requireEdit ? "('edit')" : "('view','edit')";
+            $grant = $localPdo->prepare(
+                "SELECT 1 FROM entity_access_grants
+                  WHERE entity_type = ? AND entity_id = ? AND granted_to_user_id = ?
+                    AND access_level IN {$levels} AND revoked_at IS NULL LIMIT 1"
+            );
+            $grant->execute([$entityType, $entityId, $userId]);
+            return (bool) $grant->fetchColumn();
+        }
+
+        if ($entityType === 'vehicle_unit') {
+            $levels = $requireEdit ? "('edit')" : "('view','edit')";
+            $stmt = $localPdo->prepare(
+                "SELECT 1
+                   FROM vehicle_units vu
+                  WHERE vu.id = ? AND vu.deleted_at IS NULL
+                    AND (
+                        vu.created_by_user_id = ?
+                        OR vu.id IN (
+                            SELECT entity_id FROM entity_access_grants
+                             WHERE entity_type = 'vehicle_unit' AND granted_to_user_id = ?
+                               AND access_level IN {$levels} AND revoked_at IS NULL
+                        )
+                        OR EXISTS (
+                            SELECT 1 FROM vehicle_sets vs
+                             WHERE (vs.primary_vehicle_unit_id = vu.id OR vs.secondary_vehicle_unit_id = vu.id)
+                               AND vs.deleted_at IS NULL
+                               AND (vs.created_by_user_id = ? OR vs.id IN (
+                                   SELECT entity_id FROM entity_access_grants
+                                    WHERE entity_type = 'vehicle_set' AND granted_to_user_id = ?
+                                      AND access_level IN {$levels} AND revoked_at IS NULL
+                               ))
+                        )
+                    ) LIMIT 1"
+            );
+            $stmt->execute([$entityId, $userId, $userId, $userId, $userId]);
+            return (bool) $stmt->fetchColumn();
+        }
+
+        return false;
+    }
+
+    public static function resolveStoredPath(int $companyId, string $relativePath): ?string
+    {
+        $relativePath = str_replace('\\', '/', trim($relativePath));
+        $expectedPrefix = 'companies/' . $companyId . '/';
+        if ($relativePath === '' || !str_starts_with($relativePath, $expectedPrefix) || str_contains($relativePath, '..')) {
+            return null;
+        }
+
+        $file = realpath(\storage_path($relativePath));
+        $companyRoot = realpath(\storage_path('companies/' . $companyId));
+        if ($file === false || $companyRoot === false || !is_file($file)) {
+            return null;
+        }
+
+        $prefix = rtrim($companyRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        return str_starts_with($file, $prefix) ? $file : null;
+    }
+
+    public static function safeDownloadName(string $name): string
+    {
+        $name = preg_replace('/[\x00-\x1F\x7F"\\\\]/u', '_', basename($name)) ?? 'document';
+        return trim($name) !== '' ? $name : 'document';
+    }
+
+    public static function responseMime(string $filePath): string
+    {
+        $detected = function_exists('mime_content_type') ? mime_content_type($filePath) : false;
+        $mime = is_string($detected) ? strtolower(trim($detected)) : '';
+        $allowed = [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'image/gif',
+            'text/plain',
+        ];
+
+        return in_array($mime, $allowed, true) ? $mime : 'application/octet-stream';
+    }
+
+    public static function canRenderInline(string $mime): bool
+    {
+        return in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'], true);
     }
 
     // -------------------------------------------------------------------------

@@ -26,8 +26,6 @@
             var wrap = input.closest('.contact-cell-wrap');
             if (wrap) wrap.classList.remove('is-error');
             input.classList.remove('is-error');
-            var suffix = input.closest('.contact-input-suffix');
-            if (suffix) suffix.classList.remove('is-error');
             var err = wrap ? wrap.querySelector('[data-contact-error]') : null;
             if (err) err.textContent = '';
         }
@@ -36,12 +34,7 @@
             if (!input) return;
             var wrap = input.closest('.contact-cell-wrap');
             if (wrap) wrap.classList.add('is-error');
-            var suffix = input.closest('.contact-input-suffix');
-            if (suffix) {
-                suffix.classList.add('is-error');
-            } else {
-                input.classList.add('is-error');
-            }
+            input.classList.add('is-error');
             var err = wrap ? wrap.querySelector('[data-contact-error]') : null;
             if (err) err.textContent = message || '';
         }
@@ -116,7 +109,7 @@
             Array.prototype.forEach.call(row.querySelectorAll('[data-contact-error]'), function (node) {
                 node.textContent = '';
             });
-            Array.prototype.forEach.call(row.querySelectorAll('.contact-cell-wrap, .contact-input-suffix'), function (node) {
+            Array.prototype.forEach.call(row.querySelectorAll('.contact-cell-wrap'), function (node) {
                 node.classList.remove('is-error');
             });
         }

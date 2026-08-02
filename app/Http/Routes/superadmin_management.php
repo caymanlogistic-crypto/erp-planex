@@ -20,11 +20,15 @@ $router->get('/superadmin/companies/{id}/vehicles', [$m, 'vehicles']);
 $router->get('/superadmin/companies/{id}/crews', [$m, 'crews']);
 $router->get('/superadmin/companies/{id}/documents', [$m, 'documents']);
 $router->get('/superadmin/companies/{company_id}/documents/{document_id}/download', [$m, 'documentDownload']);
+$router->get('/superadmin/companies/{company_id}/documents/{document_id}/view', [$m, 'documentView']);
 $router->get('/superadmin/companies/{id}/access-grants', [$m, 'accessGrants']);
 $router->post('/superadmin/companies/{id}/access-grants/{grant_id}/revoke', [$m, 'revokeGrant']);
 
 // Logist management
 $router->get('/superadmin/companies/{id}/users/logists/create', [$m, 'logistCreateForm']);
+$router->post('/superadmin/companies/{id}/users/logists/create', [$m, 'logistCreateSubmit']);
+$router->get('/superadmin/companies/{id}/users/logists/modal-create', [$m, 'logistModalCreateForm']);
+$router->post('/superadmin/companies/{id}/users/logists/modal-create', [$m, 'logistModalCreateSubmit']);
 $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}', [$m, 'logistView']);
 $router->get('/superadmin/companies/{company_id}/users/logists/{user_id}/edit', [$m, 'logistEditForm']);
 $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/edit', [$m, 'logistEditSubmit']);
@@ -32,4 +36,10 @@ $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/reset-
 $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/activate', [$m, 'logistActivate']);
 $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/block', [$m, 'logistBlock']);
 $router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/archive', [$m, 'logistArchive']);
-$router->post('/superadmin/companies/{id}/users/logists/create', [$m, 'logistCreateSubmit']);
+$router->get('/superadmin/companies/{company_id}/users/logists/{user_id}/modal-view', [$m, 'logistModalView']);
+$router->get('/superadmin/companies/{company_id}/users/logists/{user_id}/modal-edit', [$m, 'logistModalEditForm']);
+$router->post('/superadmin/companies/{company_id}/users/logists/{user_id}/modal-edit', [$m, 'logistModalEditSubmit']);
+
+// Reconciliation (central-only user recovery)
+$router->post('/superadmin/companies/{id}/users/reconcile/{user_id}', [$m, 'logistReconcile']);
+$router->get('/superadmin/companies/{id}/users/reconcile/list', [$m, 'logistReconcileList']);

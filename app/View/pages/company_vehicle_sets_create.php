@@ -104,8 +104,8 @@ $isCouplingSelected = $selectedSetType === 'coupling';
 <?php if ($company === null): ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">Подрядчики</span>
         <h1 class="page-title">Создать транспорт</h1>
+        <div class="page-summary"><span>Подрядчики</span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/vehicle-sets') ?>" class="btn btn-secondary">&larr; К списку</a>
@@ -122,10 +122,8 @@ $isCouplingSelected = $selectedSetType === 'coupling';
 <?php elseif (($company['status'] ?? '') !== 'active'): ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">
-            Подрядчики / <?= e(mb_strtoupper($company['name'])) ?>
-        </span>
         <h1 class="page-title">Создать транспорт</h1>
+        <div class="page-summary"><span>Подрядчики / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/vehicle-sets') ?>" class="btn btn-secondary">&larr; К списку</a>
@@ -145,10 +143,8 @@ $isCouplingSelected = $selectedSetType === 'coupling';
 <?php elseif ($success): ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">
-            Подрядчики / <?= e(mb_strtoupper($company['name'])) ?>
-        </span>
         <h1 class="page-title">Транспорт создан</h1>
+        <div class="page-summary"><span>Подрядчики / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/vehicle-sets/create') ?>" class="btn btn-secondary">Создать ещё</a>
@@ -218,10 +214,8 @@ $isCouplingSelected = $selectedSetType === 'coupling';
 <?php else: ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">
-            Подрядчики / <?= e(mb_strtoupper($company['name'])) ?>
-        </span>
         <h1 class="page-title">Создать транспорт</h1>
+        <div class="page-summary"><span>Подрядчики / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/vehicle-sets') ?>" class="btn btn-secondary">&larr; К списку</a>

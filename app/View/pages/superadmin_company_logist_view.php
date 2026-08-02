@@ -40,8 +40,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Пароль сброшен</span>
+        <h1 class="page-title">Пароль сброшен</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>" class="btn btn-ghost">← К карточке пользователя</a>
@@ -63,7 +63,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dt>Новый временный пароль</dt>
             <dd><code class="code-hi"><?= e($newPassword) ?></code></dd>
             <dt>Роль</dt>
-            <dd><?php $rc = $logist['role_code'] ?? 'logist'; echo e($rc === 'logist' ? 'Пользователь' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></dd>
+            <dd><?php $rc = $logist['role'] ?? 'logist'; echo e($rc === 'logist' ? 'Логист' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></dd>
         </dl>
 
         <div class="notice warn">
@@ -77,8 +77,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title"><?= e($logist['full_name']) ?></span>
+        <h1 class="page-title"><?= e($logist['full_name']) ?></h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -90,6 +90,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 
 <?php if (($_GET['status_changed'] ?? '') === '1'): ?>
     <div class="notice success">Статус изменён.</div>
+<?php endif; ?>
+<?php if (($_GET['error'] ?? '') === 'reset_failed'): ?>
+    <div class="notice danger">Ошибка сброса пароля. Проверьте доступность БД компании и повторите попытку.</div>
 <?php endif; ?>
 
 <?php if (!empty($countsIncomplete)): ?>
@@ -113,7 +116,7 @@ require_once __DIR__ . '/../components/status_badge.php';
             <dt>Телефон</dt>
             <dd><?= e($logist['phone'] ?? '—') ?></dd>
             <dt>Роль</dt>
-            <dd><?php $rc = $logist['role_code'] ?? 'logist'; echo e($rc === 'logist' ? 'Пользователь' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></dd>
+            <dd><?php $rc = $logist['role'] ?? 'logist'; echo e($rc === 'logist' ? 'Логист' : ($rc === 'senior_logist' ? 'Логист+' : $rc)) ?></dd>
             <dt>Статус</dt>
             <dd><?= renderStatusBadge($logist['status']) ?></dd>
             <dt>Комментарий</dt>
@@ -194,6 +197,11 @@ require_once __DIR__ . '/../components/status_badge.php';
             <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/block" onsubmit="return confirm('Заблокировать пользователя?')">
                 <button type="submit" class="btn btn-danger">Заблокировать</button>
 
+            </form>
+            <?php endif; ?>
+            <?php if ($logist['status'] !== 'archived'): ?>
+            <form method="post" action="/superadmin/companies/<?= $companyId ?>/users/logists/<?= $logistId ?>/archive" onsubmit="return confirm('Архивировать пользователя? Это действие скроет пользователя из списков и запретит вход.')">
+                <button type="submit" class="btn btn-danger">Архивировать</button>
             </form>
             <?php endif; ?>
         </div>

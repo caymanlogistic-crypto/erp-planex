@@ -1,7 +1,7 @@
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">ОШИБКА ДОСТУПА</span>
-        <span class="page-title">Доступ запрещён</span>
+        <h1 class="page-title">Доступ запрещён</h1>
+        <div class="page-summary"><span>ОШИБКА ДОСТУПА</span></div>
     </div>
 </div>
 

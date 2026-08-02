@@ -104,7 +104,7 @@ final class ContractorService
 
     public function getContractorById(PDO $localPdo, int $id): ?array
     {
-        $stmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ?');
+        $stmt = $localPdo->prepare('SELECT * FROM contractors WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
@@ -208,6 +208,8 @@ final class ContractorService
                 bank_name = :bank_name,
                 bank_bik = :bank_bik,
                 bank_corr_account = :bank_corr_account,
+                director_full_name = :director_full_name,
+                director_position = :director_position,
                 status = :status,
                 comments = :comments,
                 updated_by_user_id = :updated_by_user_id,
@@ -226,6 +228,8 @@ final class ContractorService
             ':bank_name'        => ($data['bank_name'] ?? '') !== '' ? $data['bank_name'] : null,
             ':bank_bik'         => ($data['bank_bik'] ?? '') !== '' ? $data['bank_bik'] : null,
             ':bank_corr_account'=> ($data['bank_corr_account'] ?? '') !== '' ? $data['bank_corr_account'] : null,
+            ':director_full_name' => ($v = trim($data['director_full_name'] ?? '')) !== '' ? $v : null,
+            ':director_position'  => ($v = trim($data['director_position'] ?? '')) !== '' ? $v : null,
             ':status'           => $data['status'] ?? 'active',
             ':comments'         => ($v = trim($data['comments'] ?? '')) !== '' ? $v : null,
             ':updated_by_user_id' => $userId,

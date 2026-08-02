@@ -15,9 +15,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Водители+ТС</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водители+ТС</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 <div class="notice warn">
@@ -38,9 +38,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($block === null): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Связка не найдена</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Связка не найдена</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
@@ -57,9 +57,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif (isset($accessDenied)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Доступ запрещён</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/driver-vehicle-blocks') ?>" class="btn btn-ghost">← К списку</a>
@@ -82,10 +82,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <div class="page-eyebrow">ВОДИТЕЛИ+ТС / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Водители+ТС: <?= e($block['driver_name'] ?? '—') ?> + <?= e($block['primary_plate'] ?? '—') ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водители+ТС: <?= e($block['driver_name'] ?? '—') ?> + <?= e($block['primary_plate'] ?? '—') ?></h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/driver-vehicle-blocks/<?= $block['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -194,7 +193,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
         <div class="form-section">
             <h3 class="panel-head-title">Удаление записи</h3>
-            <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
+            <p class="text-muted mb-compact">Запись будет удалена из списка.</p>
             <form method="post" action="/company/driver-vehicle-blocks/<?= $block['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
                 <button type="submit" class="btn btn-danger">Удалить</button>
             </form>

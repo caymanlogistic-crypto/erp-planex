@@ -7,9 +7,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиенты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиенты</h1>
+        <div class="page-summary"><span>Заказчики перевозок и их реквизиты</span></div>
     </div>
 </div>
 
@@ -20,9 +20,9 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиенты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиенты</h1>
+        <div class="page-summary"><span>Заказчики перевозок и их реквизиты</span></div>
     </div>
 </div>
 
@@ -33,28 +33,30 @@
 <?php elseif (empty($clients)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиенты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиенты</h1>
+        <div class="page-summary"><span>Заказчики перевозок и их реквизиты</span></div>
     </div>
     <div class="page-head-actions">
         <button type="button" class="btn btn-primary" onclick="openModal('le-client-modal')">Создать клиента</button>
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only">
-    <div class="empty-state">
-        <p class="empty-title">Клиенты ещё не созданы.</p>
-        <a href="<?= app_url('/company/clients/create') ?>" class="btn btn-primary">Создать первого клиента</a>
+<div class="panel">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Клиенты ещё не созданы.</p>
+            <p class="empty-desc">Добавьте заказчика перевозок с контактами и реквизитами для оформления договоров.</p>
+        </div>
     </div>
 </div>
 
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиенты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиенты</h1>
+        <div class="page-summary"><span>Заказчики перевозок и их реквизиты</span></div>
     </div>
     <div class="page-head-actions">
         <button type="button" class="btn btn-primary" onclick="openModal('le-client-modal')">Создать клиента</button>
@@ -84,7 +86,6 @@
                     <th>ИНН</th>
                     <th>Статус</th>
                     <th>Создан</th>
-                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -105,13 +106,6 @@
                         <?php endif; ?>
                     </td>
                     <td class="col-muted"><?= e($c['created_at']) ?></td>
-                    <td class="col-actions">
-                        <div class="row-actions">
-                            <a href="/company/clients/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
-                            <a href="/company/clients/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
-                            <a href="/company/documents?entity_type=client&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
-                        </div>
-                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -137,7 +131,8 @@
 </div>
 <script>
 (function initClientLegalEntityModal() {
-    var config = { modalId: 'le-client-modal', formAction: '/company/clients/create', typeField: 'entity_type' };
+    window.ERP_BASE_PATH = '<?= app_base_path() ?>';
+    var config = { modalId: 'le-client-modal', formAction: '<?= app_url('/company/clients/create') ?>', typeField: 'entity_type' };
     if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
         window.LegalEntityModal.init(config);
         return;

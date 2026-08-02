@@ -5,8 +5,8 @@ require_once __DIR__ . '/../components/status_badge.php';
 ?>
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN</span>
-        <span class="page-title">Реестр компаний</span>
+        <h1 class="page-title">Реестр компаний</h1>
+        <div class="page-summary"><span>Управление компаниями-экспедиторами</span></div>
     </div>
     <div class="page-head-actions">
             <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary" onclick="event.preventDefault();openModal('sa-company-create-modal');">Создать экспедитора</a>
@@ -51,7 +51,6 @@ require_once __DIR__ . '/../components/status_badge.php';
             <div class="empty-state">
                 <p class="empty-title">Нет компаний</p>
                 <p class="empty-desc">Создайте первого экспедитора для начала работы системы.</p>
-                <a href="<?= app_url('/superadmin/companies/create') ?>" class="btn btn-primary" onclick="event.preventDefault();openModal('sa-company-create-modal');">Создать экспедитора</a>
             </div>
         </div>
     </div>
@@ -114,7 +113,7 @@ require_once __DIR__ . '/../components/status_badge.php';
       <div class="modal-required-note"><span class="req">*</span> — обязательные поля</div>
       <div class="modal-foot-actions">
         <button type="button" class="btn btn-ghost" onclick="closeModal('sa-company-create-modal')">Отмена</button>
-        <button type="submit" form="le-sa-company-create-form" class="btn btn-primary">Создать компанию</button>
+        <button type="submit" form="le-sa-company-create-form" class="btn btn-primary">Создать экспедитора</button>
       </div>
     </div>
   </div>

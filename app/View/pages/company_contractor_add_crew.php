@@ -8,8 +8,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Добавить экипаж перевозчику</span>
+        <h1 class="page-title">Добавить экипаж перевозчику</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-ghost">← К перевозчику</a>
@@ -37,8 +37,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Перевозчик не найден</span>
+        <h1 class="page-title">Перевозчик не найден</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку</a>
@@ -57,8 +57,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Экипаж создан</span>
+        <h1 class="page-title">Экипаж создан</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-primary">← К перевозчику</a>
@@ -217,8 +217,8 @@ if ($blockMode === 'new') {
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ / <?= e($company['name']) ?></span>
-        <span class="page-title">Добавить экипаж перевозчику «<?= e($contractor['name']) ?>»</span>
+        <h1 class="page-title">Добавить экипаж перевозчику «<?= e($contractor['name']) ?>»</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/contractors/<?= (int)($contractorId ?? 0) ?>" class="btn btn-ghost">← К перевозчику</a>

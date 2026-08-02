@@ -80,6 +80,10 @@ final class AuditService
             $where[] = 'entity_type = ?';
             $params[] = $filters['entity_type'];
         }
+        if (!empty($filters['exclude_entity_type'])) {
+            $where[] = 'entity_type != ?';
+            $params[] = $filters['exclude_entity_type'];
+        }
         if (!empty($filters['status'])) {
             $where[] = 'status = ?';
             $params[] = $filters['status'];

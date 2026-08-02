@@ -46,4 +46,16 @@ for($VSC_idx=0;$VSC_idx<$VSC_rowCount;$VSC_idx++){$VSC_file=$VSC_customFiles[$VS
 $VSC_lpdo->commit();$VSC_createdVehicleSet=['id'=>$VSC_newSetId,'set_type'=>$VSC_setType,'status'=>$VSC_status,'comments'=>$VSC_comments,'units'=>$VSC_createdUnits,'primary_plate'=>$VSC_createdUnits['primary']['plate_number']??'','secondary_plate'=>$VSC_createdUnits['secondary']['plate_number']??null,'primary_vehicle_unit_id'=>$VSC_createdUnitIds['primary']??null,'secondary_vehicle_unit_id'=>$VSC_createdUnitIds['secondary']??null];$VSC_success=true;}
 catch(\Throwable$e){if($VSC_lpdo->inTransaction())$VSC_lpdo->rollBack();foreach($VSC_storedPaths as $sp){if(is_string($sp)&&$sp!==''&&is_file($sp))@unlink($sp);}throw$e;}}
 catch(\Exception$e){$VSC_company=$VSC_company??null;$VSC_formError='Ошибка: '.$e->getMessage();}
-VSC_render: ob_start();require base_path('app/View/pages/company_vehicle_sets_create.php');$content=ob_get_clean();require base_path('app/View/layouts/main.php');
+VSC_render:
+$pageTitle=$VSC_pageTitle;
+$pageContext=$VSC_pageContext;
+$company=$VSC_company;
+$errors=$VSC_errors;
+$old=$VSC_old;
+$formError=$VSC_formError;
+$success=$VSC_success;
+$createdVehicleSet=$VSC_createdVehicleSet;
+$docErrors=$VSC_docErrors;
+$uploadedDocs=$VSC_uploadedDocs;
+$docTypes=$VSC_docTypes;
+ob_start();require base_path('app/View/pages/company_vehicle_sets_create.php');$content=ob_get_clean();require base_path('app/View/layouts/main.php');

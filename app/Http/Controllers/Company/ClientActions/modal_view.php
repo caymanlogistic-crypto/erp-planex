@@ -5,7 +5,7 @@ use App\Service\ClientContactService;
 requireRole(['company_owner', 'senior_logist', 'logist']);
 
 $renderMessage = static function (string $message): void {
-    echo '<div class="modal-body"><div class="notice warn" style="margin:16px">' . e($message) . '</div></div>';
+    echo '<div class="modal-body"><div class="notice warn modal-notice">' . e($message) . '</div></div>';
     echo '<div class="modal-foot is-spaced"><div class="modal-foot-actions"><button type="button" class="btn btn-ghost" data-client-view-close-btn>Закрыть</button></div></div>';
 };
 
@@ -46,6 +46,16 @@ try {
         $contacts = ClientContactService::loadByClientId($localPdo, (int) $client['id']);
     } catch (\Exception $e) {
         $contacts = [];
+    }
+
+    $clientDocuments = [];
+    try {
+        require_once base_path('app/Support/legal_entity_document_upload.php');
+        if (function_exists('loadEntityDocuments')) {
+            $clientDocuments = loadEntityDocuments($localPdo, (int) $client['id'], 'client');
+        }
+    } catch (\Exception $e) {
+        $clientDocuments = [];
     }
 
     $canEdit = $roleCode !== 'logist' || (int) ($client['created_by_user_id'] ?? 0) === $userId || $grantLevel === 'edit';

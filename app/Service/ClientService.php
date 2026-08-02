@@ -106,7 +106,7 @@ final class ClientService
 
     public function getClientById(PDO $localPdo, int $id): ?array
     {
-        $stmt = $localPdo->prepare('SELECT * FROM clients WHERE id = ?');
+        $stmt = $localPdo->prepare('SELECT * FROM clients WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
@@ -209,8 +209,15 @@ final class ClientService
                 inn = :inn,
                 kpp = :kpp,
                 ogrn = :ogrn,
+                entity_type = :entity_type,
                 legal_address = :legal_address,
                 physical_address = :physical_address,
+                bank_account = :bank_account,
+                bank_name = :bank_name,
+                bank_bik = :bank_bik,
+                bank_corr_account = :bank_corr_account,
+                director_full_name = :director_full_name,
+                director_position = :director_position,
                 status = :status,
                 comments = :comments,
                 updated_by_user_id = :updated_by_user_id,
@@ -218,17 +225,24 @@ final class ClientService
              WHERE id = :id'
         );
         $update->execute([
-            ':name'             => trim($data['name'] ?? ''),
-            ':inn'              => trim($data['inn'] ?? ''),
-            ':kpp'              => ($v = trim($data['kpp'] ?? '')) !== '' ? $v : null,
-            ':ogrn'             => ($v = trim($data['ogrn'] ?? '')) !== '' ? $v : null,
-            ':legal_address'    => ($v = trim($data['legal_address'] ?? '')) !== '' ? $v : null,
-            ':physical_address' => ($v = trim($data['physical_address'] ?? '')) !== '' ? $v : null,
-            ':status'           => $data['status'] ?? 'active',
-            ':comments'         => ($v = trim($data['comments'] ?? '')) !== '' ? $v : null,
+            ':name'               => trim($data['name'] ?? ''),
+            ':inn'                => trim($data['inn'] ?? ''),
+            ':kpp'                => ($v = trim($data['kpp'] ?? '')) !== '' ? $v : null,
+            ':ogrn'               => ($v = trim($data['ogrn'] ?? '')) !== '' ? $v : null,
+            ':entity_type'        => ($data['entity_type'] ?? '') !== '' ? $data['entity_type'] : null,
+            ':legal_address'      => ($v = trim($data['legal_address'] ?? '')) !== '' ? $v : null,
+            ':physical_address'   => ($v = trim($data['physical_address'] ?? '')) !== '' ? $v : null,
+            ':bank_account'       => ($data['bank_account'] ?? '') !== '' ? $data['bank_account'] : null,
+            ':bank_name'          => ($data['bank_name'] ?? '') !== '' ? $data['bank_name'] : null,
+            ':bank_bik'           => ($data['bank_bik'] ?? '') !== '' ? $data['bank_bik'] : null,
+            ':bank_corr_account'  => ($data['bank_corr_account'] ?? '') !== '' ? $data['bank_corr_account'] : null,
+            ':director_full_name' => ($v = trim($data['director_full_name'] ?? '')) !== '' ? $v : null,
+            ':director_position'  => ($v = trim($data['director_position'] ?? '')) !== '' ? $v : null,
+            ':status'             => $data['status'] ?? 'active',
+            ':comments'           => ($v = trim($data['comments'] ?? '')) !== '' ? $v : null,
             ':updated_by_user_id' => $userId,
-            ':updated_by_role'   => $role,
-            ':id'               => $id,
+            ':updated_by_role'    => $role,
+            ':id'                 => $id,
         ]);
     }
 
@@ -272,5 +286,24 @@ final class ClientService
         $stmt = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type = 'client' AND entity_id = ? AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL LIMIT 1");
         $stmt->execute([$clientId, $userId]);
         return $stmt->fetchColumn() ?: null;
+    }
+
+    public function canAccessClient(PDO $localPdo, array $client, int $userId, string $roleCode, string $mode = 'view'): bool
+    {
+        if (in_array($roleCode, ['company_owner', 'senior_logist'], true)) {
+            return true;
+        }
+        if ($roleCode !== 'logist' || $userId <= 0) {
+            return false;
+        }
+        if ((int) ($client['created_by_user_id'] ?? 0) === $userId) {
+            return true;
+        }
+        if ($mode === 'archive') {
+            return false;
+        }
+
+        $grant = $this->checkLogistAccess($localPdo, (int) ($client['id'] ?? 0), $userId, $mode);
+        return $mode === 'edit' ? $grant === 'edit' : in_array($grant, ['view', 'edit'], true);
     }
 }

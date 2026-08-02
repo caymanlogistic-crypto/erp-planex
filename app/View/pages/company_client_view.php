@@ -13,9 +13,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиенты</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиенты</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/clients') ?>" class="btn btn-ghost">← К списку</a>
@@ -29,9 +29,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($client === null): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиент</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиент</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/clients') ?>" class="btn btn-ghost">← К списку</a>
@@ -45,9 +45,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиент</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиент</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/clients') ?>" class="btn btn-ghost">← К списку</a>
@@ -61,9 +61,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <h1>Клиент: <?= e($client['name']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Клиент: <?= e($client['name']) ?></h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/clients/<?= $client['id'] ?>/edit" class="btn btn-primary">Редактировать</a>

@@ -33,7 +33,7 @@ if (!empty($validationErrors)) {
 
 $routeFormMode = 'edit';
 $routeFormId = 'linear-trip-edit-form';
-$routeFormAction = '/company/trips/linear/' . (int) ($route['id'] ?? 0) . '/modal-edit';
+$routeFormAction = app_url('/company/trips/linear/' . (int) ($route['id'] ?? 0) . '/modal-edit');
 $routeFormDomPrefix = 'linear-trip-edit-' . (int) ($route['id'] ?? 0);
 $routeFormClass = 'linear-trip-panel';
 $existingDocsByCode = $docsByCode;

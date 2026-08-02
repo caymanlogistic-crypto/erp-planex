@@ -6,14 +6,15 @@
  */
 ?>
 <div class="page-head">
-    <div>
-        <h1>Удалённые данные</h1>
-        <p class="text-muted">Просмотр и восстановление удалённых записей всех компаний</p>
+    <div class="page-head-left">
+        <h1 class="page-title">Удалённые данные</h1>
+        <div class="page-summary"><span>Просмотр и восстановление удалённых записей всех компаний</span></div>
     </div>
 </div>
 
 <?php if (!empty($_GET['error'])): ?>
-<div class="notice warn">Ошибка: <?= e($_GET['error']) ?></div>
+<?php $errorMsg = $_GET['error'] === 'company_deletion_final' ? 'Восстановление компании невозможно — компания была безвозвратно удалена.' : e($_GET['error']); ?>
+<div class="notice warn">Ошибка: <?= $errorMsg ?></div>
 <?php endif; ?>
 <?php if (!empty($_GET['restored'])): ?>
 <div class="notice success">Запись успешно восстановлена.
@@ -24,10 +25,11 @@
 <?php endif; ?>
 
 <div class="panel">
-    <div class="panel-body" style="overflow-x:auto;">
+    <div class="panel-body">
         <?php if (empty($records)): ?>
         <div class="empty-state">
-            <p class="text-muted">Нет удалённых записей.</p>
+            <p class="empty-title">Нет удалённых записей</p>
+            <p class="empty-desc">Удалённые данные всех компаний отображаются здесь для просмотра и восстановления.</p>
         </div>
         <?php else: ?>
         <table class="table">
@@ -61,10 +63,13 @@
                     </td>
                     <td class="table-actions">
                         <a href="/superadmin/deleted-data/<?= (int)$r['id'] ?>" class="btn btn-ghost btn-sm">Просмотр</a>
-                        <?php if ($r['status'] === 'archived'): ?>
-                        <form method="post" action="/superadmin/deleted-data/<?= (int)$r['id'] ?>/restore" style="display:inline;" onsubmit="return confirm('Восстановить запись? Она снова появится в рабочем списке компании.')">
+                        <?php if ($r['status'] === 'archived' && $r['entity_type'] !== 'company'): ?>
+                        <form method="post" action="/superadmin/deleted-data/<?= (int)$r['id'] ?>/restore" class="inline-form" onsubmit="return confirm('Восстановить запись? Она снова появится в рабочем списке компании.')">
                             <button type="submit" class="btn btn-primary btn-sm">Восстановить</button>
                         </form>
+                        <?php endif; ?>
+                        <?php if ($r['entity_type'] === 'company'): ?>
+                        <span class="text-muted">Безвозвратно удалена</span>
                         <?php endif; ?>
                     </td>
                 </tr>

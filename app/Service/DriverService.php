@@ -94,7 +94,7 @@ final class DriverService
 
     public function getDriverById(PDO $localPdo, int $id): ?array
     {
-        $stmt = $localPdo->prepare('SELECT * FROM drivers WHERE id = ?');
+        $stmt = $localPdo->prepare('SELECT * FROM drivers WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }

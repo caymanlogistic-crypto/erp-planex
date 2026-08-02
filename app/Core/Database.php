@@ -41,6 +41,21 @@ class Database
         return $this->pdo !== null;
     }
 
+    public function fetch(string $sql, array $params = []): ?array
+    {
+        $stmt = $this->connection()->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row !== false ? $row : null;
+    }
+
+    public function fetchAll(string $sql, array $params = []): array
+    {
+        $stmt = $this->connection()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public static function fromConfig(array $config): self
     {
         return new self($config['database'] ?? []);
@@ -75,7 +90,7 @@ class Database
 
             return $pdo;
         } catch (PDOException $e) {
-            throw new RuntimeException('Database connection failed');
+            throw new RuntimeException('Database connection failed: ' . $e->getMessage());
         }
     }
 }

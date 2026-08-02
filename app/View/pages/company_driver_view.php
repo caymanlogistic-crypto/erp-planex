@@ -17,9 +17,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Водитель</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водитель</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 
@@ -43,9 +43,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif ($driver === null): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Водитель не найден</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водитель не найден</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
@@ -63,9 +63,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php elseif (isset($accessDenied)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Доступ запрещён</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Доступ запрещён</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/drivers') ?>" class="btn btn-ghost">← К списку</a>
@@ -89,10 +89,9 @@ require_once __DIR__ . '/../components/status_badge.php';
 <?php else: ?>
 
 <div class="page-head">
-    <div>
-        <div class="page-eyebrow">ВОДИТЕЛИ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Водитель: <?= e($driver['full_name']) ?></h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Водитель: <?= e($driver['full_name']) ?></h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/drivers/<?= $driver['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
@@ -322,7 +321,7 @@ require_once __DIR__ . '/../components/status_badge.php';
 
         <div class="form-section">
             <h3 class="panel-head-title">Удаление записи</h3>
-            <p class="text-muted" style="margin-bottom:8px;">Запись будет удалена из списка.</p>
+            <p class="text-muted mb-compact">Запись будет удалена из списка.</p>
             <form method="post" action="/company/drivers/<?= $driver['id'] ?>/archive" onsubmit="return confirm('Удалить запись? Запись будет удалена из списка.')">
                 <button type="submit" class="btn btn-danger">Удалить</button>
             </form>

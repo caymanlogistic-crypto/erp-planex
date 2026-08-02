@@ -45,10 +45,12 @@ require_once base_path('app/View/components/view_formatters.php');
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only">
-    <div class="empty-state">
-        <p class="empty-title">Транспорт ещё не создан.</p>
-        <p class="empty-desc">Создайте транспорт, чтобы он появился в списке и стал доступен для просмотра и редактирования.</p>
+<div class="panel">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Транспорт ещё не создан.</p>
+            <p class="empty-desc">Создайте транспорт, чтобы он появился в списке и стал доступен для просмотра и редактирования.</p>
+        </div>
     </div>
 </div>
 

@@ -8,14 +8,14 @@
         $pdo = $db->connection();
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $company = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
 
         $ownerExists = false;
         $existingOwner = null;
         if ($company) {
             $ownerStmt = $pdo->prepare("SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' LIMIT 1");
             $ownerStmt->execute([(int) $id]);
-            $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $existingOwner = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
             $ownerExists = $existingOwner !== null;
         }
 

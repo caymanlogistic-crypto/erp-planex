@@ -13,14 +13,19 @@
     $tempPassword = null;
     $ownerExists = false;
     $existingOwner = null;
+    $isModal = ($_POST['is_modal'] ?? '0') === '1';
 
     try {
         $pdo = $db->connection();
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $company = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
 
         if (!$company) {
+            if ($isModal) {
+                echo '<div class="modal-body"><div class="notice warn">Компания не найдена.</div></div>';
+                return;
+            }
             ob_start();
             require base_path('app/View/pages/superadmin_company_owner_create.php');
             $content = ob_get_clean();
@@ -30,10 +35,14 @@
 
         $ownerStmt = $pdo->prepare("SELECT * FROM company_users WHERE company_id = ? AND role = 'company_owner' LIMIT 1");
         $ownerStmt->execute([(int) $id]);
-        $existingOwner = $ownerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $existingOwner = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
         $ownerExists = $existingOwner !== null;
 
         if ($ownerExists) {
+            if ($isModal) {
+                echo '<div class="modal-body"><div class="notice warn">Руководитель для этой компании уже создан: <strong>' . e($existingOwner['full_name']) . '</strong> (логин: ' . e($existingOwner['login']) . '). Дублирование невозможно.</div></div>';
+                return;
+            }
             ob_start();
             require base_path('app/View/pages/superadmin_company_owner_create.php');
             $content = ob_get_clean();
@@ -75,6 +84,20 @@
 
         if (!empty($errors)) {
             $generatedPassword = generatePassword();
+            if ($isModal) {
+                ob_start();
+                require base_path('app/View/partials/superadmin_company_owner_create_form.php');
+                $modalBody = ob_get_clean();
+                echo '<div class="modal-body">' . $modalBody . '</div>
+                    <div class="modal-foot is-spaced">
+                        <div class="modal-required-note"><span class="req">*</span> — обязательные поля</div>
+                        <div class="modal-foot-actions">
+                            <button type="button" class="btn btn-ghost" data-owner-create-close>Отмена</button>
+                            <button type="submit" form="owner-create-form" class="btn btn-primary">Создать руководителя</button>
+                        </div>
+                    </div>';
+                return;
+            }
             ob_start();
             require base_path('app/View/pages/superadmin_company_owner_create.php');
             $content = ob_get_clean();
@@ -108,6 +131,45 @@
     } catch (\Exception $e) {
         $company = $company ?? null;
         $formError = 'Ошибка создания Руководителя: ' . $e->getMessage();
+    }
+
+    if ($isModal) {
+        if ($success) {
+            echo '<div class="modal-body" data-owner-create-success="1">
+                <div class="notice success">Главный пользователь успешно создан.</div>
+                <dl class="kv owner-create-success-dl">
+                    <dt>Компания</dt>
+                    <dd>' . e($company['name']) . '</dd>
+                    <dt>ФИО</dt>
+                    <dd>' . e($createdOwner['full_name']) . '</dd>
+                    <dt>Логин</dt>
+                    <dd><code>' . e($createdOwner['login']) . '</code></dd>
+                    <dt>Временный пароль</dt>
+                    <dd><code class="code-hi">' . e($tempPassword) . '</code></dd>
+                    <dt>Роль</dt>
+                    <dd>Руководитель</dd>
+                </dl>
+            </div>
+            <div class="modal-foot is-spaced">
+                <div class="modal-foot-actions">
+                    <button type="button" class="btn btn-secondary" data-owner-create-close>Закрыть</button>
+                </div>
+            </div>';
+            return;
+        }
+
+        ob_start();
+        require base_path('app/View/partials/superadmin_company_owner_create_form.php');
+        $modalBody = ob_get_clean();
+        echo '<div class="modal-body">' . $modalBody . '</div>
+            <div class="modal-foot is-spaced">
+                <div class="modal-required-note"><span class="req">*</span> — обязательные поля</div>
+                <div class="modal-foot-actions">
+                    <button type="button" class="btn btn-ghost" data-owner-create-close>Отмена</button>
+                    <button type="submit" form="owner-create-form" class="btn btn-primary">Создать руководителя</button>
+                </div>
+            </div>';
+        return;
     }
 
     ob_start();

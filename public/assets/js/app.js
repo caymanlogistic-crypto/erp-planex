@@ -1,5 +1,14 @@
 document.documentElement.classList.add('js-ready');
 
+window.getErpBasePath = function () {
+    if (window.ERP_BASE_PATH) return window.ERP_BASE_PATH;
+    var meta = document.querySelector('meta[name="erp-base-path"]');
+    if (meta) return meta.getAttribute('content');
+    var m = window.location.pathname.match(/^(\/[^/]+)/);
+    if (m && m[1] === '/erp') return '/erp';
+    return '';
+};
+
 // ============================================================
 // Driver form init — shared between create & edit modes
 // ============================================================
@@ -1144,6 +1153,9 @@ window.openModal = function (id) {
     if (id === 'vehicle-set-create-modal' && window.bindVehicleSetCreateModalForm) {
         window.bindVehicleSetCreateModalForm();
     }
+    if (id === 'company-user-create-modal' && window.bindCompanyUserCreateModalForm) {
+        window.bindCompanyUserCreateModalForm();
+    }
 };
 
 function resetModalContent(modal) {
@@ -1203,6 +1215,19 @@ document.addEventListener('keydown', function (e) {
     }
 });
 
+// Declarative modal open/close via data attributes
+document.addEventListener('click', function (e) {
+    var openBtn = e.target.closest('[data-open-modal]');
+    if (openBtn) {
+        window.openModal(openBtn.getAttribute('data-open-modal'));
+        return;
+    }
+    var closeBtn = e.target.closest('[data-close-modal]');
+    if (closeBtn) {
+        window.closeModal(closeBtn.getAttribute('data-close-modal'));
+    }
+});
+
 // ============================================================
 // Driver modal — ModalShell adapter
 // ============================================================
@@ -1227,9 +1252,9 @@ document.addEventListener('keydown', function (e) {
             cancel: '[data-client-cancel-edit-btn]'
         },
         endpoints: {
-            view: function (id) { return '/company/clients/' + id + '/modal-view'; },
-            edit: function (id) { return '/company/clients/' + id + '/modal-edit'; },
-            delete: function (id) { return '/company/clients/' + id + '/modal-archive'; }
+            view: function (id) { var base = window.getErpBasePath(); return base + '/company/clients/' + id + '/modal-view'; },
+            edit: function (id) { var base = window.getErpBasePath(); return base + '/company/clients/' + id + '/modal-edit'; },
+            delete: function (id) { var base = window.getErpBasePath(); return base + '/company/clients/' + id + '/modal-archive'; }
         },
         errorMessages: {
             loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u043a\u043b\u0438\u0435\u043d\u0442\u0430.',
@@ -1245,7 +1270,32 @@ document.addEventListener('keydown', function (e) {
             cancelBtn: '\u041e\u0442\u043c\u0435\u043d\u0430',
             confirmBtn: '\u0423\u0434\u0430\u043b\u0438\u0442\u044c'
         },
-        onContentLoaded: function () {}
+        onContentLoaded: function (shell, mode) {
+            if (mode === 'edit') {
+                var form = shell.querySelector('#client-edit-form');
+                if (form && window.initContactFields) {
+                    window.initContactFields(form, { fieldPrefix: 'contacts' });
+                }
+                if (form && window.initLegalEntityDocuments) {
+                    window.initLegalEntityDocuments(form);
+                }
+                if (form) {
+                    var innBtn = form.querySelector('[data-inn-autofill-btn]');
+                    if (innBtn && window.runLegalEntityInnLookup && !innBtn.dataset.leInnReady) {
+                        innBtn.dataset.leInnReady = '1';
+                        innBtn.addEventListener('click', function (event) {
+                            event.preventDefault();
+                            window.runLegalEntityInnLookup(form, {
+                                button: innBtn,
+                                typeFieldName: 'entity_type',
+                                idleButtonText: '\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u043f\u043e \u0418\u041d\u041d',
+                                loadingButtonText: '\u041f\u043e\u0438\u0441\u043a...'
+                            });
+                        });
+                    }
+                }
+            }
+        }
     });
     ModalShell.register('client', clientCtrl);
 
@@ -1305,9 +1355,9 @@ document.addEventListener('keydown', function (e) {
             cancel: '[data-contractor-cancel-edit-btn]'
         },
         endpoints: {
-            view: function (id) { return '/company/contractors/' + id + '/modal-view'; },
-            edit: function (id) { return '/company/contractors/' + id + '/modal-edit'; },
-            delete: function (id) { return '/company/contractors/' + id + '/modal-archive'; }
+            view: function (id) { var base = window.getErpBasePath(); return base + '/company/contractors/' + id + '/modal-view'; },
+            edit: function (id) { var base = window.getErpBasePath(); return base + '/company/contractors/' + id + '/modal-edit'; },
+            delete: function (id) { var base = window.getErpBasePath(); return base + '/company/contractors/' + id + '/modal-archive'; }
         },
         errorMessages: {
             loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u043f\u0435\u0440\u0435\u0432\u043e\u0437\u0447\u0438\u043a\u0430.',
@@ -1323,7 +1373,32 @@ document.addEventListener('keydown', function (e) {
             cancelBtn: '\u041e\u0442\u043c\u0435\u043d\u0430',
             confirmBtn: '\u0423\u0434\u0430\u043b\u0438\u0442\u044c'
         },
-        onContentLoaded: function () {}
+        onContentLoaded: function (shell, mode) {
+            if (mode === 'edit') {
+                var form = shell.querySelector('#contractor-edit-form');
+                if (form && window.initContactFields) {
+                    window.initContactFields(form, { fieldPrefix: 'contacts' });
+                }
+                if (form && window.initLegalEntityDocuments) {
+                    window.initLegalEntityDocuments(form);
+                }
+                if (form) {
+                    var innBtn = form.querySelector('[data-inn-autofill-btn]');
+                    if (innBtn && window.runLegalEntityInnLookup && !innBtn.dataset.leInnReady) {
+                        innBtn.dataset.leInnReady = '1';
+                        innBtn.addEventListener('click', function (event) {
+                            event.preventDefault();
+                            window.runLegalEntityInnLookup(form, {
+                                button: innBtn,
+                                typeFieldName: 'contractor_type',
+                                idleButtonText: '\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u043f\u043e \u0418\u041d\u041d',
+                                loadingButtonText: '\u041f\u043e\u0438\u0441\u043a...'
+                            });
+                        });
+                    }
+                }
+            }
+        }
     });
     ModalShell.register('contractor', contractorCtrl);
 
@@ -1383,9 +1458,9 @@ document.addEventListener('keydown', function (e) {
             cancel: '[data-driver-cancel-edit-btn]'
         },
         endpoints: {
-            view:   function (id) { return '/company/drivers/' + id + '/modal-view'; },
-            edit:   function (id) { return '/company/drivers/' + id + '/modal-edit'; },
-            delete: function (id) { return '/company/drivers/' + id + '/modal-delete'; }
+            view:   function (id) { var base = window.getErpBasePath(); return base + '/company/drivers/' + id + '/modal-view'; },
+            edit:   function (id) { var base = window.getErpBasePath(); return base + '/company/drivers/' + id + '/modal-edit'; },
+            delete: function (id) { var base = window.getErpBasePath(); return base + '/company/drivers/' + id + '/modal-delete'; }
         },
         errorMessages: {
             loadFailed:    '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435.',
@@ -1595,9 +1670,9 @@ document.addEventListener('keydown', function (e) {
             cancel: '[data-vehicle-set-cancel-edit-btn]'
         },
         endpoints: {
-            view:   function (id) { return '/company/vehicle-sets/' + id + '/modal-view'; },
-            edit:   function (id) { return '/company/vehicle-sets/' + id + '/modal-edit'; },
-            delete: function (id) { return '/company/vehicle-sets/' + id + '/modal-archive'; }
+            view:   function (id) { var base = window.getErpBasePath(); return base + '/company/vehicle-sets/' + id + '/modal-view'; },
+            edit:   function (id) { var base = window.getErpBasePath(); return base + '/company/vehicle-sets/' + id + '/modal-edit'; },
+            delete: function (id) { var base = window.getErpBasePath(); return base + '/company/vehicle-sets/' + id + '/modal-archive'; }
         },
         errorMessages: {
             loadFailed:    '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430.',
@@ -1657,11 +1732,79 @@ document.addEventListener('keydown', function (e) {
 })();
 
 // ============================================================
+// Bank statement upload modal: close on overlay click
+// ============================================================
+(function () {
+    var modal = document.getElementById('bank-statement-upload-modal');
+    if (!modal) return;
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) {
+            window.closeModal('bank-statement-upload-modal');
+        }
+    });
+})();
+
+// ============================================================
+// Bank import delete confirmation (event delegation)
+// ============================================================
+(function () {
+    var deleteImportId = null;
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-delete-import]');
+        if (!btn) return;
+        deleteImportId = parseInt(btn.getAttribute('data-delete-import'), 10);
+        var input = document.getElementById('bank-delete-confirm-input');
+        if (input) input.value = '';
+        var confirmBtn = document.getElementById('bank-delete-confirm-btn');
+        if (confirmBtn) confirmBtn.disabled = true;
+        var errorBox = document.getElementById('bank-delete-confirm-error');
+        if (errorBox) errorBox.classList.add('is-hidden');
+        window.closeModal('bank-statements-modal');
+        window.openModal('bank-delete-confirm-modal');
+    });
+
+    document.addEventListener('input', function (e) {
+        var input = e.target.closest('[data-confirm-delete-input]');
+        if (!input) return;
+        var confirmBtn = document.getElementById('bank-delete-confirm-btn');
+        if (confirmBtn) confirmBtn.disabled = input.value.trim() !== 'УДАЛИТЬ';
+    });
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-confirm-delete-btn]');
+        if (!btn) return;
+        if (!deleteImportId) return;
+        var url = window._bankDeleteImportUrl || '/company/finance/bank-accounts/import/delete';
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        var token = meta ? meta.getAttribute('content') : '';
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = url;
+        var importInput = document.createElement('input');
+        importInput.type = 'hidden';
+        importInput.name = 'import_id';
+        importInput.value = deleteImportId;
+        form.appendChild(importInput);
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_csrf_token';
+        csrfInput.value = token;
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        window.closeModal('bank-delete-confirm-modal');
+        form.submit();
+    });
+})();
+
+// ============================================================
 // Linear trips: create form + ModalShell adapter
 // ============================================================
 (function () {
+    var baseUrl = null;
+    try { baseUrl = window.getErpBasePath(); } catch (e) { baseUrl = ''; }
     async function fetchLinearTripCargoSuggestions(query) {
-        var response = await fetch('/company/trips/linear/cargo-types?q=' + encodeURIComponent(query), {
+        var response = await fetch((baseUrl || '') + '/company/trips/linear/cargo-types?q=' + encodeURIComponent(query), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         if (!response.ok) return [];
@@ -1670,15 +1813,19 @@ document.addEventListener('keydown', function (e) {
     }
 
     function syncDueFields(row) {
-        var dueTypeSelect = row.querySelector('[data-payment-due-type]');
-        if (!dueTypeSelect) return;
-        var showDays = dueTypeSelect.value === 'После загрузки' || dueTypeSelect.value === 'После выгрузки';
-        var daysField = row.querySelector('[data-payment-due-days-wrapper]');
-        var kindField = row.querySelector('[data-payment-due-days-kind-wrapper]');
-        var daysInput = daysField ? daysField.querySelector('input[name$="[payment_due_days]"]') : null;
-        var kindInput = kindField ? kindField.querySelector('select[name$="[payment_due_days_kind]"]') : null;
+        var condSelect = row.querySelector('[data-condition-type]');
+        if (!condSelect) return;
+        var val = condSelect.value;
+        var showDays = val === 'after_start' || val === 'after_end' || val === 'after_documents';
+        var showSpecificDate = val === 'prepayment' || val === 'specific_date';
+        var daysField = row.querySelector('[data-days-count-wrapper]');
+        var kindField = row.querySelector('[data-days-kind-wrapper]');
+        var specField = row.querySelector('[data-specific-date-wrapper]');
+        var daysInput = daysField ? daysField.querySelector('input[name$="[days_count]"]') : null;
+        var kindInput = kindField ? kindField.querySelector('select[name$="[days_kind]"]') : null;
         if (daysField) daysField.classList.toggle('is-hidden', !showDays);
         if (kindField) kindField.classList.toggle('is-hidden', !showDays);
+        if (specField) specField.classList.toggle('is-hidden', !showSpecificDate);
         if (daysInput) {
             daysInput.required = showDays;
             if (!showDays) {
@@ -1723,41 +1870,61 @@ document.addEventListener('keydown', function (e) {
                 '<div class="field-msg"></div>' +
             '</div>' +
             '<div class="field">' +
-                '<label class="field-label">Тип оплаты <span class="req">*</span></label>' +
-                '<select name="' + baseName + '[0][payment_type]" class="field-input">' +
-                    '<option value="Без НДС">Без НДС</option>' +
-                    '<option value="Нал">Нал</option>' +
-                    '<option value="НДС 0%">НДС 0%</option>' +
-                    '<option value="НДС 5%">НДС 5%</option>' +
-                    '<option value="НДС 7%">НДС 7%</option>' +
-                    '<option value="НДС 20%">НДС 20%</option>' +
-                    '<option value="НДС 22%">НДС 22%</option>' +
+                '<label class="field-label">Способ оплаты <span class="req">*</span></label>' +
+                '<select name="' + baseName + '[0][payment_method]" class="field-input">' +
+                    '<option value="cashless">Безнал</option>' +
+                    '<option value="cash">Нал</option>' +
+                '</select>' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="field">' +
+                '<label class="field-label">НДС <span class="req">*</span></label>' +
+                '<select name="' + baseName + '[0][vat_rate]" class="field-input">' +
+                    '<option value="">Без НДС</option>' +
+                    '<option value="0">НДС 0%</option>' +
+                    '<option value="5">НДС 5%</option>' +
+                    '<option value="7">НДС 7%</option>' +
+                    '<option value="20">НДС 20%</option>' +
+                    '<option value="22">НДС 22%</option>' +
                 '</select>' +
                 '<div class="field-msg"></div>' +
             '</div>' +
             '<div class="field">' +
                 '<label class="field-label">Срок оплаты <span class="req">*</span></label>' +
-                '<select name="' + baseName + '[0][payment_due_type]" class="field-input" data-payment-due-type>' +
+                '<select name="' + baseName + '[0][condition_type]" class="field-input" data-condition-type>' +
                     '<option value="">— Выберите срок —</option>' +
-                    '<option value="Предоплата на загрузке">Предоплата на загрузке</option>' +
-                    '<option value="После загрузки">После загрузки</option>' +
-                    '<option value="До выгрузки">До выгрузки</option>' +
-                    '<option value="После выгрузки">После выгрузки</option>' +
+                    '<option value="prepayment">Предоплата</option>' +
+                    '<option value="start_day">В день начала рейса</option>' +
+                    '<option value="after_start">После начала рейса</option>' +
+                    '<option value="end_day">В день окончания рейса</option>' +
+                    '<option value="after_end">После окончания рейса</option>' +
+                    '<option value="after_documents">После получения документов</option>' +
+                    '<option value="specific_date">Конкретная дата</option>' +
                 '</select>' +
                 '<div class="field-msg"></div>' +
             '</div>' +
-            '<div class="field is-hidden" data-payment-due-days-wrapper>' +
+            '<div class="field is-hidden" data-days-count-wrapper>' +
                 '<label class="field-label">Дней <span class="req">*</span></label>' +
-                '<input type="number" min="1" name="' + baseName + '[0][payment_due_days]" class="field-input">' +
+                '<input type="number" min="1" name="' + baseName + '[0][days_count]" class="field-input">' +
                 '<div class="field-msg"></div>' +
             '</div>' +
-            '<div class="field is-hidden" data-payment-due-days-kind-wrapper>' +
+            '<div class="field is-hidden" data-days-kind-wrapper>' +
                 '<label class="field-label">Тип дней <span class="req">*</span></label>' +
-                '<select name="' + baseName + '[0][payment_due_days_kind]" class="field-input">' +
+                '<select name="' + baseName + '[0][days_kind]" class="field-input">' +
                     '<option value="">— Выберите тип —</option>' +
                     '<option value="working">Рабочие дни</option>' +
                     '<option value="calendar">Календарные дни</option>' +
                 '</select>' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="field is-hidden" data-specific-date-wrapper>' +
+                '<label class="field-label">Конкретная дата <span class="req">*</span></label>' +
+                '<input type="text" name="' + baseName + '[0][specific_due_date]" class="field-input js-erp-date-picker" placeholder="дд.мм.гггг" inputmode="numeric" autocomplete="off">' +
+                '<div class="field-msg"></div>' +
+            '</div>' +
+            '<div class="field">' +
+                '<label class="field-label">Комментарий к сроку</label>' +
+                '<input type="text" name="' + baseName + '[0][condition_comment]" class="field-input" placeholder="Опциональный комментарий">' +
                 '<div class="field-msg"></div>' +
             '</div>' +
             '<button type="button" class="linear-trip-row-remove" data-remove-payment-row aria-label="Удалить оплату">×</button>';
@@ -1909,7 +2076,7 @@ document.addEventListener('keydown', function (e) {
                 syncDueFields(row);
             });
             container.addEventListener('change', function (event) {
-                if (event.target.matches('[data-payment-due-type]')) {
+                if (event.target.matches('[data-condition-type]')) {
                     syncDueFields(event.target.closest('[data-payment-row]'));
                 }
             });
@@ -2136,6 +2303,8 @@ document.addEventListener('keydown', function (e) {
 })();
 
 (function () {
+    var baseUrl = null;
+    try { baseUrl = window.getErpBasePath(); } catch (e) { baseUrl = ''; }
     var linearTripGrid = document.querySelector('.table-card[data-erp-grid]');
     if (!linearTripGrid || !document.querySelector('tr[data-linear-route-id]')) {
         return;
@@ -2161,9 +2330,9 @@ document.addEventListener('keydown', function (e) {
             cancel: '[data-linear-trip-cancel-edit-btn]'
         },
         endpoints: {
-            view: function (id) { return '/company/trips/linear/' + id + '/modal-view'; },
-            edit: function (id) { return '/company/trips/linear/' + id + '/modal-edit'; },
-            delete: function (id) { return '/company/trips/linear/' + id + '/modal-delete'; }
+            view: function (id) { return (baseUrl || '') + '/company/trips/linear/' + id + '/modal-view'; },
+            edit: function (id) { return (baseUrl || '') + '/company/trips/linear/' + id + '/modal-edit'; },
+            delete: function (id) { return (baseUrl || '') + '/company/trips/linear/' + id + '/modal-delete'; }
         },
         errorMessages: {
             loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435 \u0440\u0435\u0439\u0441\u0430.',
@@ -2227,11 +2396,11 @@ document.addEventListener('keydown', function (e) {
         },
         endpoints: {
             view: function (id) {
-                var base = window.ERP_BASE_PATH || '';
+                var base = window.getErpBasePath();
                 return base + '/superadmin/companies/' + id + '/modal-view';
             },
             edit: function (id) {
-                var base = window.ERP_BASE_PATH || '';
+                var base = window.getErpBasePath();
                 return base + '/superadmin/companies/' + id + '/modal-edit';
             }
         },
@@ -2239,7 +2408,14 @@ document.addEventListener('keydown', function (e) {
             loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u0438.',
             saveFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f.'
         },
-        onContentLoaded: function () {}
+        onContentLoaded: function (shell, mode) {
+            if (mode === 'edit') {
+                var form = shell.querySelector('#company-edit-form');
+                if (form && window.initLegalEntityDocuments) {
+                    window.initLegalEntityDocuments(form);
+                }
+            }
+        }
     });
     ModalShell.register('superadminCompany', companyCtrl);
 
@@ -2315,3 +2491,940 @@ window.submitDeleteForm = function () {
     window.closeModal('delete-confirm-modal');
     form.submit();
 };
+
+// ============================================================
+// Password controls: show/hide, copy, generate (reusable)
+// ============================================================
+window.initPasswordControls = function (root) {
+    if (!root) return;
+    var fields = root.querySelectorAll('[data-owner-password-field], [data-sa-user-password-field], [data-company-user-password-field]');
+    if (!fields.length) {
+        var fieldAlt = root.querySelector('[data-owner-password-field]') || root.querySelector('[data-sa-user-password-field]') || root.querySelector('[data-company-user-password-field]');
+        if (fieldAlt) fields = [fieldAlt];
+    }
+
+    fields.forEach(function (passwordField) {
+        if (!passwordField) return;
+        if (passwordField.dataset.pwdReady === '1') return;
+        passwordField.dataset.pwdReady = '1';
+
+        var prefix = 'owner';
+        if (passwordField.hasAttribute('data-sa-user-password-field')) prefix = 'sa-user';
+        else if (passwordField.hasAttribute('data-company-user-password-field')) prefix = 'company-user';
+
+        var rootParent = passwordField.closest('.field-inline-group') || passwordField.parentElement;
+        var generateBtn = rootParent.querySelector('[data-' + prefix + '-password-generate]');
+        var toggleBtn = rootParent.querySelector('[data-' + prefix + '-password-toggle]');
+        var copyBtn = rootParent.querySelector('[data-' + prefix + '-password-copy]');
+
+        if (!generateBtn && !toggleBtn && !copyBtn) {
+            generateBtn = rootParent.querySelector('[data-owner-password-generate]') || rootParent.querySelector('[data-sa-user-password-generate]') || rootParent.querySelector('[data-company-user-password-generate]');
+            toggleBtn = rootParent.querySelector('[data-owner-password-toggle]') || rootParent.querySelector('[data-sa-user-password-toggle]') || rootParent.querySelector('[data-company-user-password-toggle]');
+            copyBtn = rootParent.querySelector('[data-owner-password-copy]') || rootParent.querySelector('[data-sa-user-password-copy]') || rootParent.querySelector('[data-company-user-password-copy]');
+        }
+
+        if (generateBtn) {
+            generateBtn.addEventListener('click', function () {
+                var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                var pwd = '';
+                for (var i = 0; i < 12; i++) {
+                    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                passwordField.value = pwd;
+                if (passwordField.type === 'password') {
+                    passwordField.type = 'text';
+                    if (toggleBtn) toggleBtn.textContent = 'Скрыть';
+                }
+            });
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                var isPassword = passwordField.type === 'password';
+                passwordField.type = isPassword ? 'text' : 'password';
+                toggleBtn.textContent = isPassword ? 'Скрыть' : 'Показать';
+            });
+        }
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function () {
+                if (passwordField.value) {
+                    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                        navigator.clipboard.writeText(passwordField.value).catch(function () {});
+                    }
+                    copyBtn.textContent = 'Скопировано';
+                    setTimeout(function () { copyBtn.textContent = 'Копировать'; }, 2000);
+                }
+            });
+        }
+    });
+};
+
+// Backward compat alias
+window.initOwnerCreateForm = window.initPasswordControls;
+
+// ============================================================
+// Owner create modal — superadmin company detail page
+// Binds data-owner-create-modal links and modal controls
+// ============================================================
+(function () {
+    var modalId = 'sa-owner-create-modal';
+    var contentId = 'sa-owner-create-modal-content';
+    var modalEl = document.getElementById(modalId);
+    if (!modalEl) return;
+
+    window.closeOwnerCreateModal = function () {
+        if (window.closeModal) {
+            window.closeModal(modalId);
+        } else {
+            modalEl.classList.remove('is-open');
+        }
+    };
+
+    document.querySelectorAll('[data-owner-create-modal]').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            var companyId = link.getAttribute('data-company-id');
+            if (!companyId) return;
+
+            var contentTarget = document.getElementById(contentId);
+            contentTarget.innerHTML = '<div class="modal-body"><div class="driver-modal-loading">Загрузка...</div></div>';
+            if (window.openModal) {
+                window.openModal(modalId);
+            } else {
+                modalEl.classList.add('is-open');
+            }
+
+            var base = window.getErpBasePath();
+            fetch(base + '/superadmin/companies/' + companyId + '/create-owner/modal')
+                .then(function (r) { return r.text(); })
+                .then(function (html) {
+                    contentTarget.innerHTML = html;
+                    if (window.initOwnerCreateForm) {
+                        window.initOwnerCreateForm(contentTarget);
+                    }
+                })
+                .catch(function () {
+                    contentTarget.innerHTML = '<div class="modal-body"><div class="notice warn">Ошибка загрузки формы. <a href="' + link.getAttribute('href') + '">Открыть в полной версии</a></div></div>';
+                });
+        });
+    });
+
+    modalEl.addEventListener('submit', function (e) {
+        if (e.target && e.target.id === 'owner-create-form') {
+            e.preventDefault();
+            var form = e.target;
+            var formData = new FormData(form);
+            var contentTarget = document.getElementById(contentId);
+
+            fetch(form.getAttribute('action'), {
+                method: 'POST',
+                body: formData
+            })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                contentTarget.innerHTML = html;
+                if (window.initOwnerCreateForm) {
+                    window.initOwnerCreateForm(contentTarget);
+                }
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                if (tmp.querySelector('[data-owner-create-success]')) {
+                    modalEl.dataset.refreshOnClose = '1';
+                }
+            })
+            .catch(function () {
+                contentTarget.innerHTML = '<div class="modal-body"><div class="notice warn">Ошибка отправки формы.</div></div>';
+            });
+        }
+    });
+
+    modalEl.addEventListener('click', function (e) {
+        if (e.target.closest('[data-owner-create-close]')) {
+            window.closeOwnerCreateModal();
+            if (modalEl.dataset.refreshOnClose === '1') {
+                delete modalEl.dataset.refreshOnClose;
+                window.location.reload();
+            }
+        }
+    });
+})();
+
+// ============================================================
+// Superadmin — Owner View/Edit Modal (ModalShell)
+// ============================================================
+(function () {
+    var ownerCtrl = ModalShell.create({
+        modalId: 'sa-owner-view-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c',
+        loadingClass: 'driver-modal-loading',
+        viewBtnSelectors: {
+            edit: '[data-user-edit-btn]',
+            close: '[data-user-view-close-btn]'
+        },
+        editBtnSelectors: {
+            cancel: '[data-user-cancel-edit-btn]'
+        },
+        endpoints: {
+            view: function (companyId) { var base = window.getErpBasePath(); return base + '/superadmin/companies/' + companyId + '/owner/modal-view'; },
+            edit: function (companyId) { var base = window.getErpBasePath(); return base + '/superadmin/companies/' + companyId + '/owner/modal-edit'; }
+        },
+        errorMessages: {
+            loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435.',
+            saveFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c.'
+        },
+        onContentLoaded: function () {}
+    });
+    ModalShell.register('saOwner', ownerCtrl);
+
+    var ownerViewClose = document.querySelector('[data-owner-view-close]');
+    if (ownerViewClose) {
+        ownerViewClose.addEventListener('click', function () { ownerCtrl.close(); });
+    }
+
+    var ownerCard = document.querySelector('[data-erp-owner-card]');
+    if (ownerCard) {
+        ownerCard.addEventListener('dblclick', function (e) {
+            if (e.target.closest('a, button, input, select, textarea, label')) return;
+            var companyId = this.getAttribute('data-owner-id');
+            if (companyId) ownerCtrl.loadView(companyId);
+        });
+    }
+})();
+
+// ============================================================
+// Superadmin — Logist View/Edit Modal (ModalShell)
+// ============================================================
+(function () {
+    var baseUrl = null;
+    try { baseUrl = window.getErpBasePath(); } catch (e) { baseUrl = ''; }
+
+    var logistCtrl = ModalShell.create({
+        modalId: 'sa-logist-view-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c',
+        loadingClass: 'driver-modal-loading',
+        viewBtnSelectors: {
+            edit: '[data-user-edit-btn]',
+            close: '[data-user-view-close-btn]'
+        },
+        editBtnSelectors: {
+            cancel: '[data-user-cancel-edit-btn]'
+        },
+        editFormSelector: '#user-edit-form',
+        endpoints: {
+            view: function (uid) {
+                var companyId = document.getElementById('sa-logist-view-modal').getAttribute('data-company-id');
+                return (baseUrl || '') + '/superadmin/companies/' + companyId + '/users/logists/' + uid + '/modal-view';
+            },
+            edit: function (uid) {
+                var companyId = document.getElementById('sa-logist-view-modal').getAttribute('data-company-id');
+                return (baseUrl || '') + '/superadmin/companies/' + companyId + '/users/logists/' + uid + '/modal-edit';
+            }
+        },
+        errorMessages: {
+            loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435.',
+            saveFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c.'
+        },
+        onContentLoaded: function () {}
+    });
+    ModalShell.register('saLogist', logistCtrl);
+
+    var saLogistViewClose = document.querySelector('[data-sa-logist-view-close]');
+    if (saLogistViewClose) {
+        saLogistViewClose.addEventListener('click', function () { logistCtrl.close(); });
+    }
+
+    var logistRow = document.querySelector('tr[data-sa-user-id]');
+    var logistTable = null;
+    if (logistRow) {
+        logistTable = logistRow.closest('tbody');
+    }
+    if (logistTable) {
+        // dblclick on row -> view
+        logistTable.addEventListener('dblclick', function (e) {
+            if (e.target.closest('a, button, input, select, textarea, label')) return;
+            var row = e.target.closest('tr[data-sa-user-id]');
+            if (!row) return;
+            var uid = row.getAttribute('data-sa-user-id');
+            if (uid) logistCtrl.loadView(uid);
+        });
+
+        // click on action links -> modal view/edit
+        logistTable.addEventListener('click', function (e) {
+            var base = window.getErpBasePath ? window.getErpBasePath() : '';
+            var link = e.target.closest('a[href*="/superadmin/companies/"][href*="/users/logists/"]');
+            if (!link) return;
+            var href = link.getAttribute('href') || '';
+            var row = e.target.closest('tr[data-sa-user-id]');
+            var uid = row ? row.getAttribute('data-sa-user-id') : '';
+
+            var path;
+            try {
+                path = new URL(href, window.location.origin).pathname;
+            } catch (_) {
+                path = href;
+            }
+
+            var basePat = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var viewPat = new RegExp('^' + basePat + '/superadmin/companies/\\d+/users/logists/\\d+$');
+            var editPat = new RegExp('^' + basePat + '/superadmin/companies/\\d+/users/logists/\\d+/edit$');
+
+            if (viewPat.test(path)) {
+                e.preventDefault();
+                if (uid) logistCtrl.loadView(uid);
+                return;
+            }
+
+            if (editPat.test(path)) {
+                e.preventDefault();
+                if (uid) logistCtrl.loadEdit(uid);
+            }
+        });
+    }
+
+    // Set data-company-id on view modal when showing
+    document.querySelectorAll('[data-sa-logist-create-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            var companyId = this.getAttribute('data-company-id');
+            if (!companyId) {
+                var m = window.location.pathname.match(/\/superadmin\/companies\/(\d+)/);
+                if (m) companyId = m[1];
+                else return;
+            }
+
+            var modal = document.getElementById('sa-logist-create-modal');
+            if (!modal) return;
+            var contentTarget = document.getElementById('sa-logist-create-modal-content');
+            contentTarget.innerHTML = '<div class="modal-body"><div class="driver-modal-loading">\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...</div></div>';
+            window.openModal('sa-logist-create-modal');
+
+            fetch((baseUrl || '') + '/superadmin/companies/' + companyId + '/users/logists/modal-create')
+                .then(function (r) { return r.text(); })
+                .then(function (html) {
+                    contentTarget.innerHTML = html;
+                    if (window.initPasswordControls) {
+                        window.initPasswordControls(contentTarget);
+                    }
+                })
+                .catch(function () {
+                    contentTarget.innerHTML = '<div class="modal-body"><div class="notice warn">\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u0444\u043e\u0440\u043c\u044b.</div></div>';
+                });
+        });
+    });
+
+    // SA logist create modal AJAX submit
+    var saLogistCreateModal = document.getElementById('sa-logist-create-modal');
+    if (saLogistCreateModal) {
+        saLogistCreateModal.addEventListener('submit', function (e) {
+            if (e.target && e.target.id === 'sa-logist-create-form') {
+                e.preventDefault();
+                var form = e.target;
+                var formData = new FormData(form);
+                var contentTarget = document.getElementById('sa-logist-create-modal-content');
+
+                fetch(form.getAttribute('action'), {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function (r) { return r.text(); })
+                .then(function (html) {
+                    contentTarget.innerHTML = html;
+                    var tmp = document.createElement('div');
+                    tmp.innerHTML = html;
+                    if (tmp.querySelector('[data-sa-logist-create-success]')) {
+                        saLogistCreateModal.dataset.refreshOnClose = '1';
+                        var closeBtns = contentTarget.querySelectorAll('[data-sa-logist-create-close]');
+                        closeBtns.forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                window.closeModal('sa-logist-create-modal');
+                                if (saLogistCreateModal.dataset.refreshOnClose === '1') {
+                                    delete saLogistCreateModal.dataset.refreshOnClose;
+                                    window.location.reload();
+                                }
+                            });
+                        });
+                    }
+                })
+                .catch(function () {
+                    contentTarget.innerHTML = '<div class="modal-body"><div class="notice warn">\u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438 \u0444\u043e\u0440\u043c\u044b.</div></div>';
+                });
+            }
+        });
+
+        saLogistCreateModal.addEventListener('click', function (e) {
+            if (e.target.closest('[data-sa-logist-create-close]')) {
+                window.closeModal('sa-logist-create-modal');
+                if (saLogistCreateModal.dataset.refreshOnClose === '1') {
+                    delete saLogistCreateModal.dataset.refreshOnClose;
+                    window.location.reload();
+                }
+            }
+        });
+    }
+})();
+
+// ============================================================
+// Company owner — User View/Edit/Create Modal
+// ============================================================
+(function () {
+    var baseUrl = null;
+    try { baseUrl = window.getErpBasePath(); } catch (e) { baseUrl = ''; }
+
+    var companyUserCtrl = ModalShell.create({
+        modalId: 'company-user-view-modal',
+        overlayClass: 'driver-view-overlay',
+        modalInnerClass: 'modal-lg driver-view-modal-inner',
+        title: '\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c',
+        loadingClass: 'driver-modal-loading',
+        viewBtnSelectors: {
+            edit: '[data-company-user-edit-btn]',
+            close: '[data-company-user-view-close-btn]'
+        },
+        editFormSelector: '#company-user-edit-form',
+        editBtnSelectors: {
+            cancel: '[data-company-user-cancel-edit-btn]'
+        },
+        endpoints: {
+            view: function (id) { return (baseUrl || '') + '/company/logists/' + id + '/modal-view'; },
+            edit: function (id) { return (baseUrl || '') + '/company/logists/' + id + '/modal-edit'; }
+        },
+        errorMessages: {
+            loadFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435.',
+            saveFailed: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c.'
+        },
+        onContentLoaded: function () {}
+    });
+    ModalShell.register('companyUser', companyUserCtrl);
+
+    var cuViewClose = document.querySelector('[data-company-user-view-close]');
+    if (cuViewClose) {
+        cuViewClose.addEventListener('click', function () {
+            companyUserCtrl.close();
+        });
+    }
+
+    var companyUserTable = document.querySelector('table.tbl tbody');
+    if (companyUserTable && companyUserTable.querySelector('[data-company-user-id]')) {
+        companyUserTable.addEventListener('dblclick', function (e) {
+            if (e.target.closest('a, button, input, select, textarea, label')) return;
+            var row = e.target.closest('tr[data-company-user-id]');
+            if (!row) return;
+            var id = row.getAttribute('data-company-user-id');
+            if (id) companyUserCtrl.loadView(id);
+        });
+    }
+
+    // Table action link click — modal view/edit instead of navigation
+    if (companyUserTable && companyUserTable.querySelector('[data-company-user-id]')) {
+        companyUserTable.addEventListener('click', function (e) {
+            var base = window.getErpBasePath ? window.getErpBasePath() : '';
+            var link = e.target.closest('a[href*="/company/logists/"]');
+            if (!link) return;
+            var href = link.getAttribute('href') || '';
+            var r = e.target.closest('tr[data-company-user-id]');
+            var id = r ? r.getAttribute('data-company-user-id') : '';
+            var path;
+            try {
+                path = new URL(href, window.location.origin).pathname;
+            } catch (_) {
+                path = href;
+            }
+            var viewPat = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/company/logists/\\d+$');
+            var editPat = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/company/logists/\\d+/edit$');
+            if (viewPat.test(path)) {
+                e.preventDefault();
+                if (id) companyUserCtrl.loadView(id);
+                return;
+            }
+            if (editPat.test(path)) {
+                e.preventDefault();
+                if (id) companyUserCtrl.loadEdit(id);
+            }
+        });
+    }
+
+    // ── Create modal ──
+    window.bindCompanyUserCreateModalForm = function () {
+        var m = document.getElementById('company-user-create-modal');
+        if (!m) return;
+        var f = m.querySelector('#company-user-create-form');
+        if (!f || f.dataset.modalCreateSubmitReady === '1') return;
+        f.dataset.modalCreateSubmitReady = '1';
+        f.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var fd = new FormData(f);
+            fetch(f.action, { method: 'POST', credentials: 'same-origin', body: fd })
+                .then(function (r) { if (!r.ok) throw Error(r.status); return r.text(); })
+                .then(function (html) {
+                    var tmp = document.createElement('div');
+                    tmp.innerHTML = html;
+                    // Success: render details, keep modal open, refresh on close
+                    if (tmp.querySelector('[data-company-user-create-success]')) {
+                        var mb = m.querySelector('.modal-body');
+                        var mf = m.querySelector('.modal-foot');
+                        if (mb) { var nb = tmp.querySelector('.modal-body'); if (nb) mb.innerHTML = nb.innerHTML; }
+                        if (mf) { var nf = tmp.querySelector('.modal-foot'); if (nf) mf.innerHTML = nf.innerHTML; }
+                        m.dataset.refreshOnClose = '1';
+                        return;
+                    }
+                    // Validation error: re-render form in modal, re-bind
+                    if (tmp.querySelector('#company-user-create-form')) {
+                        var mb = m.querySelector('.modal-body');
+                        if (mb) { var nb = tmp.querySelector('.modal-body'); if (nb) mb.innerHTML = nb.innerHTML; }
+                        var mf = m.querySelector('.modal-foot');
+                        if (mf) { var nf = tmp.querySelector('.modal-foot'); if (nf) mf.innerHTML = nf.innerHTML; }
+                        if (window.initPasswordControls) window.initPasswordControls(m);
+                        window.bindCompanyUserCreateModalForm();
+                        return;
+                    }
+                    // Unexpected response: show inline warning
+                    var mb = m.querySelector('.modal-body');
+                    if (mb) mb.innerHTML = '<div class="notice warn">Неожиданный ответ сервера. <a href="' + window.location.href + '">Обновите страницу</a>.</div>';
+                })
+                .catch(function () {
+                    var mb = m.querySelector('.modal-body');
+                    if (mb) mb.innerHTML = '<div class="notice warn">Ошибка соединения. Попробуйте ещё раз.</div>';
+                });
+        });
+    };
+
+    var cuCreateModal = document.getElementById('company-user-create-modal');
+    if (cuCreateModal && cuCreateModal.dataset.resetOnClose === '1') {
+        var cuBody = cuCreateModal.querySelector('.modal-body');
+        if (cuBody && !cuCreateModal.dataset.initialBodyHtml) {
+            cuCreateModal.dataset.initialBodyHtml = cuBody.innerHTML;
+        }
+    }
+    window.bindCompanyUserCreateModalForm();
+    if (cuCreateModal && window.initPasswordControls) window.initPasswordControls(cuCreateModal);
+
+    document.querySelectorAll('[data-company-user-create-modal]').forEach(function (b) {
+        b.addEventListener('click', function () { openModal('company-user-create-modal'); });
+    });
+    if (cuCreateModal) {
+        cuCreateModal.addEventListener('click', function (e) {
+            if (e.target.closest('[data-company-user-create-close]')) {
+                closeModal('company-user-create-modal');
+                if (cuCreateModal.dataset.refreshOnClose === '1') {
+                    delete cuCreateModal.dataset.refreshOnClose;
+                    window.location.reload();
+                }
+            }
+        });
+    }
+})();
+
+// ============================================================
+// Route executors — create/view/edit popups
+// ============================================================
+(function () {
+    var createModal = document.getElementById('route-executor-create-modal');
+    var viewModal = document.getElementById('route-executor-view-modal');
+    if (!createModal && !viewModal) return;
+
+    var baseUrl = '';
+    try { baseUrl = window.getErpBasePath ? window.getErpBasePath() : ''; } catch (e) { baseUrl = ''; }
+
+    function parseContent(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        return doc.querySelector('main.content') || doc.body;
+    }
+
+    function cleanRouteExecutorContent(container) {
+        var clone = container.cloneNode(true);
+        clone.querySelectorAll('.page-head, script').forEach(function (node) {
+            node.remove();
+        });
+        clone.querySelectorAll('a[href^="/company/route-executors"], a[href^="' + baseUrl + '/company/route-executors"]').forEach(function (link) {
+            var href = link.getAttribute('href') || '';
+            try {
+                href = new URL(href, window.location.origin).pathname;
+            } catch (e) {}
+            var viewMatch = href.match(/\/company\/route-executors\/(\d+)$/);
+            var editMatch = href.match(/\/company\/route-executors\/(\d+)\/edit$/);
+            if (editMatch) {
+                link.setAttribute('href', baseUrl + '/company/route-executors/' + editMatch[1] + '/edit');
+                link.setAttribute('data-route-executor-edit-link', editMatch[1]);
+            } else if (viewMatch) {
+                link.setAttribute('href', baseUrl + '/company/route-executors/' + viewMatch[1]);
+                link.setAttribute('data-route-executor-view-link', viewMatch[1]);
+            }
+        });
+        return clone;
+    }
+
+    function setModalLoading(modal, contentId) {
+        var content = document.getElementById(contentId);
+        if (content) {
+            content.innerHTML = '<div class="driver-modal-loading">\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...</div>';
+        }
+        if (window.openModal) {
+            window.openModal(modal.id);
+        } else {
+            modal.classList.add('is-open');
+        }
+    }
+
+    function showModalError(contentId, message) {
+        var content = document.getElementById(contentId);
+        if (content) {
+            content.innerHTML = '<div class="notice warn modal-notice">' + message + '</div>';
+        }
+    }
+
+    function prepareCreateForm(content) {
+        var form = content.querySelector('#route-executor-create-form') || content.querySelector('form[action*="/company/route-executors/create"]');
+        if (!form) return null;
+        form.id = 'route-executor-create-form';
+        form.setAttribute('action', baseUrl + '/company/route-executors/create');
+        form.querySelectorAll('.form-actions').forEach(function (node) { node.remove(); });
+        if (!form.querySelector('input[name="_is_modal"]')) {
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = '_is_modal';
+            hidden.value = '1';
+            form.appendChild(hidden);
+        }
+        return form;
+    }
+
+    function bindCreateForm() {
+        if (!createModal) return;
+        var form = createModal.querySelector('#route-executor-create-form');
+        if (!form || form.dataset.routeExecutorCreateReady === '1') return;
+        form.dataset.routeExecutorCreateReady = '1';
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var body = new FormData(form);
+            fetch(form.getAttribute('action'), {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: body
+            })
+            .then(function (response) { return response.text(); })
+            .then(function (html) {
+                var contentTarget = document.getElementById('route-executor-create-modal-content');
+                if (!contentTarget) return;
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                if (tmp.querySelector('[data-route-executor-create-success]')) {
+                    window.closeModal('route-executor-create-modal');
+                    window.location.reload();
+                    return;
+                }
+
+                var parsed = parseContent(html);
+                var nextForm = prepareCreateForm(parsed);
+                if (nextForm) {
+                    contentTarget.innerHTML = '';
+                    contentTarget.appendChild(nextForm);
+                    bindCreateForm();
+                } else {
+                    contentTarget.innerHTML = html;
+                }
+            })
+            .catch(function () {
+                showModalError('route-executor-create-modal-content', 'Ошибка отправки формы.');
+            });
+        });
+    }
+
+    function openCreateModal() {
+        if (!createModal) return;
+        setModalLoading(createModal, 'route-executor-create-modal-content');
+        var foot = document.getElementById('route-executor-create-modal-foot');
+        if (foot) {
+            foot.style.display = '';
+            var note = foot.querySelector('.modal-required-note');
+            var actions = foot.querySelector('.modal-foot-actions');
+            if (note) note.style.display = '';
+            if (actions) {
+                actions.innerHTML = '<button type="button" class="btn btn-ghost" data-route-executor-create-close>\u041e\u0442\u043c\u0435\u043d\u0430</button><button type="submit" form="route-executor-create-form" class="btn btn-primary">\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0438\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044f \u0440\u0435\u0439\u0441\u0430</button>';
+            }
+        }
+        fetch(baseUrl + '/company/route-executors/create', { credentials: 'same-origin' })
+            .then(function (response) { return response.text(); })
+            .then(function (html) {
+                var content = parseContent(html);
+                var form = prepareCreateForm(content);
+                var target = document.getElementById('route-executor-create-modal-content');
+                if (!target) return;
+                if (form) {
+                    target.innerHTML = '';
+                    target.appendChild(form);
+                    bindCreateForm();
+                } else {
+                    target.innerHTML = '';
+                    target.appendChild(cleanRouteExecutorContent(content));
+                }
+            })
+            .catch(function () {
+                showModalError('route-executor-create-modal-content', 'Не удалось загрузить форму создания.');
+            });
+    }
+
+    function prepareEditForm(content, id) {
+        var form = content.querySelector('#route-executor-edit-form') || content.querySelector('form[action*="/company/route-executors/"][action*="/edit"]');
+        if (!form) return null;
+        form.id = 'route-executor-edit-form';
+        form.setAttribute('action', baseUrl + '/company/route-executors/' + id + '/edit');
+        form.querySelectorAll('.form-actions').forEach(function (node) { node.remove(); });
+        if (!form.querySelector('input[name="_is_modal"]')) {
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = '_is_modal';
+            hidden.value = '1';
+            form.appendChild(hidden);
+        }
+        return form;
+    }
+
+    function setViewFoot(html) {
+        var modalInner = viewModal ? viewModal.querySelector('.modal') : null;
+        if (!modalInner) return;
+        var oldFoot = modalInner.querySelector('.modal-foot');
+        if (oldFoot) oldFoot.remove();
+        if (html) {
+            modalInner.insertAdjacentHTML('beforeend', html);
+        }
+    }
+
+    function openViewModal(id) {
+        if (!viewModal || !id) return;
+        viewModal.dataset.routeExecutorId = id;
+        var inner = document.getElementById('route-executor-view-modal-inner');
+        if (inner) inner.classList.add('is-view-mode');
+        setModalLoading(viewModal, 'route-executor-view-modal-content');
+        setViewFoot('');
+        fetch(baseUrl + '/company/route-executors/' + id, { credentials: 'same-origin' })
+            .then(function (response) { return response.text(); })
+            .then(function (html) {
+                var content = cleanRouteExecutorContent(parseContent(html));
+                var target = document.getElementById('route-executor-view-modal-content');
+                if (!target) return;
+                var viewCard = content.querySelector('[data-route-executor-view-card]');
+                var fragment;
+                if (viewCard) {
+                    var panel = viewCard.closest('.panel');
+                    fragment = panel || viewCard;
+                } else {
+                    fragment = content;
+                }
+                fragment.querySelectorAll('[data-re-section-actions]').forEach(function (section) {
+                    section.remove();
+                });
+                target.innerHTML = '';
+                target.appendChild(fragment);
+                setViewFoot('<div class="modal-foot is-spaced"><div></div><div class="modal-foot-actions"><button type="button" class="btn btn-ghost" data-route-executor-view-close>\u0417\u0430\u043a\u0440\u044b\u0442\u044c</button><button type="button" class="btn btn-primary" data-route-executor-edit-btn="' + id + '">\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c</button></div></div>');
+            })
+            .catch(function () {
+                showModalError('route-executor-view-modal-content', 'Не удалось загрузить карточку исполнителя рейса.');
+            });
+    }
+
+    function openEditModal(id) {
+        if (!viewModal || !id) return;
+        viewModal.dataset.routeExecutorId = id;
+        var inner = document.getElementById('route-executor-view-modal-inner');
+        if (inner) inner.classList.remove('is-view-mode');
+        setModalLoading(viewModal, 'route-executor-view-modal-content');
+        setViewFoot('<div class="modal-foot is-spaced"><div class="modal-required-note"><span class="req">*</span> \u2014 \u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u043f\u043e\u043b\u044f</div><div class="modal-foot-actions"><button type="button" class="btn btn-ghost" data-route-executor-view-close>\u041e\u0442\u043c\u0435\u043d\u0430</button><button type="submit" form="route-executor-edit-form" class="btn btn-primary">\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c</button></div></div>');
+        fetch(baseUrl + '/company/route-executors/' + id + '/edit', { credentials: 'same-origin' })
+            .then(function (response) { return response.text(); })
+            .then(function (html) {
+                var content = parseContent(html);
+                var form = prepareEditForm(content, id);
+                var target = document.getElementById('route-executor-view-modal-content');
+                if (!target) return;
+                target.innerHTML = '';
+                if (form) {
+                    target.appendChild(form);
+                    bindEditForm(id);
+                } else {
+                    var cleaned = cleanRouteExecutorContent(content);
+                    var editForm = cleaned.querySelector('#route-executor-edit-form');
+                    var panel = editForm || cleaned.querySelector('.panel');
+                    target.appendChild(panel || cleaned);
+                }
+            })
+            .catch(function () {
+                showModalError('route-executor-view-modal-content', 'Не удалось загрузить форму редактирования.');
+            });
+    }
+
+    function bindEditForm(id) {
+        var form = viewModal ? viewModal.querySelector('#route-executor-edit-form') : null;
+        if (!form || form.dataset.routeExecutorEditReady === '1') return;
+        form.dataset.routeExecutorEditReady = '1';
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            fetch(form.getAttribute('action'), {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: new FormData(form)
+            })
+            .then(function (response) { return response.text(); })
+            .then(function (html) {
+                if (html.indexOf('\u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c \u0440\u0435\u0439\u0441\u0430 \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d') !== -1) {
+                    viewModal.dataset.refreshOnClose = '1';
+                    openViewModal(id);
+                    return;
+                }
+                var content = parseContent(html);
+                var nextForm = prepareEditForm(content, id);
+                var target = document.getElementById('route-executor-view-modal-content');
+                if (!target) return;
+                target.innerHTML = '';
+                if (nextForm) {
+                    target.appendChild(nextForm);
+                    bindEditForm(id);
+                } else {
+                    target.innerHTML = '';
+                    target.appendChild(cleanRouteExecutorContent(content));
+                }
+            })
+            .catch(function () {
+                showModalError('route-executor-view-modal-content', 'Не удалось сохранить изменения.');
+            });
+        });
+    }
+
+    document.querySelectorAll('[data-route-executor-create-btn]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            openCreateModal();
+        });
+    });
+
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('[data-route-executor-create-close]')) {
+            if (createModal && createModal.dataset.refreshOnClose === '1') {
+                window.location.reload();
+                return;
+            }
+            window.closeModal('route-executor-create-modal');
+        }
+        if (event.target.closest('[data-route-executor-view-close]')) {
+            if (viewModal && viewModal.dataset.refreshOnClose === '1') {
+                window.location.reload();
+                return;
+            }
+            window.closeModal('route-executor-view-modal');
+        }
+        var editBtn = event.target.closest('[data-route-executor-edit-btn]');
+        if (editBtn) {
+            event.preventDefault();
+            openEditModal(editBtn.getAttribute('data-route-executor-edit-btn'));
+        }
+        var editLink = event.target.closest('[data-route-executor-edit-link]');
+        if (editLink) {
+            event.preventDefault();
+            openEditModal(editLink.getAttribute('data-route-executor-edit-link'));
+        }
+    });
+
+    var tableBody = document.querySelector('[data-route-executors-grid] tbody');
+    if (tableBody) {
+        tableBody.addEventListener('dblclick', function (event) {
+            if (event.target.closest('a, button, input, select, textarea, label')) return;
+            var row = event.target.closest('tr[data-route-executor-id]');
+            if (!row) return;
+            openViewModal(row.getAttribute('data-route-executor-id'));
+        });
+    }
+})();
+
+// ============================================================
+// Bank transaction detail modal (double-click on row)
+// ============================================================
+(function () {
+    var txModal = document.getElementById('tx-detail-modal');
+    if (!txModal) return;
+
+    var closeBtn = txModal.querySelector('[data-tx-modal-close]');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+            window.closeModal('tx-detail-modal');
+        });
+    }
+
+    txModal.addEventListener('click', function (e) {
+        if (e.target === txModal) {
+            window.closeModal('tx-detail-modal');
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && txModal.classList.contains('is-open')) {
+            window.closeModal('tx-detail-modal');
+        }
+    });
+
+    function openTxDetail(row) {
+        var get = function (attr) {
+            return row.getAttribute(attr) || '';
+        };
+
+        var dateVal = get('data-tx-date');
+        var accountVal = get('data-tx-account');
+        var cpartyVal = get('data-tx-cparty');
+        var innVal = get('data-tx-inn');
+        var cpartyAccountVal = get('data-tx-cparty-account');
+        var bikVal = get('data-tx-bik');
+        var docnumVal = get('data-tx-docnum');
+        var typeVal = get('data-tx-type');
+        var debitVal = get('data-tx-debit');
+        var creditVal = get('data-tx-credit');
+        var purposeVal = get('data-tx-purpose');
+
+        var fmtDate = function (val) {
+            if (!val || val === '\u2014') return '\u2014';
+            var m = val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) return m[3] + '.' + m[2] + '.' + m[1];
+            return val;
+        };
+
+        var fmtAmount = function (val) {
+            var num = parseFloat(val);
+            return num > 0 ? num.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1 ') + ' \u20bd' : '\u2014';
+        };
+
+        var setText = function (sel, val) {
+            var el = txModal.querySelector(sel);
+            if (el) el.textContent = val;
+        };
+
+        setText('[data-tx-detail-date]', fmtDate(dateVal) || '\u2014');
+        setText('[data-tx-detail-account]', accountVal || '\u2014');
+        setText('[data-tx-detail-cparty]', cpartyVal || '\u2014');
+        setText('[data-tx-detail-inn]', innVal || '\u2014');
+        setText('[data-tx-detail-cparty-account]', cpartyAccountVal || '\u2014');
+        setText('[data-tx-detail-bik]', bikVal || '\u2014');
+        setText('[data-tx-detail-docnum]', docnumVal || '\u2014');
+        setText('[data-tx-detail-type]', typeVal || '\u2014');
+        setText('[data-tx-detail-debit]', fmtAmount(debitVal));
+        setText('[data-tx-detail-credit]', fmtAmount(creditVal));
+        setText('[data-tx-detail-purpose]', purposeVal || '\u2014');
+
+        window.openModal('tx-detail-modal');
+    }
+
+    var txTable = document.querySelector('.bank-transactions-table');
+
+    if (txTable) {
+        var tbody = txTable.querySelector('tbody');
+        if (tbody) {
+            tbody.addEventListener('dblclick', function (event) {
+                if (event.target.closest('a, button, input, select, textarea, label')) return;
+                var row = event.target.closest('tr[data-tx-id]');
+                if (!row) return;
+                openTxDetail(row);
+            });
+        }
+    }
+})();

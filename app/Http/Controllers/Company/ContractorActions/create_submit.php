@@ -16,14 +16,54 @@ $createdContractor = null;
 $docErrors = [];
 $uploadedDocs = [];
 
-if ($companyId <= 0) {
-    $company = null;
-    $formError = 'Компания не найдена';
+$renderContractorCreateResponse = static function () use (
+    &$isModalRequest,
+    &$success,
+    &$docTypes,
+    &$localPdo,
+    &$service,
+    &$old,
+    &$errors,
+    &$formError,
+    &$submittedContacts,
+    &$company,
+    &$content
+): void {
+    if ($isModalRequest) {
+        header('Content-Type: text/html; charset=utf-8');
+        if ($success) {
+            echo '<div data-le-create-success="1"></div>';
+            return;
+        }
+
+        if (empty($docTypes) && !empty($localPdo)) {
+            $docTypes = $service->getDocTypes($localPdo, 'contractor');
+        }
+        $leEntityType = 'contractor';
+        $leFormAction = '/company/contractors/create';
+        $leFormId = 'le-create-form';
+        $leOld = $old;
+        $leErrors = $errors;
+        $leFormError = $formError;
+        $leDocTypes = $docTypes ?? [];
+        $leContactValues = $submittedContacts ?? ($old['contacts'] ?? []);
+        $leContactErrors = $errors['contacts'] ?? [];
+        ob_start();
+        require base_path('app/View/partials/legal_entity_create_form.php');
+        echo ob_get_clean();
+        return;
+    }
 
     ob_start();
     require base_path('app/View/pages/company_contractors_create.php');
     $content = ob_get_clean();
     require base_path('app/View/layouts/main.php');
+};
+
+if ($companyId <= 0) {
+    $company = null;
+    $formError = 'Компания не найдена';
+    $renderContractorCreateResponse();
     return;
 }
 
@@ -33,11 +73,7 @@ try {
     if (!$company) {
         $company = null;
         $formError = 'Компания не найдена';
-
-        ob_start();
-        require base_path('app/View/pages/company_contractors_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $renderContractorCreateResponse();
         return;
     }
 
@@ -45,11 +81,7 @@ try {
 
     if ($company['status'] !== 'active') {
         $formError = 'Создание перевозчиков недоступно';
-
-        ob_start();
-        require base_path('app/View/pages/company_contractors_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $renderContractorCreateResponse();
         return;
     }
 
@@ -57,10 +89,7 @@ try {
 
     if (isPostTruncated()) {
         $formError = 'Общий размер отправки превышает серверный лимит. Для ERP требуется настройка post_max_size не менее 100M. Уменьшите количество файлов или обратитесь к администратору.';
-        ob_start();
-        require base_path('app/View/pages/company_contractors_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $renderContractorCreateResponse();
         return;
     }
 
@@ -83,20 +112,14 @@ try {
     $errors = $service->validateContractor($_POST, $localPdo);
 
     if (!empty($errors)) {
-        ob_start();
-        require base_path('app/View/pages/company_contractors_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $renderContractorCreateResponse();
         return;
     }
 
     $totalSizeError = validateTotalUploadSize();
     if ($totalSizeError !== '') {
         $formError = $totalSizeError;
-        ob_start();
-        require base_path('app/View/pages/company_contractors_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $renderContractorCreateResponse();
         return;
     }
 
@@ -104,10 +127,7 @@ try {
     $customDocumentTitleError = validateLegalEntityCustomDocumentTitles($_POST, $legalEntityFiles);
     if ($customDocumentTitleError !== null) {
         $formError = $customDocumentTitleError;
-        ob_start();
-        require base_path('app/View/pages/company_contractors_create.php');
-        $content = ob_get_clean();
-        require base_path('app/View/layouts/main.php');
+        $renderContractorCreateResponse();
         return;
     }
 
@@ -193,31 +213,4 @@ try {
     $formError = 'Ошибка создания перевозчика: ' . $e->getMessage();
 }
 
-if ($isModalRequest) {
-    header('Content-Type: text/html; charset=utf-8');
-    if ($success) {
-        echo '<div data-le-create-success="1"></div>';
-    } else {
-        if (empty($docTypes) && !empty($localPdo)) {
-            $docTypes = $service->getDocTypes($localPdo, 'contractor');
-        }
-        $leEntityType = 'contractor';
-        $leFormAction = '/company/contractors/create';
-        $leFormId = 'le-create-form';
-        $leOld = $old;
-        $leErrors = $errors;
-        $leFormError = $formError;
-        $leDocTypes = $docTypes ?? [];
-        $leContactValues = $submittedContacts ?? ($old['contacts'] ?? []);
-        $leContactErrors = $errors['contacts'] ?? [];
-        ob_start();
-        require base_path('app/View/partials/legal_entity_create_form.php');
-        echo ob_get_clean();
-    }
-    exit;
-}
-
-ob_start();
-require base_path('app/View/pages/company_contractors_create.php');
-$content = ob_get_clean();
-require base_path('app/View/layouts/main.php');
+$renderContractorCreateResponse();

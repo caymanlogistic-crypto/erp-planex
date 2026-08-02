@@ -25,8 +25,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">SUPERADMIN / <?= e($company['name']) ?></span>
-        <span class="page-title">Доступы компании</span>
+        <h1 class="page-title">Доступы компании</h1>
+        <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
@@ -42,10 +42,9 @@
 <?php elseif (empty($grants)): ?>
     <div class="panel">
         <div class="panel-body">
-            <div class="empty-state empty-state-left">
+            <div class="empty-state">
                 <p class="empty-title">Нет выданных доступов</p>
                 <p class="empty-desc">Доступы появляются, когда пользователям выдают права на конкретные записи. Если пользователей или справочников нет, это нормальное производное состояние.</p>
-                <a href="/superadmin/companies/<?= $id ?>/users" class="btn btn-secondary">Проверить пользователей</a>
             </div>
         </div>
     </div>

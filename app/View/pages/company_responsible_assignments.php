@@ -65,11 +65,11 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
 </div>
 
 <?php if ($successMessage): ?>
-<div class="notice ok" style="margin-bottom:12px;"><?= e($successMessage) ?></div>
+<div class="notice ok mb-section"><?= e($successMessage) ?></div>
 <?php endif; ?>
 
 <?php if ($formError): ?>
-<div class="notice warn" style="margin-bottom:12px;"><?= e($formError) ?></div>
+<div class="notice warn mb-section"><?= e($formError) ?></div>
 <?php endif; ?>
 
 <div class="tab-bar">
@@ -80,29 +80,30 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
 
 <?php if (empty($items)): ?>
 
-<div class="table-card table-card--toolbar-only" style="margin-top:12px;">
-    <div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <p class="empty-title">Нет записей</p>
-        <p class="empty-desc">В разделе «<?= e($tabLabel) ?>» нет активных записей для переназначения.</p>
+<div class="panel mt-section">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Нет записей</p>
+            <p class="empty-desc">В разделе «<?= e($tabLabel) ?>» нет активных записей для переназначения.</p>
+        </div>
     </div>
 </div>
 
 <?php else: ?>
 
 <!-- Mass reassignment form (global bar above table) -->
-<div class="table-card table-card--standard" style="margin-top:12px;">
+<div class="table-card table-card--standard mt-section">
     <div class="table-toolbar">
-        <form id="massReassignToolbarForm" method="post" action="<?= app_url('/company/responsible-assignments/reassign') ?>" class="inline-form" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;" onsubmit="return massReassignConfirm(this)">
+        <form id="massReassignToolbarForm" method="post" action="<?= app_url('/company/responsible-assignments/reassign') ?>" class="toolbar-form" onsubmit="return massReassignConfirm(this)">
             <input type="hidden" name="entity_type" value="<?= e($activeTab) ?>">
             <?php if ($showCascade): ?>
-            <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;white-space:nowrap;">
+            <label class="checkbox-inline">
                 <input type="checkbox" name="cascade" value="1">
                 Перенести вместе с исполнителями рейса
             </label>
             <?php endif; ?>
-            <span class="found-label" style="white-space:nowrap;">Новый логист для выбранных:</span>
-            <select name="new_logist_id" class="field-select" style="min-width:180px;">
+            <span class="found-label nowrap">Новый логист для выбранных:</span>
+            <select name="new_logist_id" class="field-select select-md">
                 <option value="">— Выберите —</option>
                 <?php foreach ($logists as $l): ?>
                 <option value="<?= $l['id'] ?>"><?= e($l['full_name']) ?> (<?= e($l['login']) ?>)</option>
@@ -115,7 +116,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
         <table class="table">
             <thead>
                 <tr>
-                    <th style="width:40px;">
+                    <th class="col-check-width">
                         <input type="checkbox" onclick="toggleAllCheckboxes(this)" title="Выбрать все">
                     </th>
                     <?php if ($activeTab === 'route_executor'): ?>
@@ -134,7 +135,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
                     <?php endif; ?>
                     <th>Текущий логист</th>
                     <th>Новый логист</th>
-                    <th style="width:130px;">Действие</th>
+                    <th class="col-action-width">Действие</th>
                 </tr>
             </thead>
             <tbody>
@@ -167,13 +168,13 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
                         <?php endif; ?>
                     </td>
                     <td>
-                        <form method="post" action="<?= app_url('/company/responsible-assignments/reassign') ?>" class="inline-form" style="display:flex;align-items:center;gap:6px;">
+                        <form method="post" action="<?= app_url('/company/responsible-assignments/reassign') ?>" class="inline-actions">
                             <input type="hidden" name="entity_type" value="<?= e($activeTab) ?>">
                             <input type="hidden" name="entity_ids[]" value="<?= $item[($activeTab === 'route_executor') ? 'crew_id' : 'id'] ?>">
                             <?php if ($showCascade): ?>
                             <input type="hidden" name="cascade" value="0">
                             <?php endif; ?>
-                            <select name="new_logist_id" class="field-select" style="min-width:160px;">
+                            <select name="new_logist_id" class="field-select select-sm">
                                 <option value="">— Выберите —</option>
                                 <?php foreach ($logists as $l):
                                     $sel = ((int)$l['id'] === (int)($item['logist_id'] ?? 0)) ? ' selected' : '';
@@ -199,7 +200,7 @@ $tabLabel    = $tabLabels[$activeTab] ?? '';
 <?php endif; ?>
 
 <!-- Form-level error (non-blocking, shown before mass submit) -->
-<div id="reassignFormError" class="form-alert alert-error" style="display:none;margin-bottom:8px;"></div>
+<div id="reassignFormError" class="form-alert alert-error mb-compact" style="display:none;"></div>
 
 <script>
 // Show form error inline (no alert)

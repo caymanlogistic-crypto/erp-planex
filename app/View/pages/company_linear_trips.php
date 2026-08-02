@@ -46,7 +46,7 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
         <div class="page-summary"><span>Реестр линейных перевозок и агентских договоров по компании.</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/company/trips/linear?show_create=1" class="btn btn-primary" onclick="openModal('linear-trip-create-modal'); return false;">Создать рейс</a>
+        <a href="<?= app_url('/company/trips/linear?show_create=1') ?>" class="btn btn-primary" onclick="openModal('linear-trip-create-modal'); return false;">Создать рейс</a>
     </div>
 </div>
 
@@ -54,11 +54,12 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
 <?php if ($formError): ?><div class="notice warn"><?= e($formError) ?></div><?php endif; ?>
 
 <?php if (empty($routes)): ?>
-    <div class="table-card table-card--toolbar-only">
-        <div class="empty-state">
-            <p class="empty-title">Линейные рейсы ещё не созданы.</p>
-            <p class="empty-desc">Создайте первый рейс через модальное окно: выберите тип, участников, исполнителя, груз, даты и финансовые условия.</p>
-            <a href="/company/trips/linear?show_create=1" class="btn btn-primary" onclick="openModal('linear-trip-create-modal'); return false;">Создать рейс</a>
+    <div class="panel">
+        <div class="panel-body">
+            <div class="empty-state">
+                <p class="empty-title">Линейные рейсы ещё не созданы.</p>
+                <p class="empty-desc">Создайте первый рейс через модальное окно: выберите тип, участников, исполнителя, груз, даты и финансовые условия.</p>
+            </div>
         </div>
     </div>
 <?php else: ?>
@@ -102,16 +103,18 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
                         }
 
                         $moneyParts = [];
-                        foreach (($route['payments']['customer'] ?? []) as $payment) {
-                            $moneyParts[] = 'Заказчик: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
-                        }
-                        foreach (($route['payments']['carrier'] ?? []) as $payment) {
-                            $moneyParts[] = 'Перевозчик: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
-                        }
-                        foreach (($route['principal_items'] ?? []) as $principal) {
-                            $principalPayments = $route['payments']['principals'][(int) ($principal['id'] ?? 0)] ?? [];
-                            foreach ($principalPayments as $payment) {
-                                $moneyParts[] = 'Принципал: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
+                        if ($isFinanceRealm) {
+                            foreach (($route['payments']['customer'] ?? []) as $payment) {
+                                $moneyParts[] = 'Заказчик: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
+                            }
+                            foreach (($route['payments']['carrier'] ?? []) as $payment) {
+                                $moneyParts[] = 'Перевозчик: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
+                            }
+                            foreach (($route['principal_items'] ?? []) as $principal) {
+                                $principalPayments = $route['payments']['principals'][(int) ($principal['id'] ?? 0)] ?? [];
+                                foreach ($principalPayments as $payment) {
+                                    $moneyParts[] = 'Принципал: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
+                                }
                             }
                         }
                         if ($moneyParts === []) {
@@ -143,6 +146,17 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
                                         <span class="cell-sub"><?= e($moneyPart) ?></span>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
+                                <?php if ($isFinanceRealm): ?>
+                                <?php
+                                $invCounts = $route['invoice_counts'] ?? [];
+                                $invParts = [];
+                                if (!empty($invCounts['customer'])) $invParts[] = 'Сч. заказчика: ' . (int) $invCounts['customer'];
+                                if (!empty($invCounts['carrier'])) $invParts[] = 'Сч. перевозчика: ' . (int) $invCounts['carrier'];
+                                if (!empty($invCounts['principal'])) $invParts[] = 'Сч. принципала: ' . (int) $invCounts['principal'];
+                                if (!empty($invParts)): ?>
+                                    <span class="cell-sub invoice-hint"><?= e(implode(' · ', $invParts)) ?></span>
+                                <?php endif; ?>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

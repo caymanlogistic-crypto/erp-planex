@@ -8,6 +8,18 @@
  * Бизнес-маршруты, авторизация — не подключаются.
  */
 
+$isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+    || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+ini_set('session.use_strict_mode', '1');
+ini_set('session.use_only_cookies', '1');
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'secure' => $isHttps,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
 session_start();
 
 define('ERP_MAX_FILE_SIZE', 20 * 1024 * 1024);        // 20 MB per file
@@ -36,14 +48,38 @@ require_once base_path('app/Service/ContractorService.php');
 require_once base_path('app/Service/DriverService.php');
 require_once base_path('app/Service/VehicleSetService.php');
 require_once base_path('app/Service/SuperadminCompanyService.php');
+require_once base_path('app/Service/UserSyncService.php');
 require_once base_path('app/Service/DocumentService.php');
 require_once base_path('app/Service/RouteExecutorService.php');
 require_once base_path('app/Service/ResponsibleAssignmentService.php');
 require_once base_path('app/Service/LocalMigrationService.php');
 require_once base_path('app/Service/AuditService.php');
+require_once base_path('app/Service/DateCalculationService.php');
+require_once base_path('app/Service/RoutePaymentStatusService.php');
+require_once base_path('app/Service/FinanceAuditLogService.php');
+require_once base_path('app/Service/FinanceSettlementCascadeService.php');
 require_once base_path('app/Service/LinearRouteService.php');
+require_once base_path('app/Service/BankStatementXlsxParser.php');
+require_once base_path('app/Service/BankFinanceService.php');
+require_once base_path('app/Service/HardenedBankStatementImapImporter.php');
+require_once base_path('app/Service/BankStatementSettingsService.php');
+require_once base_path('app/Service/CompanyDeletionService.php');
+require_once base_path('app/Service/FinanceAllocationService.php');
+require_once base_path('app/Service/FinanceInvoiceService.php');
+require_once base_path('app/Service/FinanceBalanceService.php');
+require_once base_path('app/Service/FinanceBankReconciliationService.php');
+require_once base_path('app/Service/FinanceOperationService.php');
+require_once base_path('app/Service/FinanceCashService.php');
+require_once base_path('app/Service/FinanceDdsCategoryService.php');
+require_once base_path('app/Service/FinanceMatchingRuleService.php');
+require_once base_path('app/Service/FinancePaymentCalendarService.php');
+require_once base_path('app/Service/FinanceCashFlowReportService.php');
+require_once base_path('app/Service/FinanceManagementBalanceService.php');
+require_once base_path('app/Service/FinancePaymentPlanFactService.php');
+require_once base_path('app/Service/FinanceDashboardService.php');
 
 require_once base_path('app/Support/core_runtime.php');
+require_once base_path('app/Support/crypto_helper.php');
 require_once base_path('app/Support/company_database.php');
 require_once base_path('app/Support/http_runtime.php');
 require_once base_path('app/Support/legal_entity_document_upload.php');
@@ -58,6 +94,10 @@ require_once base_path('app/View/components/page_header.php');
 require_once base_path('app/View/components/status_badge.php');
 require_once base_path('app/View/components/table.php');
 require_once base_path('app/View/components/view_formatters.php');
+
+sendSecurityHeaders($isHttps);
+startCsrfFormInjection();
+verifyCsrfRequest();
 
 use App\Core\Database;
 use App\Http\Router;
@@ -90,6 +130,18 @@ require_once base_path('app/Http/Routes/company_responsible_assignments.php');
 require_once base_path('app/Http/Routes/company_linear_trips.php');
 require_once base_path('app/Http/Routes/superadmin_management.php');
 require_once base_path('app/Http/Routes/superadmin_company_delete.php');
+require_once base_path('app/Http/Routes/superadmin_db_usage.php');
 require_once base_path('app/Http/Routes/superadmin_deleted_data.php');
+require_once base_path('app/Http/Routes/company_bank_finance.php');
+require_once base_path('app/Http/Routes/company_finance_invoices.php');
+require_once base_path('app/Http/Routes/company_finance_operations.php');
+require_once base_path('app/Http/Routes/company_finance_cash.php');
+require_once base_path('app/Http/Routes/company_finance_dds_categories.php');
+require_once base_path('app/Http/Routes/company_finance_payment_calendar.php');
+require_once base_path('app/Http/Routes/company_finance_cash_flow_report.php');
+require_once base_path('app/Http/Routes/company_finance_management_balance.php');
+require_once base_path('app/Http/Routes/company_finance_payment_plan_fact.php');
+require_once base_path('app/Http/Routes/company_finance_dashboard.php');
+require_once base_path('app/Http/Routes/company_finance_matching_rules.php');
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

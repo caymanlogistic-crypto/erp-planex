@@ -10,6 +10,7 @@ try{$pdo=$db->connection();$stmt=$pdo->prepare('SELECT * FROM companies WHERE id
 if(!$company){ob_start();require base_path('app/View/pages/company_documents_upload.php');$content=ob_get_clean();require base_path('app/View/layouts/main.php');return;}
 if($company['status']!=='active'){ob_start();require base_path('app/View/pages/company_documents_upload.php');$content=ob_get_clean();require base_path('app/View/layouts/main.php');return;}
 $cfg=companyDatabaseConfig($config, $company);$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
+if(!\App\Service\DocumentService::canCurrentUserEdit($lpdo,['entity_type'=>$entityType,'entity_id'=>$entityId])){denyEntityAccess();return;}
 try{$lpdo->query("SELECT 1 FROM documents LIMIT 1")->fetch();}catch(\Exception$e){$lpdo->exec(file_get_contents(base_path('database/migrations-local/007_create_company_documents.sql')));}
 try{$lpdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch();}catch(\Exception$e){$lpdo->exec(file_get_contents(base_path('database/migrations-local/024_create_document_types.sql')));$lpdo->exec(file_get_contents(base_path('database/migrations-local/025_add_document_type_id.sql')));}
 $dtStmt=$lpdo->query("SELECT * FROM document_types WHERE entity_type IS NULL OR entity_type='' OR entity_type='$entityType' ORDER BY sort_order,name ASC");$docTypes=$dtStmt->fetchAll(PDO::FETCH_ASSOC);

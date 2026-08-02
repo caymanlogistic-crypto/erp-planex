@@ -34,10 +34,11 @@
 
 <div class="page-head">
     <div>
-        <div class="page-eyebrow">ПЕРЕВОЗЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></div>
-        <h1>Привязка перевозчиков</h1>
+        <h1 class="page-title">Привязка перевозчиков</h1>
+        <div class="page-summary"><span>ПЕРЕВОЗЧИКИ / <?= e(mb_strtoupper($company['name'])) ?></span></div>
     </div>
     <div class="page-head-actions">
+        <a href="<?= app_url('/company/contractors/create') ?>" class="btn btn-primary">Создать перевозчика</a>
         <a href="<?= app_url('/company/contractors') ?>" class="btn btn-ghost">← К списку перевозчиков</a>
     </div>
 </div>
@@ -45,18 +46,18 @@
 <div class="panel">
     <div class="panel-body">
 
-        <p class="text-muted" style="margin-bottom:16px;">
+        <p class="text-muted mb-section">
             Перепривязка переносит перевозчика и его рабочий контекст (экипажи, водители, транспорт)
             от одного логиста к другому. Владение записями меняется, история операции сохраняется.
             Водители и транспорт, используемые другими перевозчиками, не перепривязываются.
         </p>
 
         <?php if ($successMessage): ?>
-        <div class="notice ok" style="margin-bottom:12px;"><?= e($successMessage) ?></div>
+        <div class="notice ok mb-section"><?= e($successMessage) ?></div>
         <?php endif; ?>
 
         <?php if ($formError): ?>
-        <div class="notice warn" style="margin-bottom:12px;"><?= e($formError) ?></div>
+        <div class="notice warn mb-section"><?= e($formError) ?></div>
         <?php endif; ?>
 
         <?php if (empty($assignments)): ?>
@@ -64,9 +65,6 @@
             <div class="empty-icon">📋</div>
             <p class="empty-title">Нет перевозчиков</p>
             <p class="empty-desc">В компании ещё нет перевозчиков. Создайте первого перевозчика.</p>
-            <div class="form-actions">
-                <a href="<?= app_url('/company/contractors/create') ?>" class="btn btn-primary">Создать перевозчика</a>
-            </div>
         </div>
         <?php else: ?>
 
@@ -77,9 +75,9 @@
                         <th>Перевозчик</th>
                         <th>ИНН</th>
                         <th>Сейчас привязан</th>
-                        <th style="text-align:center;">Экипажи</th>
-                        <th style="text-align:center;">Водители</th>
-                        <th style="text-align:center;">Транспорт</th>
+                        <th class="text-center">Экипажи</th>
+                        <th class="text-center">Водители</th>
+                        <th class="text-center">Транспорт</th>
                         <th>Новый логист</th>
                         <th></th>
                     </tr>
@@ -104,12 +102,12 @@
                         <span class="text-muted">Не назначен</span>
                         <?php endif; ?>
                     </td>
-                    <td class="col-mono" style="text-align:center;"><?= (int)($a['crew_count'] ?? 0) ?></td>
-                    <td class="col-mono" style="text-align:center;"><?= (int)($a['driver_count'] ?? 0) ?></td>
-                    <td class="col-mono" style="text-align:center;"><?= (int)($a['vehicle_count'] ?? 0) ?></td>
+                    <td class="col-mono text-center"><?= (int)($a['crew_count'] ?? 0) ?></td>
+                    <td class="col-mono text-center"><?= (int)($a['driver_count'] ?? 0) ?></td>
+                    <td class="col-mono text-center"><?= (int)($a['vehicle_count'] ?? 0) ?></td>
                     <td>
                         <form method="post" action="/company/contractor-assignments/<?= $a['id'] ?>/assign" class="inline-form">
-                            <select name="new_logist_id" class="field-select" style="min-width:180px;">
+                            <select name="new_logist_id" class="field-select select-md">
                                 <option value="">— Выберите —</option>
                                 <?php foreach ($logists as $l):
                                     $selected = ((int)$l['id'] === (int)($a['logist_id'] ?? 0)) ? ' selected' : '';

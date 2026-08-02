@@ -1,89 +1,29 @@
 <?php
+require_once __DIR__ . '/../app/Support/environment.php';
 
-/**
- * PHASE 0.9C — Environment precedence regression test.
- *
- * Verifies that bootstrap/app.php does NOT overwrite an existing process
- * environment variable with a value from .env (non-overwrite semantics).
- *
- * Usage:
- *   php tests/env_precedence_test.php            — run all scenarios (isolated subprocesses)
- *   php tests/env_precedence_test.php S1         — run a single scenario in this process
- *
- * No secret values are printed. Only environment MODE indicators
- * (production / local / empty) and non-secret marker values are emitted.
- */
-
-// --- Scenario runner mode (invoked as a subprocess) ---
-if (isset($argv[1]) && preg_match('/^S[0-9]$/', (string) $argv[1])) {
-    $scenario = $argv[1];
-    // Set up the process environment per scenario BEFORE requiring bootstrap.
-    switch ($scenario) {
-        case 'S1':
-            putenv('APP_ENV=production'); // process env present + .env likely APP_ENV=local
-            break;
-        case 'S2':
-            putenv('APP_ENV');            // ensure APP_ENV absent from process env
-            break;
-        case 'S3':
-            putenv('APP_ENV=');           // process APP_ENV explicitly empty
-            break;
-        case 'S4':
-            putenv('PHASE09C_PRECEDENCE=from-process'); // var not defined in .env
-            break;
-        case 'S5':
-            putenv('APP_NAME=process-name'); // var defined in .env (non-secret)
-            break;
-    }
-
-    require __DIR__ . '/../bootstrap/app.php';
-
-    $result = [];
-    $result['scenario'] = $scenario;
-    $result['app_env'] = getenv('APP_ENV');
-    $result['marker'] = getenv('PHASE09C_PRECEDENCE');
-    $result['app_name'] = getenv('APP_NAME');
-    echo json_encode($result);
-    exit(0);
+$pass=0;$fail=0;
+function check(string $name,bool $ok):void{global $pass,$fail;if($ok){$pass++;echo "[PASS] $name\n";}else{$fail++;echo "[FAIL] $name\n";}}
+$tmp=tempnam(sys_get_temp_dir(),'planex_env_');
+if($tmp===false){fwrite(STDERR,"Cannot create env fixture\n");exit(1);}
+file_put_contents($tmp,"APP_ENV=local\nAPP_NAME='fixture name'\nEMPTY_ALLOWED=\nINVALID-NAME=x\n# COMMENTED=y\n");
+$names=['APP_ENV','APP_NAME','EMPTY_ALLOWED','INVALID-NAME','COMMENTED'];
+$before=[];foreach($names as $n){$before[$n]=getenv($n);putenv($n);unset($_ENV[$n]);}
+try{
+  putenv('APP_ENV=production');$_ENV['APP_ENV']='production';
+  $loaded=loadEnvFileNonOverwriting($tmp);
+  check('process APP_ENV wins',getenv('APP_ENV')==='production');
+  check('APP_ENV not reported loaded',!in_array('APP_ENV',$loaded,true));
+  check('quoted value loaded',getenv('APP_NAME')==='fixture name');
+  check('empty value loaded',getenv('EMPTY_ALLOWED')==='');
+  check('invalid name ignored',getenv('INVALID-NAME')===false);
+  check('comment ignored',getenv('COMMENTED')===false);
+  putenv('APP_ENV');unset($_ENV['APP_ENV']);
+  $loaded2=loadEnvFileNonOverwriting($tmp);
+  check('missing APP_ENV loaded',getenv('APP_ENV')==='local');
+  check('already loaded APP_NAME preserved',getenv('APP_NAME')==='fixture name');
+  check('missing file no-op',loadEnvFileNonOverwriting($tmp.'.missing')===[]);
+} finally {
+  @unlink($tmp);
+  foreach($before as $n=>$v){if($v===false){putenv($n);unset($_ENV[$n]);}else{putenv($n.'='.$v);$_ENV[$n]=$v;}}
 }
-
-// --- Test runner mode (parent process) ---
-$pass = 0;
-$fail = 0;
-$total = 0;
-$phpBin = defined('PHP_BINARY') ? PHP_BINARY : 'php';
-
-function runScenario(string $phpBin, string $scenario): array {
-    $cmd = sprintf('%s %s %s 2>&1', escapeshellarg($phpBin), escapeshellarg(__FILE__), $scenario);
-    $out = shell_exec($cmd);
-    $data = json_decode((string) $out, true);
-    if (!is_array($data)) {
-        return ['scenario' => $scenario, 'raw' => (string) $out];
-    }
-    return $data;
-}
-
-$cases = [
-    'S1' => ['desc' => 'process APP_ENV=production + .env APP_ENV=local => production',
-             'check' => fn($d) => ($d['app_env'] ?? null) === 'production'],
-    'S2' => ['desc' => 'process APP_ENV absent + .env APP_ENV=local => local applied (non-empty)',
-             'check' => fn($d) => isset($d['app_env']) && $d['app_env'] !== '' && $d['app_env'] !== false],
-    'S3' => ['desc' => 'process APP_ENV empty => preserved (empty not overwritten by .env)',
-             'check' => fn($d) => ($d['app_env'] ?? 'SET') === ''],
-    'S4' => ['desc' => 'unrelated process var (not in .env) preserved',
-             'check' => fn($d) => ($d['marker'] ?? null) === 'from-process'],
-    'S5' => ['desc' => 'process APP_NAME wins over .env APP_NAME',
-             'check' => fn($d) => ($d['app_name'] ?? null) === 'process-name'],
-];
-
-echo "=== ENV PRECEDENCE REGRESSION TEST ===\n";
-foreach ($cases as $sc => $case) {
-    $total++;
-    $d = runScenario($phpBin, $sc);
-    $ok = $case['check']($d);
-    $status = $ok ? 'PASS' : 'FAIL';
-    echo sprintf("  [%s] %s: %s\n", $status, $sc, $case['desc']);
-    if ($ok) { $pass++; } else { $fail++; }
-}
-echo "RESULT: $pass/$total passed, $fail failed\n";
-exit($fail === 0 ? 0 : 1);
+printf("ENV: %d passed, %d failed\n",$pass,$fail);exit($fail?1:0);

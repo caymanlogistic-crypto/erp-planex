@@ -25,17 +25,18 @@ final class DeletedDataController
         if (!empty($_GET['company_id'])) {
             $filters['company_id'] = (int)$_GET['company_id'];
         }
-        if (!empty($_GET['entity_type'])) {
+        if (!empty($_GET['entity_type']) && $_GET['entity_type'] !== 'company') {
             $filters['entity_type'] = $_GET['entity_type'];
         }
         if (!empty($_GET['status'])) {
             $filters['status'] = $_GET['status'];
         }
+        $filters['exclude_entity_type'] = 'company';
 
         $records = AuditService::listAll($pdo, $filters);
 
         $companies = $pdo->query("SELECT id, name FROM companies ORDER BY name")->fetchAll(\PDO::FETCH_ASSOC);
-        $entityTypes = $pdo->query("SELECT DISTINCT entity_type FROM deleted_entities ORDER BY entity_type")->fetchAll(\PDO::FETCH_COLUMN);
+        $entityTypes = $pdo->query("SELECT DISTINCT entity_type FROM deleted_entities WHERE entity_type != 'company' ORDER BY entity_type")->fetchAll(\PDO::FETCH_COLUMN);
 
         ob_start();
         require base_path('app/View/pages/superadmin_deleted_data.php');
@@ -77,6 +78,11 @@ final class DeletedDataController
 
         if (!$record) {
             header('Location: /superadmin/deleted-data?error=not_found');
+            exit;
+        }
+
+        if ($record['entity_type'] === 'company') {
+            header('Location: /superadmin/deleted-data/' . $recordId . '?error=company_deletion_final');
             exit;
         }
 

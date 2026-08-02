@@ -62,7 +62,6 @@
     <div class="empty-state">
         <p class="empty-title">Экипажи ещё не созданы.</p>
         <p class="empty-desc">Создайте экипаж, чтобы объединить подрядчика, водителя и транспортный комплект.</p>
-        <a href="<?= app_url('/company/crews/create') ?>" class="btn btn-primary">Создать первый экипаж</a>
     </div>
     <?php endif; ?>
 </div>
@@ -119,7 +118,7 @@
                     </td>
                     <td class="cell-double">
                         <span class="cell-main col-mono"><?= e($c['plates'] ?? '—') ?></span>
-                        <span class="cell-sub"><?= e($c['set_type'] ?? '—') ?></span>
+                        <span class="cell-sub"><?= e(ui_set_type($c['set_type'] ?? null)) ?></span>
                     </td>
                     <td>
                         <span class="badge<?= $c['status'] === 'active' ? ' badge-ok' : '' ?>">

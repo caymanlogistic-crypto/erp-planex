@@ -16,6 +16,7 @@ $leShowDocuments   = $leShowDocuments ?? true;
 $leShowInlineActions = $leShowInlineActions ?? true;
 $leShowStatus       = $leShowStatus ?? false;
 $leSubmitLabel     = $leSubmitLabel ?? 'Создать';
+$leHiddenFields     = $leHiddenFields ?? [];
 
 $isCompany = $leEntityType === 'company' || $leEntityType === 'expeditor';
 
@@ -223,7 +224,83 @@ $leTypeOptions = [
             <div class="section-title">Документы</div>
         </div>
         <div class="file-list">
+            <?php if (!empty($leExistingDocs)): ?>
+            <?php foreach ($leExistingDocs as $doc):
+                $docId = (int) ($doc['id'] ?? 0);
+                if ($docId <= 0) continue;
+                $name = $doc['original_name'] ?? $doc['stored_name'] ?? '';
+                $metaText = $name ?: 'Файл';
+                $parts = explode('.', $name);
+                $ext = count($parts) > 1 ? strtoupper(end($parts)) : '';
+                $mime = $doc['mime_type'] ?? '';
+                $badgeCls = 'file-type-badge';
+                $badgeTxt = '—';
+                if ($ext === '') {
+                    if (strpos($mime, 'pdf') !== false) $ext = 'PDF';
+                    elseif (strpos($mime, 'image') !== false) $ext = 'IMG';
+                }
+                if ($ext === 'PDF') { $badgeCls .= ' is-pdf'; $badgeTxt = 'PDF'; }
+                elseif ($ext === 'DOC' || $ext === 'DOCX' || $ext === 'RTF' || $ext === 'ODT') { $badgeCls .= ' is-doc'; $badgeTxt = 'DOC'; }
+                elseif ($ext === 'XLS' || $ext === 'XLSX' || $ext === 'CSV' || $ext === 'ODS') { $badgeCls .= ' is-xls'; $badgeTxt = 'XLS'; }
+                elseif (in_array($ext, ['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF', 'BMP', 'TIF', 'TIFF', 'HEIC', 'HEIF'], true)) { $badgeCls .= ' is-img'; $badgeTxt = 'IMG'; }
+                else { $badgeCls .= ' is-other'; $badgeTxt = $ext ?: 'FILE'; }
+                $rowTitle = $doc['type_name'] ?: $doc['document_type'] ?: 'Документ';
+                $rowKey = 'existing-' . $docId;
+            ?>
+            <div class="file-item file-item-predef document-file-row has-file has-existing-file driver-doc-view-item"
+                 id="le-frow-<?= $rowKey ?>"
+                 data-file-row="predef"
+                 data-file-code="<?= $rowKey ?>"
+                 data-has-existing="1"
+                 data-existing-badge-class="<?= $badgeCls ?>"
+                 data-existing-badge-text="<?= $badgeTxt ?>"
+                 data-existing-meta="<?= e($metaText) ?>"
+                 data-existing-button-text="Заменить">
+                <div class="<?= $badgeCls ?>" id="le-fbadge-<?= $rowKey ?>"><?= $badgeTxt ?></div>
+                <div class="file-info">
+                    <div class="file-name"><?= e($rowTitle) ?></div>
+                    <div class="file-meta" id="le-fname-<?= $rowKey ?>"><?= e($metaText) ?></div>
+                </div>
+                <button type="button"
+                        class="btn btn-secondary file-action-btn js-file-pick-btn"
+                        data-file-input="le-predef-file-<?= $rowKey ?>">
+                    <span id="le-fbtn-<?= $rowKey ?>">Заменить</span>
+                </button>
+                <button type="button"
+                        class="predef-file-clear"
+                        id="le-fclear-<?= $rowKey ?>"
+                        title="Удалить файл">×</button>
+                <input type="file"
+                       id="le-predef-file-<?= $rowKey ?>"
+                       class="file-input-hidden js-predef-file-input"
+                       name="existing_doc_file[<?= $docId ?>]"
+                       data-label="le-fname-<?= $rowKey ?>"
+                       data-badge="le-fbadge-<?= $rowKey ?>"
+                       data-button-label="le-fbtn-<?= $rowKey ?>"
+                       data-clear="le-fclear-<?= $rowKey ?>">
+                <input type="hidden" name="delete_existing_doc[<?= $docId ?>]" value="0" data-delete-predef-doc>
+            </div>
+            <?php endforeach; ?>
+            <?php endif; ?>
+            <?php
+            $leExistingCodes = [];
+            $leExistingLabels = [];
+            if (!empty($leExistingDocs)) {
+                foreach ($leExistingDocs as $doc) {
+                    if (!empty($doc['type_code'])) {
+                        $leExistingCodes[] = $doc['type_code'];
+                    }
+                    $label = $doc['type_name'] ?? $doc['document_type'] ?? '';
+                    $label = trim(mb_strtolower($label));
+                    if ($label !== '') {
+                        $leExistingLabels[] = $label;
+                    }
+                }
+            }
+            ?>
             <?php foreach ($lePredefDocs as $pdoc): ?>
+            <?php if (in_array($pdoc['code'], $leExistingCodes, true)) continue; ?>
+            <?php if (in_array(trim(mb_strtolower($pdoc['name'])), $leExistingLabels, true)) continue; ?>
             <div class="file-item file-item-predef document-file-row is-empty">
                 <div class="file-type-badge file-type-badge-empty" id="le-fbadge-<?= e($pdoc['code']) ?>">—</div>
                 <div class="file-info">
@@ -252,5 +329,10 @@ $leTypeOptions = [
 
 </div>
 
+<?php if (!empty($leHiddenFields) && is_array($leHiddenFields)): ?>
+<?php foreach ($leHiddenFields as $leHiddenName => $leHiddenValue): ?>
+<input type="hidden" name="<?= e($leHiddenName) ?>" value="<?= e($leHiddenValue) ?>">
+<?php endforeach; ?>
+<?php endif; ?>
 <script type="application/json" data-doc-types><?= json_encode($leDocTypes, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
 </form>

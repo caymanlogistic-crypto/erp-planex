@@ -88,108 +88,135 @@
 <div class="panel">
     <div class="panel-body">
 
-        <div class="form-section">
-            <h3 class="panel-head-title">Подрядчик</h3>
-            <dl class="kv">
-                <dt>Название</dt>
-                <dd>
-                    <?php if (!empty($crew['contractor_id'])): ?>
-                        <a href="/company/contractors/<?= $crew['contractor_id'] ?>"><?= e($crew['contractor_name'] ?? '') ?: '—' ?></a>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </dd>
-                <dt>ИНН</dt>
-                <dd><?= e($crew['contractor_inn'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
+        <div class="route-executor-view-card" data-route-executor-view-card>
 
-        <div class="form-section">
-            <h3 class="panel-head-title">Водитель</h3>
-            <dl class="kv">
-                <dt>ФИО</dt>
-                <dd>
-                    <?php if (!empty($crew['driver_id'])): ?>
-                        <a href="/company/drivers/<?= $crew['driver_id'] ?>"><?= e($crew['driver_name'] ?? '') ?: '—' ?></a>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </dd>
-                <dt>Телефон</dt>
-                <dd><?= e($crew['driver_phone'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
-
-        <div class="form-section">
-            <h3 class="panel-head-title">Транспорт (ТС)</h3>
-            <dl class="kv">
-                <dt>Тип комплекта</dt>
-                <dd><?= e(ui_set_type($crew['set_type'] ?? null)) ?: '—' ?></dd>
-                <dt>Госномер</dt>
-                <dd>
-                    <?php if (!empty($crew['vehicle_set_id'])): ?>
-                        <a href="/company/vehicle-sets/<?= $crew['vehicle_set_id'] ?>">
-                            <code><?= e($crew['primary_plate'] ?? '—') ?></code>
-                            <?php if (!empty($crew['secondary_plate'])): ?>
-                                + <code><?= e($crew['secondary_plate']) ?></code>
-<?php endif; ?>
-<?php require base_path('app/View/partials/delete_confirm_modal.php'); ?>
-                        </a>
-                    <?php else: ?>
-                        —
-                    <?php endif; ?>
-                </dd>
-            </dl>
-        </div>
-
-        <div class="form-section">
-            <h3 class="panel-head-title">Статус и ответственный</h3>
-            <dl class="kv">
-                <dt>Ответственный логист</dt>
-                <dd><?= e($crew['created_by_name'] ?? '') ?: '—' ?></dd>
-                <dt>Статус</dt>
-                <dd>
-                    <?php if ($crew['status'] === 'active'): ?>
-                        <span class="badge badge-ok"><span class="dot"></span>Активен</span>
-                    <?php elseif ($crew['status'] === 'archived'): ?>
-
-                    <?php else: ?>
-                        <span class="badge"><span class="dot"></span>Неактивен</span>
-                    <?php endif; ?>
-                </dd>
-                <dt>Комментарий</dt>
-                <dd><?= e($crew['comments'] ?? '') ?: '—' ?></dd>
-            </dl>
-        </div>
-
-        <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
-        <div class="form-section">
-            <h3 class="panel-head-title">Техническая информация</h3>
-            <dl class="kv">
-                <dt>Создан</dt>
-                <dd><?= e(ui_date($crew['created_at'] ?? null)) ?></dd>
-                <dt>Обновлён</dt>
-                <dd><?= e(ui_date($crew['updated_at'] ?? null)) ?></dd>
-            </dl>
-        </div>
-        <?php endif; ?>
-
-        <div class="form-section">
-            <h3 class="panel-head-title">Действия</h3>
-            <div class="form-actions">
-                <a href="/company/route-executors/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
-                <?php if (($crew['status'] ?? '') !== 'archived'): ?>
-                <form method="post" action="/company/route-executors/<?= $crew['id'] ?>/archive" style="display:inline;">
-                    <button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button>
-                </form>
-                <?php else: ?>
-                    <p class="text-muted">Исполнитель рейса уже удалён.</p>
-                <?php endif; ?>
-                <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
+            <div class="re-section">
+                <h3 class="re-section-title">Подрядчик</h3>
+                <div class="re-grid">
+                    <div class="re-item">
+                        <span class="re-label">Название</span>
+                        <span class="re-value">
+                            <?php if (!empty($crew['contractor_id'])): ?>
+                                <a href="/company/contractors/<?= $crew['contractor_id'] ?>"><?= e($crew['contractor_name'] ?? '') ?: '—' ?></a>
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                    <div class="re-item">
+                        <span class="re-label">ИНН</span>
+                        <span class="re-value"><?= e($crew['contractor_inn'] ?? '') ?: '—' ?></span>
+                    </div>
+                </div>
             </div>
+
+            <div class="re-section">
+                <h3 class="re-section-title">Водитель</h3>
+                <div class="re-grid">
+                    <div class="re-item">
+                        <span class="re-label">ФИО</span>
+                        <span class="re-value">
+                            <?php if (!empty($crew['driver_id'])): ?>
+                                <a href="/company/drivers/<?= $crew['driver_id'] ?>"><?= e($crew['driver_name'] ?? '') ?: '—' ?></a>
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                    <div class="re-item">
+                        <span class="re-label">Телефон</span>
+                        <span class="re-value"><?= e($crew['driver_phone'] ?? '') ?: '—' ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="re-section">
+                <h3 class="re-section-title">Транспорт (ТС)</h3>
+                <div class="re-grid">
+                    <div class="re-item">
+                        <span class="re-label">Тип комплекта</span>
+                        <span class="re-value"><?= e(ui_set_type($crew['set_type'] ?? null)) ?: '—' ?></span>
+                    </div>
+                    <div class="re-item">
+                        <span class="re-label">Госномер</span>
+                        <span class="re-value">
+                            <?php if (!empty($crew['vehicle_set_id'])): ?>
+                                <a href="/company/vehicle-sets/<?= $crew['vehicle_set_id'] ?>">
+                                    <code><?= e($crew['primary_plate'] ?? '—') ?></code>
+                                    <?php if (!empty($crew['secondary_plate'])): ?>
+                                        + <code><?= e($crew['secondary_plate']) ?></code>
+                                    <?php endif; ?>
+                                </a>
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="re-section">
+                <h3 class="re-section-title">Статус и ответственный</h3>
+                <div class="re-grid">
+                    <div class="re-item">
+                        <span class="re-label">Ответственный логист</span>
+                        <span class="re-value"><?= e($crew['created_by_name'] ?? '') ?: '—' ?></span>
+                    </div>
+                    <div class="re-item">
+                        <span class="re-label">Статус</span>
+                        <span class="re-value">
+                            <?php if ($crew['status'] === 'active'): ?>
+                                <span class="badge badge-ok"><span class="dot"></span>Активен</span>
+                            <?php elseif ($crew['status'] === 'archived'): ?>
+
+                            <?php else: ?>
+                                <span class="badge"><span class="dot"></span>Неактивен</span>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                    <div class="re-item re-item--wide">
+                        <span class="re-label">Комментарий</span>
+                        <span class="re-value"><?= e($crew['comments'] ?? '') ?: '—' ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <?php if (($_SESSION['role_code'] ?? '') !== 'logist'): ?>
+            <div class="re-section">
+                <h3 class="re-section-title">Техническая информация</h3>
+                <div class="re-grid">
+                    <div class="re-item">
+                        <span class="re-label">Создан</span>
+                        <span class="re-value"><?= e(ui_date($crew['created_at'] ?? null)) ?></span>
+                    </div>
+                    <div class="re-item">
+                        <span class="re-label">Обновлён</span>
+                        <span class="re-value"><?= e(ui_date($crew['updated_at'] ?? null)) ?></span>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <div class="re-section" data-re-section-actions>
+                <h3 class="re-section-title">Действия</h3>
+                <div class="form-actions">
+                    <a href="/company/route-executors/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
+                    <?php if (($crew['status'] ?? '') !== 'archived'): ?>
+                    <form method="post" action="/company/route-executors/<?= $crew['id'] ?>/archive" class="inline-form">
+                        <button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button>
+                    </form>
+                    <?php else: ?>
+                        <p class="text-muted">Исполнитель рейса уже удалён.</p>
+                    <?php endif; ?>
+                    <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
+                </div>
+            </div>
+
         </div>
 
     </div>
 </div>
+
+<?php require base_path('app/View/partials/delete_confirm_modal.php'); ?>
 
 <?php endif; ?>

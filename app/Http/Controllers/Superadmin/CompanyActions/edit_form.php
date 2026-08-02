@@ -9,7 +9,7 @@
 
         $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
         $stmt->execute([(int) $id]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
+        $company = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$company) {
             $company = null;

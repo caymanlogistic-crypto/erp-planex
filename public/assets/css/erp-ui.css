@@ -21,6 +21,11 @@
 /* ============================================================
    RESET
    ============================================================ */
+@font-face { font-family:"IBM Plex Sans"; src:url("../fonts/IBMPlexSans-Regular.woff2") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+@font-face { font-family:"IBM Plex Sans"; src:url("../fonts/IBMPlexSans-Medium.woff2") format("woff2"); font-weight:500; font-style:normal; font-display:swap; }
+@font-face { font-family:"IBM Plex Sans"; src:url("../fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); font-weight:600; font-style:normal; font-display:swap; }
+@font-face { font-family:"IBM Plex Sans"; src:url("../fonts/IBMPlexSans-Bold.woff2") format("woff2"); font-weight:700; font-style:normal; font-display:swap; }
+
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
@@ -32,8 +37,9 @@ body {
   overflow: hidden;
 }
 h1,h2,h3,p { margin: 0; }
-button { cursor: default; border: none; background: none; padding: 0; font: inherit; color: inherit; }
-select { cursor: default; }
+button { cursor: pointer; border: none; background: none; padding: 0; font: inherit; color: inherit; }
+select { cursor: pointer; }
+a { color: inherit; }
 textarea { resize: vertical; }
 svg { display: block; }
 
@@ -212,13 +218,14 @@ a.nav-item{text-decoration:none;outline:none;}
 
 .nav-item.is-active { background:var(--nav-active-bg); color:var(--nav-text-act); }
 .nav-item.is-active::before { content:""; position:absolute; left:0; top:7px; bottom:7px; width:2px; background:var(--nav-gold); border-radius:0 1px 1px 0; }
-.nav-item.is-parent { color:rgba(200,147,58,.65); }
+.nav-item.is-parent { color:var(--nav-text); }
+.nav-item.is-parent.is-open { color:var(--nav-text-act); }
 .nav-icon { width:16px; height:16px; flex-shrink:0; opacity:var(--nav-icon-op); transition:opacity 90ms; }
-.nav-item:hover .nav-icon,.nav-item.is-active .nav-icon,.nav-item.is-parent .nav-icon { opacity:.8; }
+.nav-item:hover .nav-icon,.nav-item.is-active .nav-icon,.nav-item.is-parent.is-open .nav-icon { opacity:.8; }
 .nav-label { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .nav-count { height:16px; min-width:22px; padding:0 5px; display:inline-flex; align-items:center; justify-content:center; background:rgba(200,147,58,.14); border:1px solid rgba(200,147,58,.24); color:rgba(200,147,58,.65); font-size:9.5px; font-weight:700; border-radius:2px; flex-shrink:0; }
 .nav-count.is-alert { background:rgba(153,46,38,.22); border-color:rgba(153,46,38,.38); color:rgba(220,100,90,.88); }
-.nav-item.is-active .nav-count,.nav-item.is-parent .nav-count { background:rgba(200,147,58,.22); border-color:rgba(200,147,58,.4); color:var(--nav-gold); }
+.nav-item.is-active .nav-count,.nav-item.is-parent.is-open .nav-count { background:rgba(200,147,58,.22); border-color:rgba(200,147,58,.4); color:var(--nav-gold); }
 .nav-chevron { width:14px; height:14px; flex-shrink:0; opacity:.25; transition:transform 180ms ease,opacity 90ms; }
 .nav-item:hover .nav-chevron { opacity:.45; }
 .nav-item.is-open .nav-chevron { transform:rotate(90deg); opacity:.45; }
@@ -443,6 +450,28 @@ a.nav-item{text-decoration:none;outline:none;}
 
 
 /* ============================================================
+   FINANCE OPERATIONS PAGE
+   ============================================================ */
+.table-toolbar--ops { margin-bottom: 1rem; }
+.toolbar-left--ops { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.toolbar-input--ops,
+.toolbar-select--ops,
+.toolbar-search--ops,
+.btn--ops-filter,
+.btn--ops-reset { height: 34px; }
+.toolbar-input--ops { padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 6px; }
+.toolbar-search--ops { padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 6px; }
+.toolbar-select--ops { padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 6px; }
+.btn--ops-reset { display: inline-flex; align-items: center; }
+.page-summary--ops { margin-bottom: 1rem; }
+.page-summary--calendar-kpis { white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+.page-summary--calendar-kpis > span { white-space: nowrap; flex-shrink: 0; }
+.tr--ops-clickable { cursor: pointer; }
+.td--ops-counterparty,
+.td--ops-purpose { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
+/* ============================================================
    EXTENDED FORM ELEMENT HELPERS
    ============================================================ */
 .field-label-row{display:flex;align-items:center;justify-content:space-between;}
@@ -472,7 +501,7 @@ a.nav-item{text-decoration:none;outline:none;}
 .checkbox-group{display:flex;flex-direction:column;gap:7px;}
 .checkbox-group.is-horizontal{flex-direction:row;flex-wrap:wrap;gap:14px;}
 .checkbox-item{display:inline-flex;align-items:flex-start;gap:8px;cursor:default;user-select:none;}
-.checkbox-item input[type=checkbox]{position:absolute;opacity:0;pointer-events:none;}
+.checkbox-item input[type=checkbox]{position:absolute;width:auto;height:auto;opacity:0;pointer-events:none;}
 .checkbox-mark{width:14px;height:14px;flex-shrink:0;border-radius:2px;border:1.5px solid #c2bbb0;background:linear-gradient(180deg,var(--surface-field) 0%,#f7f5f0 100%);display:grid;place-items:center;transition:border-color 90ms,background 90ms;box-shadow:inset 0 1px 1px rgba(0,0,0,.05);margin-top:1px;}
 .checkbox-item:hover .checkbox-mark{border-color:#a49d92;}
 .checkbox-item input:checked+.checkbox-mark{background:var(--accent);border-color:var(--accent-deep);}
@@ -1200,4 +1229,470 @@ body { overflow:hidden; background:var(--app-bg); font-family:var(--font); font-
 .danger-step.is-terminal {
   background:var(--surface-field-alt);
   border-color:var(--danger-border);
+}
+
+/* ============================================================
+   PRODUCTION CONSISTENCY LAYER
+   Canonical geometry shared by legacy and current page patterns.
+   ============================================================ */
+.app { min-width:1180px; }
+.content { min-width:0; }
+
+.panel,
+.table-card,
+.form-section,
+.panel-section,
+.subject-card,
+.metric-card {
+  border-radius:2px;
+  box-shadow:none;
+}
+
+.panel,
+.table-card {
+  border-color:var(--line-soft);
+  background:var(--surface);
+}
+
+.page-head {
+  min-height:58px;
+  margin-bottom:8px;
+}
+.page-title { text-wrap:balance; }
+.page-summary { max-width:920px; }
+
+.field-input:focus,
+.field-select:focus,
+.field-textarea:focus {
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(124,71,24,.16);
+}
+.field-input[disabled],
+.field-select[disabled],
+.field-textarea[disabled] {
+  color:var(--text-faint);
+  background:var(--surface-muted);
+  cursor:not-allowed;
+}
+
+.table,
+.tbl {
+  width:100%;
+  border-collapse:collapse;
+  font-variant-numeric:tabular-nums;
+}
+.table-scroll,
+.tbl-wrap { min-width:0; overflow:auto; }
+.table th,
+.tbl th { white-space:nowrap; }
+.table td,
+.tbl td { vertical-align:middle; }
+.col-actions,
+.row-actions { white-space:nowrap; }
+
+.modal {
+  max-height:min(88vh, 900px);
+  border:1px solid var(--line-strong);
+  border-radius:2px;
+  box-shadow:0 18px 60px rgba(0,0,0,.28);
+}
+.modal-head,
+.modal-foot { flex:0 0 auto; }
+.modal-body { min-height:0; overflow:auto; }
+.driver-view-modal-inner,
+.user-view-modal-inner { width:min(100%, 980px); }
+
+.metric-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:8px;
+}
+.metric-card {
+  min-height:72px;
+  padding:10px 12px;
+  background:var(--surface-field-alt);
+  border:1px solid var(--line-hair);
+}
+.metric-value {
+  color:var(--text-main);
+  font-size:22px;
+  font-weight:700;
+  line-height:1.15;
+}
+.metric-label {
+  margin-top:4px;
+  color:var(--text-faint);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.inline-form { display:inline-flex; align-items:center; }
+.inline-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.toolbar-form { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.checkbox-inline { display:flex; align-items:center; gap:4px; font-size:12px; font-weight:500; white-space:nowrap; }
+.nowrap { white-space:nowrap; }
+.input-offset { margin-top:8px; }
+.button-offset { margin-left:4px; }
+.delete-confirm-error { margin-top:8px; color:var(--danger-text); }
+.modal-notice { margin:16px; }
+.text-center { text-align:center; }
+.text-prewrap { white-space:pre-wrap; }
+.mt-section { margin-top:12px; }
+.mb-compact { margin-bottom:8px; }
+.mb-section { margin-bottom:12px; }
+.select-md { min-width:180px; }
+.select-sm { min-width:160px; }
+.col-check-width { width:40px; }
+.col-action-width { width:130px; }
+.code-block-scroll {
+  max-height:400px;
+  overflow:auto;
+  padding:12px;
+  background:var(--surface-field-alt);
+  border:1px solid var(--line-hair);
+  border-radius:2px;
+  font:12px/1.5 var(--font-mono);
+}
+.table-overflow { overflow-x:auto; }
+
+/* --- Bank accounts: viewport/scroll/alignment --- */
+body .bank-finance-card {
+    display: block;
+    margin-bottom: 8px;
+}
+body .bank-finance-card .table-scroll {
+    display: block;
+    min-height: auto;
+    max-height: none;
+    overflow: auto;
+}
+body .bank-finance-card .table-footer {
+    min-height: 34px;
+}
+body .bank-transactions-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+}
+body .bank-tx-scroll {
+    flex: 1;
+    overflow: auto;
+    min-height: 100px;
+}
+body .bank-tx-scroll .table {
+    min-width: 900px;
+}
+body .bank-finance-card.bank-transactions-card .empty-state.compact {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.bank-balances-table,
+.bank-imports-table {
+    min-width: 1120px;
+}
+.bank-balance-strong {
+    font-weight: 700;
+    color: var(--accent-deep);
+}
+td.is-dash {
+    text-align: center;
+}
+#bank-statements-modal .modal {
+    width: min(calc(100vw - 64px), 1100px);
+}
+#bank-statements-modal .modal-body {
+    overflow-x: hidden;
+    padding: 0;
+}
+#bank-statements-modal .modal-body .empty-state {
+    margin: 16px;
+}
+#bank-statements-modal .modal-body .mt-section {
+    padding: 0 16px;
+}
+#bank-statements-modal .modal-body .table-footer {
+    padding: 0 16px 16px;
+}
+#bank-statements-modal .modal-body > .table-scroll,
+#bank-statements-modal .bank-imports-table,
+#bank-statements-modal .bank-balances-table {
+    width: 100%;
+}
+#bank-statements-modal .bank-imports-table,
+#bank-statements-modal .bank-balances-table {
+    min-width: 0;
+    table-layout: fixed;
+}
+#bank-statements-modal .modal-body > .table-scroll {
+    overflow: hidden;
+}
+#bank-statements-modal .bank-imports-table .col-date { width: 11%; }
+#bank-statements-modal .bank-imports-table .col-filename { width: 25%; white-space: normal; word-break: break-word; overflow-wrap: break-word; }
+#bank-statements-modal .bank-imports-table .col-source { width: 7%; }
+#bank-statements-modal .bank-imports-table .col-account { width: 14%; }
+#bank-statements-modal .bank-imports-table .col-period { width: 17%; }
+#bank-statements-modal .bank-imports-table .col-ops { width: 7%; }
+#bank-statements-modal .bank-imports-table .col-balances { width: 6%; }
+#bank-statements-modal .bank-imports-table .col-status { width: 9%; }
+#bank-statements-modal .bank-imports-table .col-action { width: 4%; text-align: center; }
+#bank-statements-modal .bank-balances-table { font-size: 0.875rem; }
+#bank-statements-modal .bank-balances-table th,
+#bank-statements-modal .bank-balances-table td { padding: 4px 6px; }
+#bank-statements-modal .bank-balances-table th:nth-child(1),
+#bank-statements-modal .bank-balances-table td:nth-child(1) { width: 14%; }
+#bank-statements-modal .bank-balances-table th:nth-child(2),
+#bank-statements-modal .bank-balances-table td:nth-child(2) { width: 16%; }
+#bank-statements-modal .bank-balances-table th:nth-child(3),
+#bank-statements-modal .bank-balances-table td:nth-child(3) { width: 8%; }
+#bank-statements-modal .bank-balances-table th:nth-child(4),
+#bank-statements-modal .bank-balances-table td:nth-child(4) { width: 18%; }
+#bank-statements-modal .bank-balances-table th:nth-child(5),
+#bank-statements-modal .bank-balances-table td:nth-child(5) { width: 16%; }
+#bank-statements-modal .bank-balances-table th:nth-child(6),
+#bank-statements-modal .bank-balances-table td:nth-child(6) { width: 16%; }
+#bank-statements-modal .bank-balances-table th:nth-child(7),
+#bank-statements-modal .bank-balances-table td:nth-child(7) { width: 12%; }
+
+/* ============================================================
+   BANK RECONCILIATION — detail rows and account layout
+   ============================================================ */
+.bank-recon-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.bank-recon-account-num {
+  font-weight: 600;
+}
+.bank-recon-spacer {
+  margin-left: auto;
+}
+.bank-recon-detail {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-faint);
+  padding-left: 8px;
+}
+.bank-recon-section-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.bank-recon-post-balance {
+  display: flex;
+  gap: 24px;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.bank-recon-hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid var(--line-hair);
+}
+
+/* ============================================================
+   ROUTE EXECUTOR MODALS — view & edit popup standardisation
+   ============================================================ */
+.route-executor-modal-inner {
+  width: min(800px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+}
+.route-executor-modal-inner .modal-body {
+  padding: 16px;
+}
+
+/* View card inside modal: strip panel chrome */
+#route-executor-view-modal-inner .panel,
+#route-executor-view-modal-inner [data-re-edit-form].panel {
+  border: none;
+  background: transparent;
+  max-width: none;
+  box-shadow: none;
+  margin: 0;
+}
+#route-executor-view-modal-inner .panel-body,
+#route-executor-view-modal-inner [data-re-edit-body] {
+  padding: 0;
+}
+/* Create modal: strip panel chrome so form doesn't render as box inside modal */
+#route-executor-create-modal-inner .panel {
+  border: none;
+  background: transparent;
+  max-width: none;
+  box-shadow: none;
+  margin: 0;
+}
+#route-executor-create-modal-inner .panel-body {
+  padding: 0;
+  background: transparent;
+  border: none;
+  gap: 0;
+}
+#route-executor-create-modal-inner .form-section {
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line-hair);
+  background: transparent;
+}
+#route-executor-create-modal-inner .form-section:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+#route-executor-create-modal-inner .panel-head-title {
+  margin-bottom: 4px;
+}
+
+/* View card layout */
+.route-executor-view-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.re-section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-hair);
+}
+.re-section:last-child {
+  border-bottom: none;
+}
+#route-executor-view-modal-inner.is-view-mode .modal-body {
+  flex: 0 1 auto;
+  overflow: auto;
+}
+.re-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.re-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+.re-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.re-item--wide {
+  grid-column: 1 / -1;
+}
+.re-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  line-height: 1;
+}
+.re-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+.re-value code {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--surface-muted);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* Edit form inside modal */
+#route-executor-view-modal-inner #route-executor-edit-form .form-section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-hair);
+}
+#route-executor-view-modal-inner #route-executor-edit-form .form-section:last-child {
+  border-bottom: none;
+}
+
+@media (max-width:1280px) {
+  :root { --sidebar-w:204px; }
+  .app { min-width:1024px; }
+  .content { padding-left:10px; padding-right:10px; }
+  .command-center { grid-template-columns:minmax(0,1fr) 280px; }
+}
+
+@media (max-width:700px) {
+  .app,
+  .app-shell { min-width:0; grid-template-columns:1fr; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after {
+    scroll-behavior:auto !important;
+    transition-duration:.01ms !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+  }
+}
+
+/* ================================================================
+   Dashboard cards (finance dashboard compact grid)
+   ================================================================ */
+.dashboard-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:12px;
+  margin-bottom:1rem;
+}
+.dashboard-card {
+  display:block;
+  padding:14px 16px;
+  background:var(--surface-strong);
+  border:1px solid var(--line-hair);
+  border-radius:2px;
+  text-decoration:none;
+  transition:box-shadow .12s ease,border-color .12s ease;
+}
+.dashboard-card:hover {
+  border-color:var(--line-soft);
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.dashboard-card-label {
+  font-size:.75rem;
+  font-weight:500;
+  color:var(--text-faint);
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  margin-bottom:6px;
+}
+.dashboard-card-value {
+  font-size:1.25rem;
+  font-weight:600;
+  color:var(--text-main);
+  line-height:1.3;
+}
+.dashboard-card-meta {
+  font-size:.75rem;
+  color:var(--text-faint);
+  margin-top:4px;
+  line-height:1.4;
+}
+.dashboard-card--accent {
+  border-left:3px solid var(--accent);
+}
+.dashboard-card--danger {
+  border-left:3px solid var(--danger);
+}
+.dashboard-card--danger .dashboard-card-value {
+  color:var(--danger);
+}
+.dashboard-card--outflow {
+  border-left:3px solid var(--warning);
+}
+.dashboard-card--ok {
+  border-left:3px solid var(--success);
 }

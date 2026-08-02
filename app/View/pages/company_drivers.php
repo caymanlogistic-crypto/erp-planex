@@ -46,10 +46,12 @@ require_once base_path('app/View/components/view_formatters.php');
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only">
-    <div class="empty-state">
-        <p class="empty-title">Нет доступных водителей</p>
-        <p class="empty-desc">У вас пока нет созданных водителей, либо руководитель ещё не выдал вам доступ к существующим.</p>
+<div class="panel">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Нет доступных водителей</p>
+            <p class="empty-desc">У вас пока нет созданных водителей, либо руководитель ещё не выдал вам доступ к существующим.</p>
+        </div>
     </div>
 </div>
 

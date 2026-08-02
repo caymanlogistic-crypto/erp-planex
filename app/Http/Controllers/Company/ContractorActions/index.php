@@ -34,11 +34,11 @@ try {
     }
 
     $pageContext = 'Перевозчики › Компания: ' . $company['name'];
-    $topbarCrumbs = [
-        ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
-        ['label' => 'Подрядчики', 'url' => null],
-        ['label' => 'Список перевозчиков', 'url' => null],
-    ];
+    //$topbarCrumbs = [
+    //    ['label' => mb_strtoupper($company['name']), 'url' => '/company/dashboard'],
+    //    ['label' => 'Подрядчики', 'url' => null],
+    //    ['label' => 'Список перевозчиков', 'url' => null],
+    //];
 
     if ($company['status'] !== 'active') {
         $contractors = [];

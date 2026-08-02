@@ -1,3 +1,7 @@
+<?php
+$routeExecutorCreateButton = '<button type="button" class="btn btn-primary" data-route-executor-create-btn>Создать исполнителя рейса</button>';
+?>
+
 <?php if ($company === null): ?>
 
 <div class="notice warn">
@@ -39,7 +43,7 @@
         <div class="page-summary"><span>Исполнитель рейса: подрядчик + водитель + транспорт</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать исполнителя рейса</a>
+        <?= $routeExecutorCreateButton ?>
     </div>
 </div>
 
@@ -54,13 +58,11 @@
     <div class="empty-state">
         <p class="empty-title">Исполнители рейса ещё не созданы или пока не доступны.</p>
         <p class="empty-desc">Можно создать исполнителя рейса из доступных вам подрядчиков, водителей и транспорта. Если нужных данных нет в списках, запросите доступ у руководителя.</p>
-        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать исполнителя рейса</a>
     </div>
     <?php else: ?>
     <div class="empty-state">
         <p class="empty-title">Исполнители рейса ещё не созданы.</p>
         <p class="empty-desc">Создайте исполнителя рейса: выберите подрядчика, водителя и транспорт — система автоматически создаст связку.</p>
-        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать первого исполнителя рейса</a>
     </div>
     <?php endif; ?>
 </div>
@@ -73,11 +75,11 @@
         <div class="page-summary"><span>Исполнитель рейса: подрядчик + водитель + транспорт</span></div>
     </div>
     <div class="page-head-actions">
-        <a href="<?= app_url('/company/route-executors/create') ?>" class="btn btn-primary">Создать исполнителя рейса</a>
+        <?= $routeExecutorCreateButton ?>
     </div>
 </div>
 
-<div class="table-card table-card--standard" data-erp-grid>
+<div class="table-card table-card--standard" data-erp-grid data-route-executors-grid>
     <div class="table-toolbar">
         <div class="found-label">Найдено: <b><?= count($executors) ?></b> исполнителей</div>
         <div class="toolbar-right">
@@ -102,15 +104,12 @@
                     <th>Госномер</th>
                     <th>Ответственный логист</th>
                     <th>Статус</th>
-                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($executors as $e): ?>
-                <tr data-erp-sort-date="<?= $e['crew_id'] ?>">
-                    <td>
-                        <a href="/company/contractors/<?= $e['contractor_id'] ?>" class="cell-link"><?= e($e['contractor_name'] ?? '—') ?></a>
-                    </td>
+                <tr data-route-executor-id="<?= (int) $e['crew_id'] ?>" data-erp-sort-date="<?= (int) $e['crew_id'] ?>">
+                    <td><?= e($e['contractor_name'] ?? '—') ?></td>
                     <td><?= e($e['driver_name'] ?? '—') ?></td>
                     <td class="col-mono"><?= e($e['driver_phone'] ?? '—') ?></td>
                     <td class="cell-double">
@@ -125,11 +124,6 @@
                             <?= $e['crew_status'] === 'active' ? 'Активен' : 'Неактивен' ?>
                         </span>
                     </td>
-                    <td class="col-actions">
-                        <div class="row-actions">
-                            <a href="/company/route-executors/<?= $e['crew_id'] ?>" class="btn btn-toolbar">Открыть</a>
-                        </div>
-                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -140,4 +134,37 @@
     </div>
 </div>
 
+<?php endif; ?>
+
+<?php if ($company !== null && ($company['status'] ?? '') === 'active' && !isset($dbError)): ?>
+<div class="modal-overlay" id="route-executor-create-modal" data-close-on-overlay="0" data-close-on-escape="0">
+  <div class="modal route-executor-modal-inner" id="route-executor-create-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Создать исполнителя рейса</span>
+      <button type="button" class="modal-close" data-route-executor-create-close>×</button>
+    </div>
+    <div class="modal-body" id="route-executor-create-modal-content">
+      <div class="driver-modal-loading">Загрузка...</div>
+    </div>
+    <div class="modal-foot is-spaced" id="route-executor-create-modal-foot" style="display:none">
+      <div class="modal-required-note"><span class="req">*</span> — обязательные поля</div>
+      <div class="modal-foot-actions">
+        <button type="button" class="btn btn-ghost" data-route-executor-create-close>Отмена</button>
+        <button type="submit" form="route-executor-create-form" class="btn btn-primary">Создать исполнителя рейса</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="route-executor-view-modal" data-close-on-overlay="0" data-close-on-escape="0">
+  <div class="modal route-executor-modal-inner" id="route-executor-view-modal-inner">
+    <div class="modal-head">
+      <span class="modal-title">Исполнитель рейса</span>
+      <button type="button" class="modal-close" data-route-executor-view-close>×</button>
+    </div>
+    <div class="modal-body" id="route-executor-view-modal-content">
+      <div class="driver-modal-loading">Загрузка...</div>
+    </div>
+  </div>
+</div>
 <?php endif; ?>

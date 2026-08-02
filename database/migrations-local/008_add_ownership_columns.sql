@@ -41,11 +41,16 @@ PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
 
--- vehicles
+-- vehicles / vehicle_units (supports both pre- and post-rename schemas)
+SET @vehicleTable = IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = 'vehicle_units') > 0,
+    'vehicle_units',
+    'vehicles'
+);
 SET @preparedStatement = (SELECT IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = 'vehicles' AND COLUMN_NAME = 'created_by_user_id') > 0,
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @vehicleTable AND COLUMN_NAME = 'created_by_user_id') > 0,
     'SELECT 1 AS already_exists',
-    'ALTER TABLE `vehicles` ADD COLUMN `created_by_user_id` INT UNSIGNED DEFAULT NULL, ADD COLUMN `created_by_role` VARCHAR(20) DEFAULT NULL'
+    CONCAT('ALTER TABLE `', @vehicleTable, '` ADD COLUMN `created_by_user_id` INT UNSIGNED DEFAULT NULL, ADD COLUMN `created_by_role` VARCHAR(20) DEFAULT NULL')
 ));
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;

@@ -2,8 +2,8 @@
 
 <div class="page-head">
     <div class="page-head-left">
-        <span class="page-eyebrow">КОМПАНИЯ<?= !empty($company['name']) ? ' / ' . e($company['name']) : '' ?></span>
-        <span class="page-title">Загрузка документа</span>
+        <h1 class="page-title">Загрузка документа</h1>
+        <div class="page-summary"><span>Компания<?= !empty($company['name']) ? ' / ' . e($company['name']) : '' ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="<?= app_url('/company/dashboard') ?>" class="btn btn-ghost">← На главную</a>
@@ -25,8 +25,8 @@
 <?php elseif ($entityTypeError): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Загрузить документ</h1>
+    <div class="page-head-left">
+        <h1 class="page-title">Загрузить документ</h1>
     </div>
 </div>
 <div class="notice warn">
@@ -36,8 +36,8 @@
 <?php elseif ($company === null): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Загрузить документ</h1>
+    <div class="page-head-left">
+        <h1 class="page-title">Загрузить документ</h1>
     </div>
 </div>
 <div class="notice warn">
@@ -47,9 +47,9 @@
 <?php elseif ($company['status'] !== 'active'): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Загрузить документ</h1>
-        <p class="text-muted">Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Загрузить документ</h1>
+        <div class="page-summary"><span>Компания: <?= e($company['name']) ?></span></div>
     </div>
 </div>
 <div class="notice warn">
@@ -59,8 +59,8 @@
 <?php elseif (isset($dbError)): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Загрузить документ</h1>
+    <div class="page-head-left">
+        <h1 class="page-title">Загрузить документ</h1>
     </div>
 </div>
 <div class="notice warn">
@@ -70,8 +70,8 @@
 <?php elseif ($entityNotFound): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Загрузить документ</h1>
+    <div class="page-head-left">
+        <h1 class="page-title">Загрузить документ</h1>
     </div>
 </div>
 <div class="notice warn">
@@ -81,9 +81,9 @@
 <?php elseif ($success): ?>
 
 <div class="page-head">
-    <div>
-        <h1>Документ загружен</h1>
-        <p class="text-muted"><?= e($entityLabel) ?> &laquo;<?= e($entityName) ?>&raquo; &bull; Компания: <?= e($company['name']) ?></p>
+    <div class="page-head-left">
+        <h1 class="page-title">Документ загружен</h1>
+        <div class="page-summary"><span><?= e($entityLabel) ?> &laquo;<?= e($entityName) ?>&raquo; &bull; Компания: <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
         <a href="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-primary">&larr; К списку документов</a>
@@ -141,10 +141,12 @@
 <?php else: ?>
 
 <div class="page-head">
-    <div>
+    <div class="page-head-left">
+        <h1 class="page-title"><?= $replaceDocId > 0 ? 'Заменить документ' : 'Загрузить документ' ?></h1>
+        <div class="page-summary"><span><?= e($entityLabel) ?> &laquo;<?= e($entityName) ?>&raquo; &bull; Компания: <?= e($company['name']) ?></span></div>
+    </div>
+    <div class="page-head-actions">
         <a href="/company/documents?entity_type=<?= e($entityType) ?>&entity_id=<?= $entityId ?>" class="btn btn-ghost back-action">&larr; Назад к документам</a>
-        <h1><?= $replaceDocId > 0 ? 'Заменить документ' : 'Загрузить документ' ?></h1>
-        <p class="text-muted"><?= e($entityLabel) ?> &laquo;<?= e($entityName) ?>&raquo; &bull; Компания: <?= e($company['name']) ?></p>
     </div>
 </div>
 
@@ -188,7 +190,7 @@
                     </option>
                     <?php endforeach; ?>
                 </select>
-                <input type="text" name="document_type" id="document_type_text" class="field-input" style="margin-top:0.5rem;"
+                <input type="text" name="document_type" id="document_type_text" class="field-input input-offset"
                        value="<?= e($old['document_type'] ?? $replacedDoc['document_type'] ?? '') ?>"
                        placeholder="Или введите название типа вручную">
                 <div class="field-msg">Выберите тип из списка или введите свой. <a href="<?= app_url('/company/document-types/create') ?>" target="_blank">Создать новый тип</a></div>

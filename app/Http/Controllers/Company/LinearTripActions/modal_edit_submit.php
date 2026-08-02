@@ -40,6 +40,7 @@ try {
         'user_id' => (int) ($_SESSION['user_id'] ?? 0),
         'role_code' => (string) ($_SESSION['role_code'] ?? ''),
     ];
+    $isFinanceRealm = ($sessionUser['role_code'] ?? '') === 'company_owner';
     if (!LinearRouteService::canEditRoute($route, $localPdo, $sessionUser)) {
         http_response_code(403);
         echo '<div class="notice warn">У вас нет права редактировать эту запись.</div>';
@@ -71,12 +72,15 @@ try {
             }
 
             $amountRaw = trim((string) ($row['amount'] ?? ''));
-            $paymentType = trim((string) ($row['payment_type'] ?? ''));
-            $paymentDueType = trim((string) ($row['payment_due_type'] ?? ''));
-            $paymentDueDaysRaw = trim((string) ($row['payment_due_days'] ?? ''));
-            $paymentDueDaysKind = trim((string) ($row['payment_due_days_kind'] ?? ''));
+            $paymentMethod = trim((string) ($row['payment_method'] ?? ''));
+            $vatRateRaw = trim((string) ($row['vat_rate'] ?? ''));
+            $conditionType = trim((string) ($row['condition_type'] ?? ''));
+            $daysCountRaw = trim((string) ($row['days_count'] ?? ''));
+            $daysKind = trim((string) ($row['days_kind'] ?? ''));
+            $specificDueDateRaw = trim((string) ($row['specific_due_date'] ?? ''));
+            $conditionComment = trim((string) ($row['condition_comment'] ?? ''));
 
-            $isEmpty = $amountRaw === '' && $paymentType === '' && $paymentDueType === '' && $paymentDueDaysRaw === '' && $paymentDueDaysKind === '';
+            $isEmpty = $amountRaw === '' && $paymentMethod === '' && $conditionType === '' && $daysCountRaw === '' && $daysKind === '' && $specificDueDateRaw === '' && $conditionComment === '';
             if ($isEmpty) {
                 continue;
             }
@@ -85,35 +89,63 @@ try {
             if ($amount === null) {
                 $errors[$scopeKey . '.' . $index . '.amount'] = 'Укажите сумму целым числом для блока «' . $scopeLabel . '».';
             }
-            if (!in_array($paymentType, LinearRouteService::PAYMENT_TYPES, true)) {
-                $errors[$scopeKey . '.' . $index . '.payment_type'] = 'Выберите корректный тип оплаты для блока «' . $scopeLabel . '».';
-            }
-            if (!in_array($paymentDueType, LinearRouteService::PAYMENT_DUE_TYPES, true)) {
-                $errors[$scopeKey . '.' . $index . '.payment_due_type'] = 'Выберите корректный срок оплаты для блока «' . $scopeLabel . '».';
+
+            if (!in_array($paymentMethod, ['cashless', 'cash', ''], true)) {
+                $errors[$scopeKey . '.' . $index . '.payment_method'] = 'Выберите способ оплаты для блока «' . $scopeLabel . '».';
             }
 
-            $paymentDueDays = null;
-            if (LinearRouteService::paymentDueTypeRequiresDays($paymentDueType)) {
-                if ($paymentDueDaysRaw === '' || !ctype_digit($paymentDueDaysRaw) || (int) $paymentDueDaysRaw <= 0) {
-                    $errors[$scopeKey . '.' . $index . '.payment_due_days'] = 'Укажите количество дней целым положительным числом для блока «' . $scopeLabel . '».';
+            $vatRate = null;
+            if ($vatRateRaw !== '' && $vatRateRaw !== null) {
+                if (in_array($vatRateRaw, ['0', '5', '7', '20', '22'], true)) {
+                    $vatRate = $vatRateRaw;
                 } else {
-                    $paymentDueDays = (int) $paymentDueDaysRaw;
+                    $errors[$scopeKey . '.' . $index . '.vat_rate'] = 'Выберите ставку НДС для блока «' . $scopeLabel . '».';
+                }
+            }
+
+            $paymentType = LinearRouteService::legacyPaymentTypeFromMethodAndVat(
+                $paymentMethod ?: 'cashless',
+                $vatRate !== null ? (string) $vatRate : null
+            );
+
+            if (!in_array($conditionType, LinearRouteService::CONDITION_TYPES, true)) {
+                $errors[$scopeKey . '.' . $index . '.condition_type'] = 'Выберите корректный срок оплаты для блока «' . $scopeLabel . '».';
+            }
+
+            $daysCount = null;
+            if (LinearRouteService::conditionTypeRequiresDays($conditionType)) {
+                if ($daysCountRaw === '' || !ctype_digit($daysCountRaw) || (int) $daysCountRaw <= 0) {
+                    $errors[$scopeKey . '.' . $index . '.days_count'] = 'Укажите количество дней целым положительным числом для блока «' . $scopeLabel . '».';
+                } else {
+                    $daysCount = (int) $daysCountRaw;
                 }
 
-                if (!array_key_exists($paymentDueDaysKind, LinearRouteService::PAYMENT_DUE_DAYS_KINDS)) {
-                    $errors[$scopeKey . '.' . $index . '.payment_due_days_kind'] = 'Выберите тип дней для блока «' . $scopeLabel . '».';
+                if (!array_key_exists($daysKind, LinearRouteService::PAYMENT_DUE_DAYS_KINDS)) {
+                    $errors[$scopeKey . '.' . $index . '.days_kind'] = 'Выберите тип дней для блока «' . $scopeLabel . '».';
                 }
             } else {
-                $paymentDueDays = null;
-                $paymentDueDaysKind = null;
+                $daysCount = null;
+                $daysKind = null;
+            }
+
+            $specificDueDate = null;
+            if (LinearRouteService::conditionTypeRequiresSpecificDate($conditionType)) {
+                $specificDueDate = LinearRouteService::normalizeDate($specificDueDateRaw);
+                if ($specificDueDate === null) {
+                    $errors[$scopeKey . '.' . $index . '.specific_due_date'] = 'Укажите конкретную дату для блока «' . $scopeLabel . '».';
+                }
             }
 
             $result[] = [
                 'amount' => $amount,
                 'payment_type' => $paymentType,
-                'payment_due_type' => $paymentDueType,
-                'payment_due_days' => $paymentDueDays,
-                'payment_due_days_kind' => $paymentDueDaysKind,
+                'payment_method' => $paymentMethod ?: 'cashless',
+                'vat_rate' => $vatRate,
+                'condition_type' => $conditionType,
+                'days_count' => $daysCount,
+                'days_kind' => $daysKind,
+                'specific_due_date' => $specificDueDate,
+                'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
             ];
         }
 
@@ -144,62 +176,68 @@ try {
     if ($actualLoadingDate !== null && $actualUnloadingDate !== null && $actualUnloadingDate < $actualLoadingDate) {
         $validationErrors['actual_unloading_date'] = 'Фактическая выгрузка не может быть раньше фактической загрузки.';
     }
-
-    $customerPayments = $parsePaymentRows((array) ($_POST['customer_payments'] ?? []), 'Заказчик', 'customer_payments', $validationErrors);
-    $carrierPayments = $parsePaymentRows((array) ($_POST['carrier_payments'] ?? []), 'Перевозчик', 'carrier_payments', $validationErrors);
-    if (empty($customerPayments)) {
-        $validationErrors['customer_payments'] = 'Добавьте хотя бы одну оплату для заказчика.';
-    }
-    if (empty($carrierPayments)) {
-        $validationErrors['carrier_payments'] = 'Добавьте хотя бы одну оплату для перевозчика.';
-    }
-
+    $customerPayments = [];
+    $carrierPayments = [];
     $principalRows = [];
     $principalPaymentMap = [];
-    if ($routeType === LinearRouteService::ROUTE_TYPE_AGENCY) {
-        foreach (array_values((array) ($_POST['principal_rows'] ?? [])) as $rowIndex => $row) {
-            if (!is_array($row)) {
-                continue;
-            }
 
-            $entityKey = trim((string) ($row['entity_key'] ?? ''));
-            $payments = $parsePaymentRows((array) ($row['payments'] ?? []), 'Принципал', 'principal_rows.' . $rowIndex . '.payments', $validationErrors);
-            if ($entityKey === '' && empty($payments)) {
-                continue;
-            }
+    if ($isFinanceRealm) {
+        $customerPayments = $parsePaymentRows((array) ($_POST['customer_payments'] ?? []), 'Заказчик', 'customer_payments', $validationErrors);
+        $carrierPayments = $parsePaymentRows((array) ($_POST['carrier_payments'] ?? []), 'Перевозчик', 'carrier_payments', $validationErrors);
 
-            $principal = LinearRouteService::parsePrincipalEntityKey($entityKey);
-            if ($principal === null) {
-                $validationErrors['principal_rows.' . $rowIndex . '.entity_key'] = 'Выберите принципала.';
-                continue;
-            }
-
-            $contractSide = LinearRouteService::principalContractSide(
-                $principal['principal_type'],
-                (int) $principal['principal_id'],
-                $clientId,
-                $carrierId
-            );
-            if ($contractSide === null) {
-                $validationErrors['principal_rows.' . $rowIndex . '.entity_key'] = 'Принципалом может быть только выбранный заказчик или выбранный перевозчик.';
-                continue;
-            }
-            if (empty($payments)) {
-                $validationErrors['principal_rows.' . $rowIndex . '.payments'] = 'Добавьте хотя бы одну оплату для принципала.';
-            }
-
-            $normalizedKey = LinearRouteService::principalEntityKey($principal['principal_type'], (int) $principal['principal_id']);
-            if (isset($principalPaymentMap[$normalizedKey])) {
-                $validationErrors['principal_rows.' . $rowIndex . '.entity_key'] = 'Такой принципал уже добавлен.';
-                continue;
-            }
-
-            $principalRows[] = $principal;
-            $principalPaymentMap[$normalizedKey] = $payments;
+        if (empty($customerPayments)) {
+            $validationErrors['customer_payments'] = 'Добавьте хотя бы одну оплату для заказчика.';
+        }
+        if (empty($carrierPayments)) {
+            $validationErrors['carrier_payments'] = 'Добавьте хотя бы одну оплату для перевозчика.';
         }
 
-        if (empty($principalRows)) {
-            $validationErrors['principal_rows'] = 'Добавьте хотя бы одного принципала.';
+        if ($routeType === LinearRouteService::ROUTE_TYPE_AGENCY) {
+            foreach (array_values((array) ($_POST['principal_rows'] ?? [])) as $rowIndex => $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $entityKey = trim((string) ($row['entity_key'] ?? ''));
+                $payments = $parsePaymentRows((array) ($row['payments'] ?? []), 'Принципал', 'principal_rows.' . $rowIndex . '.payments', $validationErrors);
+                if ($entityKey === '' && empty($payments)) {
+                    continue;
+                }
+
+                $principal = LinearRouteService::parsePrincipalEntityKey($entityKey);
+                if ($principal === null) {
+                    $validationErrors['principal_rows.' . $rowIndex . '.entity_key'] = 'Выберите принципала.';
+                    continue;
+                }
+
+                $contractSide = LinearRouteService::principalContractSide(
+                    $principal['principal_type'],
+                    (int) $principal['principal_id'],
+                    $clientId,
+                    $carrierId
+                );
+                if ($contractSide === null) {
+                    $validationErrors['principal_rows.' . $rowIndex . '.entity_key'] = 'Принципалом может быть только выбранный заказчик или выбранный перевозчик.';
+                    continue;
+                }
+
+                if (empty($payments)) {
+                    $validationErrors['principal_rows.' . $rowIndex . '.payments'] = 'Добавьте хотя бы одну оплату для принципала.';
+                }
+
+                $normalizedKey = LinearRouteService::principalEntityKey($principal['principal_type'], (int) $principal['principal_id']);
+                if (isset($principalPaymentMap[$normalizedKey])) {
+                    $validationErrors['principal_rows.' . $rowIndex . '.entity_key'] = 'Такой принципал уже добавлен.';
+                    continue;
+                }
+
+                $principalRows[] = $principal;
+                $principalPaymentMap[$normalizedKey] = $payments;
+            }
+
+            if (empty($principalRows)) {
+                $validationErrors['principal_rows'] = 'Добавьте хотя бы одного принципала.';
+            }
         }
     }
 
@@ -457,50 +495,69 @@ try {
         ':id' => (int) $id,
     ]);
 
-    $storedPrincipals = [];
-    if ($routeType === LinearRouteService::ROUTE_TYPE_AGENCY) {
-        $storedPrincipals = LinearRouteService::storeRoutePrincipals(
+    if ($isFinanceRealm) {
+        $storedPrincipals = [];
+        if ($routeType === LinearRouteService::ROUTE_TYPE_AGENCY) {
+            $storedPrincipals = LinearRouteService::storeRoutePrincipals(
+                $localPdo,
+                (int) $id,
+                $principalRows,
+                $clientId,
+                $carrierId,
+                $userId,
+                $roleCode
+            );
+            LinearRouteService::syncLegacyRoutePrincipalFields(
+                $localPdo,
+                (int) $id,
+                $storedPrincipals,
+                $clientId,
+                $carrierId,
+                $userId,
+                $roleCode
+            );
+        } else {
+            LinearRouteService::storeRoutePrincipals(
+                $localPdo,
+                (int) $id,
+                [],
+                $clientId,
+                $carrierId,
+                $userId,
+                $roleCode
+            );
+        }
+
+        $oldPayments = LinearRouteService::fetchRoutePayments($localPdo, (int) $id);
+
+        LinearRouteService::storeRoutePayments(
             $localPdo,
             (int) $id,
-            $principalRows,
-            $clientId,
-            $carrierId,
-            $userId,
-            $roleCode
-        );
-        LinearRouteService::syncLegacyRoutePrincipalFields(
-            $localPdo,
-            (int) $id,
+            $customerPayments,
+            $carrierPayments,
+            $principalPaymentMap,
             $storedPrincipals,
-            $clientId,
-            $carrierId,
             $userId,
-            $roleCode
+            $roleCode,
+            [
+                'planned_loading_date' => $plannedLoadingDate,
+                'planned_unloading_date' => $plannedUnloadingDate,
+            ]
         );
-    } else {
-        LinearRouteService::storeRoutePrincipals(
+        $syncLegacyTerms($localPdo, (int) $id, $customerPayments, $carrierPayments, $principalPaymentMap, $userId, $roleCode);
+        LinearRouteService::reconcileLegacyPaymentRows($localPdo, (int) $id);
+
+        LinearRouteService::logFinanceAudit(
             $localPdo,
+            'linear_route',
             (int) $id,
-            [],
-            $clientId,
-            $carrierId,
+            'route_payments_update',
+            ['payments' => $oldPayments],
+            ['payments' => LinearRouteService::fetchRoutePayments($localPdo, (int) $id)],
             $userId,
             $roleCode
         );
     }
-
-    LinearRouteService::storeRoutePayments(
-        $localPdo,
-        (int) $id,
-        $customerPayments,
-        $carrierPayments,
-        $principalPaymentMap,
-        $storedPrincipals,
-        $userId,
-        $roleCode
-    );
-    $syncLegacyTerms($localPdo, (int) $id, $customerPayments, $carrierPayments, $principalPaymentMap, $userId, $roleCode);
-    LinearRouteService::reconcileLegacyPaymentRows($localPdo, (int) $id);
 
     $ensureDocumentSchema($localPdo);
 
@@ -569,7 +626,7 @@ try {
 
     $localPdo->commit();
 
-    $route = LinearRouteService::fetchRouteById($localPdo, (int) $id);
+    $route = LinearRouteService::fetchRouteById($localPdo, (int) $id, $isFinanceRealm);
     $docsByCode = LinearRouteService::fetchRouteDocuments($localPdo, (int) $id);
 
     $canEdit = LinearRouteService::canEditRoute($route, $localPdo, $sessionUser);

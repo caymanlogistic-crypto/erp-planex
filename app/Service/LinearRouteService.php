@@ -19,11 +19,35 @@ final class LinearRouteService
         'НДС 22%',
     ];
 
+    public const PAYMENT_METHODS = [
+        'cashless' => 'Безнал',
+        'cash' => 'Нал',
+    ];
+
+    public const VAT_RATES = [
+        '' => 'Без НДС',
+        '0' => 'НДС 0%',
+        '5' => 'НДС 5%',
+        '7' => 'НДС 7%',
+        '20' => 'НДС 20%',
+        '22' => 'НДС 22%',
+    ];
+
     public const PAYMENT_DUE_TYPES = [
         'Предоплата на загрузке',
         'После загрузки',
         'До выгрузки',
         'После выгрузки',
+    ];
+
+    public const CONDITION_TYPES = [
+        DateCalculationService::CONDITION_PREPAYMENT,
+        DateCalculationService::CONDITION_START_DAY,
+        DateCalculationService::CONDITION_AFTER_START,
+        DateCalculationService::CONDITION_END_DAY,
+        DateCalculationService::CONDITION_AFTER_END,
+        DateCalculationService::CONDITION_AFTER_DOCUMENTS,
+        DateCalculationService::CONDITION_SPECIFIC_DATE,
     ];
 
     public const PAYMENT_DUE_DAYS_KINDS = [
@@ -56,11 +80,19 @@ final class LinearRouteService
             return null;
         }
 
-        if (preg_match('/^\d+$/', $value) !== 1) {
+        $clean = str_replace(',', '.', $value);
+        if (!preg_match('/^\d+(\.\d{1,2})?$/', $clean)) {
             return null;
         }
 
-        return number_format((float) $value, 2, '.', '');
+        if (strpos($clean, '.') === false) {
+            return $clean . '.00';
+        }
+        $parts = explode('.', $clean);
+        if (strlen($parts[1]) === 1) {
+            return $clean . '0';
+        }
+        return $clean;
     }
 
     public static function parseDecimal(string $value): ?string
@@ -68,13 +100,26 @@ final class LinearRouteService
         return self::parseAmount($value);
     }
 
-    public static function formatAmount(mixed $value): string
+    public static function formatAmount(?string $value, int $decimals = 2): string
     {
-        if ($value === null || $value === '') {
-            return '—';
+        if ($value === null || $value === '' || $value === '0' || $value === '0.00') {
+            return $decimals === 0 ? '0' : '0.00';
         }
 
-        return number_format((float) $value, 0, '.', ' ');
+        $clean = str_replace([' ', ','], ['', '.'], trim($value));
+        if (!preg_match('/^\d+(\.\d{1,2})?$/', $clean)) {
+            return $decimals === 0 ? '0' : '0.00';
+        }
+
+        $parts = explode('.', $clean);
+        $intPart = $parts[0];
+        $decPart = isset($parts[1]) ? str_pad($parts[1], 2, '0') : '00';
+        if ($decimals === 0) {
+            return $intPart;
+        }
+
+        $intPart = preg_replace('/(\d)(?=(\d{3})+(?!\d))/', '$1 ', $intPart);
+        return $intPart . ',' . substr($decPart, 0, $decimals);
     }
 
     public static function shouldShowPlannedUnloading(?string $plannedLoadingDate, ?string $plannedUnloadingDate): bool
@@ -117,6 +162,285 @@ final class LinearRouteService
         return self::PARTY_LABELS[$partyRole] ?? $partyRole;
     }
 
+    public static function legacyPaymentTypeFromMethodAndVat(?string $paymentMethod, ?string $vatRate): string
+    {
+        if ($paymentMethod === 'cash') {
+            return 'Нал';
+        }
+
+        $rate = trim((string) $vatRate);
+        if ($rate === '') {
+            return 'Без НДС';
+        }
+
+        if (in_array($rate, ['0', '5', '7', '20', '22'], true)) {
+            return 'НДС ' . ((int) $rate) . '%';
+        }
+
+        return 'Без НДС';
+    }
+
+    public static function parsePaymentMethodFromLegacyType(string $paymentType): string
+    {
+        $paymentType = trim($paymentType);
+        if ($paymentType === 'Нал') {
+            return 'cash';
+        }
+
+        return 'cashless';
+    }
+
+    public static function parseVatRateFromLegacyType(string $paymentType): ?string
+    {
+        $paymentType = trim($paymentType);
+        if ($paymentType === 'Нал' || $paymentType === 'Без НДС' || $paymentType === '') {
+            return null;
+        }
+
+        if (preg_match('/^НДС\s+(\d+(?:\.\d+)?)%$/', $paymentType, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
+    public static function paymentMethodLabel(?string $paymentMethod): string
+    {
+        return self::PAYMENT_METHODS[$paymentMethod ?? ''] ?? '—';
+    }
+
+    public static function vatRateLabel(?string $vatRate): string
+    {
+        $rate = trim((string) $vatRate);
+        if ($rate === '') {
+            return 'Без НДС';
+        }
+
+        if (in_array($rate, ['0', '5', '7', '20', '22'], true)) {
+            return 'НДС ' . ((int) $rate) . '%';
+        }
+
+        return 'Без НДС';
+    }
+
+    public static function computeCalculatedDueDate(
+        ?string $paymentDueType,
+        ?int $paymentDueDays,
+        ?string $plannedLoadingDate,
+        ?string $plannedUnloadingDate
+    ): ?string {
+        $dueType = trim((string) $paymentDueType);
+        $baseDate = null;
+
+        if ($dueType === 'Предоплата на загрузке') {
+            $baseDate = $plannedLoadingDate;
+        } elseif ($dueType === 'После загрузки') {
+            $baseDate = $plannedLoadingDate;
+        } elseif ($dueType === 'До выгрузки') {
+            $baseDate = $plannedUnloadingDate;
+        } elseif ($dueType === 'После выгрузки') {
+            $baseDate = $plannedUnloadingDate;
+        }
+
+        if ($baseDate === null) {
+            return null;
+        }
+
+        $days = $paymentDueDays ?? 0;
+        if ($days === 0) {
+            return $baseDate;
+        }
+
+        $ts = strtotime($baseDate);
+        if ($ts === false) {
+            return null;
+        }
+
+        if ($dueType === 'Предоплата на загрузке' || $dueType === 'До выгрузки') {
+            $ts = strtotime("-{$days} days", $ts);
+        } else {
+            $ts = strtotime("+{$days} days", $ts);
+        }
+
+        return $ts !== false ? date('Y-m-d', $ts) : null;
+    }
+
+    public static function computeCalculatedDueDateNew(
+        ?string $conditionType,
+        ?int $daysCount,
+        string $daysKind,
+        ?string $plannedStartDate,
+        ?string $plannedEndDate,
+        ?string $actualStartDate,
+        ?string $actualEndDate,
+        ?string $closingDocumentsReceivedDate,
+        ?string $specificDueDate
+    ): ?string {
+        $forecast = DateCalculationService::calculateForecastDueDate(
+            $conditionType,
+            $plannedStartDate,
+            $plannedEndDate,
+            $daysCount,
+            $daysKind,
+            $specificDueDate
+        );
+
+        $final = DateCalculationService::calculateFinalDueDate(
+            $conditionType,
+            $actualStartDate,
+            $actualEndDate,
+            $closingDocumentsReceivedDate,
+            $daysCount,
+            $daysKind,
+            $specificDueDate
+        );
+
+        return $final ?? $forecast;
+    }
+
+    public static function computeForecastDueDate(
+        ?string $conditionType,
+        ?int $daysCount,
+        string $daysKind,
+        ?string $plannedStartDate,
+        ?string $plannedEndDate,
+        ?string $specificDueDate
+    ): ?string {
+        return DateCalculationService::calculateForecastDueDate(
+            $conditionType,
+            $plannedStartDate,
+            $plannedEndDate,
+            $daysCount,
+            $daysKind,
+            $specificDueDate
+        );
+    }
+
+    public static function computePaymentStatus(
+        ?string $amount,
+        ?string $paidAmount,
+        ?string $calculatedDueDate
+    ): string {
+        $amountCents = self::amountToCents($amount ?? '0');
+        $paidCents = self::amountToCents($paidAmount ?? '0');
+
+        if ($amountCents > 0 && $paidCents >= $amountCents) {
+            return 'paid';
+        }
+
+        if ($paidCents > 0 && $paidCents < $amountCents) {
+            $today = date('Y-m-d');
+            if ($calculatedDueDate !== null && $calculatedDueDate < $today) {
+                return 'overdue';
+            }
+            return 'partial';
+        }
+
+        $today = date('Y-m-d');
+        if ($calculatedDueDate !== null && $calculatedDueDate < $today) {
+            return 'overdue';
+        }
+
+        return 'unpaid';
+    }
+
+    public static function computePaymentStatusNew(
+        ?string $amount,
+        ?string $paidAmount,
+        ?string $calculatedDueDate,
+        ?string $cancelledAt = null,
+        ?string $closingDocumentsReceivedDate = null,
+        ?string $conditionType = null
+    ): string {
+        return RoutePaymentStatusService::computeStatus(
+            $amount,
+            $paidAmount,
+            $calculatedDueDate,
+            $cancelledAt,
+            $closingDocumentsReceivedDate,
+            $conditionType
+        );
+    }
+
+    private static function amountToCents(string $value): int
+    {
+        if ($value === '' || $value === '0' || $value === '0.00') {
+            return 0;
+        }
+        $parts = explode('.', $value, 2);
+        $intPart = ltrim($parts[0], '0') ?: '0';
+        $decPart = isset($parts[1]) ? str_pad(substr($parts[1] . '00', 0, 2), 2, '0') : '00';
+        return (int) $intPart * 100 + (int) $decPart;
+    }
+
+    public static function paymentStatusLabel(string $status): string
+    {
+        $labels = [
+            'paid' => 'Оплачен',
+            'partial' => 'Частично',
+            'overdue' => 'Просрочен',
+            'unpaid' => 'Не оплачен',
+            RoutePaymentStatusService::STATUS_PAID => 'Оплачен',
+            RoutePaymentStatusService::STATUS_PARTIALLY_PAID => 'Частично оплачен',
+            RoutePaymentStatusService::STATUS_OVERDUE => 'Просрочен',
+            RoutePaymentStatusService::STATUS_PLANNED => 'Запланирован',
+            RoutePaymentStatusService::STATUS_WAITING_EVENT => 'Ожидается событие',
+            RoutePaymentStatusService::STATUS_CANCELLED => 'Отменён',
+        ];
+
+        return $labels[$status] ?? $status;
+    }
+
+    public static function paymentStatusBadgeClass(string $status): string
+    {
+        $classes = [
+            'paid' => 'badge badge-ok',
+            'partial' => 'badge badge-warning',
+            'overdue' => 'badge badge-danger',
+            'unpaid' => 'badge badge-neutral',
+            RoutePaymentStatusService::STATUS_PAID => 'badge badge-ok',
+            RoutePaymentStatusService::STATUS_PARTIALLY_PAID => 'badge badge-warning',
+            RoutePaymentStatusService::STATUS_OVERDUE => 'badge badge-danger',
+            RoutePaymentStatusService::STATUS_PLANNED => 'badge badge-neutral',
+            RoutePaymentStatusService::STATUS_WAITING_EVENT => 'badge badge-neutral',
+            RoutePaymentStatusService::STATUS_CANCELLED => 'badge badge-neutral',
+        ];
+
+        return $classes[$status] ?? 'badge badge-neutral';
+    }
+
+    public static function legacyPaymentDueTypeToConditionType(?string $paymentDueType): ?string
+    {
+        $map = [
+            'После загрузки' => DateCalculationService::CONDITION_AFTER_START,
+            'После выгрузки' => DateCalculationService::CONDITION_AFTER_END,
+        ];
+
+        return $map[trim((string) $paymentDueType)] ?? null;
+    }
+
+    public static function conditionTypeLabel(?string $conditionType): string
+    {
+        return DateCalculationService::CONDITION_LABELS[$conditionType ?? ''] ?? '—';
+    }
+
+    public static function logFinanceAudit(
+        PDO $localPdo,
+        string $entityType,
+        int $entityId,
+        string $action,
+        ?array $oldValues,
+        ?array $newValues,
+        int $userId,
+        string $roleCode
+    ): void {
+        if (!self::tableExists($localPdo, 'finance_audit_log')) {
+            return;
+        }
+
+        FinanceAuditLogService::log($localPdo, $entityType, $entityId, $action, $oldValues, $newValues, $userId, $roleCode);
+    }
+
     public static function normalizePrincipalType(?string $value): ?string
     {
         $value = trim((string) $value);
@@ -134,6 +458,42 @@ final class LinearRouteService
     public static function paymentDueTypeRequiresDays(string $paymentDueType): bool
     {
         return in_array($paymentDueType, ['После загрузки', 'После выгрузки'], true);
+    }
+
+    public static function conditionTypeRequiresDays(?string $conditionType): bool
+    {
+        return in_array($conditionType, [
+            DateCalculationService::CONDITION_AFTER_START,
+            DateCalculationService::CONDITION_AFTER_END,
+            DateCalculationService::CONDITION_AFTER_DOCUMENTS,
+        ], true);
+    }
+
+    public static function conditionTypeRequiresSpecificDate(?string $conditionType): bool
+    {
+        return in_array($conditionType, [
+            DateCalculationService::CONDITION_PREPAYMENT,
+            DateCalculationService::CONDITION_SPECIFIC_DATE,
+        ], true);
+    }
+
+    public static function conditionTypeIsEventDay(?string $conditionType): bool
+    {
+        return in_array($conditionType, [
+            DateCalculationService::CONDITION_START_DAY,
+            DateCalculationService::CONDITION_END_DAY,
+            DateCalculationService::CONDITION_PREPAYMENT,
+        ], true);
+    }
+
+    public static function conditionTypeShowDays(?string $conditionType): bool
+    {
+        return self::conditionTypeRequiresDays($conditionType);
+    }
+
+    public static function conditionTypeShowSpecificDate(?string $conditionType): bool
+    {
+        return self::conditionTypeRequiresSpecificDate($conditionType);
     }
 
     public static function parsePrincipalEntityKey(?string $value): ?array
@@ -476,7 +836,7 @@ final class LinearRouteService
         return $documents;
     }
 
-    public static function fetchRouteById(PDO $localPdo, int $routeId): ?array
+    public static function fetchRouteById(PDO $localPdo, int $routeId, bool $includeFinance = true): ?array
     {
         if ($routeId <= 0) {
             return null;
@@ -517,7 +877,7 @@ final class LinearRouteService
             return null;
         }
 
-        return self::decorateRoute($localPdo, $route);
+        return self::decorateRoute($localPdo, $route, $includeFinance);
     }
 
     public static function fetchRoutePrincipals(PDO $localPdo, int $routeId): array
@@ -551,7 +911,7 @@ final class LinearRouteService
         return $principals;
     }
 
-    public static function fetchRoutePayments(PDO $localPdo, int $routeId): array
+    public static function fetchRoutePayments(PDO $localPdo, int $routeId, ?array $routeDates = null): array
     {
         if (self::tableExists($localPdo, 'linear_route_payments')) {
             self::reconcileLegacyPaymentRows($localPdo, $routeId);
@@ -573,7 +933,75 @@ final class LinearRouteService
             );
             $stmt->execute([$routeId]);
 
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $plannedLoadingDate = $routeDates['planned_loading_date'] ?? null;
+            $plannedUnloadingDate = $routeDates['planned_unloading_date'] ?? null;
+            $plannedStartDate = $routeDates['planned_start_date'] ?? $plannedLoadingDate;
+            $plannedEndDate = $routeDates['planned_end_date'] ?? $plannedUnloadingDate;
+            $actualStartDate = $routeDates['actual_start_date'] ?? $routeDates['actual_loading_date'] ?? null;
+            $actualEndDate = $routeDates['actual_end_date'] ?? $routeDates['actual_unloading_date'] ?? null;
+            $closingDocumentsReceivedDate = $routeDates['closing_documents_received_date'] ?? null;
+
+            foreach ($payments as &$payment) {
+                $payment['calculated_due_date'] = self::computeCalculatedDueDate(
+                    $payment['payment_due_type'] ?? null,
+                    isset($payment['payment_due_days']) ? (int) $payment['payment_due_days'] : null,
+                    $plannedLoadingDate,
+                    $plannedUnloadingDate
+                );
+
+                $conditionType = $payment['condition_type'] ?? self::legacyPaymentDueTypeToConditionType($payment['payment_due_type'] ?? null);
+
+                $payment['condition_type'] = $conditionType;
+                $payment['forecast_due_date'] = self::computeForecastDueDate(
+                    $conditionType,
+                    isset($payment['days_count']) ? (int) $payment['days_count'] : (isset($payment['payment_due_days']) ? (int) $payment['payment_due_days'] : null),
+                    $payment['days_kind'] ?? 'calendar',
+                    $plannedStartDate,
+                    $plannedEndDate,
+                    $payment['specific_due_date'] ?? null
+                );
+
+                $newCalculatedDueDate = self::computeCalculatedDueDateNew(
+                    $conditionType,
+                    isset($payment['days_count']) ? (int) $payment['days_count'] : (isset($payment['payment_due_days']) ? (int) $payment['payment_due_days'] : null),
+                    $payment['days_kind'] ?? 'calendar',
+                    $plannedStartDate,
+                    $plannedEndDate,
+                    $actualStartDate,
+                    $actualEndDate,
+                    $closingDocumentsReceivedDate,
+                    $payment['specific_due_date'] ?? null
+                );
+
+                if ($newCalculatedDueDate !== null) {
+                    $payment['calculated_due_date'] = $newCalculatedDueDate;
+                }
+
+                $payment['payment_status'] = self::computePaymentStatusNew(
+                    $payment['amount'] ?? null,
+                    $payment['paid_amount'] ?? null,
+                    $payment['calculated_due_date'],
+                    $payment['cancelled_at'] ?? null,
+                    $closingDocumentsReceivedDate,
+                    $conditionType
+                );
+
+                if ($payment['payment_status'] === RoutePaymentStatusService::STATUS_PLANNED) {
+                    $legacyStatus = self::computePaymentStatus(
+                        $payment['amount'] ?? null,
+                        $payment['paid_amount'] ?? null,
+                        $payment['calculated_due_date']
+                    );
+                    if ($legacyStatus === 'paid') {
+                        $payment['payment_status'] = RoutePaymentStatusService::STATUS_PAID;
+                    }
+                }
+            }
+            unset($payment);
+
+            return $payments;
         }
 
         $stmt = $localPdo->prepare(
@@ -674,11 +1102,26 @@ final class LinearRouteService
         return $grouped;
     }
 
-    public static function decorateRoute(PDO $localPdo, array $route): array
+    public static function decorateRoute(PDO $localPdo, array $route, bool $includeFinance = true): array
     {
         $routeId = (int) ($route['id'] ?? 0);
         $route['principal_items'] = self::fetchRoutePrincipals($localPdo, $routeId);
-        $route['payments'] = self::groupRoutePayments(self::fetchRoutePayments($localPdo, $routeId));
+
+        if ($includeFinance) {
+            $routeDates = [
+                'planned_loading_date' => $route['planned_loading_date'] ?? null,
+                'planned_unloading_date' => $route['planned_unloading_date'] ?? null,
+                'planned_start_date' => $route['planned_loading_date'] ?? null,
+                'planned_end_date' => $route['planned_unloading_date'] ?? null,
+                'actual_start_date' => $route['actual_loading_date'] ?? $route['actual_start_date'] ?? null,
+                'actual_end_date' => $route['actual_unloading_date'] ?? $route['actual_end_date'] ?? null,
+                'closing_documents_received_date' => $route['closing_documents_received_date'] ?? null,
+            ];
+            $route['payments'] = self::groupRoutePayments(self::fetchRoutePayments($localPdo, $routeId, $routeDates));
+        } else {
+            $route['payments'] = [];
+        }
+
         $route['principal_summary'] = array_map(
             static fn(array $principal): string => (string) ($principal['display_name'] ?? '—'),
             $route['principal_items']
@@ -687,7 +1130,7 @@ final class LinearRouteService
         return $route;
     }
 
-    public static function fetchRoutesForList(PDO $localPdo, array $user): array
+    public static function fetchRoutesForList(PDO $localPdo, array $user, bool $includeFinance = true): array
     {
         $baseSql = "SELECT lr.*,
                            ct.name AS client_name,
@@ -734,7 +1177,7 @@ final class LinearRouteService
         }
 
         foreach ($routes as &$route) {
-            $route = self::decorateRoute($localPdo, $route);
+            $route = self::decorateRoute($localPdo, $route, $includeFinance);
         }
         unset($route);
 
@@ -846,7 +1289,8 @@ final class LinearRouteService
         array $principalPaymentsByKey,
         array $storedPrincipals,
         int $userId,
-        string $roleCode
+        string $roleCode,
+        ?array $routeDates = null
     ): void {
         if (!self::tableExists($localPdo, 'linear_route_payments')) {
             return;
@@ -861,6 +1305,11 @@ final class LinearRouteService
                 AND deleted_at IS NULL"
         )->execute([$userId, $roleCode, $routeId]);
 
+        $plannedLoadingDate = $routeDates['planned_loading_date'] ?? null;
+        $plannedUnloadingDate = $routeDates['planned_unloading_date'] ?? null;
+        $plannedStartDate = $routeDates['planned_start_date'] ?? $plannedLoadingDate;
+        $plannedEndDate = $routeDates['planned_end_date'] ?? $plannedUnloadingDate;
+
         $insert = $localPdo->prepare(
             "INSERT INTO linear_route_payments (
                 linear_route_id,
@@ -869,71 +1318,124 @@ final class LinearRouteService
                 sort_order,
                 amount,
                 payment_type,
+                payment_method,
+                vat_rate,
                 payment_due_type,
                 payment_due_days,
                 payment_due_days_kind,
+                condition_type,
+                days_count,
+                days_kind,
+                specific_due_date,
+                condition_comment,
+                side,
+                forecast_due_date,
+                calculated_due_date,
+                payment_status,
+                status_updated_at,
                 created_by_user_id,
                 created_by_role,
                 updated_by_user_id,
                 updated_by_role
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
-        foreach (array_values($customerPayments) as $index => $payment) {
-            $insert->execute([
-                $routeId,
-                'customer',
+        $buildPaymentRow = static function (string $partyRole, ?int $principalId, int $sortOrder, array $payment) use ($plannedLoadingDate, $plannedUnloadingDate, $plannedStartDate, $plannedEndDate): array {
+            $paymentMethod = $payment['payment_method'] ?? self::parsePaymentMethodFromLegacyType($payment['payment_type'] ?? '');
+            $vatRate = array_key_exists('vat_rate', $payment) ? $payment['vat_rate'] : self::parseVatRateFromLegacyType($payment['payment_type'] ?? '');
+
+            $calculatedDueDate = self::computeCalculatedDueDate(
+                $payment['payment_due_type'] ?? null,
+                isset($payment['payment_due_days']) ? (int) $payment['payment_due_days'] : null,
+                $plannedLoadingDate,
+                $plannedUnloadingDate
+            );
+
+            $conditionType = $payment['condition_type'] ?? self::legacyPaymentDueTypeToConditionType($payment['payment_due_type'] ?? null);
+            $daysCount = array_key_exists('days_count', $payment) ? $payment['days_count'] : (isset($payment['payment_due_days']) ? (int) $payment['payment_due_days'] : null);
+            $daysKind = $payment['days_kind'] ?? $payment['payment_due_days_kind'] ?? 'calendar';
+            $specificDueDate = $payment['specific_due_date'] ?? null;
+            $conditionComment = $payment['condition_comment'] ?? null;
+            $side = $payment['side'] ?? null;
+
+            $forecastDueDate = DateCalculationService::calculateForecastDueDate(
+                $conditionType,
+                $plannedStartDate,
+                $plannedEndDate,
+                $daysCount,
+                $daysKind,
+                $specificDueDate
+            );
+
+            if ($forecastDueDate !== null) {
+                $calculatedDueDate = $forecastDueDate;
+            }
+
+            $paymentStatus = self::computePaymentStatusNew(
+                $payment['amount'] ?? null,
+                '0.00',
+                $calculatedDueDate,
                 null,
-                $index + 1,
+                null,
+                $conditionType
+            );
+
+            $legacyPaymentStatus = self::computePaymentStatus(
+                $payment['amount'] ?? null,
+                '0.00',
+                $calculatedDueDate
+            );
+
+            if ($legacyPaymentStatus === 'paid') {
+                $paymentStatus = RoutePaymentStatusService::STATUS_PAID;
+            }
+
+            $statusUpdatedAt = $paymentStatus !== RoutePaymentStatusService::STATUS_PLANNED ? date('Y-m-d H:i:s') : null;
+
+            return [$paymentMethod, $vatRate, $conditionType, $daysCount, $daysKind, $specificDueDate, $conditionComment, $side, $forecastDueDate, $calculatedDueDate, $paymentStatus, $statusUpdatedAt];
+        };
+
+        $paymentParams = static function (array $payment, array $computed, string $partyRole, ?int $principalId, int $sortOrder, int $userId, string $roleCode) use ($routeId): array {
+            return [
+                $routeId,
+                $partyRole,
+                $principalId,
+                $sortOrder,
                 $payment['amount'],
                 $payment['payment_type'],
+                $computed[0], $computed[1],
                 $payment['payment_due_type'],
                 $payment['payment_due_days'],
                 $payment['payment_due_days_kind'],
+                $computed[2], $computed[3], $computed[4], $computed[5], $computed[6], $computed[7],
+                $computed[8], $computed[9],
+                $computed[10], $computed[11],
                 $userId,
                 $roleCode,
                 $userId,
                 $roleCode,
-            ]);
+            ];
+        };
+
+        foreach (array_values($customerPayments) as $index => $payment) {
+            $computed = $buildPaymentRow('customer', null, $index + 1, $payment);
+            $params = $paymentParams($payment, $computed, 'customer', null, $index + 1, $userId, $roleCode);
+            $insert->execute($params);
         }
 
         foreach (array_values($carrierPayments) as $index => $payment) {
-            $insert->execute([
-                $routeId,
-                'carrier',
-                null,
-                $index + 1,
-                $payment['amount'],
-                $payment['payment_type'],
-                $payment['payment_due_type'],
-                $payment['payment_due_days'],
-                $payment['payment_due_days_kind'],
-                $userId,
-                $roleCode,
-                $userId,
-                $roleCode,
-            ]);
+            $computed = $buildPaymentRow('carrier', null, $index + 1, $payment);
+            $params = $paymentParams($payment, $computed, 'carrier', null, $index + 1, $userId, $roleCode);
+            $insert->execute($params);
         }
 
         foreach ($storedPrincipals as $principal) {
             $principalKey = (string) ($principal['entity_key'] ?? '');
             $principalPayments = $principalPaymentsByKey[$principalKey] ?? [];
             foreach (array_values($principalPayments) as $index => $payment) {
-                $insert->execute([
-                    $routeId,
-                    'principal',
-                    (int) $principal['id'],
-                    $index + 1,
-                    $payment['amount'],
-                    $payment['payment_type'],
-                    $payment['payment_due_type'],
-                    $payment['payment_due_days'],
-                    $payment['payment_due_days_kind'],
-                    $userId,
-                    $roleCode,
-                    $userId,
-                    $roleCode,
-                ]);
+                $computed = $buildPaymentRow('principal', (int) $principal['id'], $index + 1, $payment);
+                $params = $paymentParams($payment, $computed, 'principal', (int) $principal['id'], $index + 1, $userId, $roleCode);
+                $insert->execute($params);
             }
         }
     }

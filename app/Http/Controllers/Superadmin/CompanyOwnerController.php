@@ -20,6 +20,14 @@ final class CompanyOwnerController
         require base_path('app/Http/Controllers/Superadmin/CompanyActions/create_owner_form.php');
     }
 
+    public function createFormModal(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/create_owner_form_modal.php');
+    }
+
     public function createSubmit(string $id): void
     {
         $config = $this->config;
@@ -58,5 +66,29 @@ final class CompanyOwnerController
         $db = $this->db;
 
         require base_path('app/Http/Controllers/Superadmin/CompanyActions/owner_reset_password.php');
+    }
+
+    public function modalView(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/owner_modal_view.php');
+    }
+
+    public function modalEditForm(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/owner_modal_edit_form.php');
+    }
+
+    public function modalEditSubmit(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Superadmin/CompanyActions/owner_modal_edit_submit.php');
     }
 }

@@ -23,6 +23,19 @@ $driversActive = str_starts_with($requestPath, '/company/drivers');
 $vehicleSetsActive = str_starts_with($requestPath, '/company/vehicle-sets');
 $logistsActive = str_starts_with($requestPath, '/company/logists');
 $responsibleAssignmentsActive = str_starts_with($requestPath, '/company/responsible-assignments');
+$financeActive = str_starts_with($requestPath, '/company/finance');
+$bankAccountsActive = str_starts_with($requestPath, '/company/finance/bank-accounts');
+$cashActive = str_starts_with($requestPath, '/company/finance/cash');
+$ddsCategoriesActive = str_starts_with($requestPath, '/company/finance/settings/dds-categories');
+$matchingRulesActive = str_starts_with($requestPath, '/company/finance/settings/matching-rules');
+    $paymentCalendarActive = str_starts_with($requestPath, '/company/finance/payment-calendar');
+    $cashFlowReportActive = str_starts_with($requestPath, '/company/finance/reports/cash-flow');
+    $managementBalanceActive = str_starts_with($requestPath, '/company/finance/reports/management-balance');
+    $paymentPlanFactActive = str_starts_with($requestPath, '/company/finance/reports/payment-plan-fact');
+    $invoicesActive = str_starts_with($requestPath, '/company/finance/invoices');
+$financeDashboardActive = str_starts_with($requestPath, '/company/finance/dashboard');
+$operationsActive = str_starts_with($requestPath, '/company/finance/operations');
+$bankStatementSettingsActive = str_starts_with($requestPath, '/company/bank-statement-settings');
 
 // Вычисление — раскрыта ли группа «Справочники» (любой подпункт активен)
 $directoriesOpen = ($roleCode !== 'superadmin') && (
@@ -56,26 +69,31 @@ if ($crumbContext !== '') {
         $crumbTitle = '';
     }
 }
+
+// Auto-generate breadcrumbs if not explicitly provided
+if (empty($topbarCrumbs)) {
+    require_once base_path('app/View/components/breadcrumbs.php');
+    $superadminCompanyName = (isset($company) && is_array($company) && isset($company['name']))
+        ? $company['name']
+        : null;
+    $topbarCrumbs = ui_breadcrumbs($requestPath, $superadminCompanyName, $company ?? null);
+}
 ?>
 <!doctype html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="erp-base-path" content="<?= e(app_base_path()) ?>">
+    <meta name="csrf-token" content="<?= e(csrfToken()) ?>">
     <title><?= e($pageTitle ?? $appName) ?> — <?= e($appName) ?></title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 18h18c6.627 0 12 5.373 12 12s-5.373 12-12 12H30v12H18V18zm12 12h6a4 4 0 1 0 0-8h-6v8z' fill='white'/%3E%3C/svg%3E">
     <link rel="preload" href="<?= app_url('/assets/fonts/IBMPlexSans-Regular.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="<?= app_url('/assets/fonts/IBMPlexSans-Medium.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="<?= app_url('/assets/fonts/IBMPlexSans-SemiBold.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="<?= app_url('/assets/fonts/IBMPlexSans-Bold.woff2') ?>" as="font" type="font/woff2" crossorigin>
-    <style>
-        @font-face{font-family:"IBM Plex Sans";src:url("<?= app_url('/assets/fonts/IBMPlexSans-Regular.woff2') ?>") format("woff2");font-weight:400;font-style:normal;font-display:optional}
-        @font-face{font-family:"IBM Plex Sans";src:url("<?= app_url('/assets/fonts/IBMPlexSans-Medium.woff2') ?>") format("woff2");font-weight:500;font-style:normal;font-display:optional}
-        @font-face{font-family:"IBM Plex Sans";src:url("<?= app_url('/assets/fonts/IBMPlexSans-SemiBold.woff2') ?>") format("woff2");font-weight:600;font-style:normal;font-display:optional}
-        @font-face{font-family:"IBM Plex Sans";src:url("<?= app_url('/assets/fonts/IBMPlexSans-Bold.woff2') ?>") format("woff2");font-weight:700;font-style:normal;font-display:optional}
-    </style>
-    <link rel="stylesheet" href="<?= app_url('/assets/css/erp-ui.css') ?>">
-    <link rel="stylesheet" href="<?= app_url('/assets/css/app.css') ?>">
+    <link rel="stylesheet" href="<?= app_url('/assets/css/app.css') ?>?v=<?= filemtime(base_path('public/assets/css/app.css')) ?>">
+    <link rel="stylesheet" href="<?= app_url('/assets/css/erp-ui.css') ?>?v=<?= filemtime(base_path('public/assets/css/erp-ui.css')) ?>">
 </head>
 <body>
     <div class="app">
@@ -116,7 +134,9 @@ if ($crumbContext !== '') {
                     <strong><?= e($userName) ?></strong>
                     <span><?= e($roleLabel) ?></span>
                 </div>
-                <a href="<?= app_url('/logout') ?>" class="btn btn-ghost">Выйти</a>
+                <form method="post" action="<?= app_url('/logout') ?>" class="inline-form">
+                    <button type="submit" class="btn btn-ghost">Выйти</button>
+                </form>
                 <?php else: ?>
                 <span class="text-muted">ERP PLANEX</span>
                 <?php endif; ?>
@@ -132,6 +152,10 @@ if ($crumbContext !== '') {
                 <a class="nav-item<?= str_starts_with($requestPath, '/superadmin/companies') && !str_contains($requestPath, '/deleted') ? ' is-active' : '' ?>" href="<?= app_url('/superadmin/companies') ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 15V11H11V15" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M2 7H14" stroke="currentColor" stroke-width="1.4"/><rect x="5" y="5" width="2" height="2" rx=".3" fill="currentColor"/><rect x="9" y="5" width="2" height="2" rx=".3" fill="currentColor"/><rect x="5" y="9" width="2" height="2" rx=".3" fill="currentColor"/><rect x="9" y="9" width="2" height="2" rx=".3" fill="currentColor"/></svg>
                     <span class="nav-label">Компании</span>
+                </a>
+                <a class="nav-item<?= str_starts_with($requestPath, '/superadmin/db-usage') ? ' is-active' : '' ?>" href="<?= app_url('/superadmin/db-usage') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="6" ry="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 4V8C2 9.1 4.7 10 8 10C11.3 10 14 9.1 14 8V4" stroke="currentColor" stroke-width="1.3"/><path d="M2 8V12C2 13.1 4.7 14 8 14C11.3 14 14 13.1 14 12V8" stroke="currentColor" stroke-width="1.3"/></svg>
+                    <span class="nav-label">Использование БД</span>
                 </a>
                 <a class="nav-item<?= str_starts_with($requestPath, '/superadmin/deleted-data') ? ' is-active' : '' ?>" href="<?= app_url('/superadmin/deleted-data') ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4H14V13C14 13.6 13.6 14 13 14H3C2.4 14 2 13.6 2 13V4Z" stroke="currentColor" stroke-width="1.4"/><path d="M2 4L4 2H12L14 4" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 8L8 10L10 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
@@ -194,10 +218,116 @@ if ($crumbContext !== '') {
                 </div>
             </div>
 
-            <div class="nav-spacer"></div>
+            <div class="nav-group">
+                <div class="nav-section-label">ФИНАНСЫ</div>
+                <a class="nav-item<?= $financeDashboardActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/dashboard') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="4" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 9L7 7L9 8.5L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 6.5H14" stroke="currentColor" stroke-width="1.4"/>
+                    </svg>
+                    <span class="nav-label">Дашборд</span>
+                </a>
+                <a class="nav-item<?= $bankAccountsActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/bank-accounts') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="1.5" y="4" width="13" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 10L7 12L11 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M4 4V2.5C4 2.2 4.2 2 4.5 2H11.5C11.8 2 12 2.2 12 2.5V4" stroke="currentColor" stroke-width="1.4"/>
+                    </svg>
+                    <span class="nav-label">Банк</span>
+                </a>
+                <a class="nav-item<?= $cashActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/cash') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="1.5" y="4" width="13" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M4.5 9H5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <circle cx="8" cy="9" r="1.5" stroke="currentColor" stroke-width="1.2"/>
+                        <path d="M11 9H11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M4 4V2.5C4 2.2 4.2 2 4.5 2H11.5C11.8 2 12 2.2 12 2.5V4" stroke="currentColor" stroke-width="1.4"/>
+                    </svg>
+                    <span class="nav-label">Касса</span>
+                </a>
+                <a class="nav-item<?= $invoicesActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/invoices') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <path d="M2.5 1.5H10.5L13.5 4.5V13.5C13.5 14.05 13.05 14.5 12.5 14.5H3.5C2.95 14.5 2.5 14.05 2.5 13.5V2.5C2.5 1.95 2.95 1.5 3.5 1.5H2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                        <path d="M10.5 1.5V4.5H13.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                        <path d="M5.5 8H10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M5.5 10.5H10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M5.5 13H8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Счета</span>
+                </a>
+                <a class="nav-item<?= $operationsActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/operations') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="3" y="2" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M6 8L7.5 9.5L10 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5 12H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Операции</span>
+                </a>
+                <a class="nav-item<?= $ddsCategoriesActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/settings/dds-categories') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 7L7 9L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="nav-label">Статьи ДДС</span>
+                </a>
+                <a class="nav-item<?= $matchingRulesActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/settings/matching-rules') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 8L7 10L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="nav-label">Правила разнесения</span>
+                </a>
+                <a class="nav-item<?= $paymentCalendarActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/payment-calendar') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="1.5" y="2" width="13" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M1.5 6H14.5" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M4.5 9H6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M9.5 9H11.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M4.5 11.5H7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M10.5 11.5H12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M5 2V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <path d="M11 2V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="nav-label">Платёжный календарь</span>
+                </a>
+                <a class="nav-item<?= $cashFlowReportActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/reports/cash-flow') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 10L7 7L9 9L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 8H14" stroke="currentColor" stroke-width="1.4"/>
+                    </svg>
+                    <span class="nav-label">БДДС</span>
+                </a>
+                <a class="nav-item<?= $managementBalanceActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/reports/management-balance') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 10L8 8L10 10L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 4H14" stroke="currentColor" stroke-width="1.4"/>
+                    </svg>
+                    <span class="nav-label">Упр. баланс</span>
+                </a>
+                <a class="nav-item<?= $paymentPlanFactActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/reports/payment-plan-fact') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 10L8 8L10 10L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 4H14" stroke="currentColor" stroke-width="1.4"/>
+                    </svg>
+                    <span class="nav-label">План-факт оплаты</span>
+                </a>
+            </div>
 
             <div class="nav-group">
                 <div class="nav-section-label">СИСТЕМА</div>
+                <a class="nav-item<?= $bankStatementSettingsActive ? ' is-active' : '' ?>" href="<?= app_url('/company/bank-statement-settings') ?>">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+                        <rect x="1.5" y="5" width="13" height="9.5" rx="1" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M5 5V3.5C5 2.9 5.4 2.5 6 2.5H10C10.6 2.5 11 2.9 11 3.5V5" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M1.5 8.5H14.5" stroke="currentColor" stroke-width="1.4"/>
+                        <rect x="7" y="6.5" width="2" height="2" rx=".5" stroke="currentColor" stroke-width="1.2"/>
+                    </svg>
+                    <span class="nav-label">Настройки выписок</span>
+                </a>
                 <a class="nav-item<?= $logistsActive ? ' is-active' : '' ?>" href="<?= app_url('/company/logists') ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
                         <circle cx="6" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.4"/>
@@ -281,11 +411,12 @@ if ($crumbContext !== '') {
         </main>
     </div>
 
-    <script src="<?= app_url('/assets/js/modal-shell.js') ?>"></script>
-    <script src="<?= app_url('/assets/js/contact-fields.js') ?>"></script>
-    <script src="<?= app_url('/assets/js/legal-entity-documents.js') ?>"></script>
-    <script src="<?= app_url('/assets/js/legal-entity-inn.js') ?>"></script>
-    <script src="<?= app_url('/assets/js/legal-entity-modal.js') ?>"></script>
-    <script src="<?= app_url('/assets/js/app.js') ?>"></script>
+    <script src="<?= app_url('/assets/js/csrf-fetch.js') ?>?v=<?= filemtime(base_path('public/assets/js/csrf-fetch.js')) ?>"></script>
+    <script src="<?= app_url('/assets/js/modal-shell.js') ?>?v=<?= filemtime(base_path('public/assets/js/modal-shell.js')) ?>"></script>
+    <script src="<?= app_url('/assets/js/contact-fields.js') ?>?v=<?= filemtime(base_path('public/assets/js/contact-fields.js')) ?>"></script>
+    <script src="<?= app_url('/assets/js/legal-entity-documents.js') ?>?v=<?= filemtime(base_path('public/assets/js/legal-entity-documents.js')) ?>"></script>
+    <script src="<?= app_url('/assets/js/legal-entity-inn.js') ?>?v=<?= filemtime(base_path('public/assets/js/legal-entity-inn.js')) ?>"></script>
+    <script src="<?= app_url('/assets/js/legal-entity-modal.js') ?>?v=<?= filemtime(base_path('public/assets/js/legal-entity-modal.js')) ?>"></script>
+    <script src="<?= app_url('/assets/js/app.js') ?>?v=<?= filemtime(base_path('public/assets/js/app.js')) ?>"></script>
 </body>
 </html>

@@ -29,11 +29,12 @@ ob_start();
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only">
-    <div class="empty-state">
-        <p class="empty-title">Модуль «Отходы» пока не реализован.</p>
-        <p class="empty-desc">Основной рабочий блок сейчас находится в разделе «Рейсы → Линейные».</p>
-        <a href="/company/trips/linear" class="btn btn-primary">Открыть линейные рейсы</a>
+<div class="panel">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Модуль «Отходы» пока не реализован.</p>
+            <p class="empty-desc">Основной рабочий блок сейчас находится в разделе «Рейсы → Линейные».</p>
+        </div>
     </div>
 </div>
 <?php

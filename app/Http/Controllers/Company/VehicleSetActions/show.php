@@ -1,4 +1,5 @@
 <?php
+requireRole(['company_owner', 'senior_logist', 'logist']);
 /** @var VehicleSetService $service */
 // Show page - redirect to list for now, or render view page if it exists
 $companyId=$service->getCompanyId();

@@ -1,0 +1,77 @@
+-- Migration 047: Create finance_money_accounts and finance_operations tables
+-- Idempotent via IF NOT EXISTS / INFORMATION_SCHEMA checks.
+
+SET @dbname = DATABASE();
+
+-- finance_money_accounts table
+CREATE TABLE IF NOT EXISTS `finance_money_accounts` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `type` VARCHAR(20) NOT NULL COMMENT 'BANK, CASH',
+    `name` VARCHAR(255) NOT NULL,
+    `bank_account_id` INT UNSIGNED DEFAULT NULL,
+    `currency` VARCHAR(10) NOT NULL DEFAULT 'RUR',
+    `opening_balance` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `opening_balance_date` DATE DEFAULT NULL,
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+    `created_by_user_id` INT UNSIGNED DEFAULT NULL,
+    `created_by_role` VARCHAR(20) DEFAULT NULL,
+    `updated_by_user_id` INT UNSIGNED DEFAULT NULL,
+    `updated_by_role` VARCHAR(20) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_fma_type` (`type`),
+    KEY `idx_fma_active` (`is_active`),
+    KEY `idx_fma_bank_account` (`bank_account_id`),
+    UNIQUE KEY `uk_fma_bank_account` (`bank_account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- finance_operations table
+CREATE TABLE IF NOT EXISTS `finance_operations` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `operation_type` VARCHAR(20) NOT NULL COMMENT 'INCOME, EXPENSE, TRANSFER, ADJUSTMENT',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT, PLANNED, POSTED, CANCELLED',
+    `source` VARCHAR(30) NOT NULL COMMENT 'BANK_STATEMENT, CASH, INVOICE, MANUAL, TRANSFER',
+    `money_account_id` INT UNSIGNED NOT NULL,
+    `transfer_account_id` INT UNSIGNED DEFAULT NULL,
+    `operation_date` DATE NOT NULL,
+    `amount` DECIMAL(15,2) NOT NULL,
+    `currency` VARCHAR(10) NOT NULL DEFAULT 'RUR',
+    `dds_category_id` INT UNSIGNED DEFAULT NULL,
+    `counterparty_entity_type` VARCHAR(20) DEFAULT NULL,
+    `counterparty_entity_id` INT UNSIGNED DEFAULT NULL,
+    `counterparty_name` VARCHAR(500) DEFAULT NULL,
+    `counterparty_inn` VARCHAR(20) DEFAULT NULL,
+    `purpose` TEXT DEFAULT NULL,
+    `comment` TEXT DEFAULT NULL,
+    `bank_transaction_id` INT UNSIGNED DEFAULT NULL,
+    `invoice_id` INT UNSIGNED DEFAULT NULL,
+    `linear_route_id` INT UNSIGNED DEFAULT NULL,
+    `linear_route_payment_id` INT UNSIGNED DEFAULT NULL,
+    `dedupe_hash` VARCHAR(64) DEFAULT NULL,
+    `created_by_user_id` INT UNSIGNED DEFAULT NULL,
+    `created_by_role` VARCHAR(20) DEFAULT NULL,
+    `posted_by_user_id` INT UNSIGNED DEFAULT NULL,
+    `posted_by_role` VARCHAR(20) DEFAULT NULL,
+    `cancelled_by_user_id` INT UNSIGNED DEFAULT NULL,
+    `cancelled_by_role` VARCHAR(20) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `posted_at` DATETIME DEFAULT NULL,
+    `cancelled_at` DATETIME DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_fop_money_account` (`money_account_id`),
+    KEY `idx_fop_transfer_account` (`transfer_account_id`),
+    KEY `idx_fop_date` (`operation_date`),
+    KEY `idx_fop_type` (`operation_type`),
+    KEY `idx_fop_status` (`status`),
+    KEY `idx_fop_source` (`source`),
+    KEY `idx_fop_bank_tx` (`bank_transaction_id`),
+    KEY `idx_fop_invoice` (`invoice_id`),
+    KEY `idx_fop_route` (`linear_route_id`),
+    KEY `idx_fop_route_payment` (`linear_route_payment_id`),
+    KEY `idx_fop_counterparty_name` (`counterparty_name`(191)),
+    KEY `idx_fop_dedupe` (`dedupe_hash`),
+    UNIQUE KEY `uk_fop_bank_tx` (`bank_transaction_id`),
+    UNIQUE KEY `uk_fop_dedupe` (`dedupe_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

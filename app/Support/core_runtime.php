@@ -252,6 +252,52 @@ if (!function_exists('ensureDocumentTypeRecord')) {
     }
 }
 
+if (!function_exists('vehicleSetNormalizeNamedFiles')) {
+    function vehicleSetNormalizeNamedFiles(array $files, string $role, string $docCode): array
+    {
+        $names = $files['name'][$role][$docCode] ?? [];
+        if (!is_array($names)) {
+            $names = [$names];
+        }
+
+        $normalized = [];
+        foreach ($names as $idx => $name) {
+            $normalized[] = [
+                'name' => (string) $name,
+                'type' => (string) ($files['type'][$role][$docCode][$idx] ?? ''),
+                'tmp_name' => (string) ($files['tmp_name'][$role][$docCode][$idx] ?? ''),
+                'error' => (int) ($files['error'][$role][$docCode][$idx] ?? UPLOAD_ERR_NO_FILE),
+                'size' => (int) ($files['size'][$role][$docCode][$idx] ?? 0),
+            ];
+        }
+
+        return $normalized;
+    }
+}
+
+if (!function_exists('vehicleSetNormalizeRoleFiles')) {
+    function vehicleSetNormalizeRoleFiles(array $files, string $role): array
+    {
+        $names = $files['name'][$role] ?? [];
+        if (!is_array($names)) {
+            $names = [$names];
+        }
+
+        $normalized = [];
+        foreach ($names as $idx => $name) {
+            $normalized[] = [
+                'name' => (string) $name,
+                'type' => (string) ($files['type'][$role][$idx] ?? ''),
+                'tmp_name' => (string) ($files['tmp_name'][$role][$idx] ?? ''),
+                'error' => (int) ($files['error'][$role][$idx] ?? UPLOAD_ERR_NO_FILE),
+                'size' => (int) ($files['size'][$role][$idx] ?? 0),
+            ];
+        }
+
+        return $normalized;
+    }
+}
+
 if (!function_exists('applyLocalMigrations')) {
     function applyLocalMigrations(PDO $localPdo): void
     {

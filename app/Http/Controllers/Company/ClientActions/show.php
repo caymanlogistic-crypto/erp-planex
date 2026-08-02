@@ -52,6 +52,15 @@ try {
     $localPdo = $service->getLocalPdo($company);
 
     $client = $service->getClientById($localPdo, (int) $id);
+    if ($client && !$service->canAccessClient(
+        $localPdo,
+        $client,
+        (int) ($_SESSION['user_id'] ?? 0),
+        (string) ($_SESSION['role_code'] ?? ''),
+        'view'
+    )) {
+        denyEntityAccess();
+    }
 
     $contacts = [];
     if ($client) {

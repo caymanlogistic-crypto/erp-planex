@@ -27,17 +27,18 @@ try {
     $localPdo = $localDb->connection();
     applyLocalMigrations($localPdo);
 
-    $route = LinearRouteService::fetchRouteById($localPdo, (int) $id);
+    $sessionUser = [
+        'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+        'role_code' => (string) ($_SESSION['role_code'] ?? ''),
+    ];
+    $isFinanceRealm = ($sessionUser['role_code'] ?? '') === 'company_owner';
+    $route = LinearRouteService::fetchRouteById($localPdo, (int) $id, $isFinanceRealm);
     if (!$route) {
         http_response_code(404);
         echo '<div class="notice warn">Рейс не найден.</div>';
         exit;
     }
 
-    $sessionUser = [
-        'user_id' => (int) ($_SESSION['user_id'] ?? 0),
-        'role_code' => (string) ($_SESSION['role_code'] ?? ''),
-    ];
     if (!LinearRouteService::canEditRoute($route, $localPdo, $sessionUser)) {
         http_response_code(403);
         echo '<div class="notice warn">У вас нет права редактировать эту запись.</div>';

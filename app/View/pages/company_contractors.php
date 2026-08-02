@@ -43,10 +43,12 @@
     </div>
 </div>
 
-<div class="table-card table-card--toolbar-only">
-    <div class="empty-state">
-        <p class="empty-title">Нет доступных перевозчиков</p>
-        <p class="empty-desc">У вас пока нет созданных перевозчиков, либо руководитель ещё не выдал вам доступ к существующим.</p>
+<div class="panel">
+    <div class="panel-body">
+        <div class="empty-state">
+            <p class="empty-title">Нет доступных перевозчиков</p>
+            <p class="empty-desc">У вас пока нет созданных перевозчиков, либо руководитель ещё не выдал вам доступ к существующим.</p>
+        </div>
     </div>
 </div>
 
@@ -88,7 +90,6 @@
                     <th>Создал</th>
                     <?php endif; ?>
                     <th>Статус</th>
-                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -111,13 +112,6 @@
                             <?= $c['status'] === 'active' ? 'Активен' : 'Неактивен' ?>
                         </span>
                     </td>
-                    <td class="col-actions">
-                        <div class="row-actions">
-                            <a href="/company/contractors/<?= $c['id'] ?>" class="btn btn-toolbar">Просмотр</a>
-                            <a href="/company/contractors/<?= $c['id'] ?>/edit" class="btn btn-toolbar">Редактировать</a>
-                            <a href="/company/documents?entity_type=contractor&entity_id=<?= $c['id'] ?>" class="btn btn-toolbar">Документы</a>
-                        </div>
-                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -127,22 +121,6 @@
         <span class="footer-label">Показано <b class="footer-range">1–<?= count($contractors) ?></b> из <b class="footer-total"><?= count($contractors) ?></b></span>
     </div>
 </div>
-
-<script>
-// Double-click row → open contractor card
-(function() {
-    var tableBody = document.querySelector('.table-card[data-erp-grid] tbody');
-    if (!tableBody) return;
-    tableBody.addEventListener('dblclick', function(e) {
-        if (e.target.closest('a, button, input, select, textarea, label')) return;
-        var row = e.target.closest('tr[data-contractor-id]');
-        if (!row) return;
-        var contractorId = row.getAttribute('data-contractor-id');
-        if (!contractorId) return;
-        return;
-    });
-})();
-</script>
 
 <?php endif; ?>
 
@@ -159,7 +137,8 @@
 </div>
 <script>
 (function initContractorLegalEntityModal() {
-    var config = { modalId: 'le-contractor-modal', formAction: '/company/contractors/create', typeField: 'contractor_type' };
+    window.ERP_BASE_PATH = '<?= app_base_path() ?>';
+    var config = { modalId: 'le-contractor-modal', formAction: '<?= app_url('/company/contractors/create') ?>', typeField: 'contractor_type' };
     if (window.LegalEntityModal && typeof window.LegalEntityModal.init === 'function') {
         window.LegalEntityModal.init(config);
         return;
