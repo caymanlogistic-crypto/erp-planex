@@ -21,12 +21,12 @@ permissions:
 env:
   P11_BASE_URL: https://plan-ex.ru/erpv2/
   P11_OUT_DIR: P11_output
-  P11_MAX_URLS: '220'
+  P11_MAX_PATTERNS: '120'
 
 jobs:
   fullhd-readonly-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -84,11 +84,18 @@ jobs:
             echo "No secure P11 runtime credentials are available; runner will record RUNTIME_ACCESS_BLOCKED."
           fi
 
-      - name: Execute read-only 1920x1080 audit
+      - name: Prepare checkpointed audit runner V2
         shell: bash
         run: |
           set -euo pipefail
-          node .github/p11/P11_fullhd_audit.js | tee P11_runner_summary.json
+          base64 -d .github/p11/P11_fullhd_audit_v2.js.gz.b64 | gzip -d > /tmp/P11_fullhd_audit_v2.js
+          node --check /tmp/P11_fullhd_audit_v2.js
+
+      - name: Execute checkpointed read-only 1920x1080 audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node /tmp/P11_fullhd_audit_v2.js | tee P11_runner_summary.json
 
       - name: Record commit evidence
         if: always()
