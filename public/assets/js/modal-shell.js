@@ -26,7 +26,7 @@ window.ModalShell = (function () {
             el.setAttribute('role', 'dialog');
             el.setAttribute('aria-modal', 'true');
             el.dataset.closeOnOverlay = '0';
-            el.dataset.closeOnEscape = '0';
+            el.dataset.closeOnEscape = '1';
             el.innerHTML =
                 '<div class="modal ' + (config.modalInnerClass || 'modal-lg') + '">' +
                 '  <div class="modal-head">' +
@@ -223,7 +223,7 @@ window.ModalShell = (function () {
             c.setAttribute('role', 'dialog');
             c.setAttribute('aria-modal', 'true');
             c.dataset.closeOnOverlay = '0';
-            c.dataset.closeOnEscape = '0';
+            c.dataset.closeOnEscape = '1';
             c.innerHTML =
                 '<div class="modal">' +
                 '  <div class="modal-head">' +
@@ -396,4 +396,64 @@ window.ModalShell = (function () {
     }
 
     return { create: create, get: get, register: register };
+})();
+
+// P11 Full HD keyboard contract: Escape closes only the topmost visible modal.
+// Legacy data-close-on-escape="0" values are intentionally overridden.
+// A modal that must remain locked must opt in explicitly with data-escape-locked="1".
+(function initErpModalKeyboardController() {
+    'use strict';
+
+    if (window.__erpModalKeyboardControllerReady) return;
+    window.__erpModalKeyboardControllerReady = true;
+
+    function isVisible(modal) {
+        if (!modal || !modal.classList.contains('is-open')) return false;
+        var style = window.getComputedStyle(modal);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+    }
+
+    function zIndexOf(modal) {
+        var parsed = parseInt(window.getComputedStyle(modal).zIndex, 10);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function topmostOpenModal() {
+        var modals = Array.prototype.filter.call(
+            document.querySelectorAll('.modal-overlay.is-open'),
+            isVisible
+        );
+
+        return modals.reduce(function (top, candidate) {
+            if (!top) return candidate;
+            var topZ = zIndexOf(top);
+            var candidateZ = zIndexOf(candidate);
+            if (candidateZ > topZ) return candidate;
+            if (candidateZ < topZ) return top;
+            return (top.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING)
+                ? candidate
+                : top;
+        }, null);
+    }
+
+    function closeTopmostModal(modal) {
+        if (!modal) return;
+        if (modal.id && typeof window.closeModal === 'function') {
+            window.closeModal(modal.id);
+            return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+
+        var modal = topmostOpenModal();
+        if (!modal || modal.dataset.escapeLocked === '1') return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeTopmostModal(modal);
+    }, true);
 })();
