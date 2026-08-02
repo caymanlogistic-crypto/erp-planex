@@ -25,14 +25,13 @@
         $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
 
         $user = [
             'id' => $_SESSION['user_id'] ?? null,
             'role' => $_SESSION['role_code'] ?? null,
         ];
 
-        $accountId = \App\Service\FinanceCashService::createCashAccount($localPdo, $_POST, $user);
+        \App\Service\FinanceCashService::createCashAccount($localPdo, $_POST, $user);
 
         $_SESSION['finance_success'] = 'Касса "' . e($_POST['name'] ?? '') . '" успешно создана.';
     } catch (\InvalidArgumentException $e) {
