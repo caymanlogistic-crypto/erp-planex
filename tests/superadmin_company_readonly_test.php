@@ -6,6 +6,9 @@ $root = dirname(__DIR__);
 $files = [
     $root . '/app/Http/Controllers/Superadmin/CompanyActions/view.php',
     $root . '/app/Http/Controllers/Superadmin/ManagementActions/directories.php',
+    $root . '/app/Http/Controllers/Superadmin/ManagementActions/documents.php',
+    $root . '/app/Http/Controllers/Superadmin/ManagementActions/access_grants.php',
+    $root . '/app/Http/Controllers/Superadmin/ManagementActions/entity_list.php',
 ];
 
 $failed = false;
