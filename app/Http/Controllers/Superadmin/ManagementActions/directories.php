@@ -3,7 +3,7 @@ requireRole('superadmin');$pageTitle='Каталоги компании';$pageCo
 $companyId=(int)$id;$pdo=$db->connection();$company=\App\Service\SuperadminCompanyService::loadCompany($pdo,$companyId);
 if(!$company){http_response_code(404);echo'Company not found';return;}
 //$topbarCrumbs=[['label'=>'Superadmin','url'=>'/superadmin/dashboard'],['label'=>'Компании','url'=>'/superadmin/companies'],['label'=>$company['name'],'url'=>'/superadmin/companies/'.$companyId],['label'=>'Каталоги','url'=>null]];
-$cfg=companyDatabaseConfig($config,$company);$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();applyLocalMigrations($lpdo);
+$cfg=companyDatabaseConfig($config,$company);$ldb=new \App\Core\Database($cfg);$lpdo=$ldb->connection();
 $stmtClients=$lpdo->query("SELECT COUNT(*) FROM clients");$clientsCount=$stmtClients->fetchColumn();
 $stmtContractors=$lpdo->query("SELECT COUNT(*) FROM contractors");$contractorsCount=$stmtContractors->fetchColumn();
 $stmtDrivers=$lpdo->query("SELECT COUNT(*) FROM drivers");$driversCount=$stmtDrivers->fetchColumn();

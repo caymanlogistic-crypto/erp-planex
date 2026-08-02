@@ -67,7 +67,6 @@
                 $localDbConfig = companyDatabaseConfig($config, $company);
                 $localDb = new \App\Core\Database($localDbConfig);
                 $localPdo = $localDb->connection();
-                applyLocalMigrations($localPdo);
                 $localDbExists = true;
 
                 $logistCountStmt = $localPdo->prepare(
@@ -122,6 +121,7 @@
                 $accessCountStmt->execute();
                 $accessStats['total'] = (int)$accessCountStmt->fetchColumn();
             } catch (\Exception $e) {
+                error_log('Superadmin company view: tenant data unavailable for company #' . (int) $id);
             }
         }
 
