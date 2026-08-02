@@ -1,5 +1,6 @@
 name: P11 Export deploy public key
 
+# One-time PR run used only to export the public half of the existing deploy key.
 on:
   push:
     branches:
