@@ -1,7 +1,7 @@
 name: P11 Export deploy public key
 
 on:
-  pull_request:
+  push:
     branches:
       - chatgpt/production-stabilization-20260802
     paths:
