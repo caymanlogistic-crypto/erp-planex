@@ -1,0 +1,38 @@
+name: P11 Export deploy public key
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P11_export_deploy_public_key.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-public-key:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Derive public key only
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${PRIVATE_KEY:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P11_deploy_key"
+          chmod 600 "${HOME}/.ssh/P11_deploy_key"
+          ssh-keygen -y -f "${HOME}/.ssh/P11_deploy_key" > P11_deploy_public_key.txt
+          test -s P11_deploy_public_key.txt
+          rm -f "${HOME}/.ssh/P11_deploy_key"
+
+      - name: Upload public key
+        uses: actions/upload-artifact@v4
+        with:
+          name: P11_deploy_public_key
+          path: P11_deploy_public_key.txt
+          retention-days: 1
