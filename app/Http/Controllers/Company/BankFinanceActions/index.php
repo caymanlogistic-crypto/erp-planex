@@ -13,6 +13,7 @@
         $transactions = [];
         $dailyBalances = [];
         $bankSettings = [];
+        $reconciliation = [];
         $dbError = null;
 
         ob_start();
@@ -35,6 +36,7 @@
             $transactions = [];
             $dailyBalances = [];
             $bankSettings = [];
+            $reconciliation = [];
             $dbError = null;
 
             ob_start();
@@ -52,6 +54,7 @@
             $transactions = [];
             $dailyBalances = [];
             $bankSettings = [];
+            $reconciliation = [];
             $dbError = null;
 
             ob_start();
@@ -80,17 +83,24 @@
         $dbResult = \App\Service\BankFinanceService::getDailyBalances($localPdo, null, 1, 100, $dateFrom, $dateTo);
         $dailyBalances = $dbResult['data'];
 
-        $reconciliation = \App\Service\FinanceBankReconciliationService::reconcileAll($localPdo);
+        $reconciliation = [];
+        try {
+            $reconciliation = \App\Service\FinanceBankReconciliationService::reconcileAll($localPdo);
+        } catch (\Throwable $reconciliationError) {
+            error_log('Bank reconciliation read error: ' . $reconciliationError->getMessage());
+        }
 
         $dbError = null;
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
+        error_log('Bank accounts read error: ' . $e->getMessage());
         $company = $company ?? null;
         $accounts = [];
         $imports = [];
         $transactions = [];
         $dailyBalances = [];
         $bankSettings = [];
-        $dbError = 'Не удалось подключиться к базе данных компании.';
+        $reconciliation = [];
+        $dbError = 'Не удалось загрузить банковские данные компании.';
     }
 
     ob_start();
