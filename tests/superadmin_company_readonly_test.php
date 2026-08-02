@@ -25,4 +25,19 @@ foreach ($files as $file) {
     }
 }
 
+$directories = file_get_contents($files[1]);
+$directoriesView = file_get_contents($root . '/app/View/pages/superadmin_company_directories.php');
+if (!is_string($directories) || !str_contains($directories, '$dirs[$table]')) {
+    fwrite(STDERR, "FAIL: directories action does not provide the view data contract\n");
+    $failed = true;
+} else {
+    echo "PASS: directories action provides the view data contract\n";
+}
+if (!is_string($directoriesView) || preg_match('~href="/superadmin/~', $directoriesView)) {
+    fwrite(STDERR, "FAIL: directories view bypasses APP_BASE_PATH\n");
+    $failed = true;
+} else {
+    echo "PASS: directories links honor APP_BASE_PATH\n";
+}
+
 exit($failed ? 1 : 0);

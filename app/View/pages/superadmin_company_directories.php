@@ -29,7 +29,7 @@
         <div class="page-summary"><span>SUPERADMIN / <?= e($company['name']) ?></span></div>
     </div>
     <div class="page-head-actions">
-        <a href="/superadmin/companies/<?= $id ?>" class="btn btn-ghost">← К карточке</a>
+        <a href="<?= app_url('/superadmin/companies/' . (int)$id) ?>" class="btn btn-ghost">← К карточке</a>
     </div>
 </div>
 
@@ -68,7 +68,7 @@
                         <td class="col-num"><?= (int)($dirs['clients']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['clients']['archived'] ?? 0) ?></td>
                         <td class="col-tight"><span class="badge <?= (int)($dirs['clients']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['clients']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/clients" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-actions"><a href="<?= app_url('/superadmin/companies/' . (int)$id . '/clients') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Подрядчики</td>
@@ -76,7 +76,7 @@
                         <td class="col-num"><?= (int)($dirs['contractors']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['contractors']['archived'] ?? 0) ?></td>
                         <td class="col-tight"><span class="badge <?= (int)($dirs['contractors']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['contractors']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/contractors" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-actions"><a href="<?= app_url('/superadmin/companies/' . (int)$id . '/contractors') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Водители</td>
@@ -84,7 +84,7 @@
                         <td class="col-num"><?= (int)($dirs['drivers']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['drivers']['archived'] ?? 0) ?></td>
                         <td class="col-tight"><span class="badge <?= (int)($dirs['drivers']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['drivers']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/drivers" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-actions"><a href="<?= app_url('/superadmin/companies/' . (int)$id . '/drivers') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспортные единицы</td>
@@ -92,7 +92,7 @@
                         <td class="col-num"><?= (int)($dirs['vehicle_units']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['vehicle_units']['archived'] ?? 0) ?></td>
                         <td class="col-tight"><span class="badge <?= (int)($dirs['vehicle_units']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['vehicle_units']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/vehicles" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-actions"><a href="<?= app_url('/superadmin/companies/' . (int)$id . '/vehicles') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                     <tr>
                         <td>Транспортные комплекты</td>
@@ -116,7 +116,7 @@
                         <td class="col-num"><?= (int)($dirs['crews']['active'] ?? 0) ?></td>
                         <td class="col-num"><?= (int)($dirs['crews']['archived'] ?? 0) ?></td>
                         <td class="col-tight"><span class="badge <?= (int)($dirs['crews']['active'] ?? 0) > 0 ? 'badge-ok' : 'badge-warning' ?>"><?= (int)($dirs['crews']['active'] ?? 0) > 0 ? 'Заполнен' : 'Пусто' ?></span></td>
-                        <td class="col-actions"><a href="/superadmin/companies/<?= $id ?>/crews" class="btn btn-ghost btn-sm">Открыть</a></td>
+                        <td class="col-actions"><a href="<?= app_url('/superadmin/companies/' . (int)$id . '/crews') ?>" class="btn btn-ghost btn-sm">Открыть</a></td>
                     </tr>
                 </tbody>
             </table>
