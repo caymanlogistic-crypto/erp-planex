@@ -11,6 +11,22 @@
 $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
     || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
+// Session isolation must be configured before session_start(). Load only the
+// environment helpers here; bootstrap/app.php will reuse them via require_once.
+require_once __DIR__ . '/../app/Support/helpers.php';
+require_once __DIR__ . '/../app/Support/environment.php';
+loadEnvFileNonOverwriting(dirname(__DIR__) . '/.env');
+
+$sessionName = trim((string) getenv('SESSION_COOKIE_NAME'));
+if ($sessionName !== '') {
+    session_name($sessionName);
+}
+
+$sessionSavePath = trim((string) getenv('SESSION_SAVE_PATH'));
+if ($sessionSavePath !== '') {
+    session_save_path($sessionSavePath);
+}
+
 ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 session_set_cookie_params([
