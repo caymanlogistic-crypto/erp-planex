@@ -25,7 +25,6 @@
         $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
 
         $user = [
             'id' => $_SESSION['user_id'] ?? null,
