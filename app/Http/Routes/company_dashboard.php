@@ -28,7 +28,6 @@ $router->get('/company/dashboard', function () use ($config, $db) {
             $localDbConfig = companyDatabaseConfig($config, $company);
             $localDb = new \App\Core\Database($localDbConfig);
             $localPdo = $localDb->connection();
-            applyLocalMigrations($localPdo);
 
             if ($roleCode === 'company_owner' || $roleCode === 'senior_logist') {
                 $metrics = [
