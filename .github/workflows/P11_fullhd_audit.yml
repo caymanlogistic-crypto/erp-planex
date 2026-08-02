@@ -1,6 +1,6 @@
 name: P11 Full HD audit
 
-# P11 V2: one representative per route pattern with per-route checkpoints.
+# P11 V3: visible-text overlap probes, modal-aware inspection and non-HTML action checks.
 on:
   push:
     branches:
@@ -85,18 +85,24 @@ jobs:
             echo "No secure P11 runtime credentials are available; runner will record RUNTIME_ACCESS_BLOCKED."
           fi
 
-      - name: Prepare checkpointed audit runner V2
+      - name: Prepare checkpointed audit runner V3
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d .github/p11/P11_fullhd_audit_v2.js.gz.b64 | gzip -d > /tmp/P11_fullhd_audit_v2.js
-          node --check /tmp/P11_fullhd_audit_v2.js
+          cat \
+            .github/p11/P11_fullhd_audit_v3.js.gz.b64 \
+            .github/p11/P11_fullhd_audit_v3.part2.b64 \
+            .github/p11/P11_fullhd_audit_v3.part3.b64 \
+            .github/p11/P11_fullhd_audit_v3.part4.b64 \
+            .github/p11/P11_fullhd_audit_v3.part5.b64 \
+            | base64 -d | gzip -d > /tmp/P11_fullhd_audit_v3.js
+          node --check /tmp/P11_fullhd_audit_v3.js
 
-      - name: Execute checkpointed read-only 1920x1080 audit
+      - name: Execute checkpointed read-only 1920x1080 audit V3
         shell: bash
         run: |
           set -euo pipefail
-          NODE_PATH="${GITHUB_WORKSPACE}/node_modules" node /tmp/P11_fullhd_audit_v2.js | tee P11_runner_summary.json
+          NODE_PATH="${GITHUB_WORKSPACE}/node_modules" node /tmp/P11_fullhd_audit_v3.js | tee P11_runner_summary.json
 
       - name: Record commit evidence
         if: always()
