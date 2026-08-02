@@ -106,4 +106,14 @@
     ob_start();
     require base_path('app/View/pages/company_bank_accounts.php');
     $content = ob_get_clean();
+
+    if (($company['status'] ?? '') === 'active' && !isset($dbError)) {
+        $viewStatementsButton = '<button type="button" class="btn btn-secondary" data-open-modal="bank-statements-modal">Просмотр выписок</button>';
+        $refreshMailForm = '<form method="post" action="' . e(app_url('/company/finance/bank-accounts/refresh-from-mail')) . '" class="inline-form">'
+            . csrfField()
+            . '<button type="submit" class="btn btn-secondary">Обновить из почты</button>'
+            . '</form>';
+        $content = str_replace($viewStatementsButton, $viewStatementsButton . $refreshMailForm, $content);
+    }
+
     require base_path('app/View/layouts/main.php');
