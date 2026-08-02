@@ -15,11 +15,12 @@ permissions:
 env:
   P11_BASE_URL: https://plan-ex.ru/erpv2/
   P11_OUT_DIR: P11_output
+  P11_MAX_URLS: '220'
 
 jobs:
   fullhd-readonly-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -51,17 +52,28 @@ jobs:
         run: |
           set -euo pipefail
           credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ] && [ -f .github/p11/P11_runtime_credentials.enc.json ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P11_erpv2_audit"
+            chmod 600 "${HOME}/.ssh/P11_erpv2_audit"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P11_erpv2_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P11_erpv2_audit"
+          fi
+
           if [ -z "${credentials}" ] && [ -n "${SSH_HOST:-}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
-            install -d -m 700 "${HOME}/.ssh"
             printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P11_erpv2_audit"
             printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
             chmod 600 "${HOME}/.ssh/P11_erpv2_audit" "${HOME}/.ssh/known_hosts"
             credentials="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P11_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "test -f /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 && cat /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 || true")"
+            rm -f "${HOME}/.ssh/P11_erpv2_audit"
           fi
+
           if [ -n "${credentials}" ]; then
             echo "::add-mask::${credentials}"
             printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
-            echo "P11 credentials resolved securely."
+            echo "P11 credentials resolved securely for three roles."
           else
             echo "No secure P11 runtime credentials are available; runner will record RUNTIME_ACCESS_BLOCKED."
           fi
