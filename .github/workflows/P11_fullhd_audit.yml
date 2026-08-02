@@ -91,6 +91,9 @@ jobs:
           set -euo pipefail
           cat \
             .github/p11/P11_fullhd_audit_v3.js.gz.b64 \
+            .github/p11/P11_fullhd_audit_v3.part1b.b64 \
+            .github/p11/P11_fullhd_audit_v3.part1c.b64 \
+            .github/p11/P11_fullhd_audit_v3.part1d.b64 \
             .github/p11/P11_fullhd_audit_v3.part2.b64 \
             .github/p11/P11_fullhd_audit_v3.part3.b64 \
             .github/p11/P11_fullhd_audit_v3.part4.b64 \
