@@ -28,6 +28,14 @@ final class BankFinanceController
         require base_path('app/Http/Controllers/Company/BankFinanceActions/import.php');
     }
 
+    public function refreshFromMail(): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+
+        require base_path('app/Http/Controllers/Company/BankFinanceActions/refreshFromMail.php');
+    }
+
     public function settings(): void
     {
         $config = $this->config;
