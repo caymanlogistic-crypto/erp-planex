@@ -1,5 +1,6 @@
 name: P11 Full HD audit
 
+# P11 V2: one representative per route pattern with per-route checkpoints.
 on:
   push:
     branches:
