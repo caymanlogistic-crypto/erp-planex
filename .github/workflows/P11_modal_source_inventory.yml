@@ -1,0 +1,41 @@
+name: P11 Modal source inventory
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P11_modal_source_inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Inventory modal sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '=== JS FILES ==='
+            find public app -type f \( -name '*.js' -o -name '*.php' \) | sort
+            echo '=== MODAL TOKENS ==='
+            grep -RInE --include='*.js' --include='*.php' 'data-close-on-escape|modal-overlay|modal-close|Escape|keydown|LegalEntityModal|openModal|closeModal' public app tests 2>/dev/null || true
+            echo '=== SCRIPT INCLUDES ==='
+            grep -RInE --include='*.php' '<script[^>]+src=|assets/js/' app public 2>/dev/null || true
+            echo '=== MODAL TESTS ==='
+            find tests -type f | sort | grep -Ei 'modal|ui|layout|runtime|static' || true
+          } > P11_modal_source_inventory.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P11_modal_source_inventory
+          path: P11_modal_source_inventory.txt
+          retention-days: 1
