@@ -50,6 +50,11 @@ final class LocalMigrationService
 
     public static function apply(PDO $localPdo): void
     {
+        $requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'CLI'));
+        if (in_array($requestMethod, ['GET', 'HEAD'], true)) {
+            return;
+        }
+
         static $appliedConnections = [];
         $connectionId = spl_object_id($localPdo);
         if (isset($appliedConnections[$connectionId])) {
@@ -66,8 +71,6 @@ final class LocalMigrationService
                 UNIQUE KEY `uk_local_migration` (`migration`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
-
-
 
         $files = glob(base_path('database/migrations-local/*.sql')) ?: [];
         sort($files, SORT_STRING);
@@ -169,24 +172,15 @@ final class LocalMigrationService
                 $checksum = hash('sha256', $sql);
                 $fileName = basename($file);
 
-                // Extract migration number from filename (e.g., "016_rename..." → 16)
                 $migrationNum = 0;
                 if (preg_match('/^(\d+)/', $fileName, $numMatch)) {
                     $migrationNum = (int) $numMatch[1];
                 }
 
-                // Migrations up to 016 (which creates vehicle_units) are already
-                // present in this legacy schema. Re-running 005 would recreate
-                // `vehicles` and make 016's conflict check fail.
                 if ($migrationNum <= 16) {
                     $insert->execute([$fileName, $checksum]);
                     continue;
                 }
-
-                // Migrations 017+ are not baselined here; they will be applied
-                // by the normal migration loop in apply() since all migrations
-                // are idempotent (CREATE TABLE IF NOT EXISTS, ALTER with
-                // INFORMATION_SCHEMA pre-checks).
             }
             $localPdo->commit();
         } catch (\Throwable $e) {
@@ -225,7 +219,6 @@ final class LocalMigrationService
             $crewId = (int) $crew['id'];
             $driverId = (int) $crew['driver_id'];
             $vehicleId = (int) $crew['vehicle_id'];
-            $contractorId = (int) $crew['contractor_id'];
 
             if ($vehicleId <= 0 || $driverId <= 0) {
                 throw new \RuntimeException(
