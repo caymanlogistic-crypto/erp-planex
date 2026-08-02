@@ -7,6 +7,12 @@ on:
     paths:
       - '.github/p11/**'
       - '.github/workflows/P11_fullhd_audit.yml'
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p11/**'
+      - '.github/workflows/P11_fullhd_audit.yml'
   workflow_dispatch:
 
 permissions:
