@@ -1,0 +1,65 @@
+name: P11 Verify modal fix deployment
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P11_verify_modal_deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPECTED_SHA: 2b61d9dcd32efe3a861341da7939b26a7cd02499
+    steps:
+      - name: Wait for isolated ERPV2 marker
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P11_verify_deploy"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P11_verify_deploy" "${HOME}/.ssh/known_hosts"
+          marker=''
+          for attempt in $(seq 1 60); do
+            marker="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P11_verify_deploy" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt 2>/dev/null || true')"
+            if [ "${marker}" = "${EXPECTED_SHA}" ]; then
+              printf '%s\n' "${marker}" > P11_deployed_marker.txt
+              break
+            fi
+            sleep 10
+          done
+          rm -f "${HOME}/.ssh/P11_verify_deploy"
+          test "${marker}" = "${EXPECTED_SHA}"
+
+      - name: Verify deployed modal keyboard asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 30 \
+            'https://plan-ex.ru/erpv2/assets/js/modal-shell.js' \
+            -o P11_deployed_modal-shell.js
+          grep -F 'initErpModalKeyboardController' P11_deployed_modal-shell.js
+          grep -F "modal.dataset.escapeLocked === '1'" P11_deployed_modal-shell.js
+          grep -F 'event.stopImmediatePropagation()' P11_deployed_modal-shell.js
+
+      - name: Upload deploy evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: P11_modal_deploy_evidence
+          path: |
+            P11_deployed_marker.txt
+            P11_deployed_modal-shell.js
+          retention-days: 1
