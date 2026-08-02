@@ -140,10 +140,11 @@ foreach ($closureRouteFiles as $cf) {
     checkFileContains("app/Http/Routes/$cf", '$router->', "$cf -> has route definitions");
 }
 
-// === Service autoloading in index.php ===
+// === Service autoloading in the entrypoint dependency manifest ===
 $services = ['ContractorContactService', 'ClientContactService', 'AccessControlService', 'LocalMigrationService'];
+$dependencyManifest = 'app/Support/entrypoint_dependencies.php';
 foreach ($services as $svc) {
-    checkFileContains('public/index.php', $svc, "index.php -> $svc require");
+    checkFileContains($dependencyManifest, $svc, "entrypoint dependency manifest -> $svc require");
 }
 
 // === Dynamic table name whitelist check (entity_list.php) ===

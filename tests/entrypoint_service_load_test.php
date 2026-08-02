@@ -62,12 +62,15 @@ function check(string $label, bool $ok): void {
 
 $indexPath = __DIR__ . '/../public/index.php';
 $indexContent = file_get_contents($indexPath);
+$dependencyPath = __DIR__ . '/../app/Support/entrypoint_dependencies.php';
+$dependencyContent = file_get_contents($dependencyPath);
+$manifestContent = $indexContent . "\n" . $dependencyContent;
 
 // 1. Extract require_once entries from public/index.php.
 $requires = [];
 preg_match_all(
     '/require_once\s+base_path\(\s*[\'"]([^\'"]+)[\'"]\s*\)/',
-    $indexContent,
+    $manifestContent,
     $matches
 );
 foreach ($matches[1] as $rel) {
@@ -95,7 +98,7 @@ check('all 5 CS-01 service files exist', $missingFiles === []);
 
 // 3. Check no duplicate require entries in public/index.php.
 $dupes = array_filter(array_count_values($requires), fn($c) => $c > 1);
-check('no duplicate require entries', $dupes === []);
+check('no duplicate require entries in entrypoint manifest', $dupes === []);
 
 // 4. Foundational services with web consumers must be required in index.php.
 $foundational = [
@@ -110,7 +113,7 @@ foreach ($foundational as $f) {
         $missingRequires[] = $f;
     }
 }
-check('all 4 web-consumer foundational services required in index.php', $missingRequires === []);
+check('all 4 web-consumer foundational services required by entrypoint', $missingRequires === []);
 
 // 5. Dependency order: foundational must appear before every direct consumer.
 $consumers = [
@@ -161,6 +164,12 @@ foreach ($consumers as $foundation => $deps) {
     }
 }
 check('foundational services precede direct consumers', $orderOk);
+
+check(
+    'public entrypoint delegates ordered dependencies to one manifest',
+    str_contains($indexContent, "app/Support/entrypoint_dependencies.php")
+        && is_file($dependencyPath)
+);
 
 // 6. Isolated subprocess: prove class_exists() for all CS-01 classes.
 $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__FILE__) . ' --subprocess';
