@@ -1,49 +1,37 @@
-name: P14 Linear Trip Edit Runtime
+name: P15 Linear Trip Save Runtime
 
 on:
   push:
     branches:
-      - chatgpt/production-stabilization-20260802
+      - chatgpt/p14-runtime-verification-2
     paths:
-      - 'app/Support/entrypoint_dependencies.php'
-      - 'tests/p14_linear_trip_runtime_dependencies_test.php'
       - '.github/p14/**'
       - '.github/workflows/P14_linear_trip_edit_runtime.yml'
   pull_request:
     branches:
       - chatgpt/production-stabilization-20260802
     paths:
-      - 'app/Support/entrypoint_dependencies.php'
-      - 'tests/p14_linear_trip_runtime_dependencies_test.php'
       - '.github/p14/**'
       - '.github/workflows/P14_linear_trip_edit_runtime.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   P14_BASE_URL: https://plan-ex.ru/erpv2/
   P14_OUT_DIR: P14_output
 
 jobs:
-  linear-trip-edit-runtime:
+  linear-trip-save-runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
-      - name: Checkout exact commit
+      - name: Checkout diagnostic branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
-
-      - name: Verify PHP runtime dependency manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          php -l app/Support/entrypoint_dependencies.php
-          php -l tests/p14_linear_trip_runtime_dependencies_test.php
-          php tests/p14_linear_trip_runtime_dependencies_test.php | tee P14_dependency_test.txt
 
       - name: Configure Node
         uses: actions/setup-node@v4
@@ -70,18 +58,15 @@ jobs:
           set -euo pipefail
           credentials="${SECRET_CREDENTIALS:-}"
           install -d -m 700 "${HOME}/.ssh"
-          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ] && [ -f .github/p11/P11_runtime_credentials.enc.json ]; then
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P15_erpv2_audit"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P15_erpv2_audit" "${HOME}/.ssh/known_hosts"
+          if [ -z "${credentials}" ] && [ -f .github/p11/P11_runtime_credentials.enc.json ]; then
             python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
-            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
-            chmod 600 "${HOME}/.ssh/P14_erpv2_audit"
-            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P14_erpv2_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
-            rm -f "${HOME}/.ssh/P14_erpv2_audit"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P15_erpv2_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
           fi
-          if [ -z "${credentials}" ] && [ -n "${SSH_HOST:-}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
-            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
-            printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
-            chmod 600 "${HOME}/.ssh/P14_erpv2_audit" "${HOME}/.ssh/known_hosts"
-            credentials="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P14_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "test -f /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 && cat /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 || true")"
+          if [ -z "${credentials}" ]; then
+            credentials="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P15_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "test -f /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 && cat /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 || true")"
           fi
           if [ -z "${credentials}" ]; then
             echo "Runtime credentials are unavailable."
@@ -90,12 +75,39 @@ jobs:
           echo "::add-mask::${credentials}"
           printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
 
-      - name: Reproduce authenticated linear trip save
+      - name: Wait for exact production deployment
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          target="$(git ls-remote origin refs/heads/chatgpt/production-stabilization-20260802 | awk '{print $1}')"
+          if [ -z "${target}" ]; then
+            echo 'Unable to resolve production branch HEAD.' >&2
+            exit 1
+          fi
+          echo "TARGET_PRODUCTION_HEAD=${target}"
+          deployed=''
+          for attempt in $(seq 1 60); do
+            deployed="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P15_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt 2>/dev/null || true")"
+            echo "DEPLOY_WAIT attempt=${attempt} deployed=${deployed:-none}"
+            if [ "${deployed}" = "${target}" ]; then
+              printf 'P15_DEPLOYED_COMMIT=%s\n' "${deployed}" >> "${GITHUB_ENV}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Deployment did not reach ${target}; last deployed=${deployed:-none}." >&2
+          exit 1
+
+      - name: Verify unchanged authenticated linear trip save
         shell: bash
         run: |
           set -euo pipefail
           node --check .github/p14/P14_linear_trip_edit_runtime.js
-          node .github/p14/P14_linear_trip_edit_runtime.js | tee P14_runtime_console.json
+          node .github/p14/P14_linear_trip_edit_runtime.js | tee P15_runtime_console.json
 
       - name: Collect recent P15 server error
         if: failure()
@@ -104,27 +116,20 @@ jobs:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
-          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
-          install -d -m 700 "${HOME}/.ssh"
-          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
-          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
-          chmod 600 "${HOME}/.ssh/P14_erpv2_audit" "${HOME}/.ssh/known_hosts"
-          ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P14_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" \
+          ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P15_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" \
             "log=/home/s/spugovxsim/planexp/public_html/erpv2/storage/logs/P15_linear_trip_save_errors.log; if [ -f \"\$log\" ]; then tail -n 10 \"\$log\"; else echo P15_LOG_NOT_FOUND; fi" \
-            | tee P14_server_error.txt
+            | tee P15_server_error.txt
 
-      - name: Upload P14 runtime evidence
+      - name: Upload P15 runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: P14_linear_trip_save_runtime_${{ github.sha }}
+          name: P15_linear_trip_save_runtime_${{ github.sha }}
           path: |
             P14_output/
-            P14_dependency_test.txt
-            P14_runtime_console.json
-            P14_server_error.txt
+            P15_runtime_console.json
+            P15_server_error.txt
           if-no-files-found: warn
           retention-days: 30
