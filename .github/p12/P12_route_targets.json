@@ -1,0 +1,392 @@
+[
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/db-usage",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/deleted-data",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/create",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/deleted-data/10",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/edit",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/owner",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/users",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/directories",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/documents",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/access-grants",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/clients",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/contractors",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/drivers",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/vehicles",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/crews",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/owner/edit",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/documents?entity_type=client&entity_id=2",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/documents?entity_type=contractor&entity_id=2",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "SUPERADMIN",
+    "url": "https://plan-ex.ru/erpv2/superadmin/companies/25/documents?entity_type=driver&entity_id=2",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/dashboard",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/clients",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/trips/linear",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/trips/departures",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/route-executors",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/contractors",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/drivers",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/vehicle-sets",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/logists",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/responsible-assignments",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/documents",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/dashboard",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/bank-accounts",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/cash",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/invoices",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/operations",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/payment-calendar",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/reports/cash-flow",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/reports/management-balance",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/reports/payment-plan-fact",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/settings/dds-categories",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/settings/matching-rules",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/bank-statement-settings",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/trips/linear?show_create=1",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/contractors/create-full",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/logists/1",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/logists/1/edit",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/responsible-assignments?tab=route_executor",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/payment-calendar?date_from=2026-08-01&date_to=2026-08-31",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/payment-calendar?status=OVERDUE",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/invoices?direction=OUTGOING",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "OWNER",
+    "url": "https://plan-ex.ru/erpv2/company/finance/operations?date_from=2026-08-01&date_to=2026-08-31&type=INCOME",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/dashboard",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/clients",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/trips/linear",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/trips/departures",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/route-executors",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/contractors",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/drivers",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/vehicle-sets",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/documents",
+    "expectedStatus": 200,
+    "hadModal": false
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/finance/dashboard",
+    "expectedStatus": 403,
+    "hadModal": false
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/trips/linear?show_create=1",
+    "expectedStatus": 200,
+    "hadModal": true
+  },
+  {
+    "role": "LOGIST",
+    "url": "https://plan-ex.ru/erpv2/company/contractors/create-full",
+    "expectedStatus": 200,
+    "hadModal": false
+  }
+]
