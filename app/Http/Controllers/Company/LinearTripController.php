@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Company;
 
 use App\Core\Database;
+use App\Service\LinearTripRequestNormalizer;
 
 final class LinearTripController
 {
@@ -22,6 +23,8 @@ final class LinearTripController
 
     public function createSubmit(): void
     {
+        $this->normalizeSubmittedExecutorCarrier();
+
         $config = $this->config;
         $db = $this->db;
 
@@ -46,6 +49,8 @@ final class LinearTripController
 
     public function modalEditSubmit(string $id): void
     {
+        $this->normalizeSubmittedExecutorCarrier();
+
         $config = $this->config;
         $db = $this->db;
 
@@ -74,5 +79,22 @@ final class LinearTripController
         $db = $this->db;
 
         require base_path('app/Http/Controllers/Company/LinearTripActions/departures_placeholder.php');
+    }
+
+    private function normalizeSubmittedExecutorCarrier(): void
+    {
+        $companyId = (int) (getSessionCompanyId() ?? 0);
+        $sessionUser = [
+            'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+            'role_code' => (string) ($_SESSION['role_code'] ?? ''),
+        ];
+
+        $_POST = LinearTripRequestNormalizer::deriveCarrierFromExecutor(
+            $this->config,
+            $this->db,
+            $companyId,
+            $sessionUser,
+            $_POST
+        );
     }
 }
