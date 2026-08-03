@@ -3,235 +3,25 @@
 use App\Service\FinanceOperationService;
 use App\Service\FinanceAllocationService;
 
-$fmtDate = function ($d) { return ($d && $d !== '—') ? date('d.m.Y', is_numeric(strtotime($d)) ? strtotime($d) : time()) : '—'; };
+$fmtDate = static fn($d) => ($d && $d !== '—') ? date('d.m.Y', strtotime((string) $d) ?: time()) : '—';
 $canAllocate = $canAllocate ?? false;
+$status = (string) ($operation['status'] ?? '');
+$remaining = (float) ($operation['remaining_amount'] ?? 0);
+$hasAllocations = !empty($allocations);
+$allocateAllowed = $canAllocate && $status === 'POSTED' && $remaining > 0;
+$cancelAllowed = $canAllocate && in_array($status, ['POSTED', 'PENDING_CONFIRMATION'], true) && !$hasAllocations;
+$allocateReason = $status !== 'POSTED' ? 'Распределять можно только проведённые операции.' : ($remaining <= 0 ? 'Операция уже полностью распределена.' : '');
+$cancelReason = $status === 'CANCELLED' ? 'Операция уже отменена.' : ($hasAllocations ? 'Сначала отмените активные распределения.' : '');
 ?>
 <?php if ($error): ?>
 <div class="form-alert alert-error"><?= e($error) ?></div>
 <?php elseif ($operation): ?>
-<div class="driver-modal-body">
-    <h3 class="driver-view-name">Операция #<?= (int) $operation['id'] ?></h3>
-    <div class="driver-view-card">
-        <div class="driver-view-grid">
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Дата</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= $fmtDate($operation['operation_date'] ?? '') ?></div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Счёт</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= e($operation['account_name'] ?? '—') ?></div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Тип</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= e(FinanceOperationService::operationTypeLabel($operation['operation_type'] ?? null)) ?></div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Статус</div>
-                <div class="driver-view-cell driver-view-cell-value">
-                    <span class="<?= e(FinanceOperationService::statusBadgeClass($operation['status'] ?? null)) ?>">
-                        <span class="dot"></span>
-                        <?= e(FinanceOperationService::statusLabel($operation['status'] ?? null)) ?>
-                    </span>
-                </div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Источник</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= e(FinanceOperationService::sourceLabel($operation['source'] ?? null)) ?></div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Контрагент</div>
-                <div class="driver-view-cell driver-view-cell-value">
-                    <?= e($operation['counterparty_name'] ?? '—') ?>
-                    <?php if (!empty($operation['counterparty_inn'])): ?>
-                    <div class="driver-view-hint">ИНН <?= e($operation['counterparty_inn']) ?></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Сумма</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= FinanceOperationService::formatAmount($operation['amount'] ?? null) ?> ₽</div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Разнесено</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= FinanceAllocationService::formatAmount($operation['allocated_amount'] ?? null) ?> ₽</div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Остаток</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= FinanceAllocationService::formatAmount($operation['remaining_amount'] ?? null) ?> ₽</div>
-            </div>
-            <div class="driver-view-row">
-                <div class="driver-view-cell driver-view-cell-label">Статус разнесения</div>
-                <div class="driver-view-cell driver-view-cell-value">
-                    <span class="<?= e(FinanceOperationService::allocationStatusBadgeClass($operation['allocation_status'] ?? null)) ?>">
-                        <span class="dot"></span>
-                        <?= e(FinanceOperationService::allocationStatusLabel($operation['allocation_status'] ?? null)) ?>
-                    </span>
-                </div>
-            </div>
-            <?php if (!empty($operation['purpose'])): ?>
-            <div class="driver-view-row driver-view-row-wide">
-                <div class="driver-view-cell driver-view-cell-label">Назначение</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= e($operation['purpose']) ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($operation['comment'])): ?>
-            <div class="driver-view-row driver-view-row-wide">
-                <div class="driver-view-cell driver-view-cell-label">Комментарий</div>
-                <div class="driver-view-cell driver-view-cell-value"><?= e($operation['comment']) ?></div>
-            </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <div class="section-title mt-section">
-        <span>История изменений</span>
-        <button type="button" class="btn btn-ghost btn-sm" data-operation-history-btn data-operation-id="<?= (int) ($operation['id'] ?? 0) ?>">История</button>
-    </div>
-    <div id="operation-history-container" class="mt-half">
-        <div class="empty-state compact">
-            <p class="empty-desc">Нажмите «История» для загрузки.</p>
-        </div>
-    </div>
-
-    <?php if (!empty($allocations)): ?>
-    <div class="section-title mt-section">Распределения</div>
-    <div class="table-card table-card--standard">
-        <div class="table-scroll">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Дата</th>
-                        <th>Сумма</th>
-                        <th>Счёт</th>
-                        <th>Рейс</th>
-                        <th>Комментарий</th>
-                        <?php if ($canAllocate): ?>
-                        <th>Действие</th>
-                        <?php endif; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($allocations as $al): ?>
-                    <tr>
-                        <td class="col-mono"><?= $fmtDate($al['allocation_date'] ?? '') ?></td>
-                        <td class="col-mono"><?= FinanceAllocationService::formatAmount($al['amount'] ?? null) ?></td>
-                        <td><?= e($al['invoice_number'] ?? '—') ?></td>
-                        <td><?= e(($al['route_type'] ?? '') . ' / ' . ($al['planned_loading_date'] ?? '—')) ?></td>
-                        <td><?= e($al['comment'] ?? '—') ?></td>
-                        <?php if ($canAllocate): ?>
-                        <td>
-                            <form action="<?= app_url('/company/finance/operations/allocations/' . (int) $al['id'] . '/cancel') ?>" method="post" class="cancel-allocation-form">
-                                <?= csrfField() ?>
-                                <input type="hidden" name="reason" value="Отменено вручную">
-                                <button type="submit" class="btn btn-ghost btn-sm">Отменить</button>
-                            </form>
-                        </td>
-                        <?php endif; ?>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <?php endif; ?>
+<div class="finance-operation-card" data-operation-card data-operation-id="<?= (int) $operation['id'] ?>" data-status="<?= e($status) ?>" data-status-label="<?= e(FinanceOperationService::statusLabel($status)) ?>" data-allocation-status-label="<?= e(FinanceOperationService::allocationStatusLabel($operation['allocation_status'] ?? null)) ?>" data-allocated="<?= e((string) ($operation['allocated_amount'] ?? '0.00')) ?>" data-remaining="<?= e((string) ($operation['remaining_amount'] ?? '0.00')) ?>">
+    <div class="finance-operation-heading"><div><h3>Операция №<?= (int) $operation['id'] ?></h3><div class="finance-operation-subtitle"><?= $fmtDate($operation['operation_date'] ?? '') ?> · <?= e(FinanceOperationService::operationTypeLabel($operation['operation_type'] ?? null)) ?></div></div><span class="<?= e(FinanceOperationService::statusBadgeClass($status)) ?>"><span class="dot"></span><?= e(FinanceOperationService::statusLabel($status)) ?></span></div>
+    <div class="finance-operation-metrics"><div><span>Сумма</span><strong><?= FinanceOperationService::formatAmount($operation['amount'] ?? null) ?> ₽</strong></div><div><span>Разнесено</span><strong><?= FinanceAllocationService::formatAmount($operation['allocated_amount'] ?? null) ?> ₽</strong></div><div><span>Остаток</span><strong><?= FinanceAllocationService::formatAmount($operation['remaining_amount'] ?? null) ?> ₽</strong></div><div><span>Статус разнесения</span><strong><?= e(FinanceOperationService::allocationStatusLabel($operation['allocation_status'] ?? null)) ?></strong></div></div>
+    <div class="finance-operation-details"><div><span>Расчётный счёт</span><b><?= e($operation['account_name'] ?? '—') ?></b></div><div><span>Источник</span><b><?= e(FinanceOperationService::sourceLabel($operation['source'] ?? null)) ?></b></div><div><span>Контрагент</span><b><?= e($operation['counterparty_name'] ?? '—') ?></b><?php if (!empty($operation['counterparty_inn'])): ?><small>ИНН <?= e($operation['counterparty_inn']) ?></small><?php endif; ?></div><div class="wide"><span>Назначение платежа</span><b><?= e($operation['purpose'] ?: '—') ?></b></div><?php if (!empty($operation['cancellation_reason'])): ?><div class="wide"><span>Причина отмены</span><b><?= e($operation['cancellation_reason']) ?></b></div><?php endif; ?></div>
+    <?php if ($hasAllocations): ?><section class="finance-operation-section"><h4>Распределения</h4><div class="table-scroll"><table class="table"><thead><tr><th>Дата</th><th>Сумма</th><th>Счёт</th><th>Рейс</th><th>Комментарий</th><th></th></tr></thead><tbody><?php foreach ($allocations as $al): ?><tr><td><?= $fmtDate($al['allocation_date'] ?? '') ?></td><td><?= FinanceAllocationService::formatAmount($al['amount'] ?? null) ?> ₽</td><td><?= e($al['invoice_number'] ?? '—') ?></td><td><?= e(trim(($al['route_type'] ?? '') . ' ' . ($al['planned_loading_date'] ?? '')) ?: '—') ?></td><td><?= e($al['comment'] ?? '—') ?></td><td><form action="<?= app_url('/company/finance/operations/allocations/' . (int) $al['id'] . '/cancel') ?>" method="post" data-allocation-cancel-form><?= csrfField() ?><input type="hidden" name="reason" value="Отменено вручную"><button type="submit" class="btn btn-ghost btn-sm">Отменить</button></form></td></tr><?php endforeach; ?></tbody></table></div></section><?php endif; ?>
+    <section class="finance-operation-section"><div class="finance-operation-section-head"><h4>История изменений</h4><button type="button" class="btn btn-ghost btn-sm" data-operation-history-btn data-operation-id="<?= (int) $operation['id'] ?>">Обновить историю</button></div><div data-operation-history-container><div class="empty-state compact"><p>Загрузка истории…</p></div></div></section>
 </div>
-<div class="modal-foot is-spaced">
-    <div class="modal-foot-actions">
-        <button type="button" class="btn btn-ghost" data-close-modal="operation-view-modal">Закрыть</button>
-    </div>
-    <div class="modal-foot-actions">
-        <?php if ($canAllocate && $operation['status'] === 'POSTED' && $operation['remaining_amount'] !== '0.00'): ?>
-        <button type="button" class="btn btn-primary" data-operation-allocate-btn>Распределить</button>
-        <?php endif; ?>
-        <?php if ($canAllocate && $operation['status'] === 'POSTED'): ?>
-        <button type="button" class="btn btn-primary btn-danger" data-operation-cancel-btn>Отменить операцию</button>
-        <?php endif; ?>
-    </div>
-</div>
-
-<script>
-(function() {
-    var modal = document.getElementById('operation-view-modal');
-    if (!modal) return;
-
-    var allocateBtn = modal.querySelector('[data-operation-allocate-btn]');
-    if (allocateBtn) {
-        allocateBtn.addEventListener('click', function() {
-            var id = <?= (int) ($operation['id'] ?? 0) ?>;
-            var allocateModal = document.getElementById('operation-allocate-modal');
-            var allocateBody = document.getElementById('operation-allocate-modal-body');
-            if (!allocateBody || !allocateModal) return;
-            allocateBody.innerHTML = '<div class="empty-state compact"><p>Загрузка...</p></div>';
-            window.openModal('operation-allocate-modal');
-            allocateModal.querySelector('.modal-title').textContent = 'Распределение операции #' + id;
-
-            fetch(window.getErpBasePath() + '/company/finance/operations/' + id + '/allocate')
-                .then(function(r) { return r.text(); })
-                .then(function(html) {
-                    allocateBody.innerHTML = html;
-                })
-                .catch(function() {
-                    allocateBody.innerHTML = '<div class="form-alert alert-error">Не удалось загрузить форму распределения.</div>';
-                });
-        });
-    }
-
-    var historyBtn = modal.querySelector('[data-operation-history-btn]');
-    var historyContainer = modal.querySelector('#operation-history-container');
-    if (historyBtn && historyContainer) {
-        historyBtn.addEventListener('click', function() {
-            var id = historyBtn.getAttribute('data-operation-id');
-            historyContainer.innerHTML = '<div class="empty-state compact"><p>Загрузка...</p></div>';
-            fetch(window.getErpBasePath() + '/company/finance/operations/' + id + '/history')
-                .then(function(r) { return r.text(); })
-                .then(function(html) {
-                    historyContainer.innerHTML = html;
-                })
-                .catch(function() {
-                    historyContainer.innerHTML = '<div class="form-alert alert-error">Не удалось загрузить историю.</div>';
-                });
-        });
-    }
-
-    var cancelBtn = modal.querySelector('[data-operation-cancel-btn]');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
-            var id = <?= (int) ($operation['id'] ?? 0) ?>;
-            var cancelModal = document.getElementById('operation-cancel-modal');
-            if (!cancelModal) return;
-            var cancelForm = cancelModal.querySelector('.finance-cancel-form');
-            if (cancelForm) {
-                cancelForm.action = window.getErpBasePath() + '/company/finance/operations/' + id + '/cancel';
-            }
-            window.openModal('operation-cancel-modal');
-        });
-    }
-
-    var cancelForms = modal.querySelectorAll('.cancel-allocation-form');
-    cancelForms.forEach(function(form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            var alertBox = form.querySelector('.form-alert');
-            if (alertBox) alertBox.remove();
-            var submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) submitBtn.disabled = true;
-            var viewModalBody = document.getElementById('operation-view-modal-body');
-            fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(r) { return r.text(); })
-                .then(function(html) {
-                    if (viewModalBody) {
-                        viewModalBody.innerHTML = html;
-                    }
-                })
-                .catch(function() {
-                    if (submitBtn) submitBtn.disabled = false;
-                    var errDiv = document.createElement('div');
-                    errDiv.className = 'form-alert alert-error';
-                    errDiv.textContent = 'Ошибка связи с сервером.';
-                    form.parentNode.insertBefore(errDiv, form);
-                });
-        });
-    });
-})();
-</script>
+<div class="modal-foot is-spaced finance-operation-footer"><button type="button" class="btn btn-ghost" data-close-modal="operation-view-modal">Закрыть</button><div class="modal-foot-actions"><button type="button" class="btn btn-primary" data-operation-allocate-btn data-operation-id="<?= (int) $operation['id'] ?>" data-url="<?= app_url('/company/finance/operations/' . (int) $operation['id'] . '/allocate') ?>" <?= $allocateAllowed ? '' : 'disabled' ?> title="<?= e($allocateReason) ?>">Распределить</button><button type="button" class="btn btn-danger" data-operation-cancel-btn data-operation-id="<?= (int) $operation['id'] ?>" data-url="<?= app_url('/company/finance/operations/' . (int) $operation['id'] . '/cancel') ?>" data-date="<?= e($fmtDate($operation['operation_date'] ?? '')) ?>" data-amount="<?= e(FinanceOperationService::formatAmount($operation['amount'] ?? null) . ' ₽') ?>" data-type="<?= e(FinanceOperationService::operationTypeLabel($operation['operation_type'] ?? null)) ?>" data-counterparty="<?= e($operation['counterparty_name'] ?? '—') ?>" <?= $cancelAllowed ? '' : 'disabled' ?> title="<?= e($cancelReason) ?>">Отменить операцию</button></div></div>
 <?php endif; ?>

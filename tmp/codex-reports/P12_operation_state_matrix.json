@@ -1,0 +1,14 @@
+{
+  "prompt": "P12",
+  "operation_states": {
+    "POSTED_unallocated": {"allocate": true, "cancel": true},
+    "POSTED_partially_allocated": {"allocate": true, "cancel": false, "reason": "cancel allocations first"},
+    "POSTED_allocated": {"allocate": false, "cancel": false, "reason": "cancel allocations first"},
+    "PENDING_CONFIRMATION": {"allocate": false, "cancel": true},
+    "CANCELLED": {"allocate": false, "cancel": false},
+    "DRAFT": {"allocate": false, "cancel": false},
+    "PLANNED": {"allocate": false, "cancel": false}
+  },
+  "allocation_states": ["unallocated", "partially_allocated", "allocated"],
+  "cancellation_policy": "Operation cancellation is prohibited while active allocations exist."
+}

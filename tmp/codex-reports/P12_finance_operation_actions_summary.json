@@ -1,0 +1,9 @@
+{
+  "status": "P12_CODE_READY_RUNTIME_OWNER_CHECK_REQUIRED",
+  "start_head": "2b61d9dcd32efe3a861341da7939b26a7cd02499",
+  "final_head": "commit containing this report",
+  "root_cause": "Inline scripts inside AJAX fragments inserted via innerHTML were never executed.",
+  "cancellation_policy": "Block cancellation while active allocations exist.",
+  "runtime_verified": false,
+  "owner_runtime_check_required": true
+}

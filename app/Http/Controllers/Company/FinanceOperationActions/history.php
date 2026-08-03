@@ -1,7 +1,7 @@
 <?php
 
 use App\Core\Database;
-use App\Service\FinanceOperationService;
+use App\Service\FinanceOperationActionService;
 
 requireRole(['company_owner']);
 
@@ -9,24 +9,20 @@ $logs = [];
 $error = null;
 
 try {
-    $companyId = (int)(getSessionCompanyId() ?? 0);
+    $companyId = (int) (getSessionCompanyId() ?? 0);
     $company = $db->fetch('SELECT * FROM companies WHERE id = ?', [$companyId]);
-
     if (!$company || $company['status'] !== 'active') {
         throw new \RuntimeException('Компания недоступна.');
     }
 
-    $localConfig = companyDatabaseConfig($config, $company);
-    $localDb = new Database($localConfig);
+    $localDb = new Database(companyDatabaseConfig($config, $company));
     $localPdo = $localDb->connection();
-    applyLocalMigrations($localPdo);
-
-    $entityId = (int) $id;
-    $entityType = (string) ($_GET['entity_type'] ?? 'finance_operation');
-
-    $logs = FinanceOperationService::fetchAuditLog($localPdo, $entityType, $entityId);
+    $logs = FinanceOperationActionService::fetchOperationHistory($localPdo, (int) $id);
 } catch (\Throwable $e) {
-    $error = $e->getMessage();
+    http_response_code(500);
+    $error = $e instanceof \RuntimeException && !($e instanceof \PDOException)
+        ? $e->getMessage()
+        : 'Не удалось загрузить историю.';
 }
 
 require base_path('app/View/partials/company_finance_history_view.php');
