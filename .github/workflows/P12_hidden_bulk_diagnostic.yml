@@ -84,10 +84,11 @@ jobs:
             await b.close();
           })().catch(e=>{fs.writeFileSync('P12_bulk_output/P12_HIDDEN_BULK_DIAGNOSTIC.json',JSON.stringify({error:String(e.stack||e)},null,2));process.exitCode=1;});
           JS
-          node /tmp/P12_bulk.js
+          NODE_PATH="${GITHUB_WORKSPACE}/node_modules" node /tmp/P12_bulk.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: P12_hidden_bulk_diagnostic
           path: P12_bulk_output/
+          if-no-files-found: error
           retention-days: 30
