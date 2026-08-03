@@ -73,7 +73,7 @@ jobs:
           }
           '''
           if marker not in css:
-              css = css.rstrip() + block + '\n'
+              css = css.rstrip() + block.rstrip() + '\n'
           css_path.write_text(css, encoding='utf-8', newline='\n')
 
           test_path = Path('tests/p12_responsible_assignments_toolbar_test.php')
