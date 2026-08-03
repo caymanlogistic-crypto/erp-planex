@@ -36,6 +36,14 @@ function credentials() {
     evidence.formEncoding = await form.getAttribute('enctype');
     evidence.carrierValue = await form.locator('[name="carrier_contractor_id"]').inputValue().catch(()=>null);
     evidence.executorValue = await form.locator('[name="route_executor_id"]').inputValue().catch(()=>null);
+    evidence.paymentConditions = await form.evaluate((element) => {
+      const data = new FormData(element);
+      const result = {};
+      for (const [key, value] of data.entries()) {
+        if (key.endsWith('[condition_type]')) result[key] = String(value);
+      }
+      return result;
+    });
     evidence.submit = await form.evaluate(async (element) => {
       const data = new FormData(element);
       const response = await fetch(element.action, {
