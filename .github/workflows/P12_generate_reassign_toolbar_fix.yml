@@ -1,0 +1,154 @@
+name: P12 Generate reassign toolbar fix
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P12_generate_reassign_toolbar_fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout production-stabilization head
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/production-stabilization-20260802
+          fetch-depth: 0
+
+      - name: Apply scoped toolbar layout fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          css_path = Path('public/assets/css/erp-ui.css')
+          css = css_path.read_text(encoding='utf-8')
+          marker = '/* P12 responsible assignments mass toolbar */'
+          block = r'''
+
+          /* P12 responsible assignments mass toolbar */
+          #massReassignToolbarForm {
+              display: flex;
+              flex-flow: row nowrap;
+              align-items: center;
+              gap: 8px 12px;
+              width: 100%;
+              min-width: 0;
+              margin: 0;
+          }
+
+          #massReassignToolbarForm .checkbox-inline,
+          #massReassignToolbarForm .found-label,
+          #massReassignToolbarForm .btn {
+              flex: 0 0 auto;
+              margin: 0;
+          }
+
+          #massReassignToolbarForm .field-select {
+              flex: 1 1 320px;
+              min-width: 220px;
+              max-width: 560px;
+          }
+
+          @media (max-width: 1100px) {
+              #massReassignToolbarForm {
+                  flex-wrap: wrap;
+              }
+
+              .table-toolbar:has(#massReassignToolbarForm) {
+                  height: auto;
+                  min-height: 36px;
+                  overflow: visible;
+                  padding-top: 8px;
+                  padding-bottom: 8px;
+              }
+          }
+          '''
+          if marker not in css:
+              css = css.rstrip() + block + '\n'
+          css_path.write_text(css, encoding='utf-8', newline='\n')
+
+          test_path = Path('tests/p12_responsible_assignments_toolbar_test.php')
+          test_path.write_text(r'''<?php
+          if (PHP_SAPI !== 'cli') {
+              http_response_code(404);
+              exit;
+          }
+
+          $css = file_get_contents(__DIR__ . '/../public/assets/css/erp-ui.css');
+          $view = file_get_contents(__DIR__ . '/../app/View/pages/company_responsible_assignments.php');
+          $checks = [
+              'Mass toolbar form exists in view' => str_contains($view, 'id="massReassignToolbarForm"'),
+              'Mass submit button exists' => str_contains($view, 'Переназначить выбранные'),
+              'Scoped P12 CSS marker exists' => str_contains($css, 'P12 responsible assignments mass toolbar'),
+              'Mass toolbar is forced to one row on Full HD' => preg_match('/#massReassignToolbarForm\s*\{[^}]*flex-flow:\s*row nowrap;/s', $css) === 1,
+              'Mass toolbar aligns controls vertically' => preg_match('/#massReassignToolbarForm\s*\{[^}]*align-items:\s*center;/s', $css) === 1,
+              'Select can shrink and grow' => preg_match('/#massReassignToolbarForm \.field-select\s*\{[^}]*flex:\s*1 1 320px;/s', $css) === 1,
+              'Button remains fixed width' => preg_match('/#massReassignToolbarForm \.btn\s*\{[^}]*flex:\s*0 0 auto;/s', $css) === 1,
+              'Narrow desktop fallback expands toolbar height' => str_contains($css, '.table-toolbar:has(#massReassignToolbarForm)'),
+          ];
+
+          $failed = 0;
+          echo "=== P12 Responsible Assignments Toolbar ===\n";
+          foreach ($checks as $name => $ok) {
+              echo ($ok ? 'PASS' : 'FAIL') . " - {$name}\n";
+              if (!$ok) $failed++;
+          }
+          echo 'TOTAL=' . count($checks) . '; FAILED=' . $failed . "\n";
+          exit($failed === 0 ? 0 : 1);
+          ''', encoding='utf-8', newline='\n')
+          PY
+
+      - name: Validate changed files
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/p12_responsible_assignments_toolbar_test.php
+          php tests/p12_responsible_assignments_toolbar_test.php
+          if [ -f tools/architecture_guard.php ]; then php tools/architecture_guard.php; fi
+          git diff --check
+          python <<'PY'
+          from pathlib import Path
+          files = [Path('public/assets/css/erp-ui.css'), Path('tests/p12_responsible_assignments_toolbar_test.php')]
+          problems = []
+          for path in files:
+              raw = path.read_bytes()
+              if raw.startswith(b'\xef\xbb\xbf'):
+                  problems.append(f'{path}: UTF-8 BOM')
+              text = raw.decode('utf-8')
+              for token in ('Рџ', 'РЎ', 'Ð', 'Ñ', '�'):
+                  if token in text:
+                      problems.append(f'{path}: mojibake token {token}')
+          if problems:
+              raise SystemExit('\n'.join(problems))
+          PY
+          if grep -nEi '(password\s*=|api[_-]?key\s*=|secret\s*=|BEGIN [A-Z ]*PRIVATE KEY)' public/assets/css/erp-ui.css tests/p12_responsible_assignments_toolbar_test.php; then
+            echo 'Potential secret in changed files' >&2
+            exit 1
+          fi
+
+      - name: Create generated application commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'P12 QA automation'
+          git config user.email 'p12-qa@users.noreply.github.com'
+          git add public/assets/css/erp-ui.css tests/p12_responsible_assignments_toolbar_test.php
+          git commit -m 'fix(P12): keep mass reassignment toolbar usable'
+          git push origin HEAD:refs/heads/p12-generated-reassign-toolbar-fix --force-with-lease
+          git rev-parse HEAD | tee P12_generated_fix_commit.txt
+
+      - name: Upload generated commit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: P12_generated_reassign_toolbar_fix
+          path: P12_generated_fix_commit.txt
+          retention-days: 1
