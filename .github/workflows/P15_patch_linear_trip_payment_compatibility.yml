@@ -21,7 +21,7 @@ jobs:
           ref: chatgpt/production-stabilization-20260802
           fetch-depth: 0
 
-      - name: Patch payment compatibility keys
+      - name: Patch payment compatibility
         shell: bash
         run: |
           set -euo pipefail
@@ -30,10 +30,13 @@ jobs:
 
           path = Path('app/Service/LinearTripEditSaveService.php')
           text = path.read_text(encoding='utf-8')
-          needle = """                'specific_due_date' => $specificDueDate,
-                          'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
-                      ];""".replace('                          ', '                ').replace('                      ];', '            ];')
-          replacement = """                'specific_due_date' => $specificDueDate,
+
+          payment_marker = "'payment_due_type' => self::legacyDueType($conditionType)"
+          if payment_marker not in text:
+              needle = """                'specific_due_date' => $specificDueDate,
+                'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
+            ];"""
+              replacement = """                'specific_due_date' => $specificDueDate,
                 'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
                 // LinearRouteService::storeRoutePayments still persists legacy columns.
                 // Keep both representations populated to avoid undefined-key failures.
@@ -41,15 +44,22 @@ jobs:
                 'payment_due_days' => $daysCount,
                 'payment_due_days_kind' => $daysKind,
             ];"""
-          if "'payment_due_type' => self::legacyDueType($conditionType)" in text:
-              print('P15 compatibility patch already applied.')
-          elif needle in text:
-              path.write_text(text.replace(needle, replacement, 1), encoding='utf-8', newline='\n')
-              print('P15 compatibility patch applied.')
-          else:
-              start = text.find("'specific_due_date' => $specificDueDate")
-              print(text[start-120:start+360] if start >= 0 else 'specific_due_date marker absent')
-              raise SystemExit('Expected parsePaymentRows block was not found.')
+              if needle not in text:
+                  raise SystemExit('Expected parsePaymentRows block was not found.')
+              text = text.replace(needle, replacement, 1)
+
+          start_day_line = "DateCalculationService::CONDITION_START_DAY => 'Предоплата на загрузке',"
+          if start_day_line not in text:
+              needle = """            DateCalculationService::CONDITION_PREPAYMENT => 'Предоплата на загрузке',
+            DateCalculationService::CONDITION_AFTER_START => 'После загрузки',"""
+              replacement = """            DateCalculationService::CONDITION_PREPAYMENT => 'Предоплата на загрузке',
+            DateCalculationService::CONDITION_START_DAY => 'Предоплата на загрузке',
+            DateCalculationService::CONDITION_AFTER_START => 'После загрузки',"""
+              if needle not in text:
+                  raise SystemExit('Expected legacyDueType block was not found.')
+              text = text.replace(needle, replacement, 1)
+
+          path.write_text(text, encoding='utf-8', newline='\n')
           PY
 
           php -l app/Service/LinearTripEditSaveService.php
@@ -69,5 +79,5 @@ jobs:
             echo 'No patch commit required.'
             exit 0
           fi
-          git commit -m 'fix(P15): preserve legacy payment keys during trip save'
+          git commit -m 'fix(P15): preserve route start payment semantics'
           git push origin HEAD:chatgpt/production-stabilization-20260802
