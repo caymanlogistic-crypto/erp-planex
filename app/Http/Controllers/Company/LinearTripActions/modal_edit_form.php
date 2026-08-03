@@ -2,6 +2,7 @@
 
 use App\Service\LinearRouteService;
 use App\Service\LinearTripEditTokenService;
+use App\Service\LinearTripRequestNormalizer;
 
 requireRole(['company_owner', 'senior_logist', 'logist']);
 
@@ -46,6 +47,7 @@ try {
         exit;
     }
 
+    $route = LinearTripRequestNormalizer::normalizeRoutePaymentConditions($route);
     $termsByRole = LinearRouteService::fetchRouteTerms($localPdo, $routeId);
     $docsByCode = LinearRouteService::fetchRouteDocuments($localPdo, $routeId);
     $clients = LinearRouteService::fetchVisibleClients($localPdo, $sessionUser);
@@ -59,7 +61,7 @@ try {
     require base_path('app/View/partials/company_linear_trip_modal_edit.php');
     exit;
 } catch (Throwable $e) {
-    error_log(sprintf('[P13] linear trip edit load failed company=%d route=%d: %s', $companyId, $routeId, $e->getMessage()));
+    error_log(sprintf('[P15] linear trip edit load failed company=%d route=%d: %s', $companyId, $routeId, $e->getMessage()));
     http_response_code(500);
     echo '<div class="notice warn">Не удалось открыть редактирование рейса.</div>';
     exit;
