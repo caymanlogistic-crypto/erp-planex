@@ -9,6 +9,14 @@ on:
       - 'tests/p14_linear_trip_runtime_dependencies_test.php'
       - '.github/p14/**'
       - '.github/workflows/P14_linear_trip_edit_runtime.yml'
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - 'app/Support/entrypoint_dependencies.php'
+      - 'tests/p14_linear_trip_runtime_dependencies_test.php'
+      - '.github/p14/**'
+      - '.github/workflows/P14_linear_trip_edit_runtime.yml'
   workflow_dispatch:
 
 permissions:
@@ -95,7 +103,7 @@ jobs:
           node .github/p14/P14_linear_trip_edit_runtime.js | tee P14_runtime_console.json
 
       - name: Record P14 result in repository
-        if: always()
+        if: always() && github.event_name == 'push'
         shell: bash
         env:
           TARGET_BRANCH: chatgpt/production-stabilization-20260802
