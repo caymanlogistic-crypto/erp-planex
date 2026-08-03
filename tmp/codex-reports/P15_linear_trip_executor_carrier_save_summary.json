@@ -1,0 +1,50 @@
+{
+  "prompt": "P15",
+  "status": "RUNTIME_ACCEPTED",
+  "scope": [
+    "derive carrier from selected route executor",
+    "remove manual carrier requirement from linear trip UI",
+    "fix internal error during linear trip edit save",
+    "normalize legacy payment conditions"
+  ],
+  "production_branch": "chatgpt/production-stabilization-20260802",
+  "runtime": {
+    "base_url": "https://plan-ex.ru/erpv2/",
+    "deployed_commit_verified": "fbd830dc80905d4b056ebfefc1ee8dcb393e0c43",
+    "workflow_run_id": 30839527962,
+    "workflow_job_id": 91772899108,
+    "conclusion": "success",
+    "route_id": 2,
+    "route_executor_id": 3,
+    "derived_carrier_contractor_id": 4,
+    "carrier_field_hidden": true,
+    "form_encoding": "multipart/form-data",
+    "form_action": "/erpv2/company/trips/linear/2/modal-edit",
+    "post_http_status": 200,
+    "post_success": true,
+    "post_message": "Рейс успешно сохранён."
+  },
+  "root_causes": [
+    "carrier was independently required although route executor already stores contractor_id",
+    "historical payment conditions were not normalized for the modern form",
+    "save service omitted legacy payment keys still consumed by LinearRouteService::storeRoutePayments",
+    "legacy loading prepayment was incorrectly interpreted as modern prepayment requiring a concrete date"
+  ],
+  "fixes": [
+    "server-side carrier derivation from visible route executor",
+    "hidden compatibility carrier control in create/edit forms",
+    "legacy payment condition normalization",
+    "modern and legacy payment key population during save",
+    "traceable internal error IDs without exposing server details"
+  ],
+  "data_safety": {
+    "new_route_created": false,
+    "test_document_uploaded": false,
+    "business_values_intentionally_changed": false,
+    "production_schema_manually_modified": false
+  },
+  "remaining_limitations": [
+    "carrier select remains hidden in DOM for backward compatibility",
+    "P15 runtime did not upload a test document into the working route"
+  ]
+}
