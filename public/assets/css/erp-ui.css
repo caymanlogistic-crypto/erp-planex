@@ -1696,3 +1696,41 @@ td.is-dash {
 .dashboard-card--ok {
   border-left:3px solid var(--success);
 }
+
+/* P12 responsible assignments mass toolbar */
+#massReassignToolbarForm {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    gap: 8px 12px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+#massReassignToolbarForm .checkbox-inline,
+#massReassignToolbarForm .found-label,
+#massReassignToolbarForm .btn {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+#massReassignToolbarForm .field-select {
+    flex: 1 1 320px;
+    min-width: 220px;
+    max-width: 560px;
+}
+
+@media (max-width: 1100px) {
+    #massReassignToolbarForm {
+        flex-wrap: wrap;
+    }
+
+    .table-toolbar:has(#massReassignToolbarForm) {
+        height: auto;
+        min-height: 36px;
+        overflow: visible;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+}
