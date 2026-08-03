@@ -36,12 +36,19 @@ function credentials() {
     evidence.formEncoding = await form.getAttribute('enctype');
     evidence.carrierValue = await form.locator('[name="carrier_contractor_id"]').inputValue().catch(()=>null);
     evidence.executorValue = await form.locator('[name="route_executor_id"]').inputValue().catch(()=>null);
-    evidence.paymentConditions = await form.evaluate((element) => {
-      const data = new FormData(element);
+    evidence.paymentConditionsBefore = await form.evaluate((element) => {
       const result = {};
-      for (const [key, value] of data.entries()) {
-        if (key.endsWith('[condition_type]')) result[key] = String(value);
-      }
+      element.querySelectorAll('select[name$="[condition_type]"]').forEach((select) => { result[select.name] = select.value; });
+      return result;
+    });
+    await form.evaluate((element) => {
+      element.querySelectorAll('select[name$="[condition_type]"]').forEach((select) => {
+        if (!select.value) select.value = 'start_day';
+      });
+    });
+    evidence.paymentConditionsAfter = await form.evaluate((element) => {
+      const result = {};
+      element.querySelectorAll('select[name$="[condition_type]"]').forEach((select) => { result[select.name] = select.value; });
       return result;
     });
     evidence.submit = await form.evaluate(async (element) => {
