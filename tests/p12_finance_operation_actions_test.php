@@ -42,7 +42,7 @@ $check('22 safe errors',str_contains($allocate,'Не удалось создат
 $check('23 duplicate guard',str_contains($allocate,'finance_allocation_tokens')&&str_contains($form,'request_token'));
 $check('24 disabled state',str_contains($modal,'$allocateAllowed')&&str_contains($modal,'$cancelAllowed')&&str_contains($modal,'disabled'));
 $check('25 active allocations block cancel',str_contains($service,'Сначала отмените активные распределения'));
-$check('26 POST routes',str_contains($routes,"$router->post('/company/finance/operations/{id}/allocate'")&&str_contains($routes,"$router->post('/company/finance/operations/{id}/cancel'"));
+$check('26 POST routes',str_contains($routes,"\$router->post('/company/finance/operations/{id}/allocate'")&&str_contains($routes,"\$router->post('/company/finance/operations/{id}/cancel'"));
 $check('27 fragments no scripts',!str_contains($modal,'<script')&&!str_contains($form,'<script'));
 $check('28 delegated controller loaded',str_contains($page,'finance-operation-actions.js'));
 $check('29 supported targets',str_contains($form,'invoice_id')&&str_contains($form,'linear_route_id')&&str_contains($form,'linear_route_payment_id'));
