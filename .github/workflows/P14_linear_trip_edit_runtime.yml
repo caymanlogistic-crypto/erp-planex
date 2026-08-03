@@ -33,6 +33,13 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
 
+      - name: Run P15 static regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/p15_linear_trip_executor_carrier_save_test.php
+          php tests/p15_linear_trip_executor_carrier_save_test.php | tee P15_static_test.txt
+
       - name: Configure Node
         uses: actions/setup-node@v4
         with:
@@ -129,6 +136,7 @@ jobs:
           name: P15_linear_trip_save_runtime_${{ github.sha }}
           path: |
             P14_output/
+            P15_static_test.txt
             P15_runtime_console.json
             P15_server_error.txt
           if-no-files-found: warn
