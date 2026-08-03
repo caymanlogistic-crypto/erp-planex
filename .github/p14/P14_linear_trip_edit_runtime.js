@@ -61,7 +61,7 @@ async function verifyEditModal(page, evidence) {
         const basePath = meta ? String(meta.getAttribute('content') || '') : '';
         const url = `${basePath}/company/trips/linear/${routeId}/modal-edit`;
         const response = await fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-        return { status: response.status, url: response.url, body: (await response.text()).slice(0, 1500) };
+        return { status: response.status, url: response.url, body: (await response.text()).slice(0, 2000) };
     }, { routeId: evidence.routeId });
     evidence.directModalResponse = directResult;
     if (directResult.status !== 200 || !directResult.body.includes('linear-trip-edit-form')) {
@@ -88,8 +88,23 @@ async function verifyEditModal(page, evidence) {
     const errorText = (await errorNotice.count()) ? (await errorNotice.innerText().catch(() => '')).trim() : '';
     if (errorText) throw new Error('Edit modal returned warning: ' + errorText);
 
-    const token = await form.locator('input[name="_linear_trip_save_token"]').inputValue().catch(() => '');
-    if (!token) throw new Error('P13 save token is absent from the edit form.');
+    const tokenEvidence = await form.evaluate((element) => {
+        const data = new FormData(element);
+        const value = String(data.get('_linear_trip_save_token') || '');
+        const associated = document.querySelector('input[name="_linear_trip_save_token"][form="linear-trip-edit-form"]');
+        return {
+            value,
+            includedInFormData: value.length > 0,
+            associatedControlPresent: Boolean(associated),
+        };
+    });
+    evidence.tokenEvidence = {
+        includedInFormData: tokenEvidence.includedInFormData,
+        associatedControlPresent: tokenEvidence.associatedControlPresent,
+    };
+    if (!tokenEvidence.includedInFormData) {
+        throw new Error('P13 save token is absent from FormData.');
+    }
 
     const response = modalResponses[modalResponses.length - 1] || null;
     if (!response || response.status !== 200) {
