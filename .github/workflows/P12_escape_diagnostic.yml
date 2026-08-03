@@ -1,0 +1,210 @@
+name: P12 Escape diagnostic
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P12_escape_diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  P12_BASE_URL: https://plan-ex.ru/erpv2/
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_erpv2_audit"
+            chmod 600 "${HOME}/.ssh/P12_erpv2_audit"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P12_erpv2_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P12_erpv2_audit"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P12_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Run focused production diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P12_output
+          cat > /tmp/P12_escape_diagnostic.js <<'JS'
+          'use strict';
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+          const base = (process.env.P12_BASE_URL || 'https://plan-ex.ru/erpv2/').replace(/\/+$/, '/');
+          const creds = JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64, 'base64').toString('utf8'));
+          const owner = creds.find((item) => item.role === 'OWNER') || creds.find((item) => /owner/i.test(item.role || ''));
+          if (!owner) throw new Error('OWNER credential not resolved');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, ignoreHTTPSErrors: true, locale: 'ru-RU' });
+            const page = await context.newPage();
+            const consoleErrors = [];
+            const pageErrors = [];
+            page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+            page.on('pageerror', (err) => pageErrors.push(String(err.message || err)));
+
+            await page.goto(new URL('login', base).href, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').first().fill(owner.password);
+            await Promise.all([
+              page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {}),
+              page.locator('button[type="submit"],input[type="submit"]').first().click()
+            ]);
+            await page.waitForTimeout(800);
+            await page.goto(new URL('company/clients', base).href, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            await page.waitForTimeout(800);
+
+            const initial = await page.evaluate(async () => {
+              const srcs = [...document.scripts].map((s) => s.src).filter(Boolean);
+              const modalShellSrc = srcs.find((src) => /modal-shell\.js/.test(src)) || null;
+              let sourceContainsController = null;
+              let sourceContainsGeneratedEscape = null;
+              if (modalShellSrc) {
+                const text = await fetch(modalShellSrc, { cache: 'no-store', credentials: 'same-origin' }).then((r) => r.text());
+                sourceContainsController = text.includes('initErpModalKeyboardController');
+                sourceContainsGeneratedEscape = text.includes("dataset.closeOnEscape = '1'");
+              }
+              return {
+                url: location.href,
+                controllerReady: Boolean(window.__erpModalKeyboardControllerReady),
+                modalShellLoaded: Boolean(window.ModalShell),
+                openModalAvailable: typeof window.openModal === 'function',
+                closeModalAvailable: typeof window.closeModal === 'function',
+                scriptSources: srcs,
+                modalShellSrc,
+                sourceContainsController,
+                sourceContainsGeneratedEscape,
+                candidateModals: [...document.querySelectorAll('.modal-overlay')].map((m) => ({ id: m.id, className: m.className, closeOnEscape: m.dataset.closeOnEscape || null, escapeLocked: m.dataset.escapeLocked || null }))
+              };
+            });
+
+            let openedBy = null;
+            const directId = await page.evaluate(() => {
+              const preferred = ['client-create-modal', 'client-view-modal'];
+              for (const id of preferred) if (document.getElementById(id)) return id;
+              const candidate = [...document.querySelectorAll('.modal-overlay[id]')].find((m) => m.querySelector('form'));
+              return candidate ? candidate.id : null;
+            });
+            if (directId) {
+              await page.evaluate((id) => window.openModal(id), directId);
+              openedBy = `window.openModal:${directId}`;
+            } else {
+              const button = page.locator('button[type="button"],a[role="button"],[data-open-modal]').filter({ hasText: /добавить|создать/i }).first();
+              if (await button.count()) {
+                await button.click();
+                openedBy = 'safe-button-click';
+              }
+            }
+            await page.waitForTimeout(500);
+
+            const snapshot = () => page.evaluate(() => [...document.querySelectorAll('.modal-overlay.is-open')].map((m) => {
+              const style = getComputedStyle(m);
+              const rect = m.getBoundingClientRect();
+              return {
+                id: m.id,
+                className: m.className,
+                closeOnEscape: m.dataset.closeOnEscape || null,
+                escapeLocked: m.dataset.escapeLocked || null,
+                display: style.display,
+                visibility: style.visibility,
+                opacity: style.opacity,
+                zIndex: style.zIndex,
+                width: rect.width,
+                height: rect.height,
+                activeElement: document.activeElement ? `${document.activeElement.tagName}#${document.activeElement.id || ''}.${document.activeElement.className || ''}` : null
+              };
+            }));
+
+            const before = await snapshot();
+            await page.screenshot({ path: 'P12_output/P12_escape_before.png', fullPage: false });
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(500);
+            const afterKeyboard = await snapshot();
+            await page.screenshot({ path: 'P12_output/P12_escape_after_keyboard.png', fullPage: false });
+
+            const manualEventResult = await page.evaluate(() => {
+              const event = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true });
+              const dispatched = document.dispatchEvent(event);
+              return { dispatched, defaultPrevented: event.defaultPrevented };
+            });
+            await page.waitForTimeout(500);
+            const afterManualEvent = await snapshot();
+
+            let closeModalResult = null;
+            if (afterManualEvent.length && afterManualEvent[0].id) {
+              closeModalResult = await page.evaluate((id) => {
+                window.closeModal(id);
+                return { id, stillOpen: document.getElementById(id)?.classList.contains('is-open') || false };
+              }, afterManualEvent[0].id);
+            }
+            const afterCloseApi = await snapshot();
+
+            const result = {
+              status: afterKeyboard.length === 0 ? 'PASS' : 'FAIL',
+              openedBy,
+              initial,
+              before,
+              afterKeyboard,
+              manualEventResult,
+              afterManualEvent,
+              closeModalResult,
+              afterCloseApi,
+              consoleErrors,
+              pageErrors
+            };
+            fs.writeFileSync('P12_output/P12_escape_diagnostic.json', JSON.stringify(result, null, 2));
+            console.log(JSON.stringify({ status: result.status, openedBy, before: before.map((x) => x.id), afterKeyboard: afterKeyboard.map((x) => x.id), controllerReady: initial.controllerReady, sourceContainsController: initial.sourceContainsController }));
+            await browser.close();
+            process.exitCode = result.status === 'PASS' ? 0 : 1;
+          })().catch((error) => {
+            fs.writeFileSync('P12_output/P12_escape_diagnostic.json', JSON.stringify({ status: 'ERROR', error: String(error.stack || error) }, null, 2));
+            console.error('P12 focused diagnostic failed');
+            process.exitCode = 1;
+          });
+          JS
+          node --check /tmp/P12_escape_diagnostic.js
+          NODE_PATH="${GITHUB_WORKSPACE}/node_modules" node /tmp/P12_escape_diagnostic.js
+
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P12_escape_diagnostic
+          path: P12_output/
+          if-no-files-found: error
+          retention-days: 30
