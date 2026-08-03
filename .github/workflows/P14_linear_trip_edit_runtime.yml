@@ -70,7 +70,6 @@ jobs:
           set -euo pipefail
           credentials="${SECRET_CREDENTIALS:-}"
           install -d -m 700 "${HOME}/.ssh"
-
           if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ] && [ -f .github/p11/P11_runtime_credentials.enc.json ]; then
             python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
             printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
@@ -78,62 +77,54 @@ jobs:
             credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P14_erpv2_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
             rm -f "${HOME}/.ssh/P14_erpv2_audit"
           fi
-
           if [ -z "${credentials}" ] && [ -n "${SSH_HOST:-}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
             printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
             printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
             chmod 600 "${HOME}/.ssh/P14_erpv2_audit" "${HOME}/.ssh/known_hosts"
             credentials="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P14_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "test -f /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 && cat /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 || true")"
-            rm -f "${HOME}/.ssh/P14_erpv2_audit"
           fi
-
           if [ -z "${credentials}" ]; then
             echo "Runtime credentials are unavailable."
             exit 2
           fi
-
           echo "::add-mask::${credentials}"
           printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
 
-      - name: Verify authenticated linear trip edit modal
+      - name: Reproduce authenticated linear trip save
         shell: bash
         run: |
           set -euo pipefail
           node --check .github/p14/P14_linear_trip_edit_runtime.js
           node .github/p14/P14_linear_trip_edit_runtime.js | tee P14_runtime_console.json
 
-      - name: Record P14 result in repository
-        if: always() && github.event_name == 'push'
+      - name: Collect recent P13 server error
+        if: failure()
         shell: bash
         env:
-          TARGET_BRANCH: chatgpt/production-stabilization-20260802
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
-          mkdir -p tmp/codex-reports
-          if [ -f P14_output/P14_runtime_result.json ]; then
-            cp P14_output/P14_runtime_result.json tmp/codex-reports/P14_linear_trip_edit_runtime_result.json
-          else
-            printf '{\n  "status": "BLOCKED",\n  "commit": "%s",\n  "reason": "Runtime result file was not produced; inspect workflow steps."\n}\n' "${GITHUB_SHA}" > tmp/codex-reports/P14_linear_trip_edit_runtime_result.json
-          fi
-          if [ -f P14_dependency_test.txt ]; then
-            cp P14_dependency_test.txt tmp/codex-reports/P14_linear_trip_runtime_dependencies.txt
-          fi
-          git config user.name "P14 runtime automation"
-          git config user.email "p14-runtime@users.noreply.github.com"
-          git add tmp/codex-reports/P14_linear_trip_edit_runtime_result.json tmp/codex-reports/P14_linear_trip_runtime_dependencies.txt 2>/dev/null || true
-          if ! git diff --cached --quiet; then
-            git commit -m "test(P14): record deployed edit modal result [skip ci]"
-            git push origin "HEAD:${TARGET_BRANCH}"
-          fi
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P14_erpv2_audit" "${HOME}/.ssh/known_hosts"
+          ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P14_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" \
+            "find /home/s/spugovxsim -type f -mmin -60 -size -20M -print0 2>/dev/null | xargs -0 grep -H -F '[P13] linear trip save failed' 2>/dev/null | tail -n 10" \
+            | tee P14_server_error.txt
 
       - name: Upload P14 runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: P14_linear_trip_edit_runtime_${{ github.sha }}
+          name: P14_linear_trip_save_runtime_${{ github.sha }}
           path: |
             P14_output/
             P14_dependency_test.txt
             P14_runtime_console.json
+            P14_server_error.txt
           if-no-files-found: warn
           retention-days: 30
