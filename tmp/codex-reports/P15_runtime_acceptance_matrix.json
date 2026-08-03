@@ -1,0 +1,71 @@
+{
+  "prompt": "P15",
+  "acceptance": [
+    {
+      "id": "P15-01",
+      "requirement": "Поле Перевозчик не требует ручного заполнения",
+      "evidence": "carrierFieldHidden=true in live browser runtime",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-02",
+      "requirement": "Перевозчик определяется из исполнителя рейса",
+      "evidence": "route_executor_id=3, derived carrier_contractor_id=4",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-03",
+      "requirement": "Сервер не доверяет самостоятельному carrier_contractor_id",
+      "evidence": "LinearTripRequestNormalizer::deriveCarrierFromExecutor overwrites POST before create/edit action",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-04",
+      "requirement": "Исторические условия оплаты отображаются без пустых обязательных значений",
+      "evidence": "customer/carrier payment condition types resolved to start_day and after_end",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-05",
+      "requirement": "Сохранение существующего рейса не возвращает internal_save_error",
+      "evidence": "POST /erpv2/company/trips/linear/2/modal-edit returned HTTP 200",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-06",
+      "requirement": "Сохранение завершается success=true",
+      "evidence": "JSON success=true, message=Рейс успешно сохранён.",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-07",
+      "requirement": "Форма сохраняет multipart document capability",
+      "evidence": "formEncoding=multipart/form-data",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-08",
+      "requirement": "Маршрут учитывает /erpv2 base path",
+      "evidence": "formAction=/erpv2/company/trips/linear/2/modal-edit",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-09",
+      "requirement": "Проверка выполнена после exact deployment",
+      "evidence": "deployed marker matched fbd830dc80905d4b056ebfefc1ee8dcb393e0c43 before browser run",
+      "status": "PASS"
+    },
+    {
+      "id": "P15-10",
+      "requirement": "Тест не загрязняет рабочие данные",
+      "evidence": "existing values submitted; no new route and no test document",
+      "status": "PASS"
+    }
+  ],
+  "totals": {
+    "pass": 10,
+    "fail": 0,
+    "blocked": 0
+  },
+  "final_status": "RUNTIME_ACCEPTED"
+}
