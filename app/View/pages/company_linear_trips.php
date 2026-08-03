@@ -189,3 +189,4 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
 </div>
 
 <?php endif; ?>
+<script src="<?= app_url('/assets/js/linear-trip-executor-carrier.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-executor-carrier.js')) ?>"></script>
