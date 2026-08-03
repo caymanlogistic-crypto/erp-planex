@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   P14_BASE_URL: https://plan-ex.ru/erpv2/
@@ -93,6 +93,30 @@ jobs:
           set -euo pipefail
           node --check .github/p14/P14_linear_trip_edit_runtime.js
           node .github/p14/P14_linear_trip_edit_runtime.js | tee P14_runtime_console.json
+
+      - name: Record P14 result in repository
+        if: always()
+        shell: bash
+        env:
+          TARGET_BRANCH: chatgpt/production-stabilization-20260802
+        run: |
+          set -euo pipefail
+          mkdir -p tmp/codex-reports
+          if [ -f P14_output/P14_runtime_result.json ]; then
+            cp P14_output/P14_runtime_result.json tmp/codex-reports/P14_linear_trip_edit_runtime_result.json
+          else
+            printf '{\n  "status": "BLOCKED",\n  "commit": "%s",\n  "reason": "Runtime result file was not produced; inspect workflow steps."\n}\n' "${GITHUB_SHA}" > tmp/codex-reports/P14_linear_trip_edit_runtime_result.json
+          fi
+          if [ -f P14_dependency_test.txt ]; then
+            cp P14_dependency_test.txt tmp/codex-reports/P14_linear_trip_runtime_dependencies.txt
+          fi
+          git config user.name "P14 runtime automation"
+          git config user.email "p14-runtime@users.noreply.github.com"
+          git add tmp/codex-reports/P14_linear_trip_edit_runtime_result.json tmp/codex-reports/P14_linear_trip_runtime_dependencies.txt 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "test(P14): record deployed edit modal result [skip ci]"
+            git push origin "HEAD:${TARGET_BRANCH}"
+          fi
 
       - name: Upload P14 runtime evidence
         if: always()
