@@ -1,0 +1,102 @@
+name: P12 Fast production audit
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p12/P12_fast_audit.js'
+      - '.github/p12/P12_route_targets.json'
+      - '.github/workflows/P12_fast_production_audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  P12_OUT_DIR: P12_fast_output
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_fast_audit"
+            chmod 600 "${HOME}/.ssh/P12_fast_audit"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P12_fast_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P12_fast_audit"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P12_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Validate deterministic runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check .github/p12/P12_fast_audit.js
+          python -m json.tool .github/p12/P12_route_targets.json > /dev/null
+          test "$(python -c "import json; print(len(json.load(open('.github/p12/P12_route_targets.json'))))")" = '65'
+          if grep -E 'admin@planex|test1234|123321|a2fvoqJoaL' .github/p12/P12_fast_audit.js .github/p12/P12_route_targets.json; then exit 1; fi
+
+      - name: Execute deterministic Full HD acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p12/P12_fast_audit.js | tee P12_fast_runner_summary.json
+
+      - name: Record deployment evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P12_fast_output
+          printf '%s\n' '2b61d9dcd32efe3a861341da7939b26a7cd02499' > P12_fast_output/P12_APPLICATION_COMMIT.txt
+          printf '%s\n' "${GITHUB_SHA}" > P12_fast_output/P12_AUDIT_SOURCE_COMMIT.txt
+          printf '%s\n' "${GITHUB_RUN_ID}" > P12_fast_output/P12_AUDIT_RUN_ID.txt
+          marker="$(curl -fsSL --max-time 20 https://plan-ex.ru/erpv2/DEPLOYED_COMMIT.txt || true)"
+          printf '%s\n' "${marker}" > P12_fast_output/P12_DEPLOYED_MARKER.txt
+          asset="$(curl -fsSL --max-time 20 'https://plan-ex.ru/erpv2/assets/js/modal-shell.js?P12fast=1' || true)"
+          if printf '%s' "${asset}" | grep -Fq 'initErpModalKeyboardController'; then
+            printf '%s\n' 'PASS' > P12_fast_output/P12_MODAL_ASSET_FINGERPRINT.txt
+          else
+            printf '%s\n' 'FAIL' > P12_fast_output/P12_MODAL_ASSET_FINGERPRINT.txt
+          fi
+
+      - name: Upload P12 deterministic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P12_fast_production_evidence
+          path: |
+            P12_fast_output/
+            P12_fast_runner_summary.json
+          if-no-files-found: error
+          retention-days: 30
