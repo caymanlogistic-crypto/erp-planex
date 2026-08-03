@@ -12,7 +12,8 @@ permissions:
   contents: read
 
 env:
-  EXPECTED_APPLICATION_COMMIT: e27a6c33516b07e82f493a5ab9f378ece286bb71
+  EXPECTED_APPLICATION_COMMIT: 29bbedec7068b5ae349ca14d0c0e61e178b8cfa9
+  FUNCTIONAL_FIX_COMMIT: e27a6c33516b07e82f493a5ab9f378ece286bb71
 
 jobs:
   verify:
@@ -35,7 +36,7 @@ jobs:
           git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
           git show origin/p11-audit-v2:.github/p12/P12_fast_audit.js > .github/p12/P12_fast_audit.js
           git show origin/p11-audit-v2:.github/p12/P12_route_targets.json > .github/p12/P12_route_targets.json
-          sed -i "s/2b61d9dcd32efe3a861341da7939b26a7cd02499/${EXPECTED_APPLICATION_COMMIT}/g" .github/p12/P12_fast_audit.js
+          sed -i "s/2b61d9dcd32efe3a861341da7939b26a7cd02499/${FUNCTIONAL_FIX_COMMIT}/g" .github/p12/P12_fast_audit.js
           node --check .github/p12/P12_fast_audit.js
           python -m json.tool .github/p12/P12_route_targets.json > /dev/null
           test "$(python -c "import json; print(len(json.load(open('.github/p12/P12_route_targets.json'))))")" = '65'
@@ -61,7 +62,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          css="$(curl -fsSL --max-time 30 'https://plan-ex.ru/erpv2/assets/css/erp-ui.css?P12final=1')"
+          css="$(curl -fsSL --max-time 30 'https://plan-ex.ru/erpv2/assets/css/erp-ui.css?P12final=2')"
           printf '%s' "${css}" | grep -Fq 'P12 responsible assignments mass toolbar'
           printf '%s' "${css}" | grep -Fq '#massReassignToolbarForm'
           printf '%s' "${css}" | grep -Fq 'flex-flow: row nowrap'
@@ -111,8 +112,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p P12_fast_output P12_final_output
-          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_fast_output/P12_APPLICATION_COMMIT.txt
-          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_final_output/P12_APPLICATION_COMMIT.txt
+          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_fast_output/P12_DEPLOY_HEAD_COMMIT.txt
+          printf '%s\n' "${FUNCTIONAL_FIX_COMMIT}" > P12_fast_output/P12_FUNCTIONAL_FIX_COMMIT.txt
+          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_final_output/P12_DEPLOY_HEAD_COMMIT.txt
+          printf '%s\n' "${FUNCTIONAL_FIX_COMMIT}" > P12_final_output/P12_FUNCTIONAL_FIX_COMMIT.txt
           printf '%s\n' "${GITHUB_SHA}" > P12_final_output/P12_VERIFICATION_SOURCE_COMMIT.txt
           printf '%s\n' "${GITHUB_RUN_ID}" > P12_final_output/P12_FINAL_RUN_ID.txt
 
