@@ -96,12 +96,12 @@ async function testModal(page, shotBase) {
     await page.waitForTimeout(350);
     opened=await page.locator('.modal-overlay.is-open').count()>0;
     if(opened){
-      await page.waitForFunction(() => {
-        const ms=[...document.querySelectorAll('.modal-overlay.is-open')];
-        const m=ms[ms.length-1];
-        return !m || !/Загрузка\.\.\.|Загрузка…/i.test(m.innerText || '');
-      }, { timeout: 3500 }).catch(()=>{});
-      await page.waitForTimeout(200);
+      for(let attempt=0; attempt<14; attempt++){
+        const modalText=await page.locator('.modal-overlay.is-open').last().innerText().catch(()=>'');
+        if(!/Загрузка\.\.\.|Загрузка…/i.test(modalText)) break;
+        await page.waitForTimeout(250);
+      }
+      await page.waitForTimeout(150);
     }
   }
   if(!opened){
