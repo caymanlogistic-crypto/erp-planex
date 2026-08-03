@@ -26,7 +26,7 @@ function selectOwnerCredential(credentials) {
 
 async function login(page, credential) {
     for (const candidate of [new URL('login', BASE_URL).href, BASE_URL]) {
-        await page.goto(candidate, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => null);
+        await page.goto(candidate, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => null);
         if (await page.locator('input[type="password"]').count()) break;
     }
 
@@ -39,10 +39,10 @@ async function login(page, credential) {
     await userInput.fill(credential.username);
     await passwordInput.fill(credential.password);
     await Promise.all([
-        page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {}),
+        page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {}),
         page.locator('button[type="submit"],input[type="submit"]').first().click({ timeout: 5000 }),
     ]);
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(1000);
 
     if (/\/login(?:[/?#]|$)/i.test(page.url()) || (await page.locator('input[type="password"]').count()) > 0) {
         throw new Error('Authentication failed.');
@@ -50,11 +50,23 @@ async function login(page, credential) {
 }
 
 async function verifyEditModal(page, evidence) {
-    await page.goto(new URL('company/trips/linear', BASE_URL).href, { waitUntil: 'networkidle', timeout: 45000 });
+    await page.goto(new URL('company/trips/linear', BASE_URL).href, { waitUntil: 'domcontentloaded', timeout: 30000 });
     const firstRow = page.locator('tr[data-linear-route-id]').first();
-    await firstRow.waitFor({ state: 'visible', timeout: 20000 });
+    await firstRow.waitFor({ state: 'visible', timeout: 12000 });
     evidence.routeId = await firstRow.getAttribute('data-linear-route-id');
     if (!evidence.routeId) throw new Error('Linear trip id was not found.');
+
+    const directResult = await page.evaluate(async ({ routeId }) => {
+        const meta = document.querySelector('meta[name="erp-base-path"]');
+        const basePath = meta ? String(meta.getAttribute('content') || '') : '';
+        const url = `${basePath}/company/trips/linear/${routeId}/modal-edit`;
+        const response = await fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        return { status: response.status, url: response.url, body: (await response.text()).slice(0, 1500) };
+    }, { routeId: evidence.routeId });
+    evidence.directModalResponse = directResult;
+    if (directResult.status !== 200 || !directResult.body.includes('linear-trip-edit-form')) {
+        throw new Error('Direct modal-edit check failed: ' + JSON.stringify(directResult));
+    }
 
     const modalResponses = [];
     const responseHandler = async (response) => {
@@ -65,13 +77,13 @@ async function verifyEditModal(page, evidence) {
     };
     page.on('response', responseHandler);
 
-    await firstRow.dblclick({ timeout: 10000 });
+    await firstRow.dblclick({ timeout: 8000 });
     const editButton = page.locator('[data-linear-trip-edit-btn]').first();
-    await editButton.waitFor({ state: 'visible', timeout: 15000 });
+    await editButton.waitFor({ state: 'visible', timeout: 10000 });
     await editButton.click();
 
     const form = page.locator('#linear-trip-edit-form');
-    await form.waitFor({ state: 'visible', timeout: 20000 });
+    await form.waitFor({ state: 'visible', timeout: 12000 });
     const errorNotice = page.locator('.modal-overlay.is-open .notice.warn').first();
     const errorText = (await errorNotice.count()) ? (await errorNotice.innerText().catch(() => '')).trim() : '';
     if (errorText) throw new Error('Edit modal returned warning: ' + errorText);
@@ -81,7 +93,7 @@ async function verifyEditModal(page, evidence) {
 
     const response = modalResponses[modalResponses.length - 1] || null;
     if (!response || response.status !== 200) {
-        throw new Error('modal-edit response is not HTTP 200: ' + JSON.stringify(response));
+        throw new Error('UI modal-edit response is not HTTP 200: ' + JSON.stringify(response));
     }
 
     evidence.modalResponse = { status: response.status, url: response.url };
@@ -126,15 +138,15 @@ async function verifyEditModal(page, evidence) {
 
     try {
         await login(page, credential);
-        for (let attempt = 1; attempt <= 8; attempt += 1) {
+        for (let attempt = 1; attempt <= 12; attempt += 1) {
             try {
                 await verifyEditModal(page, evidence);
                 evidence.attempts.push({ attempt, result: 'PASS' });
                 evidence.status = 'PASS';
                 break;
             } catch (error) {
-                evidence.attempts.push({ attempt, result: 'FAIL', error: String(error.message || error).slice(0, 1500) });
-                if (attempt < 8) await page.waitForTimeout(20000);
+                evidence.attempts.push({ attempt, result: 'FAIL', error: String(error.message || error).slice(0, 2000) });
+                if (attempt < 12) await page.waitForTimeout(15000);
             }
         }
         if (evidence.status !== 'PASS') {
