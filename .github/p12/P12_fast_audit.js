@@ -35,6 +35,7 @@ async function inspect(page) {
       let cur = el;
       while (cur && cur !== document.body) {
         const s=getComputedStyle(cur), r=cur.getBoundingClientRect();
+        if (cur.hidden || cur.getAttribute('aria-hidden') === 'true' || cur.classList.contains('is-hidden') || cur.classList.contains('hidden')) return false;
         if (s.display==='none'||s.visibility==='hidden'||Number(s.opacity||1)<=0.05||r.width<=1||r.height<=1) return false;
         cur=cur.parentElement;
       }
@@ -45,8 +46,10 @@ async function inspect(page) {
     }
     const w=innerWidth,h=innerHeight,root=document.documentElement,body=document.body;
     const bodyScrollWidth=Math.max(root?.scrollWidth||0,body?.scrollWidth||0);
+    const openModals=[...document.querySelectorAll('.modal-overlay.is-open')].filter(visible);
+    const topModal=openModals.length ? openModals[openModals.length-1] : null;
     const controls=[...document.querySelectorAll('a[href],button,input:not([type="hidden"]),select,textarea,[role="button"],[role="combobox"]')]
-      .filter(el=>{if(!visible(el))return false;const r=el.getBoundingClientRect();return r.bottom>0&&r.right>0&&r.top<h&&r.left<w;});
+      .filter(el=>{if(!visible(el))return false;if(topModal && !topModal.contains(el))return false;const r=el.getBoundingClientRect();return r.bottom>0&&r.right>0&&r.top<h&&r.left<w;});
     const clipped=[], overlaps=[];
     for(const el of controls.slice(0,500)){
       const r=el.getBoundingClientRect();
@@ -87,22 +90,31 @@ async function inspect(page) {
 }
 async function testModal(page, shotBase) {
   let opened = false, openedBy = null;
-  const direct = await page.evaluate(() => {
-    const all=[...document.querySelectorAll('.modal-overlay[id]')];
-    const preferred=all.find(m=>m.querySelector('form')&&m.dataset.escapeLocked!=='1')||all.find(m=>m.dataset.escapeLocked!=='1');
-    return preferred?.id||null;
-  }).catch(()=>null);
-  if(direct && await page.evaluate(()=>typeof window.openModal==='function')){
-    await page.evaluate(id=>window.openModal(id),direct);
-    openedBy='openModal:'+direct;
-    await page.waitForTimeout(250);
-    opened=await page.evaluate(id=>document.getElementById(id)?.classList.contains('is-open')||false,direct);
+  const btn=page.locator('button[type="button"],[data-open-modal]').filter({hasText:/добавить|создать|открыть|редактировать/i}).first();
+  if(await btn.count()&&await btn.isVisible().catch(()=>false)){
+    await btn.click(); openedBy='button';
+    await page.waitForTimeout(350);
+    opened=await page.locator('.modal-overlay.is-open').count()>0;
+    if(opened){
+      await page.waitForFunction(() => {
+        const ms=[...document.querySelectorAll('.modal-overlay.is-open')];
+        const m=ms[ms.length-1];
+        return !m || !/Загрузка\.\.\.|Загрузка…/i.test(m.innerText || '');
+      }, { timeout: 3500 }).catch(()=>{});
+      await page.waitForTimeout(200);
+    }
   }
   if(!opened){
-    const btn=page.locator('button[type="button"],[data-open-modal]').filter({hasText:/добавить|создать|открыть|редактировать/i}).first();
-    if(await btn.count()&&await btn.isVisible().catch(()=>false)){
-      await btn.click(); await page.waitForTimeout(300); openedBy='button';
-      opened=await page.locator('.modal-overlay.is-open').count()>0;
+    const direct = await page.evaluate(() => {
+      const all=[...document.querySelectorAll('.modal-overlay[id]')];
+      const preferred=all.find(m=>m.querySelector('form')&&m.dataset.escapeLocked!=='1')||all.find(m=>m.dataset.escapeLocked!=='1');
+      return preferred?.id||null;
+    }).catch(()=>null);
+    if(direct && await page.evaluate(()=>typeof window.openModal==='function')){
+      await page.evaluate(id=>window.openModal(id),direct);
+      openedBy='openModal:'+direct;
+      await page.waitForTimeout(350);
+      opened=await page.evaluate(id=>document.getElementById(id)?.classList.contains('is-open')||false,direct);
     }
   }
   if(!opened)return {requested:true,opened:false,openedBy,closedByEscape:null,withinViewport:null,hasClose:null,footerVisible:null};
@@ -159,7 +171,10 @@ async function testModal(page, shotBase) {
         if(layout.clippedControls)defects.push(`clipped:${layout.clippedControls}`);
         if(layout.mojibake)defects.push('mojibake');
         if((layout.visibleTextLength||0)<10)defects.push('empty_page');
-        if(consoleErrors.length||pageErrors.length)defects.push(`console:${consoleErrors.length+pageErrors.length}`);
+        const effectiveConsoleErrors = target.expectedStatus === 403
+          ? consoleErrors.filter(message => !/Failed to load resource:.*403/i.test(message))
+          : consoleErrors;
+        if(effectiveConsoleErrors.length||pageErrors.length)defects.push(`console:${effectiveConsoleErrors.length+pageErrors.length}`);
         if(networkErrors.length||badResponses.length)defects.push(`network:${networkErrors.length+badResponses.length}`);
         if(modal?.opened&&modal.closedByEscape===false)defects.push('modal_escape');
         if(modal?.opened&&modal.withinViewport===false)defects.push('modal_viewport');
@@ -169,7 +184,7 @@ async function testModal(page, shotBase) {
           const text=await page.locator('body').innerText().catch(()=>'');
           if(!/доступ запрещ|forbidden|403/i.test(text))defects.push('forbidden_ux_missing');
         }
-        results.push({role:cred.role,url:target.url,expectedStatus:target.expectedStatus,httpStatus:status,layout,modal,consoleErrors:[...consoleErrors,...pageErrors],networkErrors:[...networkErrors,...badResponses],screenshots:[path.relative(OUT,shot),modal?.screenshot].filter(Boolean),defects,finalStatus:defects.length?'FAIL':'PASS'});
+        results.push({role:cred.role,url:target.url,expectedStatus:target.expectedStatus,httpStatus:status,layout,modal,consoleErrors:[...effectiveConsoleErrors,...pageErrors],networkErrors:[...networkErrors,...badResponses],screenshots:[path.relative(OUT,shot),modal?.screenshot].filter(Boolean),defects,finalStatus:defects.length?'FAIL':'PASS'});
         fs.writeFileSync(path.join(OUT,'P12_FAST_ROUTE_MATRIX.checkpoint.json'),JSON.stringify(results,null,2));
         idx++;
         page.off('console',c);page.off('pageerror',pe);page.off('requestfailed',rf);page.off('response',rs);
