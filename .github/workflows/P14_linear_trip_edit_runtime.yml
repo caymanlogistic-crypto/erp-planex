@@ -1,0 +1,107 @@
+name: P14 Linear Trip Edit Runtime
+
+on:
+  push:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - 'app/Support/entrypoint_dependencies.php'
+      - 'tests/p14_linear_trip_runtime_dependencies_test.php'
+      - '.github/p14/**'
+      - '.github/workflows/P14_linear_trip_edit_runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  P14_BASE_URL: https://plan-ex.ru/erpv2/
+  P14_OUT_DIR: P14_output
+
+jobs:
+  linear-trip-edit-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify PHP runtime dependency manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/Support/entrypoint_dependencies.php
+          php -l tests/p14_linear_trip_runtime_dependencies_test.php
+          php tests/p14_linear_trip_runtime_dependencies_test.php | tee P14_dependency_test.txt
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve runtime credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ] && [ -f .github/p11/P11_runtime_credentials.enc.json ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
+            chmod 600 "${HOME}/.ssh/P14_erpv2_audit"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P14_erpv2_audit" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P14_erpv2_audit"
+          fi
+
+          if [ -z "${credentials}" ] && [ -n "${SSH_HOST:-}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_erpv2_audit"
+            printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+            chmod 600 "${HOME}/.ssh/P14_erpv2_audit" "${HOME}/.ssh/known_hosts"
+            credentials="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P14_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "test -f /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 && cat /home/s/spugovxsim/planexp/deploy/P11_runtime_credentials.b64 || true")"
+            rm -f "${HOME}/.ssh/P14_erpv2_audit"
+          fi
+
+          if [ -z "${credentials}" ]; then
+            echo "Runtime credentials are unavailable."
+            exit 2
+          fi
+
+          echo "::add-mask::${credentials}"
+          printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Verify authenticated linear trip edit modal
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check .github/p14/P14_linear_trip_edit_runtime.js
+          node .github/p14/P14_linear_trip_edit_runtime.js | tee P14_runtime_console.json
+
+      - name: Upload P14 runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P14_linear_trip_edit_runtime_${{ github.sha }}
+          path: |
+            P14_output/
+            P14_dependency_test.txt
+            P14_runtime_console.json
+          if-no-files-found: warn
+          retention-days: 30
