@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  EXPECTED_APPLICATION_COMMIT: 29bbedec7068b5ae349ca14d0c0e61e178b8cfa9
+  EXPECTED_DEPLOY_HEAD: 29bbedec7068b5ae349ca14d0c0e61e178b8cfa9
   FUNCTIONAL_FIX_COMMIT: e27a6c33516b07e82f493a5ab9f378ece286bb71
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
-          mkdir -p .github/p11 .github/p12
+          mkdir -p .github/p11 .github/p12 P12_final_output
           git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
           git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
           git show origin/p11-audit-v2:.github/p12/P12_fast_audit.js > .github/p12/P12_fast_audit.js
@@ -41,28 +41,35 @@ jobs:
           python -m json.tool .github/p12/P12_route_targets.json > /dev/null
           test "$(python -c "import json; print(len(json.load(open('.github/p12/P12_route_targets.json'))))")" = '65'
 
-      - name: Wait for exact isolated deployment
+      - name: Verify exact isolated deployment over SSH
         shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
-          mkdir -p P12_final_output
-          deployed=''
-          for attempt in $(seq 1 40); do
-            deployed="$(curl -fsSL --max-time 20 https://plan-ex.ru/erpv2/DEPLOYED_COMMIT.txt || true)"
-            printf 'attempt=%s deployed=%s\n' "${attempt}" "${deployed}" >> P12_final_output/P12_DEPLOY_POLL_LOG.txt
-            if [ "${deployed}" = "${EXPECTED_APPLICATION_COMMIT}" ]; then
-              break
-            fi
-            sleep 15
-          done
-          printf '%s\n' "${deployed}" > P12_final_output/P12_DEPLOYED_MARKER.txt
-          test "${deployed}" = "${EXPECTED_APPLICATION_COMMIT}"
+          test -n "${PRIVATE_KEY}"
+          test -n "${KNOWN_HOSTS}"
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_final_verify"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P12_final_verify" "${HOME}/.ssh/known_hosts"
+          deployed="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P12_final_verify" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "${SSH_USER}@${SSH_HOST}" \
+            "cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt")"
+          test "${deployed}" = "${EXPECTED_DEPLOY_HEAD}"
+          printf '%s\n' "${deployed}" > P12_final_output/P12_DEPLOYED_MARKER_SSH.txt
+          rm -f "${HOME}/.ssh/P12_final_verify"
 
       - name: Verify deployed CSS fingerprint
         shell: bash
         run: |
           set -euo pipefail
-          css="$(curl -fsSL --max-time 30 'https://plan-ex.ru/erpv2/assets/css/erp-ui.css?P12final=2')"
+          css="$(curl -fsSL --max-time 30 'https://plan-ex.ru/erpv2/assets/css/erp-ui.css?P12final=3')"
           printf '%s' "${css}" | grep -Fq 'P12 responsible assignments mass toolbar'
           printf '%s' "${css}" | grep -Fq '#massReassignToolbarForm'
           printf '%s' "${css}" | grep -Fq 'flex-flow: row nowrap'
@@ -91,10 +98,10 @@ jobs:
           install -d -m 700 "${HOME}/.ssh"
           if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
             python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
-            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_final"
-            chmod 600 "${HOME}/.ssh/P12_final"
-            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P12_final" --input .github/p11/P11_runtime_credentials.enc.json)"
-            rm -f "${HOME}/.ssh/P12_final"
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_final_credentials"
+            chmod 600 "${HOME}/.ssh/P12_final_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P12_final_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P12_final_credentials"
           fi
           test -n "${credentials}"
           echo "::add-mask::${credentials}"
@@ -112,9 +119,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p P12_fast_output P12_final_output
-          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_fast_output/P12_DEPLOY_HEAD_COMMIT.txt
+          printf '%s\n' "${EXPECTED_DEPLOY_HEAD}" > P12_fast_output/P12_DEPLOY_HEAD_COMMIT.txt
           printf '%s\n' "${FUNCTIONAL_FIX_COMMIT}" > P12_fast_output/P12_FUNCTIONAL_FIX_COMMIT.txt
-          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_final_output/P12_DEPLOY_HEAD_COMMIT.txt
+          printf '%s\n' "${EXPECTED_DEPLOY_HEAD}" > P12_final_output/P12_DEPLOY_HEAD_COMMIT.txt
           printf '%s\n' "${FUNCTIONAL_FIX_COMMIT}" > P12_final_output/P12_FUNCTIONAL_FIX_COMMIT.txt
           printf '%s\n' "${GITHUB_SHA}" > P12_final_output/P12_VERIFICATION_SOURCE_COMMIT.txt
           printf '%s\n' "${GITHUB_RUN_ID}" > P12_final_output/P12_FINAL_RUN_ID.txt
