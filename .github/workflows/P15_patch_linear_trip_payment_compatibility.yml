@@ -32,21 +32,23 @@ jobs:
           text = path.read_text(encoding='utf-8')
           needle = """                'specific_due_date' => $specificDueDate,
                           'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
-                      ];"""
+                      ];""".replace('                          ', '                ').replace('                      ];', '            ];')
           replacement = """                'specific_due_date' => $specificDueDate,
-                          'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
-                          // LinearRouteService::storeRoutePayments still persists legacy columns.
-                          // Keep both representations populated to avoid undefined-key failures.
-                          'payment_due_type' => self::legacyDueType($conditionType),
-                          'payment_due_days' => $daysCount,
-                          'payment_due_days_kind' => $daysKind,
-                      ];"""
-          if replacement in text:
+                'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
+                // LinearRouteService::storeRoutePayments still persists legacy columns.
+                // Keep both representations populated to avoid undefined-key failures.
+                'payment_due_type' => self::legacyDueType($conditionType),
+                'payment_due_days' => $daysCount,
+                'payment_due_days_kind' => $daysKind,
+            ];"""
+          if "'payment_due_type' => self::legacyDueType($conditionType)" in text:
               print('P15 compatibility patch already applied.')
           elif needle in text:
               path.write_text(text.replace(needle, replacement, 1), encoding='utf-8', newline='\n')
               print('P15 compatibility patch applied.')
           else:
+              start = text.find("'specific_due_date' => $specificDueDate")
+              print(text[start-120:start+360] if start >= 0 else 'specific_due_date marker absent')
               raise SystemExit('Expected parsePaymentRows block was not found.')
           PY
 
