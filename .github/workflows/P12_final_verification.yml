@@ -1,0 +1,131 @@
+name: P12 Final verification
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P12_final_verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_APPLICATION_COMMIT: e27a6c33516b07e82f493a5ab9f378ece286bb71
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout verification branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Load reviewed P12 runner sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+          mkdir -p .github/p11 .github/p12
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+          git show origin/p11-audit-v2:.github/p12/P12_fast_audit.js > .github/p12/P12_fast_audit.js
+          git show origin/p11-audit-v2:.github/p12/P12_route_targets.json > .github/p12/P12_route_targets.json
+          sed -i "s/2b61d9dcd32efe3a861341da7939b26a7cd02499/${EXPECTED_APPLICATION_COMMIT}/g" .github/p12/P12_fast_audit.js
+          node --check .github/p12/P12_fast_audit.js
+          python -m json.tool .github/p12/P12_route_targets.json > /dev/null
+          test "$(python -c "import json; print(len(json.load(open('.github/p12/P12_route_targets.json'))))")" = '65'
+
+      - name: Wait for exact isolated deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P12_final_output
+          deployed=''
+          for attempt in $(seq 1 40); do
+            deployed="$(curl -fsSL --max-time 20 https://plan-ex.ru/erpv2/DEPLOYED_COMMIT.txt || true)"
+            printf 'attempt=%s deployed=%s\n' "${attempt}" "${deployed}" >> P12_final_output/P12_DEPLOY_POLL_LOG.txt
+            if [ "${deployed}" = "${EXPECTED_APPLICATION_COMMIT}" ]; then
+              break
+            fi
+            sleep 15
+          done
+          printf '%s\n' "${deployed}" > P12_final_output/P12_DEPLOYED_MARKER.txt
+          test "${deployed}" = "${EXPECTED_APPLICATION_COMMIT}"
+
+      - name: Verify deployed CSS fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          css="$(curl -fsSL --max-time 30 'https://plan-ex.ru/erpv2/assets/css/erp-ui.css?P12final=1')"
+          printf '%s' "${css}" | grep -Fq 'P12 responsible assignments mass toolbar'
+          printf '%s' "${css}" | grep -Fq '#massReassignToolbarForm'
+          printf '%s' "${css}" | grep -Fq 'flex-flow: row nowrap'
+          printf '%s\n' 'PASS' > P12_final_output/P12_CSS_ASSET_FINGERPRINT.txt
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve three role credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_final"
+            chmod 600 "${HOME}/.ssh/P12_final"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P12_final" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P12_final"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P12_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Execute final 65-route Full HD acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p12/P12_fast_audit.js | tee P12_final_runner_summary.json
+
+      - name: Record final evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P12_fast_output P12_final_output
+          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_fast_output/P12_APPLICATION_COMMIT.txt
+          printf '%s\n' "${EXPECTED_APPLICATION_COMMIT}" > P12_final_output/P12_APPLICATION_COMMIT.txt
+          printf '%s\n' "${GITHUB_SHA}" > P12_final_output/P12_VERIFICATION_SOURCE_COMMIT.txt
+          printf '%s\n' "${GITHUB_RUN_ID}" > P12_final_output/P12_FINAL_RUN_ID.txt
+
+      - name: Upload final P12 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P12_final_accepted_evidence
+          path: |
+            P12_fast_output/
+            P12_final_output/
+            P12_final_runner_summary.json
+            .github/p12/P12_fast_audit.js
+            .github/p12/P12_route_targets.json
+          if-no-files-found: error
+          retention-days: 30
