@@ -259,6 +259,11 @@ final class LinearTripEditSaveService
                 'days_kind' => $daysKind,
                 'specific_due_date' => $specificDueDate,
                 'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
+                // LinearRouteService::storeRoutePayments still persists legacy columns.
+                // Keep both representations populated to avoid undefined-key failures.
+                'payment_due_type' => self::legacyDueType($conditionType),
+                'payment_due_days' => $daysCount,
+                'payment_due_days_kind' => $daysKind,
             ];
         }
         return $result;
