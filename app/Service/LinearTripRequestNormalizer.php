@@ -105,8 +105,10 @@ final class LinearTripRequestNormalizer
 
         $legacy = trim((string) ($payment['payment_due_type'] ?? ''));
         $map = [
-            'Предоплата' => DateCalculationService::CONDITION_PREPAYMENT,
-            'Предоплата на загрузке' => DateCalculationService::CONDITION_PREPAYMENT,
+            // Legacy "Предоплата на загрузке" means payment on the route start day.
+            // The modern prepayment condition requires a separate concrete date.
+            'Предоплата' => DateCalculationService::CONDITION_START_DAY,
+            'Предоплата на загрузке' => DateCalculationService::CONDITION_START_DAY,
             'В день начала рейса' => DateCalculationService::CONDITION_START_DAY,
             'После начала рейса' => DateCalculationService::CONDITION_AFTER_START,
             'После загрузки' => DateCalculationService::CONDITION_AFTER_START,
