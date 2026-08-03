@@ -97,7 +97,7 @@ jobs:
           node --check .github/p14/P14_linear_trip_edit_runtime.js
           node .github/p14/P14_linear_trip_edit_runtime.js | tee P14_runtime_console.json
 
-      - name: Collect recent P13 server error
+      - name: Collect recent P15 server error
         if: failure()
         shell: bash
         env:
@@ -113,7 +113,7 @@ jobs:
           printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
           chmod 600 "${HOME}/.ssh/P14_erpv2_audit" "${HOME}/.ssh/known_hosts"
           ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P14_erpv2_audit" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" \
-            "find /home/s/spugovxsim -type f -mmin -60 -size -20M -print0 2>/dev/null | xargs -0 grep -H -F '[P13] linear trip save failed' 2>/dev/null | tail -n 10" \
+            "log=/home/s/spugovxsim/planexp/public_html/erpv2/storage/logs/P15_linear_trip_save_errors.log; if [ -f \"\$log\" ]; then tail -n 10 \"\$log\"; else echo P15_LOG_NOT_FOUND; fi" \
             | tee P14_server_error.txt
 
       - name: Upload P14 runtime evidence
