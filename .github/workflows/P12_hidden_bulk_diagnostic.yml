@@ -1,0 +1,93 @@
+name: P12 Hidden bulk diagnostic
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P12_hidden_bulk_diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_bulk"
+            chmod 600 "${HOME}/.ssh/P12_bulk"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/P12_bulk" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/P12_bulk"
+          fi
+          echo "::add-mask::${credentials}"
+          printf 'P12_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+      - name: Inspect hidden bulk action
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P12_bulk_output
+          cat > /tmp/P12_bulk.js <<'JS'
+          const fs=require('fs');
+          const {chromium}=require('playwright');
+          const creds=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
+          const owner=creds.find(x=>x.role==='OWNER');
+          (async()=>{
+            const b=await chromium.launch({headless:true});
+            const c=await b.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,ignoreHTTPSErrors:true,locale:'ru-RU'});
+            const p=await c.newPage();
+            await p.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
+            await p.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+            await p.locator('input[type="password"]').fill(owner.password);
+            await Promise.all([p.waitForLoadState('domcontentloaded').catch(()=>{}),p.locator('button[type="submit"],input[type="submit"]').first().click()]);
+            await p.goto('https://plan-ex.ru/erpv2/company/responsible-assignments',{waitUntil:'domcontentloaded'});
+            await p.waitForTimeout(500);
+            const result=await p.evaluate(()=>{
+              const candidates=[...document.querySelectorAll('button,a,[role="button"],input[type="submit"]')];
+              const el=candidates.find(x=>(x.textContent||x.value||'').trim().includes('Переназначить выбранные'));
+              if(!el)return {found:false};
+              const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+              const points=[[r.left+r.width/2,r.top+r.height/2],[r.left+4,r.top+4],[r.right-4,r.bottom-4]].map(([x,y])=>({x,y,hit:(document.elementFromPoint(x,y)?.textContent||document.elementFromPoint(x,y)?.tagName||'').trim().replace(/\s+/g,' ').slice(0,120)}));
+              const ancestors=[];let cur=el;
+              while(cur&&cur!==document.body&&ancestors.length<12){
+                const cs=getComputedStyle(cur),cr=cur.getBoundingClientRect();
+                ancestors.push({tag:cur.tagName,id:cur.id,className:cur.className,hidden:cur.hidden,ariaHidden:cur.getAttribute('aria-hidden'),rect:{left:cr.left,top:cr.top,right:cr.right,bottom:cr.bottom,width:cr.width,height:cr.height},display:cs.display,visibility:cs.visibility,opacity:cs.opacity,overflow:cs.overflow,overflowX:cs.overflowX,overflowY:cs.overflowY,position:cs.position,zIndex:cs.zIndex,clip:cs.clip,clipPath:cs.clipPath,transform:cs.transform,maxHeight:cs.maxHeight});
+                cur=cur.parentElement;
+              }
+              return {found:true,text:(el.textContent||el.value||'').trim(),offsetParent:el.offsetParent?`${el.offsetParent.tagName}.${el.offsetParent.className}`:null,rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},display:s.display,visibility:s.visibility,opacity:s.opacity,pointerEvents:s.pointerEvents,position:s.position,zIndex:s.zIndex,clip:s.clip,clipPath:s.clipPath,transform:s.transform,points,ancestors};
+            });
+            fs.writeFileSync('P12_bulk_output/P12_HIDDEN_BULK_DIAGNOSTIC.json',JSON.stringify(result,null,2));
+            await p.screenshot({path:'P12_bulk_output/P12_HIDDEN_BULK_SCREEN.png',fullPage:false});
+            console.log(JSON.stringify({found:result.found,rect:result.rect,offsetParent:result.offsetParent}));
+            await b.close();
+          })().catch(e=>{fs.writeFileSync('P12_bulk_output/P12_HIDDEN_BULK_DIAGNOSTIC.json',JSON.stringify({error:String(e.stack||e)},null,2));process.exitCode=1;});
+          JS
+          node /tmp/P12_bulk.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P12_hidden_bulk_diagnostic
+          path: P12_bulk_output/
+          retention-days: 30
