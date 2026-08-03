@@ -1,0 +1,38 @@
+{
+  "status": "P13_CODE_READY_RUNTIME_OWNER_CHECK_REQUIRED",
+  "start_head": "e27a6c33516b07e82f493a5ab9f378ece286bb71",
+  "concurrent_head_before_push": "29bbedec7068b5ae349ca14d0c0e61e178b8cfa9",
+  "functional_final_head": "ac33e3a24314d02f2bcd32fed95da75e32574027",
+  "commit": "fix: restore linear trip document save",
+  "root_cause": [
+    "ordinary save executed schema/migration repair",
+    "upload moved file to permanent storage before metadata/commit",
+    "rollback did not compensate filesystem",
+    "ModalShell discarded non-2xx body and replaced it with a generic message"
+  ],
+  "form_encoding": "multipart/form-data",
+  "document_inputs": {
+    "predefined": "dynamic routeDocumentDefinitions input names",
+    "custom": "custom_doc_file[]"
+  },
+  "entity_type": "linear_route",
+  "staging_path": "companies/{company_id}/tmp/linear_route_uploads/{route_id}/{request_token}/",
+  "final_path": "companies/{company_id}/documents/linear_route/{route_id}/",
+  "transaction_safety": "stage -> lock route -> DB changes -> final move -> metadata -> retire old metadata -> commit; rollback removes new final files",
+  "tenant_scope": "session company + tenant DB + canEditRoute + row lock",
+  "csrf": "global startCsrfFormInjection + verifyCsrfRequest",
+  "idempotency": "one-time session token plus disabled/loading submit",
+  "tests": {
+    "php_lint": "PASS",
+    "regression": "38/38 PASS",
+    "synthetic_pdf_staging": "PASS",
+    "forbidden_extension": "PASS",
+    "bom_mojibake": "PASS",
+    "secret_scan": "PASS",
+    "production_mutation": "NOT_RUN"
+  },
+  "autodeploy_run": "NOT_OBSERVABLE",
+  "autodeploy_status": "NOT_OBSERVABLE",
+  "runtime_verified": false,
+  "owner_runtime_check_required": true
+}

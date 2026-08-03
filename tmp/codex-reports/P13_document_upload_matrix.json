@@ -1,0 +1,20 @@
+{
+  "entity_type": "linear_route",
+  "max_file_size_bytes": 20971520,
+  "shared_service": "App\\Service\\DocumentService",
+  "cases": [
+    {"case": "valid allowed file", "expected": "staged, committed, metadata visible", "implemented": true},
+    {"case": "forbidden extension", "expected": "422 safe specific error, no DB/file change", "implemented": true},
+    {"case": "size over 20 MB", "expected": "422 safe specific error, no DB/file change", "implemented": true},
+    {"case": "empty file", "expected": "422 safe specific error", "implemented": true},
+    {"case": "PHP partial upload", "expected": "422 specific incomplete-upload error", "implemented": true},
+    {"case": "temporary directory unavailable", "expected": "422 safe server storage error", "implemented": true},
+    {"case": "final storage unavailable", "expected": "rollback DB, cleanup staged/final files", "implemented": true},
+    {"case": "metadata insert failure", "expected": "rollback DB and delete newly moved final file", "implemented": true},
+    {"case": "predefined replacement", "expected": "new metadata first; old metadata soft-delete second", "implemented": true},
+    {"case": "second file fails validation", "expected": "cleanup first staged file", "implemented": true},
+    {"case": "repeat submit", "expected": "one-time token rejects duplicate", "implemented": true},
+    {"case": "foreign tenant route", "expected": "404/403 before mutation", "implemented": true},
+    {"case": "unknown backend exception", "expected": "generic safe message; details only server log", "implemented": true}
+  ]
+}
