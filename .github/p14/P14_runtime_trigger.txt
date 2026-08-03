@@ -1,0 +1,3 @@
+P14 observable pull-request runtime verification trigger.
+Target runtime: https://plan-ex.ru/erpv2/company/trips/linear
+Expected: authenticated company_owner opens first linear trip edit modal without HTTP 500 and receives #linear-trip-edit-form with a save token.
