@@ -34,23 +34,24 @@ function credentials() {
     await form.waitFor({state:'visible', timeout:15000});
     evidence.formAction = await form.getAttribute('action');
     evidence.formEncoding = await form.getAttribute('enctype');
-    evidence.carrierValue = await form.locator('[name="carrier_contractor_id"]').inputValue().catch(()=>null);
+    const carrier = form.locator('[name="carrier_contractor_id"]');
+    evidence.carrierValue = await carrier.inputValue().catch(()=>null);
     evidence.executorValue = await form.locator('[name="route_executor_id"]').inputValue().catch(()=>null);
-    evidence.paymentConditionsBefore = await form.evaluate((element) => {
+    evidence.carrierFieldHidden = await carrier.evaluate((element) => {
+      const field = element.closest('.field');
+      if (!field) return false;
+      const style = window.getComputedStyle(field);
+      return field.hidden || field.classList.contains('is-hidden') || style.display === 'none' || style.visibility === 'hidden';
+    }).catch(()=>false);
+    evidence.paymentConditions = await form.evaluate((element) => {
       const result = {};
       element.querySelectorAll('select[name$="[condition_type]"]').forEach((select) => { result[select.name] = select.value; });
       return result;
     });
-    await form.evaluate((element) => {
-      element.querySelectorAll('select[name$="[condition_type]"]').forEach((select) => {
-        if (!select.value) select.value = 'start_day';
-      });
-    });
-    evidence.paymentConditionsAfter = await form.evaluate((element) => {
-      const result = {};
-      element.querySelectorAll('select[name$="[condition_type]"]').forEach((select) => { result[select.name] = select.value; });
-      return result;
-    });
+    const emptyConditions = Object.entries(evidence.paymentConditions).filter(([, value]) => !value).map(([name]) => name);
+    if (emptyConditions.length) throw new Error('Payment conditions were not normalized: ' + emptyConditions.join(', '));
+    if (!evidence.carrierFieldHidden) throw new Error('Redundant carrier field is still visible.');
+    if (!evidence.carrierValue || !evidence.executorValue) throw new Error('Executor-derived carrier values are incomplete.');
     evidence.submit = await form.evaluate(async (element) => {
       const data = new FormData(element);
       const response = await fetch(element.action, {
@@ -62,11 +63,13 @@ function credentials() {
     });
     try { evidence.submitJson = JSON.parse(evidence.submit.body); } catch (_) {}
     evidence.status = evidence.submit.ok && evidence.submitJson && evidence.submitJson.success === true ? 'PASS' : 'FAIL';
-    await page.screenshot({path:path.join(OUT_DIR,'P14_save_result_1920x1080.png')});
+    if (evidence.status !== 'PASS') throw new Error('Save failed: ' + evidence.submit.body);
+    await page.screenshot({path:path.join(OUT_DIR,'P15_save_success_1920x1080.png')});
   } catch (error) {
     evidence.error = String(error && error.message || error);
+    await page.screenshot({path:path.join(OUT_DIR,'P15_save_failure_1920x1080.png')}).catch(()=>{});
   } finally {
-    fs.writeFileSync(path.join(OUT_DIR,'P14_runtime_result.json'), JSON.stringify(evidence,null,2));
+    fs.writeFileSync(path.join(OUT_DIR,'P15_runtime_result.json'), JSON.stringify(evidence,null,2));
     console.log(JSON.stringify(evidence));
     await context.close(); await browser.close();
   }
