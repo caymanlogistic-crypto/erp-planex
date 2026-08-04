@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const Module=require('module');
+const sourcePath=path.join(__dirname,'P14_data_setup.js');
+let source=fs.readFileSync(sourcePath,'utf8');
+const before="const r=await submit(page,f);id=await findId(page,'vehicle',plate);result.steps.push({step:'create_vehicle',httpStatus:r?.status()??null,pass:!!id,id});";
+const after="const nav=page.waitForNavigation({waitUntil:'domcontentloaded',timeout:30000}).catch(()=>null);await page.locator('button[type=\"submit\"][form=\"vehicle-set-create-form\"]').click();const r=await nav;await page.waitForTimeout(600);id=await findId(page,'vehicle',plate);result.steps.push({step:'create_vehicle',httpStatus:r?.status()??null,pass:!!id,id});";
+if(!source.includes(before))throw new Error('P14 vehicle patch target missing');
+source=source.replace(before,after);
+const filename=path.join(__dirname,'P14_data_setup_runtime_generated.js');
+const runtimeModule=new Module(filename,module);
+runtimeModule.filename=filename;
+runtimeModule.paths=module.paths;
+runtimeModule._compile(source,filename);
