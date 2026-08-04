@@ -7,6 +7,12 @@ on:
     paths:
       - '.github/p14/P14_browser_capability_check.js'
       - '.github/workflows/P14_browser_capability_check.yml'
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p14/P14_browser_capability_check.js'
+      - '.github/workflows/P14_browser_capability_check.yml'
   workflow_dispatch:
 
 permissions:
