@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const Module=require('module');
+let source=fs.readFileSync(path.join(__dirname,'P14_trip_create_test.js'),'utf8');
+source=source.replace("await set(f,'customer_payments[0][condition_type]','prepayment');","await set(f,'customer_payments[0][condition_type]','specific_date');await set(f,'customer_payments[0][specific_due_date]','08.08.2026');");
+const filename=path.join(__dirname,'P14_trip_create_runtime_v2.js');
+const runtimeModule=new Module(filename,module);
+runtimeModule.filename=filename;
+runtimeModule.paths=module.paths;
+runtimeModule._compile(source,filename);
