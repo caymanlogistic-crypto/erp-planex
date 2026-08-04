@@ -5,13 +5,13 @@ on:
     branches:
       - chatgpt/p14-browser-audit-20260805
     paths:
-      - '.github/p14/P14_browser_capability_check.js'
+      - '.github/p14/**'
       - '.github/workflows/P14_browser_capability_check.yml'
   pull_request:
     branches:
       - chatgpt/production-stabilization-20260802
     paths:
-      - '.github/p14/P14_browser_capability_check.js'
+      - '.github/p14/**'
       - '.github/workflows/P14_browser_capability_check.yml'
   workflow_dispatch:
 
