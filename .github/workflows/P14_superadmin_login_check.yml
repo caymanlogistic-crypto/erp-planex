@@ -5,11 +5,13 @@ on:
     branches:
       - chatgpt/p14-browser-audit-20260805
     paths:
+      - '.github/p14/P14_superadmin_login_check.js'
       - '.github/workflows/P14_superadmin_login_check.yml'
   pull_request:
     branches:
       - chatgpt/production-stabilization-20260802
     paths:
+      - '.github/p14/P14_superadmin_login_check.js'
       - '.github/workflows/P14_superadmin_login_check.yml'
   workflow_dispatch:
 
@@ -25,128 +27,62 @@ jobs:
     steps:
       - name: Checkout P14 audit branch
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Check required GitHub Secrets
-        id: secret_gate
+      - name: Load encrypted runtime credential helper
         shell: bash
-        env:
-          P14_SUPERADMIN_USERNAME: ${{ secrets.P14_SUPERADMIN_USERNAME }}
-          P14_SUPERADMIN_PASSWORD: ${{ secrets.P14_SUPERADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          mkdir -p "${P14_OUT}"
-          if [ -z "${P14_SUPERADMIN_USERNAME:-}" ] || [ -z "${P14_SUPERADMIN_PASSWORD:-}" ]; then
-            printf '%s\n' '{"status":"P14_BLOCKED_GITHUB_SECRETS_REQUIRED","requiredSecrets":["P14_SUPERADMIN_USERNAME","P14_SUPERADMIN_PASSWORD"]}' > "${P14_OUT}/P14_superadmin_login_result.json"
-            echo 'available=false' >> "${GITHUB_OUTPUT}"
-            echo 'P14_BLOCKED_GITHUB_SECRETS_REQUIRED'
-          else
-            echo "::add-mask::${P14_SUPERADMIN_USERNAME}"
-            echo "::add-mask::${P14_SUPERADMIN_PASSWORD}"
-            echo 'available=true' >> "${GITHUB_OUTPUT}"
-          fi
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2 >/dev/null 2>&1
+          mkdir -p /tmp/P14_credentials
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > /tmp/P14_credentials/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > /tmp/P14_credentials/P11_runtime_credentials.enc.json
+
+      - name: Resolve encrypted credential payload in memory
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${PRIVATE_KEY:-}"
+          python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3' >/dev/null
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P14_runtime_key"
+          chmod 600 "${HOME}/.ssh/P14_runtime_key"
+          credentials="$(python /tmp/P14_credentials/P11_decrypt_credentials.py --key "${HOME}/.ssh/P14_runtime_key" --input /tmp/P14_credentials/P11_runtime_credentials.enc.json)"
+          rm -f "${HOME}/.ssh/P14_runtime_key"
+          rm -rf /tmp/P14_credentials
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P14_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+          unset credentials PRIVATE_KEY
 
       - name: Configure Node
-        if: steps.secret_gate.outputs.available == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install Playwright Chromium
-        if: steps.secret_gate.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save playwright@1.54.2 >/dev/null
-          npx playwright install --with-deps chromium >/dev/null
+          npm install --no-save playwright@1.54.2 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
 
       - name: Execute protected SUPERADMIN login check
-        if: steps.secret_gate.outputs.available == 'true'
         shell: bash
-        env:
-          P14_SUPERADMIN_USERNAME: ${{ secrets.P14_SUPERADMIN_USERNAME }}
-          P14_SUPERADMIN_PASSWORD: ${{ secrets.P14_SUPERADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          echo "::add-mask::${P14_SUPERADMIN_USERNAME}"
-          echo "::add-mask::${P14_SUPERADMIN_PASSWORD}"
-          cat > /tmp/P14_superadmin_login_check.js <<'NODE'
-          'use strict';
-          const fs = require('fs');
-          const path = require('path');
-          const { chromium } = require('playwright');
-          const BASE = 'https://plan-ex.ru/erpv2/';
-          const OUT = path.resolve(process.env.P14_OUT || 'P14_superadmin_login_output');
-          fs.mkdirSync(OUT, { recursive: true });
-          const result = {
-            status: 'FAIL',
-            loginHttpStatus: null,
-            finalUrlAfterLogin: null,
-            superadminUiPresent: false,
-            protectedPages: [],
-            sameBrowserContext: true,
-            consoleErrors: [],
-            pageErrors: [],
-            requestFailures: [],
-            badResponses: [],
-            screenshot: null,
-            error: null
-          };
-          (async () => {
-            const browser = await chromium.launch({ headless: true });
-            const context = await browser.newContext({
-              viewport: { width: 1920, height: 1080 },
-              deviceScaleFactor: 1,
-              locale: 'ru-RU',
-              timezoneId: 'Europe/Moscow'
-            });
-            const page = await context.newPage();
-            page.on('console', m => { if (m.type() === 'error') result.consoleErrors.push(m.text()); });
-            page.on('pageerror', e => result.pageErrors.push(String(e.message || e)));
-            page.on('requestfailed', r => result.requestFailures.push({ method: r.method(), url: r.url(), error: r.failure()?.errorText || 'failed' }));
-            page.on('response', r => { if (r.status() >= 400) result.badResponses.push({ status: r.status(), url: r.url() }); });
-            try {
-              const loginResponse = await page.goto(BASE + 'login', { waitUntil: 'domcontentloaded', timeout: 45000 });
-              result.loginHttpStatus = loginResponse?.status() ?? null;
-              await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(process.env.P14_SUPERADMIN_USERNAME);
-              await page.locator('input[type="password"]').first().fill(process.env.P14_SUPERADMIN_PASSWORD);
-              await Promise.all([
-                page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {}),
-                page.locator('button[type="submit"],input[type="submit"]').first().click()
-              ]);
-              await page.waitForTimeout(1000);
-              result.finalUrlAfterLogin = page.url();
-              const noLongerLogin = !/\/login(?:[/?#]|$)/i.test(page.url());
-              result.superadminUiPresent = await page.locator('a[href*="/superadmin/"],nav').filter({ hasText: /компан|superadmin|администр/i }).count() > 0
-                || await page.locator('a[href*="/superadmin/"]').count() > 0;
-              const targets = ['superadmin/companies', 'superadmin/db-usage'];
-              for (const target of targets) {
-                const response = await page.goto(BASE + target, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => null);
-                await page.waitForTimeout(300);
-                result.protectedPages.push({ path: '/' + target, status: response?.status() ?? null, finalUrl: page.url(), pass: response?.status() === 200 && !/\/login(?:[/?#]|$)/i.test(page.url()) });
-              }
-              await page.goto(BASE + 'superadmin/companies', { waitUntil: 'domcontentloaded', timeout: 45000 });
-              const shot = 'P14_superadmin_dashboard_1920x1080.png';
-              await page.screenshot({ path: path.join(OUT, shot), fullPage: false });
-              result.screenshot = shot;
-              result.status = noLongerLogin && result.superadminUiPresent && result.protectedPages.every(p => p.pass) ? 'PASS' : 'FAIL';
-            } catch (e) {
-              result.error = String(e.message || e);
-            } finally {
-              fs.writeFileSync(path.join(OUT, 'P14_superadmin_login_result.json'), JSON.stringify(result, null, 2));
-              await context.close();
-              await browser.close();
-              console.log(`SUPERADMIN_LOGIN=${result.status}`);
-              if (result.status !== 'PASS') process.exitCode = 1;
-            }
-          })().catch(e => {
-            result.error = String(e.message || e);
-            fs.writeFileSync(path.join(OUT, 'P14_superadmin_login_result.json'), JSON.stringify(result, null, 2));
-            console.log('SUPERADMIN_LOGIN=FAIL');
-            process.exitCode = 1;
-          });
-          NODE
-          node /tmp/P14_superadmin_login_check.js
-          rm -f /tmp/P14_superadmin_login_check.js
+          node --check .github/p14/P14_superadmin_login_check.js >/dev/null 2>&1
+          node .github/p14/P14_superadmin_login_check.js
+
+      - name: Clear credential environment
+        if: always()
+        shell: bash
+        run: |
+          printf 'P14_CREDENTIALS_B64=\n' >> "${GITHUB_ENV}"
+          rm -rf /tmp/P14_credentials "${HOME}/.ssh/P14_runtime_key" 2>/dev/null || true
 
       - name: Upload P14 SUPERADMIN evidence
         if: always()
