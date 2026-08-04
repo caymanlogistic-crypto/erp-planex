@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const Module=require('module');
+let source=fs.readFileSync(path.join(__dirname,'P14_data_setup.js'),'utf8');
+source=source.replace("if(tag==='SELECT'){await l.selectOption(String(value)).catch(async()=>{const opts=await l.locator('option').evaluateAll(os=>os.map(o=>o.value).filter(Boolean));if(opts.length)await l.selectOption(opts[0])})}","if(tag==='SELECT'){await l.evaluate((el,val)=>{const options=[...el.options];const chosen=options.find(o=>String(o.value)===String(val))||options.find(o=>o.value);if(!chosen)return;el.value=chosen.value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));},String(value))}");
+source=source.replace("await fill(f,'units[primary][diagnostic_card_number]','P14-DC-0014');","await fill(f,'units[primary][diagnostic_card_number]','1400140014');");
+const before="const r=await submit(page,f);id=await findId(page,'vehicle',plate);result.steps.push({step:'create_vehicle',httpStatus:r?.status()??null,pass:!!id,id});";
+const after="const nav=page.waitForNavigation({waitUntil:'domcontentloaded',timeout:30000}).catch(()=>null);await page.locator('button[type=\"submit\"][form=\"vehicle-set-create-form\"]').click();const r=await nav;await page.waitForTimeout(600);id=await findId(page,'vehicle',plate);result.steps.push({step:'create_vehicle',httpStatus:r?.status()??null,pass:!!id,id});";
+if(source.includes(before))source=source.replace(before,after);
+const filename=path.join(__dirname,'P14_data_setup_runtime_v4.js');
+const runtimeModule=new Module(filename,module);
+runtimeModule.filename=filename;
+runtimeModule.paths=module.paths;
+runtimeModule._compile(source,filename);
