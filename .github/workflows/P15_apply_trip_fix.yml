@@ -6,12 +6,14 @@ on:
       - chatgpt/p15-p17-erp-fullhd-completion-20260805
     paths:
       - '.github/p15/P15_apply_trip_fix.py'
+      - '.github/p15/P15_adjust_trip_fix_tests.py'
       - '.github/workflows/P15_apply_trip_fix.yml'
   pull_request:
     branches:
       - chatgpt/production-stabilization-20260802
     paths:
       - '.github/p15/P15_apply_trip_fix.py'
+      - '.github/p15/P15_adjust_trip_fix_tests.py'
       - '.github/workflows/P15_apply_trip_fix.yml'
   workflow_dispatch:
 
@@ -34,7 +36,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply deterministic P15 patch
-        run: python .github/p15/P15_apply_trip_fix.py
+        run: |
+          python .github/p15/P15_apply_trip_fix.py
+          python .github/p15/P15_adjust_trip_fix_tests.py
 
       - name: Verify PHP 8.3-compatible syntax and regressions
         shell: bash
