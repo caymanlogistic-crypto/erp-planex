@@ -1,0 +1,96 @@
+name: P17 Independent Route Role Full HD
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/p17/P17_route_targets.json'
+      - '.github/p17/P17_route_role_fullhd_runtime.js'
+      - '.github/workflows/P17_route_role_fullhd_runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpv2-runtime-credentials
+  cancel-in-progress: false
+
+jobs:
+  route-role-fullhd:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+      - name: Resolve encrypted credentials
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2 >/dev/null 2>&1
+          mkdir -p /tmp/P17_credentials "${HOME}/.ssh"
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > /tmp/P17_credentials/decrypt.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > /tmp/P17_credentials/credentials.enc.json
+          python -m pip install --quiet 'cryptography==46.0.3' >/dev/null
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P17_runtime_key"
+          chmod 600 "${HOME}/.ssh/P17_runtime_key"
+          payload="$(python /tmp/P17_credentials/decrypt.py --key "${HOME}/.ssh/P17_runtime_key" --input /tmp/P17_credentials/credentials.enc.json)"
+          echo "::add-mask::$payload"
+          echo "P17_CREDENTIALS_B64=$payload" >> "$GITHUB_ENV"
+          rm -rf /tmp/P17_credentials "${HOME}/.ssh/P17_runtime_key"
+          unset payload PRIVATE_KEY
+      - name: Verify deployed marker and old ERP fingerprint
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 316645450e3cce40ab1dc2422368527877176eec
+        run: |
+          set -euo pipefail
+          mkdir -p P17_route_runtime_output
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P17_marker_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P17_marker_key" "${HOME}/.ssh/known_hosts"
+          ssh_base=(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17_marker_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST")
+          actual="$("${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$actual" = "$EXPECTED_SHA"
+          old_fp="$("${ssh_base[@]}" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
+          printf '%s\n' "$actual" > P17_route_runtime_output/P17_DEPLOYED_SHA.txt
+          printf '%s\n' "$old_fp" > P17_route_runtime_output/P17_OLD_ERP_FINGERPRINT.txt
+          echo "P17_DEPLOYED_SHA=$actual" >> "$GITHUB_ENV"
+          rm -f "${HOME}/.ssh/P17_marker_key"
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Validate targets and JavaScript
+        run: |
+          set -euo pipefail
+          node --check .github/p17/P17_route_role_fullhd_runtime.js
+          python - <<'PY'
+          import json
+          d=json.load(open('.github/p17/P17_route_targets.json',encoding='utf-8'))
+          assert d['count']==67 and len(d['targets'])==67
+          assert {x['role'] for x in d['targets']}=={'SUPERADMIN','OWNER','SENIOR_LOGIST','LOGIST_1','LOGIST_2'}
+          PY
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.54.2 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Execute independent P17 matrix
+        env:
+          P17_OUT: P17_route_runtime_output
+        run: node .github/p17/P17_route_role_fullhd_runtime.js
+      - if: always()
+        run: |
+          printf 'P17_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "${HOME}/.ssh/P17_marker_key" 2>/dev/null || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P17_route_role_fullhd_${{ github.sha }}
+          path: P17_route_runtime_output/
+          if-no-files-found: error
+          retention-days: 30
