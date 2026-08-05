@@ -5,6 +5,13 @@ declare(strict_types=1);
 ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
+$sanitize = static function (\Throwable $error): string {
+    $message = (string) $error->getMessage();
+    $message = preg_replace('#/home/[^/\s]+/#', '~/',$message) ?? $message;
+    $message = preg_replace('/(password|passwd|secret|token|key)\s*[=:]\s*[^\s,;]+/i', '$1=[REDACTED]', $message) ?? $message;
+    return mb_substr($message, 0, 500, 'UTF-8');
+};
+
 try {
     $config = require getcwd() . '/bootstrap/app.php';
     require_once BASE_PATH . '/app/Support/entrypoint_dependencies.php';
@@ -29,38 +36,12 @@ try {
     ];
 
     $businessTableCandidates = [
-        'users',
-        'clients',
-        'client_contacts',
-        'contractors',
-        'contractor_contacts',
-        'drivers',
-        'driver_phones',
-        'vehicle_units',
-        'vehicle_sets',
-        'driver_vehicle_blocks',
-        'crews',
-        'route_executors',
-        'linear_routes',
-        'routes',
-        'trips',
-        'route_applications',
-        'applications',
-        'documents',
-        'invoices',
-        'finance_invoices',
-        'finance_operations',
-        'cash_operations',
-        'finance_cash_operations',
-        'bank_operations',
-        'finance_bank_operations',
-        'payment_allocations',
-        'finance_allocations',
-        'bank_accounts',
-        'dds_categories',
-        'matching_rules',
-        'responsible_assignments',
-        'entity_access_grants',
+        'users','clients','client_contacts','contractors','contractor_contacts','drivers','driver_phones',
+        'vehicle_units','vehicle_sets','driver_vehicle_blocks','crews','route_executors','linear_routes',
+        'routes','trips','route_applications','applications','documents','invoices','finance_invoices',
+        'finance_operations','cash_operations','finance_cash_operations','bank_operations',
+        'finance_bank_operations','payment_allocations','finance_allocations','bank_accounts',
+        'dds_categories','matching_rules','responsible_assignments','entity_access_grants',
     ];
 
     foreach ($companies as $company) {
@@ -81,6 +62,7 @@ try {
             'business_counts' => [],
             'business_total' => 0,
             'inventory_error' => null,
+            'inventory_error_message' => null,
         ];
 
         if (!empty($company['db_identifier'])) {
@@ -93,14 +75,11 @@ try {
                 $tables = $localPdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
                 foreach ($tables as $table) {
                     $table = (string) $table;
-                    if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) {
-                        continue;
-                    }
+                    if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) continue;
                     $count = (int) $localPdo->query('SELECT COUNT(*) FROM `' . $table . '`')->fetchColumn();
                     $entry['table_counts'][$table] = $count;
                 }
                 ksort($entry['table_counts']);
-
                 foreach ($businessTableCandidates as $table) {
                     if (array_key_exists($table, $entry['table_counts'])) {
                         $entry['business_counts'][$table] = (int) $entry['table_counts'][$table];
@@ -109,10 +88,10 @@ try {
                 $entry['business_total'] = array_sum($entry['business_counts']);
             } catch (\Throwable $error) {
                 $entry['inventory_error'] = get_class($error);
+                $entry['inventory_error_message'] = $sanitize($error);
                 $result['status'] = 'FAIL';
             }
         }
-
         $result['companies'][] = $entry;
     }
 
@@ -122,6 +101,7 @@ try {
         'status' => 'FAIL',
         'generated_at' => gmdate('c'),
         'error_class' => get_class($error),
+        'error_message' => $sanitize($error),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT), PHP_EOL;
     exit(1);
 }
