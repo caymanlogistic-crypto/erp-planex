@@ -1,0 +1,57 @@
+name: P15 Complete Test Suite
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths: ['.github/workflows/P15_complete_test_suite.yml','tests/p15*.php','app/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 1
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, json, pdo, pdo_mysql
+          coverage: none
+      - name: Execute all P15 tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p P15_complete_test_output
+          status=0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files=sorted(str(p) for p in Path('tests').glob('p15*.php'))
+          Path('P15_complete_test_output/P15_TEST_FILES.json').write_text(json.dumps(files,ensure_ascii=False,indent=2),'utf-8')
+          PY
+          : > P15_complete_test_output/P15_COMPLETE_TESTS.log
+          : > P15_complete_test_output/P15_TEST_EXIT_CODES.tsv
+          count=0; pass=0; fail=0
+          while IFS= read -r test_file; do
+            test -n "$test_file" || continue
+            count=$((count+1))
+            printf '\n=== %s ===\n' "$test_file" >> P15_complete_test_output/P15_COMPLETE_TESTS.log
+            php "$test_file" >> P15_complete_test_output/P15_COMPLETE_TESTS.log 2>&1
+            code=$?
+            printf '%s\t%s\n' "$code" "$test_file" >> P15_complete_test_output/P15_TEST_EXIT_CODES.tsv
+            if test "$code" -eq 0; then pass=$((pass+1)); else fail=$((fail+1)); status=1; fi
+          done < <(find tests -maxdepth 1 -type f -name 'p15*.php' | sort)
+          printf '{"status":"%s","tests_total":%d,"tests_pass":%d,"tests_fail":%d}\n' "$(test "$status" -eq 0 && echo PASS || echo FAIL)" "$count" "$pass" "$fail" > P15_complete_test_output/P15_COMPLETE_TEST_SUMMARY.json
+          cat P15_complete_test_output/P15_COMPLETE_TESTS.log
+          exit "$status"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P15_complete_test_suite_${{ github.sha }}
+          path: P15_complete_test_output/
+          if-no-files-found: error
+          retention-days: 30
