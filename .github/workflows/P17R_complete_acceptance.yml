@@ -5,6 +5,7 @@ on:
     branches: [chatgpt/production-stabilization-20260802]
     paths:
       - '.github/p17/P17R_full_runtime.js'
+      - '.github/p17/P17R_full_runtime_v2.js'
       - '.github/p17/P17R_evidence_assembler.js'
       - '.github/p17/P17_summary_builder.js'
       - 'tests/p17_summary_builder_test.js'
@@ -38,6 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check .github/p17/P17R_full_runtime.js
+          node --check .github/p17/P17R_full_runtime_v2.js
           node --check .github/p17/P17R_evidence_assembler.js
           node --check .github/p17/P17_summary_builder.js
           node --check .github/p17/P17_route_role_fullhd_runtime_v2.js
@@ -48,6 +50,7 @@ jobs:
           from pathlib import Path
           for name in [
               '.github/p17/P17R_full_runtime.js',
+              '.github/p17/P17R_full_runtime_v2.js',
               '.github/p17/P17R_evidence_assembler.js',
               '.github/p17/P17_summary_builder.js',
               'P17_17_CASH_OPERATION_TIMEOUT_ROOT_CAUSE.md',
@@ -121,7 +124,7 @@ jobs:
         continue-on-error: true
         env:
           P17R_OUT: P17R_full_runtime_output
-        run: node .github/p17/P17R_full_runtime.js
+        run: node .github/p17/P17R_full_runtime_v2.js
 
       - name: Assemble factual matrices
         id: assemble
@@ -139,13 +142,11 @@ jobs:
           cat > P17R_final_evidence/P17_FAILED_RUN_HISTORY/README.md <<'EOF'
           # P17 failed-run history
 
-          The previous acceptance evidence remains a failed historical run and is not used as PASS evidence.
+          Previous acceptance evidence remains failed history and is not used as PASS evidence.
 
-          - Previous run: 31020228581
-          - Previous failure: TimeoutError while waiting for `form[action$="/company/finance/cash/operation-create"]`
-          - Previous matrices were partial.
-          - Root cause: the old runner clicked `Создать кассу` because its broad regex contained `Создать`, then waited for the different `Приход/Расход` form.
-          - Corrected rerun: this workflow uses new `UIUX_P17R_` records, a new BrowserContext and exact modal/form assertions.
+          - Original failed run: 31020228581 — wrong cash-modal selector and partial matrices.
+          - First factual correction run: 31026778119 — cash selector fixed; runner then exposed invalid one-token driver name and hidden vehicle-field interaction.
+          - Current correction uses new `UIUX_P17R_` records, fresh BrowserContexts, valid three-word driver names and visibility-aware vehicle fields.
           EOF
 
       - name: Strict final summary consistency gate
