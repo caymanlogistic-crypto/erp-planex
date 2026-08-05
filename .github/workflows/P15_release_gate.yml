@@ -1,5 +1,6 @@
 name: P15 Release Gate
 
+# Corrected gate: architecture_guard.php is allowlisted only for its own mojibake markers.
 on:
   push:
     branches: [chatgpt/p15-p17-erp-fullhd-completion-20260805]
