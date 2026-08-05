@@ -10,6 +10,7 @@ on:
       - '.github/p17/P17_route_role_fullhd_runtime.js'
       - '.github/p17/P17_route_role_fullhd_runtime_v2.js'
       - '.github/p17/P17_crud_trip_finance_runtime.js'
+      - '.github/p17/P17_crud_trip_finance_runtime_v2.js'
       - '.github/workflows/P17_complete_acceptance.yml'
   workflow_dispatch:
 
@@ -97,7 +98,7 @@ jobs:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          EXPECTED_SHA: 316645450e3cce40ab1dc2422368527877176eec
+          EXPECTED_SHA: 8e1b9659638d5aa86f156b7ece201da591753c82
         run: |
           set -euo pipefail
           printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P17_acceptance_key"
@@ -106,6 +107,7 @@ jobs:
           ssh_base=(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17_acceptance_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST")
           actual="$("${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
           test "$actual" = "$EXPECTED_SHA"
+          git merge-base --is-ancestor "$actual" HEAD
           old_fp="$("${ssh_base[@]}" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
           printf '%s\n' "$actual" > P17_complete_output/P17_DEPLOYED_SHA.txt
           printf '%s\n' "$old_fp" > P17_complete_output/P17_OLD_ERP_FINGERPRINT_BEFORE.txt
@@ -121,6 +123,7 @@ jobs:
           node --check .github/p17/P17_route_role_fullhd_runtime.js
           node --check .github/p17/P17_route_role_fullhd_runtime_v2.js
           node --check .github/p17/P17_crud_trip_finance_runtime.js
+          node --check .github/p17/P17_crud_trip_finance_runtime_v2.js
           python - <<'PY'
           import json
           d=json.load(open('.github/p17/P17_route_targets.json',encoding='utf-8'))
@@ -147,14 +150,14 @@ jobs:
         continue-on-error: true
         env:
           P17_OUT: P17_crud_runtime_output
-        run: node .github/p17/P17_crud_trip_finance_runtime.js
+        run: node .github/p17/P17_crud_trip_finance_runtime_v2.js
       - name: Verify deployed marker and old ERP unchanged
         if: always()
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          EXPECTED_SHA: 316645450e3cce40ab1dc2422368527877176eec
+          EXPECTED_SHA: 8e1b9659638d5aa86f156b7ece201da591753c82
         run: |
           set -euo pipefail
           ssh_base=(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17_acceptance_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST")
