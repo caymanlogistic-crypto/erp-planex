@@ -1,11 +1,11 @@
 name: P15 Trip Create Runtime
 
-# Verifies the original P14 blocker against the deployed implementation SHA.
 on:
   pull_request:
     branches: [chatgpt/production-stabilization-20260802]
     paths:
       - '.github/p15/P15_trip_create_runtime.js'
+      - '.github/p15/P15_trip_create_runtime_v2.js'
       - '.github/workflows/P15_trip_create_runtime.yml'
   workflow_dispatch:
 permissions:
@@ -45,7 +45,7 @@ jobs:
           npx playwright install --with-deps chromium >/dev/null 2>&1
       - name: Execute deployed trip create runtime
         env: { P15_OUT: P15_trip_runtime_output }
-        run: node .github/p15/P15_trip_create_runtime.js
+        run: node .github/p15/P15_trip_create_runtime_v2.js
       - if: always()
         run: printf 'P15_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
       - if: always()
