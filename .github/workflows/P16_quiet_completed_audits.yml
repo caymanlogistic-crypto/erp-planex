@@ -1,0 +1,29 @@
+name: P16 Quiet Completed Audits
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/p16/P16_quiet_completed_audit_workflows.py'
+      - '.github/workflows/P16_quiet_completed_audits.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  quiet:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+      - run: python .github/p16/P16_quiet_completed_audit_workflows.py
+      - run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name 'erp-planex-p16-bot'
+          git config user.email 'erp-planex-p16-bot@users.noreply.github.com'
+          git add .github/workflows/P14_linear_trip_edit_runtime.yml .github/workflows/P15_*.yml .github/workflows/P16_quiet_completed_audits.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'P16: make completed audit workflows manual-only'
+          git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
