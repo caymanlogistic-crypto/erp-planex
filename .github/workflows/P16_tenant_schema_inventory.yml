@@ -1,0 +1,71 @@
+name: P16 Tenant Schema Inventory
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/p16/P16_tenant_schema_inventory.php'
+      - '.github/workflows/P16_tenant_schema_inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P16_schema_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P16_schema_key" "${HOME}/.ssh/known_hosts"
+      - name: Read deployed marker and tenant schema
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p P16_schema_inventory_output
+          ssh_base=(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P16_schema_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST")
+          live=/home/s/spugovxsim/planexp/public_html/erpv2
+          deployed_sha="$("${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          printf '%s\n' "$deployed_sha" > P16_schema_inventory_output/P16_DEPLOYED_SHA.txt
+          remote_php="$("${ssh_base[@]}" 'for c in php83 php8.3 /usr/local/bin/php83 /opt/php83/bin/php /usr/bin/php8.3 php; do command -v "$c" >/dev/null 2>&1 || continue; v=$("$c" -r "echo PHP_VERSION_ID;" 2>/dev/null || true); if test -n "$v" && test "$v" -ge 80300; then command -v "$c"; exit 0; fi; done; exit 1')"
+          printf '%s\n' "$remote_php" > P16_schema_inventory_output/P16_REMOTE_PHP_PATH.txt
+          "${ssh_base[@]}" "cd '$live' && '$remote_php' -d display_errors=0" < .github/p16/P16_tenant_schema_inventory.php > P16_schema_inventory_output/P16_TENANT_SCHEMA.json
+          python -m json.tool P16_schema_inventory_output/P16_TENANT_SCHEMA.json >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('P16_schema_inventory_output/P16_TENANT_SCHEMA.json').read_text('utf-8'))
+          by_id={int(x['id']):x for x in data['companies']}
+          assert data['status']=='PASS'
+          assert by_id[25]['name']!='UIUX TEST EXPEDITOR'
+          assert by_id[27]['name']=='UIUX TEST EXPEDITOR'
+          assert by_id[27]['status']=='active'
+          assert by_id[26]['status'] in {'archived','inactive','blocked'}
+          assert by_id[25]['db_fingerprint']!=by_id[27]['db_fingerprint']!=by_id[26]['db_fingerprint']
+          assert by_id[25]['storage_fingerprint']!=by_id[27]['storage_fingerprint']!=by_id[26]['storage_fingerprint']
+          assert 'linear_routes' in data['tenant_27_schema']
+          print('P16_SCHEMA_INVENTORY=PASS')
+          PY
+      - if: always()
+        run: rm -f "${HOME}/.ssh/P16_schema_key" 2>/dev/null || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P16_tenant_schema_${{ github.sha }}
+          path: P16_schema_inventory_output/
+          if-no-files-found: error
+          retention-days: 30
