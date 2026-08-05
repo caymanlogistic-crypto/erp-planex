@@ -5,6 +5,7 @@ on:
     branches: [chatgpt/production-stabilization-20260802]
     paths:
       - '.github/p16/P16_populated_fullhd_runtime.js'
+      - '.github/p16/P16_populated_fullhd_runtime_v2.js'
       - '.github/workflows/P16_populated_fullhd_runtime.yml'
   workflow_dispatch:
 
@@ -60,7 +61,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - name: JavaScript syntax
-        run: node --check .github/p16/P16_populated_fullhd_runtime.js
+        run: |
+          node --check .github/p16/P16_populated_fullhd_runtime.js
+          node --check .github/p16/P16_populated_fullhd_runtime_v2.js
       - name: Install Playwright Chromium
         run: |
           npm install --no-save playwright@1.54.2 >/dev/null 2>&1
@@ -68,7 +71,7 @@ jobs:
       - name: Execute populated role and viewport runtime
         env:
           P16_OUT: P16_populated_runtime_output
-        run: node .github/p16/P16_populated_fullhd_runtime.js
+        run: node .github/p16/P16_populated_fullhd_runtime_v2.js
       - if: always()
         run: |
           printf 'P16_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
