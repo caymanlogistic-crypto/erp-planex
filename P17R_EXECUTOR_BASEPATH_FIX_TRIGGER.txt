@@ -1,0 +1,3 @@
+P17R_EXECUTOR_BASEPATH_FIX_TRIGGER=2026-08-05T22:40:00+03:00
+MODE=ISOLATED_PUSH
+PURPOSE=preserve /erpv2 base path in route executor links, form action and redirects
