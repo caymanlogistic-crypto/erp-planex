@@ -1,0 +1,91 @@
+name: P15 Release Gate
+
+on:
+  push:
+    branches: [chatgpt/p15-p17-erp-fullhd-completion-20260805]
+    paths:
+      - '.github/workflows/P15_release_gate.yml'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/**'
+      - 'public/**'
+      - 'tests/**'
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, json, pdo, pdo_mysql
+          coverage: none
+      - name: Execute release checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P15_release_gate_output
+          find app bootstrap config database public scripts tools tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l > P15_release_gate_output/P15_PHP_LINT.log
+          tests=(tests/p15_trip_create_payment_terms_regression_test.php tests/p15_mutation_error_service_test.php tests/p15_linear_trip_executor_carrier_save_test.php)
+          : > P15_release_gate_output/P15_TESTS.log
+          for test_file in "${tests[@]}"; do php "$test_file" >> P15_release_gate_output/P15_TESTS.log; done
+          find public app -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check > P15_release_gate_output/P15_JS_CHECK.log
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          roots=('app','bootstrap','config','database','public','scripts','tools','tests')
+          suffixes={'.php','.js','.css','.json','.md','.txt','.sql'}
+          secret_re=re.compile(r'''(?i)(password|passwd|secret|token|api[_-]?key)\s*[:=]\s*["']([^"']{4,})["']''')
+          secrets=[]; mojibake=[]; bom=[]; invalid=[]
+          for root in roots:
+              rp=Path(root)
+              if not rp.exists(): continue
+              for p in rp.rglob('*'):
+                  if not p.is_file() or p.suffix.lower() not in suffixes: continue
+                  raw=p.read_bytes()
+                  if raw.startswith(b'\xef\xbb\xbf'): bom.append(str(p))
+                  try: text=raw.decode('utf-8')
+                  except UnicodeDecodeError: invalid.append(str(p)); continue
+                  if p.as_posix()!='tools/architecture_guard.php':
+                      for marker in ('Рџ','РЎ','Ð','Ñ','�'):
+                          if marker in text: mojibake.append(f'{p}:{marker}')
+                  if 'fixtures' not in p.parts:
+                      for m in secret_re.finditer(text):
+                          value=m.group(2)
+                          if value not in {'[REDACTED]','REDACTED','example','placeholder','changeme'} and not value.startswith('${'):
+                              secrets.append(f'{p}:{text.count(chr(10),0,m.start())+1}:{m.group(1)}=[REDACTED]')
+          out=Path('P15_release_gate_output')
+          result={'secret_findings':secrets,'mojibake_findings':mojibake,'bom_findings':bom,'invalid_utf8':invalid}
+          (out/'P15_SECURITY_ENCODING_SCAN.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),'utf-8')
+          if any(result.values()): raise SystemExit(1)
+          PY
+          base=381a187d7f5cc02eb338b81836dd7ce0099a78b2
+          git diff --check "$base"...HEAD
+          git diff --name-status "$base"...HEAD > P15_release_gate_output/P15_CHANGED_FILES.txt
+          if grep -E '(^|[[:space:]])(\.env|storage/|tmp/|logs/|node_modules/|vendor/|public_html/erp/)' P15_release_gate_output/P15_CHANGED_FILES.txt; then exit 1; fi
+          git rev-parse HEAD > P15_release_gate_output/P15_VERIFIED_SHA.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          out=Path('P15_release_gate_output')
+          summary={'status':'PASS','verified_sha':(out/'P15_VERIFIED_SHA.txt').read_text().strip(),'php_lint':'PASS','tests':'PASS','js':'PASS','secret_scan':'PASS','mojibake_scan':'PASS','bom_scan':'PASS'}
+          (out/'P15_RELEASE_GATE_SUMMARY.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),'utf-8')
+          print('P15_RELEASE_GATE=PASS')
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P15_release_gate_${{ github.sha }}
+          path: P15_release_gate_output/
+          if-no-files-found: error
+          retention-days: 30
