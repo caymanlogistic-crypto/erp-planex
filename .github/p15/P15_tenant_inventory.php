@@ -7,7 +7,7 @@ error_reporting(E_ALL);
 
 $sanitize = static function (\Throwable $error): string {
     $message = (string) $error->getMessage();
-    $message = preg_replace('#/home/[^/\s]+/#', '~/',$message) ?? $message;
+    $message = preg_replace('#/home/[^/\s]+/#', '~/', $message) ?? $message;
     $message = preg_replace('/(password|passwd|secret|token|key)\s*[=:]\s*[^\s,;]+/i', '$1=[REDACTED]', $message) ?? $message;
     return mb_substr($message, 0, 500, 'UTF-8');
 };
@@ -21,7 +21,8 @@ try {
     $centralPdo = $centralDb->connection();
 
     $stmt = $centralPdo->prepare(
-        'SELECT id, name, inn, status, created_at, db_identifier, storage_path
+        'SELECT id, name, inn, status, created_at, db_identifier, storage_path,
+                db_host, db_port, db_username, db_password
          FROM companies
          WHERE name = :test_name OR id IN (25, 27)
          ORDER BY id ASC'
