@@ -131,6 +131,13 @@ try {
         return;
     }
 
+    $documentFileError = validateLegalEntityCreateDocumentFiles($legalEntityFiles);
+    if ($documentFileError !== null) {
+        $formError = $documentFileError;
+        $renderContractorCreateResponse();
+        return;
+    }
+
     $newContractorId = $service->createContractor($localPdo, $_POST, (int)$_SESSION['user_id'], $_SESSION['role_code']);
 
     ContractorContactService::replaceForContractor(

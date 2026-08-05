@@ -110,6 +110,17 @@ try {
         require base_path('app/View/layouts/main.php');
         return;
     }
+
+    $documentFileError = validateLegalEntityCreateDocumentFiles($legalEntityFiles);
+    if ($documentFileError !== null) {
+        $formError = $documentFileError;
+        ob_start();
+        require base_path('app/View/pages/company_clients_create.php');
+        $content = ob_get_clean();
+        require base_path('app/View/layouts/main.php');
+        return;
+    }
+
     $_FILES['custom_doc_file']['name'] = [];
 
     if (!empty($_FILES['custom_doc_file']['name']) && is_array($_FILES['custom_doc_file']['name'])) {

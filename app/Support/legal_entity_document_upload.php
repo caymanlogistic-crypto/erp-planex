@@ -65,6 +65,62 @@ if (!function_exists('validateLegalEntityCustomDocumentTitles')) {
     }
 }
 
+if (!function_exists('validateLegalEntityCreateDocumentFiles')) {
+    function validateLegalEntityCreateDocumentFiles(array $files): ?string
+    {
+        $groups = [
+            'predef_doc' => 'Документ',
+            'custom_doc_file' => 'Документ',
+        ];
+        $allowedExtensions = legalEntityDocumentAllowedExtensions();
+        $maxFileSize = legalEntityDocumentMaxFileSize();
+
+        foreach ($groups as $groupKey => $fallbackLabel) {
+            $names = $files[$groupKey]['name'] ?? [];
+            if (!is_array($names)) {
+                continue;
+            }
+
+            foreach ($names as $index => $originalName) {
+                $originalName = trim((string) $originalName);
+                $errorCode = (int) ($files[$groupKey]['error'][$index] ?? UPLOAD_ERR_NO_FILE);
+                if ($errorCode === UPLOAD_ERR_NO_FILE && $originalName === '') {
+                    continue;
+                }
+                if ($errorCode !== UPLOAD_ERR_OK) {
+                    return $fallbackLabel . ' «' . ($originalName !== '' ? $originalName : '#' . ((int) $index + 1)) . '»: ошибка загрузки.';
+                }
+                if ($originalName === '') {
+                    return $fallbackLabel . ': имя файла не указано.';
+                }
+
+                $fileSize = (int) ($files[$groupKey]['size'][$index] ?? 0);
+                if ($fileSize <= 0) {
+                    return $fallbackLabel . ' «' . $originalName . '»: пустой файл не допускается.';
+                }
+                if ($fileSize > $maxFileSize) {
+                    return $fallbackLabel . ' «' . $originalName . '»: размер превышает 20 МБ.';
+                }
+
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                if (!in_array($extension, $allowedExtensions, true)) {
+                    return $fallbackLabel . ' «' . $originalName . '»: недопустимый формат.';
+                }
+                if (strpos($originalName, '../') !== false || strpos($originalName, '..\\') !== false || strpos($originalName, '/') !== false || strpos($originalName, '\\') !== false) {
+                    return $fallbackLabel . ' «' . $originalName . '»: недопустимое имя.';
+                }
+
+                $tmpName = (string) ($files[$groupKey]['tmp_name'][$index] ?? '');
+                if ($tmpName === '' || !is_file($tmpName)) {
+                    return $fallbackLabel . ' «' . $originalName . '»: временный файл недоступен.';
+                }
+            }
+        }
+
+        return null;
+    }
+}
+
 if (!function_exists('findLegalEntityDocumentTypeId')) {
     function findLegalEntityDocumentTypeId(PDO $pdo, string $entityType, string $documentTypeName): ?int
     {
