@@ -1,0 +1,33 @@
+name: P16 Generate Data Plan
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/p16/P16_generate_test_data_plan.py'
+      - '.github/workflows/P16_generate_data_plan.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+      - run: |
+          set -euo pipefail
+          python .github/p16/P16_generate_test_data_plan.py
+          python -m json.tool P16_01_TEST_DATA_PLAN.json >/dev/null
+          test "$(python -c 'import json;print(len(json.load(open("P16_01_TEST_DATA_PLAN.json",encoding="utf-8"))["records"]))')" -ge 100
+      - name: Commit plan
+        run: |
+          set -euo pipefail
+          git config user.name 'erp-planex-p16-bot'
+          git config user.email 'erp-planex-p16-bot@users.noreply.github.com'
+          git add P16_01_TEST_DATA_PLAN.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'P16-01: add idempotent representative test data plan'
+          git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
