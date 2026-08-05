@@ -1,0 +1,1821 @@
+{
+  "prompt": "P16",
+  "tenant_id": 27,
+  "company": "UIUX TEST EXPEDITOR",
+  "prefix": "UIUX_P16_",
+  "idempotency": {
+    "strategy": "Find by deterministic test_id in tenant 27; create only when absent; update only matching UIUX_P16_ records.",
+    "production_company_mutation": false,
+    "cleanup": "Use application UI archive/delete only for UIUX_P16_ records after P17 owner review."
+  },
+  "records": [
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_01",
+      "purpose": "short LLC",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_02",
+      "purpose": "very long legal name",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_03",
+      "purpose": "sole proprietor",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_04",
+      "purpose": "multiple contacts",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_05",
+      "purpose": "multiple phones",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_06",
+      "purpose": "multiple emails",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_07",
+      "purpose": "long legal address",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_08",
+      "purpose": "long actual address",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_09",
+      "purpose": "long comment",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_10",
+      "purpose": "fully populated",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_11",
+      "purpose": "minimum valid",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "archived",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "client",
+      "test_id": "UIUX_P16_CLIENT_12",
+      "purpose": "documents/invoices/trips",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "restored",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_01",
+      "purpose": "carrier",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_02",
+      "purpose": "processor",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_03",
+      "purpose": "sole proprietor",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_04",
+      "purpose": "LLC",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_05",
+      "purpose": "short name",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_06",
+      "purpose": "long name",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_07",
+      "purpose": "multiple phones",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_08",
+      "purpose": "director",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_09",
+      "purpose": "bank details",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_10",
+      "purpose": "long address",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_11",
+      "purpose": "linked drivers/vehicles",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "archived",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "contractor",
+      "test_id": "UIUX_P16_CONTRACTOR_12",
+      "purpose": "documents/archive/restore",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "restored",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_01",
+      "purpose": "short name",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_02",
+      "purpose": "long name",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_03",
+      "purpose": "multiple phones",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_04",
+      "purpose": "full data",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_05",
+      "purpose": "minimum valid",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_06",
+      "purpose": "documents",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_07",
+      "purpose": "carrier A",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_08",
+      "purpose": "carrier B",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_09",
+      "purpose": "assigned owner",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_10",
+      "purpose": "archived",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "archived",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_11",
+      "purpose": "restored",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "restored",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "driver",
+      "test_id": "UIUX_P16_DRIVER_12",
+      "purpose": "in trip/no trip",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_01",
+      "purpose": "tractor",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_02",
+      "purpose": "trailer",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_03",
+      "purpose": "single vehicle",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_04",
+      "purpose": "short make",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_05",
+      "purpose": "long make/model",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_06",
+      "purpose": "free",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_07",
+      "purpose": "busy",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_08",
+      "purpose": "with documents",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_09",
+      "purpose": "without optional docs",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_10",
+      "purpose": "active",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_11",
+      "purpose": "archived",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "archived",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle",
+      "test_id": "UIUX_P16_VEHICLE_12",
+      "purpose": "restored",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "restored",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle_set",
+      "test_id": "UIUX_P16_VEHICLE_SET_01",
+      "purpose": "tractor+trailer",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle_set",
+      "test_id": "UIUX_P16_VEHICLE_SET_02",
+      "purpose": "single vehicle set",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle_set",
+      "test_id": "UIUX_P16_VEHICLE_SET_03",
+      "purpose": "long model set",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "vehicle_set",
+      "test_id": "UIUX_P16_VEHICLE_SET_04",
+      "purpose": "restored set",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "restored",
+      "related_entities": [
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "crew",
+      "test_id": "UIUX_P16_CREW_01",
+      "purpose": "driver+vehicle A",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "crew",
+      "test_id": "UIUX_P16_CREW_02",
+      "purpose": "driver+vehicle B",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "crew",
+      "test_id": "UIUX_P16_CREW_03",
+      "purpose": "busy crew",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "crew",
+      "test_id": "UIUX_P16_CREW_04",
+      "purpose": "restored crew",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned LOGIST according to grants",
+      "status": "restored",
+      "related_entities": [
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_01",
+      "purpose": "planned short",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_02",
+      "purpose": "planned long name",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_03",
+      "purpose": "one application",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_04",
+      "purpose": "many applications",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_05",
+      "purpose": "logist 1",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_06",
+      "purpose": "logist 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_07",
+      "purpose": "customer prepayment",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_08",
+      "purpose": "customer after documents",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_09",
+      "purpose": "carrier working days",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_10",
+      "purpose": "future dates",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_11",
+      "purpose": "past/overdue finance",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_12",
+      "purpose": "vehicle set",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_13",
+      "purpose": "documents",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_14",
+      "purpose": "active populated",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "trip",
+      "test_id": "UIUX_P16_TRIP_15",
+      "purpose": "archive/restore",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER/SENIOR; assigned or granted LOGIST only",
+      "status": "restored",
+      "related_entities": [
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*",
+        "UIUX_P16_DRIVER_*",
+        "UIUX_P16_VEHICLE_SET_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_account",
+      "test_id": "UIUX_P16_BANK_ACCOUNT_01",
+      "purpose": "primary synthetic account",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_account",
+      "test_id": "UIUX_P16_BANK_ACCOUNT_02",
+      "purpose": "secondary synthetic account",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_01",
+      "purpose": "income 1",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_02",
+      "purpose": "income 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_03",
+      "purpose": "income 3",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_04",
+      "purpose": "income 4",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_05",
+      "purpose": "income 5",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_06",
+      "purpose": "expense 1",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_07",
+      "purpose": "expense 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_08",
+      "purpose": "expense 3",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_09",
+      "purpose": "expense 4",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "cash_operation",
+      "test_id": "UIUX_P16_CASH_OPERATION_10",
+      "purpose": "expense 5",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "cancelled",
+      "related_entities": [
+        "UIUX_P16_DDS_CATEGORY_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_01",
+      "purpose": "outgoing unpaid",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "unpaid",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_02",
+      "purpose": "incoming unpaid",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "unpaid",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_03",
+      "purpose": "outgoing partial",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "partial",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_04",
+      "purpose": "incoming partial",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "partial",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_05",
+      "purpose": "outgoing paid",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "paid",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_06",
+      "purpose": "incoming paid",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "paid",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_07",
+      "purpose": "overdue",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "overdue",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_08",
+      "purpose": "future",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "future",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_09",
+      "purpose": "trip-linked",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "unpaid",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_10",
+      "purpose": "client-linked",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "paid",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_11",
+      "purpose": "contractor-linked",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "partial",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "invoice",
+      "test_id": "UIUX_P16_INVOICE_12",
+      "purpose": "long comment",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "unpaid",
+      "related_entities": [
+        "UIUX_P16_TRIP_*",
+        "UIUX_P16_CLIENT_*",
+        "UIUX_P16_CONTRACTOR_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_01",
+      "purpose": "income",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_02",
+      "purpose": "expense",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_03",
+      "purpose": "unallocated",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_04",
+      "purpose": "partially allocated",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_05",
+      "purpose": "fully allocated",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_06",
+      "purpose": "unknown counterparty",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_07",
+      "purpose": "long purpose",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_08",
+      "purpose": "invoice-linked",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_09",
+      "purpose": "trip-linked",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_10",
+      "purpose": "cancelled",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "cancelled",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_11",
+      "purpose": "income 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_12",
+      "purpose": "expense 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_13",
+      "purpose": "unallocated 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_14",
+      "purpose": "partial 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "bank_operation",
+      "test_id": "UIUX_P16_BANK_OPERATION_15",
+      "purpose": "full 2",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "posted",
+      "related_entities": [
+        "UIUX_P16_INVOICE_*",
+        "UIUX_P16_TRIP_*"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_01",
+      "purpose": "transport income",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_02",
+      "purpose": "carrier expense",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_03",
+      "purpose": "fuel",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_04",
+      "purpose": "salary",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_05",
+      "purpose": "tax",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_06",
+      "purpose": "cash transfer",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_07",
+      "purpose": "other income",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "dds_category",
+      "test_id": "UIUX_P16_DDS_CATEGORY_08",
+      "purpose": "other expense",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "matching_rule",
+      "test_id": "UIUX_P16_MATCHING_RULE_01",
+      "purpose": "invoice number",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "matching_rule",
+      "test_id": "UIUX_P16_MATCHING_RULE_02",
+      "purpose": "counterparty INN",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "matching_rule",
+      "test_id": "UIUX_P16_MATCHING_RULE_03",
+      "purpose": "payment purpose",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "matching_rule",
+      "test_id": "UIUX_P16_MATCHING_RULE_04",
+      "purpose": "trip reference",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "OWNER only",
+      "status": "active",
+      "related_entities": [],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_01",
+      "purpose": "PDF",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_02",
+      "purpose": "PNG",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_03",
+      "purpose": "JPG",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_04",
+      "purpose": "XLSX",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_05",
+      "purpose": "long Russian filename",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_06",
+      "purpose": "filename with spaces",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_07",
+      "purpose": "replacement candidate",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    },
+    {
+      "entity": "document",
+      "test_id": "UIUX_P16_DOCUMENT_08",
+      "purpose": "soft-delete/restore candidate",
+      "owner_role": "COMPANY_OWNER",
+      "expected_visibility": "entity-role access",
+      "status": "active",
+      "related_entities": [
+        "UIUX_P16_CLIENT_12",
+        "UIUX_P16_CONTRACTOR_12",
+        "UIUX_P16_DRIVER_06",
+        "UIUX_P16_TRIP_13"
+      ],
+      "ui_state": "populated",
+      "functional_scenario": "create/reopen/update/search/filter/sort",
+      "cleanup_policy": "retain through P17; remove only after owner review"
+    }
+  ]
+}
