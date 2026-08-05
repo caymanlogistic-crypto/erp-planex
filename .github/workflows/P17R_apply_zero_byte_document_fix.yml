@@ -6,6 +6,7 @@ on:
     paths:
       - 'P17R_ZERO_BYTE_FIX_TRIGGER.txt'
       - '.github/p17/P17R_apply_zero_byte_document_fix.py'
+      - '.github/p17/P17R_apply_zero_byte_document_fix_v2.py'
       - '.github/workflows/P17R_apply_zero_byte_document_fix.yml'
   workflow_dispatch:
 
@@ -34,7 +35,7 @@ jobs:
       - name: Apply guarded patch
         run: |
           set -euo pipefail
-          python .github/p17/P17R_apply_zero_byte_document_fix.py
+          python .github/p17/P17R_apply_zero_byte_document_fix_v2.py
 
       - name: Syntax and regression tests
         run: |
