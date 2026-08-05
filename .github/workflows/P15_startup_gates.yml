@@ -7,6 +7,12 @@ on:
     paths:
       - '.github/p15/**'
       - '.github/workflows/P15_startup_gates.yml'
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p15/**'
+      - '.github/workflows/P15_startup_gates.yml'
   workflow_dispatch:
 
 permissions:
