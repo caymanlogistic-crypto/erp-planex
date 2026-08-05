@@ -16,6 +16,7 @@ concurrency:
 
 env:
   ACCEPTED_SHA: 8e1b9659638d5aa86f156b7ece201da591753c82
+  RESTORE_TRIGGER: accepted-correction-v1
 
 jobs:
   restore-marker:
