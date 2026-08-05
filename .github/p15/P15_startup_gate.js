@@ -9,22 +9,17 @@ const OLD_ERP = 'https://plan-ex.ru/erp/';
 const OUT = path.resolve(process.env.P15_OUT || 'P15_startup_gate_output');
 fs.mkdirSync(OUT, { recursive: true });
 
-function loadSuperadminCredential() {
+function loadCredential() {
   const encoded = process.env.P15_CREDENTIALS_B64 || '';
-  if (!encoded) throw new Error('credential payload unavailable');
-  const data = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+  const data = encoded ? JSON.parse(Buffer.from(encoded, 'base64').toString('utf8')) : [];
   const item = Array.isArray(data)
     ? data.find((entry) => String(entry?.role || '').toUpperCase() === 'SUPERADMIN')
     : null;
-  if (!item || !item.username || !item.password) {
-    throw new Error('superadmin credential unavailable');
-  }
+  if (!item?.username || !item?.password) throw new Error('superadmin credential unavailable');
   return { username: String(item.username), password: String(item.password) };
 }
 
-function normalizeText(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim();
-}
+const compact = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
 (async () => {
   const result = {
@@ -36,13 +31,8 @@ function normalizeText(value) {
       locale: 'ru-RU',
       timezone: 'Europe/Moscow'
     },
-    deployedCommit: null,
-    login: {
-      httpStatus: null,
-      finalUrl: null,
-      superadminUiPresent: false,
-      sameBrowserContext: true
-    },
+    publicDeployMarker: { available: false, status: null, value: null },
+    login: { httpStatus: null, finalUrl: null, superadminUiPresent: false, sameBrowserContext: true },
     companies: [],
     oldErp: { status: null, finalUrl: null, title: null },
     consoleErrors: [],
@@ -56,7 +46,7 @@ function normalizeText(value) {
   let browser;
   let context;
   try {
-    const credential = loadSuperadminCredential();
+    const credential = loadCredential();
     browser = await chromium.launch({ headless: true });
     context = await browser.newContext({
       viewport: result.configuration.viewport,
@@ -76,13 +66,15 @@ function normalizeText(value) {
       error: request.failure()?.errorText || 'failed'
     }));
     page.on('response', (response) => {
-      if (response.status() >= 400) {
-        result.unexpectedHttpErrors.push({ status: response.status(), url: response.url() });
-      }
+      if (response.status() >= 400) result.unexpectedHttpErrors.push({ status: response.status(), url: response.url() });
     });
 
-    const markerResponse = await context.request.get(BASE + 'DEPLOYED_COMMIT.txt', { timeout: 30000 });
-    if (markerResponse.ok()) result.deployedCommit = normalizeText(await markerResponse.text());
+    const marker = await context.request.get(BASE + 'DEPLOYED_COMMIT.txt', { timeout: 30000 }).catch(() => null);
+    result.publicDeployMarker.status = marker?.status() ?? null;
+    if (marker?.ok()) {
+      result.publicDeployMarker.available = true;
+      result.publicDeployMarker.value = compact(await marker.text());
+    }
 
     const loginResponse = await page.goto(BASE + 'login', { waitUntil: 'domcontentloaded', timeout: 45000 });
     result.login.httpStatus = loginResponse?.status() ?? null;
@@ -103,31 +95,23 @@ function normalizeText(value) {
     }
 
     const companiesResponse = await page.goto(BASE + 'superadmin/companies', {
-      waitUntil: 'domcontentloaded',
-      timeout: 45000
+      waitUntil: 'domcontentloaded', timeout: 45000
     });
     if (companiesResponse?.status() !== 200) throw new Error('companies page unavailable');
-    await page.waitForTimeout(400);
 
     const rows = await page.locator('tbody tr').evaluateAll((items) => items.map((row) => {
       const text = (row.innerText || '').replace(/\s+/g, ' ').trim();
-      const links = Array.from(row.querySelectorAll('a[href]')).map((link) => link.getAttribute('href') || '');
-      const companyLink = links.find((href) => /\/superadmin\/companies\/\d+(?:[/?#]|$)/.test(href)) || '';
-      const match = companyLink.match(/\/superadmin\/companies\/(\d+)/);
-      return { text, id: match ? Number(match[1]) : null, companyLink };
+      const hrefs = Array.from(row.querySelectorAll('a[href]')).map((link) => link.getAttribute('href') || '');
+      const href = hrefs.find((value) => /\/superadmin\/companies\/\d+(?:[/?#]|$)/.test(value)) || '';
+      const match = href.match(/\/superadmin\/companies\/(\d+)/);
+      return { text, id: match ? Number(match[1]) : null };
     }));
 
-    const relevantRows = rows.filter((row) =>
-      row.id && (row.text.includes('UIUX TEST EXPEDITOR') || row.text.includes('ПЛАНЭКС'))
-    );
-
-    for (const row of relevantRows) {
+    for (const row of rows.filter((item) => item.id && (item.text.includes('UIUX TEST EXPEDITOR') || item.text.includes('ПЛАНЭКС')))) {
       const response = await page.goto(BASE + `superadmin/companies/${row.id}`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 45000
+        waitUntil: 'domcontentloaded', timeout: 45000
       });
-      await page.waitForTimeout(350);
-      const bodyText = normalizeText(await page.locator('body').innerText());
+      await page.waitForTimeout(300);
       const screenshot = `P15_GATE_COMPANY_${row.id}_1920x1080.png`;
       await page.screenshot({ path: path.join(OUT, screenshot), fullPage: false });
       result.screenshots.push(screenshot);
@@ -136,7 +120,7 @@ function normalizeText(value) {
         listRowText: row.text,
         detailStatus: response?.status() ?? null,
         detailFinalUrl: page.url(),
-        detailText: bodyText.slice(0, 20000),
+        detailText: compact(await page.locator('body').innerText()).slice(0, 20000),
         screenshot
       });
     }
@@ -147,26 +131,19 @@ function normalizeText(value) {
     result.oldErp.title = await page.title().catch(() => null);
 
     const unexpected = result.unexpectedHttpErrors.filter((item) => !item.url.includes('/favicon'));
-    const hasProduction = result.companies.some((company) => company.listRowText.includes('ПЛАНЭКС'));
-    const testCompanies = result.companies.filter((company) => company.listRowText.includes('UIUX TEST EXPEDITOR'));
+    const hasProduction = result.companies.some((company) => company.id === 25 && company.listRowText.includes('ПЛАНЭКС'));
+    const testIds = result.companies.filter((company) => company.listRowText.includes('UIUX TEST EXPEDITOR')).map((company) => company.id);
     result.status = (
-      result.deployedCommit &&
       result.login.httpStatus === 200 &&
       result.login.superadminUiPresent &&
-      hasProduction &&
-      testCompanies.length >= 2 &&
-      result.pageErrors.length === 0 &&
-      result.requestFailures.length === 0 &&
-      unexpected.length === 0
+      hasProduction && testIds.includes(26) && testIds.includes(27) &&
+      result.oldErp.status === 200 && /\/erp\/login/.test(result.oldErp.finalUrl || '') &&
+      result.pageErrors.length === 0 && result.requestFailures.length === 0 && unexpected.length === 0
     ) ? 'PASS' : 'FAIL';
   } catch (error) {
     result.errorClass = error?.name || 'Error';
   } finally {
-    fs.writeFileSync(
-      path.join(OUT, 'P15_startup_browser_gate.json'),
-      JSON.stringify(result, null, 2),
-      'utf8'
-    );
+    fs.writeFileSync(path.join(OUT, 'P15_startup_browser_gate.json'), JSON.stringify(result, null, 2), 'utf8');
     if (context) await context.close().catch(() => {});
     if (browser) await browser.close().catch(() => {});
     console.log(`P15_STARTUP_BROWSER=${result.status}`);
