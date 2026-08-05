@@ -1,0 +1,3 @@
+P17R_V7_TRIGGER=2026-08-05T23:58:00+03:00
+EXPECTED_DEPLOYED_SHA=4bb097840e7d5ab37a81c017b5a8bdfa8f0a4cb8
+PURPOSE=fresh factual acceptance after restore and finance corrections
