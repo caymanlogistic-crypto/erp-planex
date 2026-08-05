@@ -1,6 +1,9 @@
 <?php
 
+use App\Service\AuditService;
+use App\Service\LinearRouteArchiveService;
 use App\Service\LinearRouteService;
+use App\Service\MutationErrorService;
 
 requireRole(['company_owner', 'senior_logist', 'logist']);
 header('Content-Type: application/json; charset=utf-8');
@@ -11,6 +14,7 @@ if ($companyId <= 0) {
     exit;
 }
 
+$auditId = 0;
 try {
     $pdo = $db->connection();
     $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
@@ -26,7 +30,8 @@ try {
     $localPdo = $localDb->connection();
     applyLocalMigrations($localPdo);
 
-    $route = LinearRouteService::fetchRouteById($localPdo, (int) $id);
+    $routeId = (int) $id;
+    $route = LinearRouteService::fetchRouteById($localPdo, $routeId);
     if (!$route) {
         echo json_encode(['success' => false, 'error' => 'Рейс не найден.'], JSON_UNESCAPED_UNICODE);
         exit;
@@ -43,32 +48,37 @@ try {
 
     $userId = (int) ($_SESSION['user_id'] ?? 0);
     $roleCode = (string) ($_SESSION['role_code'] ?? '');
+    $userName = (string) ($_SESSION['user_name'] ?? '');
 
     $localPdo->beginTransaction();
-    $localPdo->prepare("UPDATE linear_routes SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE id = ? AND deleted_at IS NULL")
-        ->execute([$userId, $roleCode, (int) $id]);
-    $localPdo->prepare("UPDATE linear_route_financial_terms SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE linear_route_id = ? AND deleted_at IS NULL")
-        ->execute([$userId, $roleCode, (int) $id]);
-    try {
-        $localPdo->prepare("UPDATE linear_route_payments SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE linear_route_id = ? AND deleted_at IS NULL")
-            ->execute([$userId, $roleCode, (int) $id]);
-    } catch (\Throwable $e) {
+    $relatedIds = LinearRouteArchiveService::archive($localPdo, $routeId, $userId, $roleCode);
+    $snapshotJson = LinearRouteArchiveService::encodeSnapshot($route, $relatedIds);
+
+    $displayParts = ['Рейс #' . $routeId];
+    $cargoName = trim((string) ($route['cargo_type_name'] ?? ''));
+    $clientName = trim((string) ($route['client_name'] ?? ''));
+    if ($cargoName !== '') {
+        $displayParts[] = $cargoName;
     }
-    try {
-        $localPdo->prepare("UPDATE linear_route_principals SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ? WHERE linear_route_id = ? AND deleted_at IS NULL")
-            ->execute([$userId, $roleCode, (int) $id]);
-    } catch (\Throwable $e) {
+    if ($clientName !== '') {
+        $displayParts[] = $clientName;
     }
-    $localPdo->prepare(
-        "UPDATE documents
-            SET deleted_at = NOW(),
-                deleted_by_user_id = ?,
-                deleted_by_role = ?,
-                delete_comment = 'Linear route deleted'
-          WHERE entity_type = 'linear_route'
-            AND entity_id = ?
-            AND deleted_at IS NULL"
-    )->execute([$userId, $roleCode, (int) $id]);
+
+    $auditId = AuditService::recordDeletion(
+        $pdo,
+        $company,
+        'linear_route',
+        $routeId,
+        'linear_routes',
+        implode(' — ', $displayParts),
+        $userId,
+        $roleCode,
+        $userName,
+        'Удаление линейного рейса через интерфейс компании',
+        $snapshotJson,
+        count($relatedIds['documents'] ?? [])
+    );
+
     $localPdo->commit();
 
     echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
@@ -77,6 +87,25 @@ try {
     if (isset($localPdo) && $localPdo instanceof PDO && $localPdo->inTransaction()) {
         $localPdo->rollBack();
     }
-    echo json_encode(['success' => false, 'error' => 'Ошибка: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    if ($auditId > 0 && isset($pdo) && $pdo instanceof PDO) {
+        try {
+            $cleanup = $pdo->prepare("DELETE FROM deleted_entities WHERE id = ? AND status = 'archived'");
+            $cleanup->execute([$auditId]);
+        } catch (\Throwable) {
+        }
+    }
+
+    $errorId = MutationErrorService::report($e, 'linear_trip.delete', [
+        'company_id' => $companyId,
+        'route_id' => (int) $id,
+        'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+        'role_code' => (string) ($_SESSION['role_code'] ?? ''),
+    ]);
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => MutationErrorService::userMessage('удалить рейс', $errorId),
+        'error_id' => $errorId,
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
