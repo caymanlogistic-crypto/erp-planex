@@ -35,19 +35,12 @@ jobs:
       - name: Commit workflow trigger isolation
         run: |
           set -euo pipefail
+          mapfile -t changed < <(git diff --name-only -- .github/workflows | sort)
+          test "${#changed[@]}" -ge 20
+          printf '%s\n' "${changed[@]}"
           git config user.name 'erp-planex-p17r-bot'
           git config user.email 'erp-planex-p17r-bot@users.noreply.github.com'
-          git add .github/workflows/P14_linear_trip_edit_runtime.yml \
-                  .github/workflows/P15_*.yml \
-                  .github/workflows/P16_*.yml \
-                  .github/workflows/P17_complete_acceptance.yml \
-                  .github/workflows/P17_crud_trip_finance_runtime.yml \
-                  .github/workflows/P17_route_role_fullhd_runtime.yml \
-                  .github/workflows/P17R_capability_discovery.yml \
-                  .github/workflows/P17R_complete_acceptance.yml \
-                  .github/workflows/P17R_v4_complete_factual_acceptance.yml \
-                  .github/workflows/P17R_v5_complete_acceptance.yml \
-                  .github/workflows/P17R_source_contract_inventory.yml
+          git add -- "${changed[@]}"
           git commit -m 'P17R: isolate completed audit workflows to manual dispatch'
           git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
 
