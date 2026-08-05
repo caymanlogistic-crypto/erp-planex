@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/p17/P17R_full_runtime.js'
       - '.github/p17/P17R_full_runtime_v2.js'
+      - '.github/p17/P17R_full_runtime_v3.js'
       - '.github/p17/P17R_evidence_assembler.js'
       - '.github/p17/P17_summary_builder.js'
       - 'tests/p17_summary_builder_test.js'
@@ -40,6 +41,7 @@ jobs:
           set -euo pipefail
           node --check .github/p17/P17R_full_runtime.js
           node --check .github/p17/P17R_full_runtime_v2.js
+          node --check .github/p17/P17R_full_runtime_v3.js
           node --check .github/p17/P17R_evidence_assembler.js
           node --check .github/p17/P17_summary_builder.js
           node --check .github/p17/P17_route_role_fullhd_runtime_v2.js
@@ -51,6 +53,7 @@ jobs:
           for name in [
               '.github/p17/P17R_full_runtime.js',
               '.github/p17/P17R_full_runtime_v2.js',
+              '.github/p17/P17R_full_runtime_v3.js',
               '.github/p17/P17R_evidence_assembler.js',
               '.github/p17/P17_summary_builder.js',
               'P17_17_CASH_OPERATION_TIMEOUT_ROOT_CAUSE.md',
@@ -124,7 +127,7 @@ jobs:
         continue-on-error: true
         env:
           P17R_OUT: P17R_full_runtime_output
-        run: node .github/p17/P17R_full_runtime_v2.js
+        run: node .github/p17/P17R_full_runtime_v3.js
 
       - name: Assemble factual matrices
         id: assemble
@@ -145,8 +148,8 @@ jobs:
           Previous acceptance evidence remains failed history and is not used as PASS evidence.
 
           - Original failed run: 31020228581 — wrong cash-modal selector and partial matrices.
-          - First factual correction run: 31026778119 — cash selector fixed; runner then exposed invalid one-token driver name and hidden vehicle-field interaction.
-          - Current correction uses new `UIUX_P17R_` records, fresh BrowserContexts, valid three-word driver names and visibility-aware vehicle fields.
+          - Factual correction run: 31029244635 — workflow mistakenly executed v2 while v3 fixes were present.
+          - Current correction executes v3 with new `UIUX_P17R_` records, fresh BrowserContexts, exact cash modal selection, schema-aware transport fields and factual restore checks.
           EOF
 
       - name: Strict final summary consistency gate
