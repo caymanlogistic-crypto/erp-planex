@@ -1,10 +1,8 @@
 name: P15 Technical Verification
 
-# Independent verification gate for the committed P15 production diff.
 on:
   push:
-    branches:
-      - chatgpt/p15-p17-erp-fullhd-completion-20260805
+    branches: [chatgpt/p15-p17-erp-fullhd-completion-20260805]
     paths:
       - 'app/**'
       - 'bootstrap/**'
@@ -14,8 +12,7 @@ on:
       - 'tests/**'
       - '.github/workflows/P15_technical_verification.yml'
   pull_request:
-    branches:
-      - chatgpt/production-stabilization-20260802
+    branches: [chatgpt/production-stabilization-20260802]
   workflow_dispatch:
 
 permissions:
@@ -26,19 +23,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: Checkout implementation branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure PHP 8.3
-        uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: mbstring, json, pdo, pdo_mysql
           coverage: none
 
-      - name: Prepare report directory
+      - name: Prepare output
         run: mkdir -p P15_technical_verification_output
 
       - name: PHP syntax checks
@@ -53,41 +48,36 @@ jobs:
           echo "$status" > P15_technical_verification_output/P15_PHP_LINT_EXIT_CODE.txt
           exit "$status"
 
-      - name: P15 and existing regression tests
+      - name: P15 regressions
         shell: bash
         run: |
           set -uo pipefail
           status=0
-          : > P15_technical_verification_output/P15_TESTS.log
-          tests=(
-            tests/p15_trip_create_payment_terms_regression_test.php
-            tests/p15_mutation_error_service_test.php
-            tests/p15_linear_trip_executor_carrier_save_test.php
-            tests/p15_linear_trip_owner_carrier_flow_test.php
-            tests/p15_linear_trip_save_contract_test.php
-            tests/p15_linear_trip_carrier_consistency_test.php
-            tests/p15_linear_trip_legacy_payment_mapping_test.php
-            tests/p15_linear_trip_request_normalizer_test.php
-            tests/p15_linear_trip_document_upload_test.php
-            tests/p15_linear_trip_duplicate_submit_test.php
-            tests/p15_linear_trip_old_record_compatibility_test.php
-            tests/p15_linear_trip_role_access_test.php
-            tests/p15_linear_trip_tenant_isolation_test.php
-          )
           executed=0
-          for test_file in "${tests[@]}"; do
-            if [[ -f "$test_file" ]]; then
+          : > P15_technical_verification_output/P15_TESTS.log
+          for test_file in \
+            tests/p15_trip_create_payment_terms_regression_test.php \
+            tests/p15_mutation_error_service_test.php \
+            tests/p15_linear_trip_executor_carrier_save_test.php \
+            tests/p15_linear_trip_owner_carrier_flow_test.php \
+            tests/p15_linear_trip_save_contract_test.php \
+            tests/p15_linear_trip_carrier_consistency_test.php \
+            tests/p15_linear_trip_legacy_payment_mapping_test.php \
+            tests/p15_linear_trip_request_normalizer_test.php \
+            tests/p15_linear_trip_document_upload_test.php \
+            tests/p15_linear_trip_duplicate_submit_test.php \
+            tests/p15_linear_trip_old_record_compatibility_test.php \
+            tests/p15_linear_trip_role_access_test.php \
+            tests/p15_linear_trip_tenant_isolation_test.php; do
+            if test -f "$test_file"; then
               executed=$((executed+1))
               printf '\n=== %s ===\n' "$test_file" >> P15_technical_verification_output/P15_TESTS.log
               php "$test_file" >> P15_technical_verification_output/P15_TESTS.log 2>&1 || status=1
             fi
           done
-          if [[ "$executed" -lt 3 ]]; then
-            echo "Too few P15 tests executed: $executed" >> P15_technical_verification_output/P15_TESTS.log
-            status=1
-          fi
-          printf '%s\n' "$executed" > P15_technical_verification_output/P15_TESTS_EXECUTED.txt
-          printf '%s\n' "$status" > P15_technical_verification_output/P15_TESTS_EXIT_CODE.txt
+          test "$executed" -ge 3 || status=1
+          echo "$executed" > P15_technical_verification_output/P15_TESTS_EXECUTED.txt
+          echo "$status" > P15_technical_verification_output/P15_TESTS_EXIT_CODE.txt
           cat P15_technical_verification_output/P15_TESTS.log
           exit "$status"
 
@@ -97,9 +87,7 @@ jobs:
           set -uo pipefail
           status=0
           : > P15_technical_verification_output/P15_JS_CHECK.log
-          while IFS= read -r -d '' file; do
-            node --check "$file" >> P15_technical_verification_output/P15_JS_CHECK.log 2>&1 || status=1
-          done < <(find public app -type f -name '*.js' -print0)
+          while IFS= read -r -d '' file; do node --check "$file" >> P15_technical_verification_output/P15_JS_CHECK.log 2>&1 || status=1; done < <(find public app -type f -name '*.js' -print0)
           echo "$status" > P15_technical_verification_output/P15_JS_EXIT_CODE.txt
           exit "$status"
 
@@ -107,28 +95,40 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          secret_status=0
-          mojibake_status=0
-          bom_status=0
-          if git grep -nIE '(password|passwd|secret|token|api[_-]?key)[[:space:]]*[:=][[:space:]]*["'"'][^"'"']{4,}' -- app bootstrap config database public scripts tools tests ':!tests/fixtures/**' > P15_technical_verification_output/P15_SECRET_SCAN.log; then secret_status=1; fi
-          if grep -RIn --exclude-dir=.git -E 'Рџ|РЎ|Ð|Ñ|�' app bootstrap config database public scripts tools tests > P15_technical_verification_output/P15_MOJIBAKE_SCAN.log; then mojibake_status=1; fi
-          python - <<'PY' > P15_technical_verification_output/P15_BOM_SCAN.log
+          python - <<'PY'
+          import json, re
           from pathlib import Path
-          bad=[]
-          for root in ('app','bootstrap','config','database','public','scripts','tools','tests'):
-              for p in Path(root).rglob('*'):
-                  if p.is_file() and p.suffix.lower() in {'.php','.js','.css','.json','.md','.txt','.sql'} and p.read_bytes().startswith(b'\xef\xbb\xbf'):
-                      bad.append(str(p))
-          print('\n'.join(bad))
-          raise SystemExit(1 if bad else 0)
+          roots=[Path(x) for x in ('app','bootstrap','config','database','public','scripts','tools','tests')]
+          suffixes={'.php','.js','.css','.json','.md','.txt','.sql'}
+          mojibake=('Рџ','РЎ','Ð','Ñ','�')
+          secret_re=re.compile(r'''(?i)(password|passwd|secret|token|api[_-]?key)\s*[:=]\s*["']([^"']{4,})["']''')
+          secret=[]; broken=[]; bom=[]
+          for root in roots:
+              if not root.exists(): continue
+              for p in root.rglob('*'):
+                  if not p.is_file() or p.suffix.lower() not in suffixes: continue
+                  raw=p.read_bytes()
+                  if raw.startswith(b'\xef\xbb\xbf'): bom.append(str(p))
+                  try: text=raw.decode('utf-8')
+                  except UnicodeDecodeError: broken.append(f'{p}: invalid UTF-8'); continue
+                  for marker in mojibake:
+                      if marker in text: broken.append(f'{p}: {marker}')
+                  if 'fixtures' not in p.parts:
+                      for match in secret_re.finditer(text):
+                          value=match.group(2)
+                          if value not in {'[REDACTED]','REDACTED','example','placeholder','changeme'} and not value.startswith('${'):
+                              secret.append(f'{p}:{text.count(chr(10),0,match.start())+1}:{match.group(1)}=[REDACTED]')
+          out=Path('P15_technical_verification_output')
+          (out/'P15_SECRET_SCAN.log').write_text('\n'.join(secret),'utf-8')
+          (out/'P15_MOJIBAKE_SCAN.log').write_text('\n'.join(broken),'utf-8')
+          (out/'P15_BOM_SCAN.log').write_text('\n'.join(bom),'utf-8')
+          status={'secret':len(secret),'mojibake_or_utf8':len(broken),'bom':len(bom),'status':'PASS' if not(secret or broken or bom) else 'FAIL'}
+          (out/'P15_SCAN_STATUS.json').write_text(json.dumps(status,ensure_ascii=False,indent=2),'utf-8')
+          print(json.dumps(status,ensure_ascii=False))
+          raise SystemExit(0 if status['status']=='PASS' else 1)
           PY
-          bom_status=$?
-          printf 'secret=%d\nmojibake=%d\nbom=%d\n' "$secret_status" "$mojibake_status" "$bom_status" > P15_technical_verification_output/P15_SCAN_STATUS.txt
-          test "$secret_status" -eq 0
-          test "$mojibake_status" -eq 0
-          test "$bom_status" -eq 0
 
-      - name: Review production diff from baseline
+      - name: Review production diff
         shell: bash
         run: |
           set -euo pipefail
@@ -138,21 +138,23 @@ jobs:
           if grep -E '(^|[[:space:]])(\.env|storage/|tmp/|logs/|node_modules/|vendor/|public_html/erp/)' P15_technical_verification_output/P15_CHANGED_FILES.txt; then exit 1; fi
           git rev-parse HEAD > P15_technical_verification_output/P15_VERIFIED_SHA.txt
 
-      - name: Build verification summary
+      - name: Build summary
         if: always()
-        shell: bash
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           out=Path('P15_technical_verification_output')
-          summary={'status':'PASS','verified_sha':(out/'P15_VERIFIED_SHA.txt').read_text().strip() if (out/'P15_VERIFIED_SHA.txt').exists() else None,'php_lint_exit_code':int((out/'P15_PHP_LINT_EXIT_CODE.txt').read_text().strip()) if (out/'P15_PHP_LINT_EXIT_CODE.txt').exists() else None,'tests_executed':int((out/'P15_TESTS_EXECUTED.txt').read_text().strip()) if (out/'P15_TESTS_EXECUTED.txt').exists() else 0,'tests_exit_code':int((out/'P15_TESTS_EXIT_CODE.txt').read_text().strip()) if (out/'P15_TESTS_EXIT_CODE.txt').exists() else None,'js_exit_code':int((out/'P15_JS_EXIT_CODE.txt').read_text().strip()) if (out/'P15_JS_EXIT_CODE.txt').exists() else None}
-          if any(v not in (0,) for v in [summary['php_lint_exit_code'],summary['tests_exit_code'],summary['js_exit_code']]) or summary['tests_executed']<3: summary['status']='FAIL'
+          def number(name):
+              p=out/name
+              return int(p.read_text().strip()) if p.exists() else None
+          scan=json.loads((out/'P15_SCAN_STATUS.json').read_text('utf-8')) if (out/'P15_SCAN_STATUS.json').exists() else {'status':'FAIL'}
+          summary={'status':'PASS','verified_sha':(out/'P15_VERIFIED_SHA.txt').read_text().strip() if (out/'P15_VERIFIED_SHA.txt').exists() else None,'php_lint_exit_code':number('P15_PHP_LINT_EXIT_CODE.txt'),'tests_executed':number('P15_TESTS_EXECUTED.txt') or 0,'tests_exit_code':number('P15_TESTS_EXIT_CODE.txt'),'js_exit_code':number('P15_JS_EXIT_CODE.txt'),'scan_status':scan.get('status')}
+          if any(summary[k]!=0 for k in ('php_lint_exit_code','tests_exit_code','js_exit_code')) or summary['tests_executed']<3 or summary['scan_status']!='PASS': summary['status']='FAIL'
           (out/'P15_TECHNICAL_SUMMARY.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),'utf-8')
           PY
 
-      - name: Upload verification evidence
-        if: always()
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: P15_technical_verification_${{ github.sha }}
