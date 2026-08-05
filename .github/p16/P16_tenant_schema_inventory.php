@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// P16 Recovery Gate: read-only live schema and tenant identity inventory.
+// P16 Recovery Gate: read-only live schema, FK and safe sample inventory.
 ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
@@ -33,6 +33,8 @@ try {
         'php_version' => PHP_VERSION,
         'companies' => [],
         'tenant_27_schema' => [],
+        'tenant_27_foreign_keys' => [],
+        'tenant_27_safe_samples' => [],
     ];
 
     foreach ($companies as $company) {
@@ -56,8 +58,8 @@ try {
             break;
         }
     }
-    if (!$tenant || (string) $tenant['name'] !== 'UIUX TEST EXPEDITOR') {
-        throw new \RuntimeException('Tenant 27 identity mismatch.');
+    if (!$tenant || (string) $tenant['name'] !== 'UIUX TEST EXPEDITOR' || (string) $tenant['status'] !== 'active') {
+        throw new \RuntimeException('Tenant 27 identity/status mismatch.');
     }
 
     $localDb = new \App\Core\Database(companyDatabaseConfig($config, $tenant));
@@ -95,6 +97,42 @@ try {
             'columns' => $columns,
             'indexes' => $indexes,
         ];
+    }
+
+    $fkSql = "SELECT TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+              FROM information_schema.KEY_COLUMN_USAGE
+              WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL
+              ORDER BY TABLE_NAME, CONSTRAINT_NAME, ORDINAL_POSITION";
+    foreach ($pdo->query($fkSql)->fetchAll(\PDO::FETCH_ASSOC) as $fk) {
+        $result['tenant_27_foreign_keys'][] = [
+            'table' => (string) $fk['TABLE_NAME'],
+            'column' => (string) $fk['COLUMN_NAME'],
+            'constraint' => (string) $fk['CONSTRAINT_NAME'],
+            'referenced_table' => (string) $fk['REFERENCED_TABLE_NAME'],
+            'referenced_column' => (string) $fk['REFERENCED_COLUMN_NAME'],
+        ];
+    }
+
+    $sampleQueries = [
+        'users' => 'SELECT id, full_name, login, role_code, status FROM users ORDER BY id LIMIT 20',
+        'cargo_types' => 'SELECT id, name, status FROM cargo_types WHERE deleted_at IS NULL ORDER BY id LIMIT 20',
+        'clients' => 'SELECT id, name, status, created_by_user_id FROM clients ORDER BY id LIMIT 20',
+        'contractors' => 'SELECT id, name, status, created_by_user_id FROM contractors ORDER BY id LIMIT 20',
+        'drivers' => 'SELECT id, full_name, phone, status, created_by_user_id FROM drivers ORDER BY id LIMIT 20',
+        'vehicle_units' => 'SELECT id, plate_number, brand, model, status FROM vehicle_units ORDER BY id LIMIT 20',
+        'vehicle_sets' => 'SELECT id, set_type, primary_vehicle_unit_id, secondary_vehicle_unit_id, status FROM vehicle_sets ORDER BY id LIMIT 20',
+        'driver_vehicle_blocks' => 'SELECT id, driver_id, vehicle_set_id, status FROM driver_vehicle_blocks ORDER BY id LIMIT 20',
+        'crews' => 'SELECT id, contractor_id, vehicle_id, driver_id, driver_vehicle_block_id, status FROM crews ORDER BY id LIMIT 20',
+        'linear_routes' => 'SELECT id, route_type, client_id, carrier_contractor_id, route_executor_id, cargo_type_id, status, deleted_at FROM linear_routes ORDER BY id LIMIT 20',
+        'linear_route_financial_terms' => 'SELECT id, linear_route_id, party_role, amount, payment_type, payment_due_type, payment_due_days, payment_due_days_kind FROM linear_route_financial_terms ORDER BY id LIMIT 30',
+        'linear_route_payments' => 'SELECT id, linear_route_id, party_role, side, amount, payment_type, payment_due_type, condition_type, payment_status, paid_amount, deleted_at FROM linear_route_payments ORDER BY id DESC LIMIT 40',
+        'finance_dds_categories' => 'SELECT id, code, name, direction, is_active FROM finance_dds_categories ORDER BY id LIMIT 40',
+        'finance_invoices' => 'SELECT id, direction, number, amount, status, counterparty_entity_type, counterparty_entity_id, planned_payment_date FROM finance_invoices ORDER BY id LIMIT 20',
+    ];
+    foreach ($sampleQueries as $name => $sql) {
+        if (isset($result['tenant_27_schema'][$name])) {
+            $result['tenant_27_safe_samples'][$name] = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+        }
     }
 
     echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT), PHP_EOL;
