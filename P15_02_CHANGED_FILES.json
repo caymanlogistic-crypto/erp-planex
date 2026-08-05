@@ -1,0 +1,57 @@
+{
+  "prompt": "P15",
+  "baseline_sha": "381a187d7f5cc02eb338b81836dd7ce0099a78b2",
+  "production_commit": "f6688855fa3c5e58ee690ca4c8a09e2f0a257e7c",
+  "production_files": [
+    {
+      "path": "app/Http/Controllers/Company/LinearTripActions/create_submit.php",
+      "change": "modified",
+      "reason": "Persist legacy payment due fields from the canonical modern condition model and sanitize unexpected create errors."
+    },
+    {
+      "path": "app/Http/Controllers/Company/LinearTripActions/modal_edit_submit_p13.php",
+      "change": "modified",
+      "reason": "Use protected correlation-ID handling for unexpected edit-save errors."
+    },
+    {
+      "path": "app/Service/LinearRouteService.php",
+      "change": "modified",
+      "reason": "Provide the canonical modern-to-legacy payment due type mapping."
+    },
+    {
+      "path": "app/Service/LinearTripEditSaveService.php",
+      "change": "modified",
+      "reason": "Delegate edit persistence to the same canonical compatibility mapping."
+    },
+    {
+      "path": "app/Service/MutationErrorService.php",
+      "change": "created",
+      "reason": "Log protected technical details and return safe correlation IDs to mutation forms."
+    },
+    {
+      "path": "app/Support/entrypoint_dependencies.php",
+      "change": "modified",
+      "reason": "Register MutationErrorService for request entry points."
+    },
+    {
+      "path": "tests/p15_trip_create_payment_terms_regression_test.php",
+      "change": "created",
+      "reason": "Reproduce and prevent the payment_due_type NULL regression and raw exception leak."
+    },
+    {
+      "path": "tests/p15_mutation_error_service_test.php",
+      "change": "created",
+      "reason": "Verify protected logging, redaction and correlation-ID public messages."
+    }
+  ],
+  "audit_runtime_prefixes": [
+    ".github/p15/P15_*",
+    ".github/workflows/P15_*",
+    "P15_*.md",
+    "P15_*.json"
+  ],
+  "forbidden_paths_changed": [],
+  "old_erp_changed": false,
+  "deploy_workflow_changed": false,
+  "force_push_used": false
+}
