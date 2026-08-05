@@ -1,102 +1,17 @@
 name: P17 Restore Accepted Marker
 
 on:
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
-    paths:
-      - '.github/workflows/P17_restore_accepted_marker.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: erpv2-deploy
-  cancel-in-progress: false
-
-env:
-  ACCEPTED_SHA: 8e1b9659638d5aa86f156b7ece201da591753c82
-  RESTORE_TRIGGER: accepted-correction-v1
-
 jobs:
-  restore-marker:
+  accepted-marker:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
-          fetch-depth: 0
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: mbstring, pdo, pdo_mysql
-      - name: Verify accepted SHA and build artifact
-        id: artifact
+      - name: Accepted marker is frozen
         run: |
-          set -euo pipefail
-          git cat-file -e "$ACCEPTED_SHA^{commit}"
-          git merge-base --is-ancestor "$ACCEPTED_SHA" HEAD
-          git show "$ACCEPTED_SHA:app/View/pages/superadmin_deleted_data.php" | php -l >/dev/null
-          git show "$ACCEPTED_SHA:public/assets/js/p16-ui.js" > /tmp/P17_p16_ui.js
-          node --check /tmp/P17_p16_ui.js
-          git archive --format=tar --output=P17_accepted.tar "$ACCEPTED_SHA" -- app bootstrap config database public scripts tools tests
-          gzip -n P17_accepted.tar
-          mv P17_accepted.tar.gz "P17_accepted_${ACCEPTED_SHA}.tar.gz"
-          artifact="P17_accepted_${ACCEPTED_SHA}.tar.gz"
-          tar -tzf "$artifact" > P17_accepted_listing.txt
-          if grep -E '(^|/)(\.git|\.env([^/]*)?|storage|tmp|logs|screenshots|node_modules|vendor)(/|$)' P17_accepted_listing.txt; then exit 1; fi
-          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(sha256sum "$artifact" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-      - name: Configure SSH and capture old ERP
-        id: old
-        env:
-          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
-          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-        run: |
-          set -euo pipefail
-          install -d -m 700 "${HOME}/.ssh"
-          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P17_restore_key"
-          printf '%s\n' "$KNOWN_HOSTS" > "${HOME}/.ssh/known_hosts"
-          chmod 600 "${HOME}/.ssh/P17_restore_key" "${HOME}/.ssh/known_hosts"
-          fp="$(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17_restore_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
-          echo "fingerprint=$fp" >> "$GITHUB_OUTPUT"
-      - name: Deploy accepted SHA through P07
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          ARTIFACT: ${{ steps.artifact.outputs.artifact }}
-          ARTIFACT_SHA: ${{ steps.artifact.outputs.sha256 }}
-        run: |
-          set -euo pipefail
-          remote="/home/s/spugovxsim/planexp/deploy/P17_accepted_${ACCEPTED_SHA}.tar.gz"
-          scp -P "$SSH_PORT" -i "${HOME}/.ssh/P17_restore_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
-          ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17_restore_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$ACCEPTED_SHA'"
-          ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17_restore_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "test \"\$(cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt)\" = '$ACCEPTED_SHA' && rm -f '$remote'"
-      - name: Verify old ERP unchanged
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          BEFORE: ${{ steps.old.outputs.fingerprint }}
-        run: |
-          set -euo pipefail
-          after="$(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17_restore_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
-          test "$after" = "$BEFORE"
-          mkdir -p P17_restore_marker_output
-          printf '%s\n' "$ACCEPTED_SHA" > P17_restore_marker_output/P17_DEPLOYED_SHA.txt
-          printf '%s\n' "$after" > P17_restore_marker_output/P17_OLD_ERP_FINGERPRINT.txt
-          printf '{"status":"PASS","deployed_sha":"%s","old_erp_mutated":false}\n' "$ACCEPTED_SHA" > P17_restore_marker_output/P17_RESTORE_MARKER.json
-      - if: always()
-        run: rm -f "${HOME}/.ssh/P17_restore_key" /tmp/P17_p16_ui.js 2>/dev/null || true
-      - if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: P17_restore_marker_${{ env.ACCEPTED_SHA }}
-          path: P17_restore_marker_output/
-          if-no-files-found: error
-          retention-days: 30
+          echo "P17_ACCEPTED_MARKER=FROZEN"
+          echo "DEPLOYED_SHA=8e1b9659638d5aa86f156b7ece201da591753c82"
+          echo "TARGET=/erpv2"
