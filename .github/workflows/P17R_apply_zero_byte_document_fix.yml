@@ -1,0 +1,91 @@
+name: P17R Apply Zero-byte Document Fix
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - 'P17R_ZERO_BYTE_FIX_TRIGGER.txt'
+      - '.github/p17/P17R_apply_zero_byte_document_fix.py'
+      - '.github/workflows/P17R_apply_zero_byte_document_fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: erpv2-p17r-zero-byte-fix
+  cancel-in-progress: false
+
+jobs:
+  apply-test-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, fileinfo
+
+      - name: Apply guarded patch
+        run: |
+          set -euo pipefail
+          python .github/p17/P17R_apply_zero_byte_document_fix.py
+
+      - name: Syntax and regression tests
+        run: |
+          set -euo pipefail
+          php -l app/Support/legal_entity_document_upload.php
+          php -l app/Http/Controllers/Company/ClientActions/create_submit.php
+          php -l app/Http/Controllers/Company/ContractorActions/create_submit.php
+          php -l tests/p17_zero_byte_document_rejection_test.php
+          php tests/p17_zero_byte_document_rejection_test.php
+          php tests/p15_trip_create_payment_terms_regression_test.php
+          php tests/p15_mutation_error_service_test.php
+          python - <<'PY'
+          from pathlib import Path
+          files=[
+            Path('app/Support/legal_entity_document_upload.php'),
+            Path('app/Http/Controllers/Company/ClientActions/create_submit.php'),
+            Path('app/Http/Controllers/Company/ContractorActions/create_submit.php'),
+            Path('tests/p17_zero_byte_document_rejection_test.php'),
+          ]
+          for path in files:
+            raw=path.read_bytes()
+            assert not raw.startswith(b'\xef\xbb\xbf'), path
+            text=raw.decode('utf-8')
+            assert not any(marker in text for marker in ('Рџ','РЎ','Ð','Ñ','�')), path
+            assert '-----BEGIN PRIVATE KEY-----' not in text, path
+          PY
+
+      - name: Review changed paths
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git diff --name-only | sort)
+          printf '%s\n' "${files[@]}"
+          expected=(
+            app/Http/Controllers/Company/ClientActions/create_submit.php
+            app/Http/Controllers/Company/ContractorActions/create_submit.php
+            app/Support/legal_entity_document_upload.php
+            tests/p17_zero_byte_document_rejection_test.php
+          )
+          printf '%s\n' "${expected[@]}" | sort > /tmp/expected
+          printf '%s\n' "${files[@]}" | sort > /tmp/actual
+          diff -u /tmp/expected /tmp/actual
+          git diff --check
+
+      - name: Commit product fix
+        run: |
+          set -euo pipefail
+          git config user.name 'erp-planex-p17r-bot'
+          git config user.email 'erp-planex-p17r-bot@users.noreply.github.com'
+          git add app/Support/legal_entity_document_upload.php \
+                  app/Http/Controllers/Company/ClientActions/create_submit.php \
+                  app/Http/Controllers/Company/ContractorActions/create_submit.php \
+                  tests/p17_zero_byte_document_rejection_test.php
+          git commit -m 'P17: reject empty legal entity document uploads'
+          git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
