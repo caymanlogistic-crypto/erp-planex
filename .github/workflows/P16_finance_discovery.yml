@@ -1,15 +1,15 @@
 name: P16 Finance and Schema Discovery
 
 on:
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
-    paths:
-      - '.github/p16/P16_finance_form_discovery.js'
-      - '.github/p16/P16_tenant_schema_inventory.php'
-      - '.github/workflows/P16_finance_discovery.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: erpv2-runtime-credentials
+  cancel-in-progress: false
+
 jobs:
   discover:
     runs-on: ubuntu-24.04
