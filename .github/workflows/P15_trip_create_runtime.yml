@@ -6,7 +6,7 @@ on:
     paths:
       - '.github/p15/P15_trip_create_runtime.js'
       - '.github/p15/P15_trip_create_runtime_v2.js'
-      - '.github/p15/P15_trip_modal_discovery.js'
+      - '.github/p15/P15_trip_edit_discovery.js'
       - '.github/workflows/P15_trip_create_runtime.yml'
   workflow_dispatch:
 permissions:
@@ -47,9 +47,9 @@ jobs:
       - name: Verify trip creation idempotently
         env: { P15_OUT: P15_trip_runtime_output }
         run: node .github/p15/P15_trip_create_runtime_v2.js
-      - name: Discover edit lifecycle controls
+      - name: Discover exact edit lifecycle controls
         env: { P15_OUT: P15_trip_runtime_output }
-        run: node .github/p15/P15_trip_modal_discovery.js
+        run: node .github/p15/P15_trip_edit_discovery.js
       - if: always()
         run: printf 'P15_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
       - if: always()
