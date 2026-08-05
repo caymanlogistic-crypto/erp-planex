@@ -1,0 +1,50 @@
+name: P15 Source Inventory
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths: ['.github/workflows/P15_source_inventory.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 1
+      - name: Build lifecycle source inventory
+        run: |
+          set -euo pipefail
+          mkdir -p P15_source_inventory_output
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          roots=[Path('app'),Path('database'),Path('public'),Path('tests')]
+          terms=['linear_routes','payment_due_type','status','executor_found','pickup_started','planned','active','modal-edit','linear-trip-delete','route_history','history','documents']
+          files=[]; matches=[]
+          for root in roots:
+              if not root.exists(): continue
+              for p in root.rglob('*'):
+                  if not p.is_file() or p.suffix.lower() not in {'.php','.js','.sql','.json'}: continue
+                  try:text=p.read_text('utf-8')
+                  except:continue
+                  if any(term.lower() in text.lower() for term in terms):
+                      files.append(str(p))
+                      for i,line in enumerate(text.splitlines(),1):
+                          low=line.lower()
+                          if any(term.lower() in low for term in terms):
+                              matches.append({'file':str(p),'line':i,'text':line.strip()[:500]})
+          out=Path('P15_source_inventory_output')
+          (out/'P15_LINEAR_TRIP_SOURCE_FILES.json').write_text(json.dumps(sorted(set(files)),ensure_ascii=False,indent=2),'utf-8')
+          (out/'P15_LINEAR_TRIP_SOURCE_MATCHES.json').write_text(json.dumps(matches,ensure_ascii=False,indent=2),'utf-8')
+          print('P15_SOURCE_INVENTORY=PASS files='+str(len(set(files)))+' matches='+str(len(matches)))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P15_source_inventory_${{ github.sha }}
+          path: P15_source_inventory_output/
+          retention-days: 30
