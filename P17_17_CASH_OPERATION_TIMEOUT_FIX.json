@@ -1,0 +1,19 @@
+{
+  "status": "ROOT_CAUSE_CONFIRMED",
+  "classification": "BROWSER_RUNNER_SELECTOR_DEFECT",
+  "product_defect_confirmed": false,
+  "page_url": "https://plan-ex.ru/erpv2/company/finance/cash",
+  "expected_modal_id": "cash-operation-create-modal",
+  "expected_form_action": "/erpv2/company/finance/cash/operation-create",
+  "old_trigger_selector": "button,a hasText /Внести|Приход|Создать/i first()",
+  "root_cause": "The broad regular expression matched the earlier button 'Создать кассу'. The runner opened the cash-account modal and then waited for the cash-operation form from another modal.",
+  "fix": {
+    "trigger": "exact visible text 'Приход/Расход' or verified modal target",
+    "modal_assertion": "#cash-operation-create-modal visible",
+    "form_assertion": "form[action='/erpv2/company/finance/cash/operation-create'] inside the opened modal",
+    "date_format": "YYYY-MM-DD",
+    "timeout_policy": "fail fast with DOM inventory; do not increase timeout blindly"
+  },
+  "required_rerun_prefix": "UIUX_P17R_",
+  "old_failed_run_preserved": true
+}
