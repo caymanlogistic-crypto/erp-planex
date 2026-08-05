@@ -1,0 +1,214 @@
+name: P15 Startup Gates
+
+on:
+  push:
+    branches:
+      - chatgpt/p15-p17-erp-fullhd-completion-20260805
+    paths:
+      - '.github/p15/**'
+      - '.github/workflows/P15_startup_gates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p15-startup-gates
+  cancel-in-progress: false
+
+jobs:
+  startup-gates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      P15_OUT: P15_startup_gate_output
+    steps:
+      - name: Checkout implementation branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify audit scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l .github/p15/P15_tenant_inventory.php >/dev/null
+          node --check .github/p15/P15_startup_gate.js >/dev/null
+
+      - name: Load encrypted runtime credential helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2 >/dev/null 2>&1
+          mkdir -p /tmp/P15_credentials
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > /tmp/P15_credentials/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > /tmp/P15_credentials/P11_runtime_credentials.enc.json
+
+      - name: Resolve encrypted credential payload in memory
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${PRIVATE_KEY:-}"
+          python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3' >/dev/null
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P15_runtime_key"
+          chmod 600 "${HOME}/.ssh/P15_runtime_key"
+          credentials="$(python /tmp/P15_credentials/P11_decrypt_credentials.py --key "${HOME}/.ssh/P15_runtime_key" --input /tmp/P15_credentials/P11_runtime_credentials.enc.json)"
+          rm -f "${HOME}/.ssh/P15_runtime_key"
+          rm -rf /tmp/P15_credentials
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P15_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+          unset credentials PRIVATE_KEY
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+
+      - name: Execute protected browser gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p15/P15_startup_gate.js
+
+      - name: Configure isolated SSH access
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "${PRIVATE_KEY:-}"
+          test -n "${KNOWN_HOSTS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P15_erpv2_readonly"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P15_erpv2_readonly" "${HOME}/.ssh/known_hosts"
+
+      - name: Execute read-only tenant inventory
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${P15_OUT}"
+          remote_root="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P15_erpv2_readonly" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "${SSH_USER}@${SSH_HOST}" \
+            'set -e; marker=$(find /home/s/spugovxsim/planexp -maxdepth 7 -type f -path "*/public/DEPLOYED_COMMIT.txt" -print | head -n 1); test -n "$marker"; dirname "$(dirname "$marker")"')"
+          test -n "${remote_root}"
+          ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P15_erpv2_readonly" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "${SSH_USER}@${SSH_HOST}" \
+            "cd '${remote_root}' && php -d display_errors=0" \
+            < .github/p15/P15_tenant_inventory.php \
+            > "${P15_OUT}/P15_tenant_inventory.json"
+          python -m json.tool "${P15_OUT}/P15_tenant_inventory.json" >/dev/null
+
+      - name: Validate all startup gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          out = Path('P15_startup_gate_output')
+          browser = json.loads((out / 'P15_startup_browser_gate.json').read_text('utf-8'))
+          inventory = json.loads((out / 'P15_tenant_inventory.json').read_text('utf-8'))
+          companies = inventory.get('companies', [])
+          by_id = {int(item['id']): item for item in companies if 'id' in item}
+          test_companies = [item for item in companies if item.get('name') == 'UIUX TEST EXPEDITOR']
+          working = by_id.get(27)
+          production = by_id.get(25)
+          duplicates = [item for item in test_companies if int(item.get('id', 0)) != 27]
+          mutable_tables = {
+              'users', 'clients', 'client_contacts', 'contractors', 'contractor_contacts',
+              'drivers', 'driver_phones', 'vehicle_units', 'vehicle_sets',
+              'driver_vehicle_blocks', 'crews', 'route_executors', 'linear_routes',
+              'routes', 'trips', 'route_applications', 'applications', 'documents',
+              'invoices', 'finance_invoices', 'finance_operations', 'cash_operations',
+              'finance_cash_operations', 'bank_operations', 'finance_bank_operations',
+              'payment_allocations', 'finance_allocations', 'bank_accounts',
+              'responsible_assignments', 'entity_access_grants'
+          }
+          duplicate_safe = False
+          duplicate_id = None
+          duplicate_nonzero = {}
+          if len(duplicates) == 1:
+              duplicate = duplicates[0]
+              duplicate_id = int(duplicate['id'])
+              duplicate_nonzero = {
+                  name: int(count)
+                  for name, count in duplicate.get('business_counts', {}).items()
+                  if name in mutable_tables and int(count) != 0
+              }
+              duplicate_safe = (
+                  duplicate_id != 27 and duplicate_id != 25 and
+                  int(duplicate.get('central_users_count', -1)) == 0 and
+                  duplicate.get('local_db_available') is True and
+                  not duplicate_nonzero
+              )
+          isolated = bool(
+              working and duplicates and
+              working.get('db_identifier_fingerprint') != duplicates[0].get('db_identifier_fingerprint') and
+              working.get('storage_path_fingerprint') != duplicates[0].get('storage_path_fingerprint')
+          )
+          gates = {
+              'GITHUB': 'PASS',
+              'ARCHIVE': 'PASS',
+              'BROWSER': 'PASS' if browser.get('status') == 'PASS' else 'FAIL',
+              'SUPERADMIN': 'PASS' if browser.get('login', {}).get('superadminUiPresent') else 'FAIL',
+              'TENANT_ISOLATION': 'PASS' if production and working and duplicate_safe and isolated else 'FAIL',
+          }
+          summary = {
+              'status': 'PASS' if all(value == 'PASS' for value in gates.values()) else 'FAIL',
+              'gates': gates,
+              'deployed_commit': browser.get('deployedCommit'),
+              'production_company_id': 25 if production else None,
+              'working_test_tenant_id': 27 if working else None,
+              'duplicate_tenant_id': duplicate_id,
+              'duplicate_nonzero_mutable_tables': duplicate_nonzero,
+              'distinct_database_and_storage': isolated,
+              'browser_diagnostics': {
+                  'console_errors': len(browser.get('consoleErrors', [])),
+                  'page_errors': len(browser.get('pageErrors', [])),
+                  'request_failures': len(browser.get('requestFailures', [])),
+                  'unexpected_http_errors': len(browser.get('unexpectedHttpErrors', [])),
+              },
+          }
+          (out / 'P15_startup_gate_summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2), 'utf-8'
+          )
+          print(f"P15_STARTUP_GATES={summary['status']}")
+          if summary['status'] != 'PASS':
+              raise SystemExit(1)
+          PY
+
+      - name: Clear temporary credentials
+        if: always()
+        shell: bash
+        run: |
+          printf 'P15_CREDENTIALS_B64=\n' >> "${GITHUB_ENV}"
+          rm -rf /tmp/P15_credentials "${HOME}/.ssh/P15_runtime_key" "${HOME}/.ssh/P15_erpv2_readonly" 2>/dev/null || true
+
+      - name: Upload P15 startup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P15_startup_gate_output_${{ github.sha }}
+          path: P15_startup_gate_output/
+          if-no-files-found: error
+          retention-days: 30
