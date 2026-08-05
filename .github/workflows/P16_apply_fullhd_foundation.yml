@@ -1,0 +1,41 @@
+name: P16 Apply Full HD Foundation
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/p16/P16_apply_fullhd_foundation.py'
+      - 'public/assets/css/p16-fullhd.css'
+      - 'public/assets/js/p16-ui.js'
+      - '.github/workflows/P16_apply_fullhd_foundation.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+      - run: python .github/p16/P16_apply_fullhd_foundation.py
+      - name: Verify foundation
+        run: |
+          set -euo pipefail
+          php -l app/View/layouts/main.php >/dev/null
+          node --check public/assets/js/p16-ui.js
+          grep -q 'p16-fullhd.css' app/View/layouts/main.php
+          grep -q 'p16-ui.js' app/View/layouts/main.php
+          git diff --check
+          if grep -RIn -E 'Рџ|РЎ|Ð|Ñ|�' app/View/layouts/main.php public/assets/css/p16-fullhd.css public/assets/js/p16-ui.js; then exit 1; fi
+      - name: Commit P16 foundation
+        run: |
+          set -euo pipefail
+          git config user.name 'erp-planex-p16-bot'
+          git config user.email 'erp-planex-p16-bot@users.noreply.github.com'
+          git add app/View/layouts/main.php public/assets/css/p16-fullhd.css public/assets/js/p16-ui.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'P16-01: establish shared Full HD UI foundation'
+          git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
