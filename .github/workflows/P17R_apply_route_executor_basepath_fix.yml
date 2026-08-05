@@ -1,8 +1,8 @@
 name: P17R Apply Route Executor Base-path Fix
 
 on:
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
+  push:
+    branches: [chatgpt/p15-p17-erp-fullhd-completion-20260805]
     paths:
       - 'P17R_EXECUTOR_BASEPATH_FIX_TRIGGER.txt'
   workflow_dispatch:
@@ -60,7 +60,7 @@ jobs:
       - name: Review and commit
         run: |
           set -euo pipefail
-          mapfile -t files < <(git diff --name-only | sort)
+          mapfile -t files < <(git status --porcelain=v1 | sed -E 's/^.. //' | sort)
           expected=(
             app/Http/Controllers/Company/RouteExecutorActions/archive.php
             app/View/pages/company_route_executor_view.php
