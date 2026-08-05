@@ -1,0 +1,102 @@
+name: P15 Tenant Inventory Gate PHP83
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p15/P15_tenant_inventory.php'
+      - '.github/workflows/P15_tenant_inventory_gate_php83.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tenant-inventory-php83:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure isolated SSH access
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P15_inventory_key"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P15_inventory_key" "${HOME}/.ssh/known_hosts"
+
+      - name: Execute read-only tenant inventory with PHP 8.3
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p P15_tenant_inventory_php83_output
+          ssh_base=(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P15_inventory_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}")
+          deployed_sha="$("${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test -n "${deployed_sha}"
+          printf '%s\n' "${deployed_sha}" > P15_tenant_inventory_php83_output/P15_DEPLOYED_SHA.txt
+          remote_root="$("${ssh_base[@]}" "set -e
+            for candidate in /home/s/spugovxsim/planexp/current /home/s/spugovxsim/planexp/releases/${deployed_sha} /home/s/spugovxsim/planexp/erpv2; do
+              resolved=\$(readlink -f \"\${candidate}\" 2>/dev/null || true)
+              if test -f \"\${resolved}/bootstrap/app.php\"; then printf '%s\\n' \"\${resolved}\"; exit 0; fi
+            done
+            found=\$(find /home/s/spugovxsim/planexp -maxdepth 5 -type f -path '*/bootstrap/app.php' -print 2>/dev/null | head -n 1)
+            test -n \"\${found}\"; dirname \"\$(dirname \"\${found}\")\"")"
+          test -n "${remote_root}"
+          remote_php="$("${ssh_base[@]}" 'set -e
+            for candidate in php83 php8.3 /usr/local/bin/php83 /opt/php83/bin/php /usr/bin/php8.3 php; do
+              command -v "$candidate" >/dev/null 2>&1 || continue
+              version_id=$("$candidate" -r "echo PHP_VERSION_ID;" 2>/dev/null || true)
+              if test -n "$version_id" && test "$version_id" -ge 80300; then command -v "$candidate"; exit 0; fi
+            done
+            exit 1')"
+          test -n "${remote_php}"
+          "${ssh_base[@]}" "cd '${remote_root}' && '${remote_php}' -d display_errors=0" \
+            < .github/p15/P15_tenant_inventory.php \
+            > P15_tenant_inventory_php83_output/P15_tenant_inventory.json
+          python -m json.tool P15_tenant_inventory_php83_output/P15_tenant_inventory.json >/dev/null
+
+      - name: Validate tenant isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('P15_tenant_inventory_php83_output/P15_tenant_inventory.json')
+          data = json.loads(p.read_text('utf-8'))
+          companies = data.get('companies', [])
+          by_id = {int(x['id']): x for x in companies}
+          production, working = by_id.get(25), by_id.get(27)
+          duplicates = [x for x in companies if x.get('name') == 'UIUX TEST EXPEDITOR' and int(x['id']) != 27]
+          duplicate = duplicates[0] if len(duplicates) == 1 else None
+          mutable = {'users','clients','client_contacts','contractors','contractor_contacts','drivers','driver_phones','vehicle_units','vehicle_sets','driver_vehicle_blocks','crews','route_executors','linear_routes','routes','trips','route_applications','applications','documents','invoices','finance_invoices','finance_operations','cash_operations','finance_cash_operations','bank_operations','finance_bank_operations','payment_allocations','finance_allocations','bank_accounts','responsible_assignments','entity_access_grants'}
+          nonzero = {k:int(v) for k,v in (duplicate or {}).get('business_counts',{}).items() if k in mutable and int(v)}
+          passed = bool(production and working and duplicate and int(duplicate['id']) not in (25,27) and int(duplicate.get('central_users_count',-1)) == 0 and not nonzero and working.get('db_identifier_fingerprint') != duplicate.get('db_identifier_fingerprint') and working.get('storage_path_fingerprint') != duplicate.get('storage_path_fingerprint'))
+          summary = {'status':'PASS' if passed else 'FAIL','production_company_id':25 if production else None,'working_test_tenant_id':27 if working else None,'duplicate_tenant_id':int(duplicate['id']) if duplicate else None,'duplicate_nonzero_mutable_tables':nonzero,'companies':companies}
+          Path('P15_tenant_inventory_php83_output/P15_tenant_isolation_summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),'utf-8')
+          print('P15_TENANT_ISOLATION='+summary['status'])
+          if not passed: raise SystemExit(1)
+          PY
+
+      - name: Clear SSH material
+        if: always()
+        run: rm -f "${HOME}/.ssh/P15_inventory_key" 2>/dev/null || true
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P15_tenant_inventory_php83_${{ github.sha }}
+          path: P15_tenant_inventory_php83_output/
+          if-no-files-found: error
+          retention-days: 30
