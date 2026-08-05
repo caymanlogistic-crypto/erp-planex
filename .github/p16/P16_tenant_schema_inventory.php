@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+// P16 Recovery Gate: read-only live schema and tenant identity inventory.
 ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
