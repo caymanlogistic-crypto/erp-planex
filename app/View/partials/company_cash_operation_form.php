@@ -7,14 +7,14 @@ $formError = $formError ?? null;
 <?php if ($formError): ?>
 <div class="form-alert alert-error"><?= e($formError) ?></div>
 <?php endif; ?>
-<form action="<?= app_url('/company/finance/cash/operation-create') ?>" method="post" class="cash-form">
+<form action="<?= app_url('/company/finance/cash/operation-create') ?>" method="post" class="cash-form" data-cash-operation-form>
     <?= csrfField() ?>
     <div class="modal-body">
         <div class="section-title">Новая кассовая операция</div>
         <div class="form-grid-3">
             <div class="field">
                 <label class="field-label">Тип <span class="field-required">*</span></label>
-                <select name="operation_type" class="field-select" required>
+                <select name="operation_type" class="field-select" required data-cash-operation-type>
                     <option value="INCOME">Приход</option>
                     <option value="EXPENSE">Расход</option>
                 </select>
@@ -40,14 +40,15 @@ $formError = $formError ?? null;
             </div>
             <div class="field">
                 <label class="field-label">Статья ДДС</label>
-                <select name="dds_category_id" class="field-select">
+                <select name="dds_category_id" class="field-select" data-cash-dds-category>
                     <option value="">— Не выбрана —</option>
                     <?php foreach ($ddsCategories as $dc): ?>
-                    <option value="<?= (int) $dc['id'] ?>">
+                    <option value="<?= (int) $dc['id'] ?>" data-direction="<?= e((string) ($dc['direction'] ?? 'BOTH')) ?>">
                         <?= e($dc['code']) ?> — <?= e($dc['name']) ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <div class="field-hint" data-cash-dds-hint>Показаны статьи, подходящие выбранному типу операции.</div>
             </div>
         </div>
         <div class="field">
