@@ -1,0 +1,89 @@
+name: P17R Source Contract Inventory
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - 'P17R_SOURCE_INVENTORY_TRIGGER.txt'
+      - '.github/workflows/P17R_source_contract_inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpv2-p17r-source-contract-inventory
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+
+      - name: Build source contract inventory
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          roots=[Path('app'),Path('public'),Path('config'),Path('database'),Path('bootstrap'),Path('tests')]
+          groups={
+            'upload_validation':[r'move_uploaded_file',r'is_uploaded_file',r'UPLOAD_ERR',r'tmp_name',r'filesize\s*\(',r'\[.size.\]',r'finfo',r'mime',r'allowed.*extension',r'max.*size'],
+            'trip_delete':[r'data-linear-trip-delete-btn',r'confirmDeleteForm',r'linear.*delete',r'linear.*archive',r'deleted_at',r'Удалить рейс',r'УДАЛИТЬ'],
+            'executor_archive':[r'route-executor',r'route_executor',r'driver_vehicle_block',r'/archive',r'archive\s*\('],
+            'cash_operation':[r'cash-operation-create',r'cash-operation-create-modal',r'Приход/Расход',r'operation-create'],
+          }
+          compiled={k:[re.compile(p,re.I) for p in pats] for k,pats in groups.items()}
+          found={k:[] for k in groups}
+          allowed={'.php','.js','.css','.json','.sql','.md','.yml','.yaml'}
+          for root in roots:
+            if not root.exists(): continue
+            for p in root.rglob('*'):
+              if not p.is_file() or p.suffix.lower() not in allowed: continue
+              try: text=p.read_text('utf-8')
+              except Exception: continue
+              lines=text.splitlines()
+              for i,line in enumerate(lines):
+                for group,patterns in compiled.items():
+                  if any(rx.search(line) for rx in patterns):
+                    start=max(0,i-3); end=min(len(lines),i+4)
+                    found[group].append({
+                      'path':str(p).replace('\\','/'),
+                      'line':i+1,
+                      'excerpt':'\n'.join(f'{n+1}: {lines[n]}' for n in range(start,end))[:5000],
+                    })
+          for group in found:
+            seen=set(); unique=[]
+            for item in found[group]:
+              key=(item['path'],item['line'])
+              if key in seen: continue
+              seen.add(key); unique.append(item)
+            found[group]=unique[:300]
+          summary={k:len(v) for k,v in found.items()}
+          out={'status':'PASS','summary':summary,'groups':found}
+          Path('P17R_SOURCE_CONTRACT_INVENTORY.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),'utf-8')
+          md=['# P17R source contract inventory','',f'Status: PASS','']
+          for group,items in found.items():
+            md += [f'## {group}',f'Matches: {len(items)}','']
+            for item in items[:80]:
+              md += [f"### `{item['path']}:{item['line']}`",'```text',item['excerpt'],'```','']
+          Path('P17R_SOURCE_CONTRACT_REPORT.md').write_text('\n'.join(md),'utf-8')
+          print('P17R_SOURCE_CONTRACT_INVENTORY=PASS')
+          print(json.dumps(summary,ensure_ascii=False))
+          PY
+          python -m json.tool P17R_SOURCE_CONTRACT_INVENTORY.json >/dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P17R_source_contract_inventory_${{ github.sha }}
+          path: |
+            P17R_SOURCE_CONTRACT_INVENTORY.json
+            P17R_SOURCE_CONTRACT_REPORT.md
+          if-no-files-found: error
+          retention-days: 30
