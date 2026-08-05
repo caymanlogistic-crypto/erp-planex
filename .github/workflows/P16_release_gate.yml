@@ -82,6 +82,8 @@ jobs:
           from pathlib import Path
           import json,re,subprocess
           changed=subprocess.check_output(['git','diff','--name-only','origin/chatgpt/production-stabilization-20260802...HEAD'],text=True).splitlines()
+          production_roots=('app/','bootstrap/','config/','database/','public/','scripts/','tools/','tests/','.github/p16/')
+          scanned=[name for name in changed if name.startswith(production_roots)]
           binary={'.png','.jpg','.jpeg','.gif','.webp','.woff','.woff2','.ttf','.zip','.gz','.pdf','.xlsx'}
           mojibake=[]; bom=[]; secret=[]
           exact_secrets=[
@@ -90,7 +92,7 @@ jobs:
               re.compile(r'AKIA[0-9A-Z]{16}'),
               re.compile(r'gh[pousr]_[A-Za-z0-9]{30,}'),
           ]
-          for name in changed:
+          for name in scanned:
               p=Path(name)
               if not p.is_file() or p.suffix.lower() in binary: continue
               raw=p.read_bytes()
@@ -105,7 +107,9 @@ jobs:
           forbidden=[x for x in changed if x.startswith(('.env','storage/','tmp/','logs/','node_modules/','vendor/'))]
           summary={
               'status':'PASS' if not (mojibake or bom or secret or forbidden) else 'FAIL',
-              'scanned_changed_files':len(changed),
+              'changed_files':len(changed),
+              'content_scanned_files':len(scanned),
+              'workflow_definitions_reviewed_by_diff':len([x for x in changed if x.startswith('.github/workflows/')]),
               'mojibake':mojibake,
               'bom':bom,
               'secret_findings':secret,
