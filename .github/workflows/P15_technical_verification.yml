@@ -1,5 +1,6 @@
 name: P15 Technical Verification
 
+# Independent verification gate for the committed P15 production diff.
 on:
   push:
     branches:
@@ -109,20 +110,15 @@ jobs:
           secret_status=0
           mojibake_status=0
           bom_status=0
-          if git grep -nIE '(password|passwd|secret|token|api[_-]?key)[[:space:]]*[:=][[:space:]]*["'"'][^"'"']{4,}' -- app bootstrap config database public scripts tools tests ':!tests/fixtures/**' > P15_technical_verification_output/P15_SECRET_SCAN.log; then
-            secret_status=1
-          fi
-          if grep -RIn --exclude-dir=.git -E 'Рџ|РЎ|Ð|Ñ|�' app bootstrap config database public scripts tools tests > P15_technical_verification_output/P15_MOJIBAKE_SCAN.log; then
-            mojibake_status=1
-          fi
+          if git grep -nIE '(password|passwd|secret|token|api[_-]?key)[[:space:]]*[:=][[:space:]]*["'"'][^"'"']{4,}' -- app bootstrap config database public scripts tools tests ':!tests/fixtures/**' > P15_technical_verification_output/P15_SECRET_SCAN.log; then secret_status=1; fi
+          if grep -RIn --exclude-dir=.git -E 'Рџ|РЎ|Ð|Ñ|�' app bootstrap config database public scripts tools tests > P15_technical_verification_output/P15_MOJIBAKE_SCAN.log; then mojibake_status=1; fi
           python - <<'PY' > P15_technical_verification_output/P15_BOM_SCAN.log
           from pathlib import Path
           bad=[]
           for root in ('app','bootstrap','config','database','public','scripts','tools','tests'):
               for p in Path(root).rglob('*'):
-                  if p.is_file() and p.suffix.lower() in {'.php','.js','.css','.json','.md','.txt','.sql'}:
-                      if p.read_bytes().startswith(b'\xef\xbb\xbf'):
-                          bad.append(str(p))
+                  if p.is_file() and p.suffix.lower() in {'.php','.js','.css','.json','.md','.txt','.sql'} and p.read_bytes().startswith(b'\xef\xbb\xbf'):
+                      bad.append(str(p))
           print('\n'.join(bad))
           raise SystemExit(1 if bad else 0)
           PY
@@ -139,10 +135,7 @@ jobs:
           base=381a187d7f5cc02eb338b81836dd7ce0099a78b2
           git diff --check "$base"...HEAD
           git diff --name-status "$base"...HEAD > P15_technical_verification_output/P15_CHANGED_FILES.txt
-          if grep -E '(^|[[:space:]])(\.env|storage/|tmp/|logs/|node_modules/|vendor/|public_html/erp/)' P15_technical_verification_output/P15_CHANGED_FILES.txt; then
-            echo 'Forbidden path changed' >&2
-            exit 1
-          fi
+          if grep -E '(^|[[:space:]])(\.env|storage/|tmp/|logs/|node_modules/|vendor/|public_html/erp/)' P15_technical_verification_output/P15_CHANGED_FILES.txt; then exit 1; fi
           git rev-parse HEAD > P15_technical_verification_output/P15_VERIFIED_SHA.txt
 
       - name: Build verification summary
@@ -153,17 +146,8 @@ jobs:
           import json
           from pathlib import Path
           out=Path('P15_technical_verification_output')
-          summary={
-            'status':'PASS',
-            'verified_sha':(out/'P15_VERIFIED_SHA.txt').read_text().strip() if (out/'P15_VERIFIED_SHA.txt').exists() else None,
-            'php_lint_exit_code':int((out/'P15_PHP_LINT_EXIT_CODE.txt').read_text().strip()) if (out/'P15_PHP_LINT_EXIT_CODE.txt').exists() else None,
-            'tests_executed':int((out/'P15_TESTS_EXECUTED.txt').read_text().strip()) if (out/'P15_TESTS_EXECUTED.txt').exists() else 0,
-            'tests_exit_code':int((out/'P15_TESTS_EXIT_CODE.txt').read_text().strip()) if (out/'P15_TESTS_EXIT_CODE.txt').exists() else None,
-            'js_exit_code':int((out/'P15_JS_EXIT_CODE.txt').read_text().strip()) if (out/'P15_JS_EXIT_CODE.txt').exists() else None,
-          }
-          values=[summary['php_lint_exit_code'],summary['tests_exit_code'],summary['js_exit_code']]
-          if any(v not in (0,) for v in values) or summary['tests_executed']<3:
-              summary['status']='FAIL'
+          summary={'status':'PASS','verified_sha':(out/'P15_VERIFIED_SHA.txt').read_text().strip() if (out/'P15_VERIFIED_SHA.txt').exists() else None,'php_lint_exit_code':int((out/'P15_PHP_LINT_EXIT_CODE.txt').read_text().strip()) if (out/'P15_PHP_LINT_EXIT_CODE.txt').exists() else None,'tests_executed':int((out/'P15_TESTS_EXECUTED.txt').read_text().strip()) if (out/'P15_TESTS_EXECUTED.txt').exists() else 0,'tests_exit_code':int((out/'P15_TESTS_EXIT_CODE.txt').read_text().strip()) if (out/'P15_TESTS_EXIT_CODE.txt').exists() else None,'js_exit_code':int((out/'P15_JS_EXIT_CODE.txt').read_text().strip()) if (out/'P15_JS_EXIT_CODE.txt').exists() else None}
+          if any(v not in (0,) for v in [summary['php_lint_exit_code'],summary['tests_exit_code'],summary['js_exit_code']]) or summary['tests_executed']<3: summary['status']='FAIL'
           (out/'P15_TECHNICAL_SUMMARY.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),'utf-8')
           PY
 
