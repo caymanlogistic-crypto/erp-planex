@@ -18,6 +18,7 @@ require_once base_path('app/Service/RouteExecutorService.php');
 require_once base_path('app/Service/ResponsibleAssignmentService.php');
 require_once base_path('app/Service/LocalMigrationService.php');
 require_once base_path('app/Service/AuditService.php');
+require_once base_path('app/Service/MutationErrorService.php');
 require_once base_path('app/Service/DateCalculationService.php');
 require_once base_path('app/Service/RoutePaymentStatusService.php');
 require_once base_path('app/Service/FinanceAuditLogService.php');

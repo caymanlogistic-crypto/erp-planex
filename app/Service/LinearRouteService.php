@@ -180,6 +180,20 @@ final class LinearRouteService
         return 'Без НДС';
     }
 
+    public static function legacyPaymentDueTypeFromConditionType(string $conditionType): string
+    {
+        return match ($conditionType) {
+            DateCalculationService::CONDITION_PREPAYMENT,
+            DateCalculationService::CONDITION_START_DAY => 'Предоплата на загрузке',
+            DateCalculationService::CONDITION_AFTER_START => 'После загрузки',
+            DateCalculationService::CONDITION_END_DAY => 'До выгрузки',
+            DateCalculationService::CONDITION_AFTER_END,
+            DateCalculationService::CONDITION_AFTER_DOCUMENTS => 'После выгрузки',
+            DateCalculationService::CONDITION_SPECIFIC_DATE => 'После загрузки',
+            default => 'После загрузки',
+        };
+    }
+
     public static function parsePaymentMethodFromLegacyType(string $paymentType): string
     {
         $paymentType = trim($paymentType);

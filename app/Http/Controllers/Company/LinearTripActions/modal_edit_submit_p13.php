@@ -4,6 +4,7 @@ use App\Service\LinearRouteService;
 use App\Service\LinearTripDocumentUploadException;
 use App\Service\LinearTripEditSaveService;
 use App\Service\LinearTripEditTokenService;
+use App\Service\MutationErrorService;
 
 requireRole(['company_owner', 'senior_logist', 'logist']);
 header('Content-Type: application/json; charset=utf-8');
@@ -103,43 +104,16 @@ try {
         'retry_token' => LinearTripEditTokenService::issue($routeId),
     ], 422);
 } catch (Throwable $e) {
-    $errorId = 'P15-' . date('Ymd-His') . '-' . bin2hex(random_bytes(4));
-    $logLine = json_encode([
-        'timestamp' => date(DATE_ATOM),
-        'error_id' => $errorId,
+    $errorId = MutationErrorService::report($e, 'linear_trip_update', [
         'company_id' => $companyId,
         'route_id' => $routeId,
         'user_id' => $sessionUser['user_id'],
-        'exception' => get_class($e),
-        'code' => (string) $e->getCode(),
-        'message' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'trace' => array_slice($e->getTrace(), 0, 8),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-    $logDirectory = storage_path('logs');
-    if (!is_dir($logDirectory)) {
-        @mkdir($logDirectory, 0750, true);
-    }
-    @file_put_contents(
-        $logDirectory . DIRECTORY_SEPARATOR . 'P15_linear_trip_save_errors.log',
-        $logLine . PHP_EOL,
-        FILE_APPEND | LOCK_EX
-    );
-    error_log(sprintf(
-        '[P15] linear trip save failed error_id=%s company=%d route=%d user=%d exception=%s message=%s',
-        $errorId,
-        $companyId,
-        $routeId,
-        $sessionUser['user_id'],
-        get_class($e),
-        $e->getMessage()
-    ));
+        'role_code' => $sessionUser['role_code'],
+    ]);
 
     $respond([
         'success' => false,
-        'message' => 'Не удалось сохранить рейс из-за внутренней ошибки. Изменения не применены.',
+        'message' => MutationErrorService::userMessage('сохранить рейс', $errorId),
         'error_code' => 'internal_save_error',
         'error_id' => $errorId,
         'retry_token' => LinearTripEditTokenService::issue($routeId),

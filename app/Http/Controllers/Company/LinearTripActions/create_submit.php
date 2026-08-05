@@ -3,6 +3,7 @@
 use App\Service\DocumentService;
 use App\Service\LinearRouteService;
 use App\Service\LocalMigrationService;
+use App\Service\MutationErrorService;
 
 requireRole(['company_owner', 'senior_logist', 'logist']);
 
@@ -116,6 +117,10 @@ $parsePaymentRows = static function (array $rows, string $scopeLabel, string $sc
             'days_kind' => $daysKind,
             'specific_due_date' => $specificDueDate,
             'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
+            // Keep the legacy columns populated until the compatibility schema is retired.
+            'payment_due_type' => LinearRouteService::legacyPaymentDueTypeFromConditionType($conditionType),
+            'payment_due_days' => $daysCount,
+            'payment_due_days_kind' => $daysKind,
         ];
     }
 
@@ -594,7 +599,13 @@ try {
         $localPdo->rollBack();
     }
 
-    $_SESSION['linear_trip_form_error'] = 'Не удалось создать рейс: ' . $e->getMessage();
+    $errorId = MutationErrorService::report($e, 'linear_trip_create', [
+        'company_id' => $companyId,
+        'user_id' => (int) ($_SESSION['user_id'] ?? 0),
+        'role_code' => (string) ($_SESSION['role_code'] ?? ''),
+        'route_type' => $routeType,
+    ]);
+    $_SESSION['linear_trip_form_error'] = MutationErrorService::userMessage('создать рейс', $errorId);
     $_SESSION['linear_trip_validation_errors'] = $errors;
     $_SESSION['linear_trip_old'] = $old;
     header('Location: ' . $redirect);

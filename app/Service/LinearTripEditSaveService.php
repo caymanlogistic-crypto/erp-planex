@@ -371,14 +371,7 @@ final class LinearTripEditSaveService
 
     private static function legacyDueType(string $conditionType): string
     {
-        return match ($conditionType) {
-            DateCalculationService::CONDITION_PREPAYMENT => 'Предоплата на загрузке',
-            DateCalculationService::CONDITION_AFTER_START => 'После загрузки',
-            DateCalculationService::CONDITION_END_DAY => 'До выгрузки',
-            DateCalculationService::CONDITION_AFTER_END,
-            DateCalculationService::CONDITION_AFTER_DOCUMENTS => 'После выгрузки',
-            default => 'После загрузки',
-        };
+        return LinearRouteService::legacyPaymentDueTypeFromConditionType($conditionType);
     }
 
     private static function retirePrincipalDocuments(PDO $pdo, array $existingDocsByCode, int $routeId, int $userId, string $roleCode): void
