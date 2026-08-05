@@ -26,7 +26,9 @@
         applyLocalMigrations($localPdo);
 
         $cashAccounts = \App\Service\FinanceCashService::fetchMoneyAccounts($localPdo, 'CASH', true);
-        $ddsCategories = \App\Service\FinanceDdsCategoryService::fetchActiveForDirection($localPdo, 'INCOME');
+        $ddsCategories = \App\Service\FinanceDdsCategoryService::fetchCategories($localPdo, [
+            'is_active' => true,
+        ]);
     } catch (\Throwable $e) {
         echo '<div class="form-alert alert-error">Ошибка загрузки данных.</div>';
         return;
