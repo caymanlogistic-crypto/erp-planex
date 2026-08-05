@@ -24,6 +24,7 @@ require_once base_path('app/Service/RoutePaymentStatusService.php');
 require_once base_path('app/Service/FinanceAuditLogService.php');
 require_once base_path('app/Service/FinanceSettlementCascadeService.php');
 require_once base_path('app/Service/LinearRouteService.php');
+require_once base_path('app/Service/LinearRouteArchiveService.php');
 require_once base_path('app/Service/LinearTripRequestNormalizer.php');
 require_once base_path('app/Service/LinearTripDocumentUploadException.php');
 require_once base_path('app/Service/LinearTripEditTokenService.php');
