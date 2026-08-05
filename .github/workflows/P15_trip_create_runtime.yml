@@ -1,17 +1,15 @@
 name: P15 Trip Runtime
 
 on:
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
-    paths:
-      - '.github/p15/P15_trip_create_runtime.js'
-      - '.github/p15/P15_trip_create_runtime_v2.js'
-      - '.github/p15/P15_trip_lifecycle_runtime.js'
-      - '.github/p15/P15_cleanup_runtime.js'
-      - '.github/workflows/P15_trip_create_runtime.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: erpv2-runtime-credentials
+  cancel-in-progress: false
+
 jobs:
   trip-runtime:
     runs-on: ubuntu-24.04
