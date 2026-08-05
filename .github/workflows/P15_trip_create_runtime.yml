@@ -1,4 +1,4 @@
-name: P15 Trip Create Runtime
+name: P15 Trip Runtime
 
 on:
   pull_request:
@@ -6,14 +6,15 @@ on:
     paths:
       - '.github/p15/P15_trip_create_runtime.js'
       - '.github/p15/P15_trip_create_runtime_v2.js'
+      - '.github/p15/P15_trip_modal_discovery.js'
       - '.github/workflows/P15_trip_create_runtime.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  trip-create-runtime:
+  trip-runtime:
     runs-on: ubuntu-24.04
-    timeout-minutes: 18
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with: { ref: chatgpt/p15-p17-erp-fullhd-completion-20260805 }
@@ -43,15 +44,18 @@ jobs:
         run: |
           npm install --no-save playwright@1.54.2 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null 2>&1
-      - name: Execute deployed trip create runtime
+      - name: Verify trip creation idempotently
         env: { P15_OUT: P15_trip_runtime_output }
         run: node .github/p15/P15_trip_create_runtime_v2.js
+      - name: Discover edit lifecycle controls
+        env: { P15_OUT: P15_trip_runtime_output }
+        run: node .github/p15/P15_trip_modal_discovery.js
       - if: always()
         run: printf 'P15_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: P15_trip_create_runtime_${{ github.sha }}
+          name: P15_trip_runtime_${{ github.sha }}
           path: P15_trip_runtime_output/
           if-no-files-found: error
           retention-days: 30
