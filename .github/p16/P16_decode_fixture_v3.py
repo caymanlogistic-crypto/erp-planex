@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 ORIGINAL_SHA = "08031fe8097e9bde64f005418b2a47e64900f88eb4552f1ab35b00f6c09b1f72"
-CORRECTED_SHA = "7f521e033c07ff325023f067cc98c0f03d9e00a8c4dd34e8dfd16300d598bbc9"
+CORRECTED_SHA = "1476ae3a1bf49958ef01fe9500d984057e5f15a126b920ab0e70486e1479dfc0"
 
 wrapper = Path(".github/p16/P16_apply_representative_fixtures.php").read_text("utf-8")
 match = re.search(r"\$payload = '([^']+)'", wrapper)
@@ -25,6 +25,15 @@ owner_after = """    $ownerStmt = $central->prepare(\"SELECT id FROM company_use
 if source.count(owner_before) != 1:
     raise SystemExit("P16 owner compatibility anchor mismatch")
 source = source.replace(owner_before, owner_after)
+
+for old, new in (
+    ("'license_expire' =>", "'license_expire_date' =>"),
+    ("'link_side' =>", "'side' =>"),
+    ("'linked_amount' =>", "'amount' =>"),
+):
+    if source.count(old) != 1:
+        raise SystemExit(f"P16 renamed field anchor mismatch: {old}")
+    source = source.replace(old, new)
 
 persist_start = source.index("function persist(PDO $pdo")
 persist_end = source.index("\nfunction p16Guard", persist_start)
