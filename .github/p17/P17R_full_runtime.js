@@ -347,6 +347,15 @@ async function archiveRestore(browser, ownerPage, type, id, label, matrix, prefi
   const restored = (await ownerPage.locator(`[${spec.attr}],tbody tr`).filter({ hasText: label }).count()) > 0;
   scenario(matrix, supported ? { scenario_id: `${prefix}-restore`, entity: type, action: 'SUPERADMIN restore', role: 'SUPERADMIN', created_id: id, status: restored ? 'PASS' : 'FAIL', pass: restored, actual_result: restored ? 'Restored and visible' : 'Restore action did not return record' } : { scenario_id: `${prefix}-restore`, entity: type, action: 'SUPERADMIN restore', role: 'SUPERADMIN', status: 'NOT_SUPPORTED_BY_PRODUCT', applicable: false, evidence: 'Restore form absent for archived entity type' });
 }
+
+async function verifyEntityDocument(page, entityType, entityId, expectedName, scenarioId, label) {
+  const response = await page.goto(U(`company/documents?entity_type=${encodeURIComponent(entityType)}&entity_id=${entityId}`), { waitUntil: 'domcontentloaded', timeout: 45000 });
+  const text = await page.locator('body').innerText();
+  const links = await page.locator('a[href*="/company/documents/"]').count();
+  const pass = response?.status() === 200 && links > 0 && (text.includes(expectedName) || text.includes(label));
+  scenario(result.documents, { scenario_id: scenarioId, entity: `${entityType}-document`, action: `${label} upload and reopen`, url: page.url(), http_status: response?.status() ?? null, created_id: entityId, actual_result: { links, expectedNameVisible: text.includes(expectedName), bodyContainsLabel: text.includes(label) }, status: pass ? 'PASS' : 'FAIL', pass, screenshot: await screenshot(page, 'OWNER', 'documents', scenarioId) });
+}
+
 async function createTrip(page, ids) {
   await page.goto(U('company/trips/linear?show_create=1'), { waitUntil: 'domcontentloaded', timeout: 45000 });
   const form = page.locator('#linear-trip-create-form:visible').first(); await form.waitFor({ state: 'visible', timeout: 10000 });
@@ -394,14 +403,14 @@ async function createTrip(page, ids) {
   const reopenPass = text.includes('220 000') && text.includes('20.08.2026') && text.includes('22.08.2026') && text.includes(`${PREFIX}TRIP_UPDATED`);
   scenario(result.trip, { scenario_id: 'trip-reopen-updated', entity: 'linear-trip', action: 'reopen updated values', created_id: id, status: reopenPass ? 'PASS' : 'FAIL', pass: reopenPass, actual_result: text.slice(0,1000), screenshot: await screenshot(page, 'OWNER', 'trip', 'view_updated') });
   const links = await modal.locator('a[href*="/company/documents/"]').evaluateAll((nodes) => nodes.map((node) => ({ text:(node.innerText||'').trim(),href:node.href,download:node.hasAttribute('download') })));
-  let viewPass = false; let downloadPass = false;
-  for (const link of links) { const response = await page.context().request.get(link.href); const ok=response.status()===200; if(link.download) downloadPass=downloadPass||ok; else viewPass=viewPass||ok; scenario(result.documents, { scenario_id: `document-${link.download?'download':'view'}-${result.documents.length+1}`, entity: 'trip-document', action: link.download ? 'download' : 'view', url: link.href, http_status: response.status(), actual_result: response.headers()['content-type'] || '', status: ok?'PASS':'FAIL', pass: ok }); }
+  let viewPass = false; let downloadPass = false; const contentTypes = [];
+  for (const link of links) { const response = await page.context().request.get(link.href); const ok=response.status()===200; const contentType=response.headers()['content-type']||''; contentTypes.push(contentType); if(link.download) downloadPass=downloadPass||ok; else viewPass=viewPass||ok; scenario(result.documents, { scenario_id: `document-${link.download?'download':'view'}-${result.documents.length+1}`, entity: 'trip-document', action: link.download ? 'download' : 'view', url: link.href, http_status: response.status(), actual_result: contentType, status: ok?'PASS':'FAIL', pass: ok }); }
   scenario(result.documents,{scenario_id:'document-view',entity:'trip-document',action:'view',status:viewPass?'PASS':'FAIL',pass:viewPass,actual_result:`${links.filter(x=>!x.download).length} view links`});
   scenario(result.documents,{scenario_id:'document-download',entity:'trip-document',action:'download',status:downloadPass?'PASS':'FAIL',pass:downloadPass,actual_result:`${links.filter(x=>x.download).length} download links`});
   scenario(result.documents, { scenario_id: 'document-replacement', entity: 'trip-document', action: 'replacement', created_id: id, expected_result: 'Replacement filename visible', actual_result: text.includes(`${PREFIX}customer_v2.pdf`) ? 'Visible' : 'Absent', status: text.includes(`${PREFIX}customer_v2.pdf`)?'PASS':'FAIL', pass: text.includes(`${PREFIX}customer_v2.pdf`) });
-  scenario(result.documents, { scenario_id: 'document-pdf-upload', entity: 'documents', action: 'PDF upload', created_id: id, status: links.some((x)=>/\.pdf/i.test(x.text))?'PASS':'FAIL', pass: links.some((x)=>/\.pdf/i.test(x.text)) });
-  scenario(result.documents, { scenario_id: 'document-xlsx-upload', entity: 'documents', action: 'XLSX upload', created_id: id, status: links.some((x)=>/\.xlsx/i.test(x.text))?'PASS':'FAIL', pass: links.some((x)=>/\.xlsx/i.test(x.text)) });
-  scenario(result.documents, { scenario_id: 'document-png-upload', entity: 'documents', action: 'PNG upload', created_id: id, status: links.some((x)=>/\.png/i.test(x.text))?'PASS':'FAIL', pass: links.some((x)=>/\.png/i.test(x.text)) });
+  const pdfSeen=contentTypes.some((x)=>/application\/pdf/i.test(x)); const xlsxSeen=contentTypes.some((x)=>/spreadsheet|octet-stream/i.test(x));
+  scenario(result.documents, { scenario_id: 'document-pdf-upload', entity: 'documents', action: 'PDF upload', created_id: id, actual_result: contentTypes, status: pdfSeen?'PASS':'FAIL', pass: pdfSeen });
+  scenario(result.documents, { scenario_id: 'document-xlsx-upload', entity: 'documents', action: 'XLSX upload', created_id: id, actual_result: contentTypes, status: xlsxSeen?'PASS':'FAIL', pass: xlsxSeen });
   scenario(result.trip, { scenario_id: 'trip-status-view', entity: 'linear-trip', action: 'status view', actual_result: /Актив|active/i.test(text)?'active':'status not visible', status: /Актив|active/i.test(text)?'PASS':'FAIL', pass: /Актив|active/i.test(text) });
   const statusControl = modal.locator('select[name="status"],button').filter({hasText:/Статус|Исполнитель найден|Вывоз начался/i});
   scenario(result.trip, await statusControl.count() ? { scenario_id:'trip-status-transition',entity:'linear-trip',action:'status transition',status:'PASS',pass:true,evidence:'Status control exposed' } : { scenario_id:'trip-status-transition',entity:'linear-trip',action:'status transition',status:'NOT_SUPPORTED_BY_PRODUCT',applicable:false,evidence:'Linear routes use active/deleted lifecycle; map/departure statuses are not exposed for this entity.' });
@@ -467,7 +476,6 @@ async function documentNegativeTests(page) {
   const large=await attempt('SIZE_LIMIT',{name:`${PREFIX}large.pdf`,mimeType:'application/pdf',buffer:Buffer.alloc(20*1024*1024+1024)});scenario(result.documents,{scenario_id:'document-size-limit',entity:'document-validation',action:'size limit',actual_result:{id:large.id,rejected:large.rejected},status:large.rejected?'PASS':'FAIL',pass:large.rejected});
   scenario(result.documents,{scenario_id:'document-duplicate-upload',entity:'document',action:'duplicate upload',status:'NOT_SUPPORTED_BY_PRODUCT',applicable:false,evidence:'Product has no documented deduplication contract; repeated files are separate document versions.'});
   scenario(result.documents,{scenario_id:'document-delete',entity:'document',action:'soft-delete document',status:'NOT_SUPPORTED_BY_PRODUCT',applicable:false,evidence:'Entity document pages expose view/download/replace; no standalone document-delete UI was found in capability inventory.'});
-  scenario(result.documents,{scenario_id:'document-jpg-upload',entity:'document',action:'JPG upload',status:'PASS',pass:true,evidence:'Driver/vehicle create UI accepted JPG and created entity with document.'});
 }
 async function tripDeleteRestore(browser, ownerPage, id) {
   await ownerPage.goto(U('company/trips/linear'),{waitUntil:'networkidle'});let row=ownerPage.locator('tr[data-linear-route-id]').filter({hasText:N.trip}).first();await row.dblclick();await ownerPage.locator('[data-linear-trip-delete-btn]').waitFor({state:'visible',timeout:10000});ownerPage.once('dialog',(d)=>d.accept());await ownerPage.locator('[data-linear-trip-delete-btn]').click();await ownerPage.waitForTimeout(900);await ownerPage.goto(U('company/trips/linear'),{waitUntil:'networkidle'});const absent=(await ownerPage.locator('tr[data-linear-route-id]').filter({hasText:N.trip}).count())===0;scenario(result.trip,{scenario_id:'trip-soft-delete',entity:'linear-trip',action:'soft-delete',created_id:id,status:absent?'PASS':'FAIL',pass:absent,screenshot:await screenshot(ownerPage,'OWNER','trip','soft_deleted')});
@@ -491,9 +499,11 @@ const REQUIRED = {
   try {
     browser=await chromium.launch({headless:true}); owner=await roleSession(browser,'OWNER'); attachDiagnostics(owner.page,'OWNER'); const page=owner.page; const seed=170000000+(Date.now()%900000);
     const clientId=await createLegal(page,'client',N.client,seed,{name:`${PREFIX}client.png`,mimeType:'image/png',buffer:pngBuffer()},result.crud,'client'); result.entities.clientId=clientId;
+    await verifyEntityDocument(page,'client',clientId,`${PREFIX}client.png`,'document-png-upload','PNG');
     const clientRestoreId=await createLegal(page,'client',N.clientRestore,seed+11,null,result.crud,'client-restore-temp'); result.entities.clientRestoreId=clientRestoreId;
     await reopenUpdate(page,'client',clientId,N.client,result.crud,'client'); await listSearchSort(page,'client',N.client,result.crud,'client');
     const contractorId=await createLegal(page,'contractor',N.contractor,seed+22,{name:`${PREFIX}contractor.jpg`,mimeType:'image/jpeg',buffer:jpgBuffer()},result.crud,'contractor'); result.entities.contractorId=contractorId;
+    await verifyEntityDocument(page,'contractor',contractorId,`${PREFIX}contractor.jpg`,'document-jpg-upload','JPG');
     await reopenUpdate(page,'contractor',contractorId,N.contractor,result.crud,'contractor'); await listSearchSort(page,'contractor',N.contractor,result.crud,'contractor');
     const driverId=await createDriver(page,N.driver,result.crud,'driver',{name:`${PREFIX}driver.pdf`,mimeType:'application/pdf',buffer:pdfBuffer('driver')}); result.entities.driverId=driverId;
     await reopenUpdate(page,'driver',driverId,N.driver,result.crud,'driver'); await driverPhone(page,driverId,result.crud,'driver'); await listSearchSort(page,'driver',N.driver,result.crud,'driver');
