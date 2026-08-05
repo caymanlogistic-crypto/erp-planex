@@ -1,0 +1,47 @@
+name: P16 Finance Discovery
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/p16/P16_finance_form_discovery.js'
+      - '.github/workflows/P16_finance_discovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: chatgpt/p15-p17-erp-fullhd-completion-20260805 }
+      - name: Resolve encrypted credentials
+        env: { PRIVATE_KEY: '${{ secrets.ERPV2_SSH_PRIVATE_KEY }}' }
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2 >/dev/null 2>&1
+          mkdir -p /tmp/P16_credentials "${HOME}/.ssh"
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > /tmp/P16_credentials/decrypt.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > /tmp/P16_credentials/credentials.enc.json
+          python -m pip install --quiet 'cryptography==46.0.3' >/dev/null
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P16_runtime_key" && chmod 600 "${HOME}/.ssh/P16_runtime_key"
+          payload="$(python /tmp/P16_credentials/decrypt.py --key "${HOME}/.ssh/P16_runtime_key" --input /tmp/P16_credentials/credentials.enc.json)"
+          echo "::add-mask::$payload"; echo "P16_CREDENTIALS_B64=$payload" >> "$GITHUB_ENV"
+          rm -rf /tmp/P16_credentials "${HOME}/.ssh/P16_runtime_key"; unset payload PRIVATE_KEY
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install Chromium
+        run: npm install --no-save playwright@1.54.2 >/dev/null 2>&1 && npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Inspect forms
+        env: { P16_OUT: P16_finance_discovery_output }
+        run: node .github/p16/P16_finance_form_discovery.js
+      - if: always()
+        run: printf 'P16_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P16_finance_discovery_${{ github.sha }}
+          path: P16_finance_discovery_output/
+          if-no-files-found: error
+          retention-days: 30
