@@ -1,0 +1,132 @@
+{
+  "status": "FAIL",
+  "deployed_sha": null,
+  "routes_reviewed": 0,
+  "routes_pass": 0,
+  "routes_fail": 0,
+  "crud_scenarios": 0,
+  "crud_pass": 0,
+  "crud_fail": 0,
+  "crud_not_supported": 0,
+  "trip_scenarios": 0,
+  "trip_pass": 0,
+  "trip_fail": 0,
+  "document_scenarios": 0,
+  "document_pass": 0,
+  "document_fail": 0,
+  "finance_scenarios": 0,
+  "finance_pass": 0,
+  "finance_fail": 0,
+  "fullhd_pages": 0,
+  "viewport_1536_pages": 0,
+  "viewport_1366_pages": 0,
+  "console_errors": 0,
+  "page_errors": 0,
+  "request_failures": 0,
+  "expected_403": 0,
+  "unexpected_http_errors": 0,
+  "defects": {
+    "blocker": 0,
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "screenshot_index_count": 0,
+  "screenshot_file_count": 0,
+  "summary_consistency_check": "FAIL",
+  "missing_or_failed": [
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_02_ROUTE_ROLE_MATRIX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_03_CRUD_MATRIX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_04_TRIP_LIFECYCLE_MATRIX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_05_DOCUMENT_MATRIX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_06_FINANCE_MATRIX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_07_FULLHD_PAGE_MATRIX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_08_VIEWPORT_REGRESSION_MATRIX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_09_CONSOLE_NETWORK_REPORT.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_11_DEFECT_REGISTER.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_12_SCREENSHOT_INDEX.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_REQUIRED_SCENARIOS.json"
+    },
+    {
+      "code": "MISSING_MATRIX",
+      "file": "P17_RUNTIME_SUMMARY.json"
+    },
+    {
+      "code": "INVALID_MATRIX_SHAPE",
+      "matrix": "routes"
+    },
+    {
+      "code": "INVALID_MATRIX_SHAPE",
+      "matrix": "crud"
+    },
+    {
+      "code": "INVALID_MATRIX_SHAPE",
+      "matrix": "trip"
+    },
+    {
+      "code": "INVALID_MATRIX_SHAPE",
+      "matrix": "documents"
+    },
+    {
+      "code": "INVALID_MATRIX_SHAPE",
+      "matrix": "finance"
+    },
+    {
+      "code": "INVALID_MATRIX_SHAPE",
+      "matrix": "fullhd"
+    },
+    {
+      "code": "INVALID_MATRIX_SHAPE",
+      "matrix": "viewports"
+    },
+    {
+      "code": "INVALID_DEFECT_REGISTER"
+    },
+    {
+      "code": "INVALID_SCREENSHOT_INDEX"
+    },
+    {
+      "code": "DEPLOYED_SHA_INCONSISTENT",
+      "values": []
+    }
+  ],
+  "run_id": "31047011301",
+  "run_attempt": "1",
+  "runtime_step": "skipped",
+  "route_step": "skipped",
+  "assemble_step": "failure",
+  "summary_step": "failure"
+}
