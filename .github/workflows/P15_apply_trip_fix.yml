@@ -7,6 +7,12 @@ on:
     paths:
       - '.github/p15/P15_apply_trip_fix.py'
       - '.github/workflows/P15_apply_trip_fix.yml'
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p15/P15_apply_trip_fix.py'
+      - '.github/workflows/P15_apply_trip_fix.yml'
   workflow_dispatch:
 
 permissions:
