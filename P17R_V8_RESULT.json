@@ -1,0 +1,235 @@
+{
+  "routes_reviewed": 67,
+  "routes_pass": 67,
+  "routes_fail": 0,
+  "crud_scenarios": 25,
+  "crud_pass": 25,
+  "crud_fail": 0,
+  "crud_not_supported": 8,
+  "trip_scenarios": 24,
+  "trip_pass": 24,
+  "trip_fail": 0,
+  "document_scenarios": 11,
+  "document_pass": 11,
+  "document_fail": 0,
+  "finance_scenarios": 18,
+  "finance_pass": 17,
+  "finance_fail": 1,
+  "fullhd_pages": 67,
+  "viewport_1536_pages": 13,
+  "viewport_1366_pages": 13,
+  "console_errors": 0,
+  "page_errors": 0,
+  "request_failures": 0,
+  "expected_403": 6,
+  "unexpected_http_errors": 0,
+  "defects_blocker": 0,
+  "defects_critical": 0,
+  "defects_high": 0,
+  "defects_medium": 0,
+  "defects_low": 0,
+  "status": "FAIL",
+  "deployed_sha": "355b16b7e6132006ba0440be2643cab18cf32128",
+  "run_id": "31044228079",
+  "run_attempt": "1",
+  "runtime_step": "failure",
+  "route_step": "success",
+  "assemble_step": "failure",
+  "summary_step": "failure",
+  "summary_consistency_check": "FAIL",
+  "missing_or_failed": [
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "client-archive"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "client-disappear"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "client-deleted-data"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "client-restore"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "client-relations"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "contractor-archive"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "contractor-disappear"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "contractor-deleted-data"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "contractor-restore"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "driver-archive"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "driver-disappear"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "driver-deleted-data"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "driver-restore"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "executor-archive"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "executor-disappear"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "executor-deleted-data"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "crud",
+      "id": "executor-restore"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "documents",
+      "id": "document-invalid-mime"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "documents",
+      "id": "document-empty-file"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "documents",
+      "id": "document-size-limit"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "documents",
+      "id": "document-duplicate-upload"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "documents",
+      "id": "document-delete"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-bank-income"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-bank-expense"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-bank-unallocated"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-bank-partial-allocation"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-bank-full-allocation"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-bank-manual-create"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-filters-date-range"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-payment-calendar"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-cash-flow"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-management-balance"
+    },
+    {
+      "code": "MISSING_REQUIRED_SCENARIO",
+      "matrix": "finance",
+      "id": "finance-plan-fact"
+    },
+    {
+      "code": "RUNTIME_ERROR",
+      "error": {
+        "name": "ReferenceError",
+        "message": "text is not defined",
+        "stack": [
+          "ReferenceError: text is not defined",
+          "    at financeScenarios (/home/runner/work/erp-planex/erp-planex/.github/p17/P17R_full_runtime_v6.compiled.js:610:97)",
+          "    at async /home/runner/work/erp-planex/erp-planex/.github/p17/P17R_full_runtime_v6.compiled.js:698:85"
+        ]
+      }
+    },
+    {
+      "code": "RUNTIME_STATUS_NOT_PASS",
+      "status": "FAIL"
+    },
+    {
+      "code": "OPEN_BLOCKER",
+      "count": 1
+    },
+    {
+      "code": "FAILED_SCENARIOS",
+      "matrix": "finance",
+      "count": 1,
+      "ids": [
+        "finance-cash-expense"
+      ]
+    }
+  ]
+}
