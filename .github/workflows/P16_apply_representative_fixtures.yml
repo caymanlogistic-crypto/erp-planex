@@ -5,7 +5,7 @@ on:
     branches: [chatgpt/production-stabilization-20260802]
     paths:
       - '.github/p16/P16_apply_representative_fixtures.php'
-      - '.github/p16/P16_apply_representative_fixtures_v2.php'
+      - '.github/p16/P16_decode_fixture_v3.py'
       - '.github/workflows/P16_apply_representative_fixtures.yml'
   workflow_dispatch:
 
@@ -20,27 +20,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
-      - name: Decode and verify corrected fixture source
+      - name: Decode and verify schema-aware fixture source
         run: |
           set -euo pipefail
           php -l .github/p16/P16_apply_representative_fixtures.php >/dev/null
-          python - <<'PY'
-          import base64,gzip,hashlib,re
-          from pathlib import Path
-          wrapper=Path('.github/p16/P16_apply_representative_fixtures.php').read_text('utf-8')
-          match=re.search(r"\$payload = '([^']+)'",wrapper)
-          assert match, 'payload missing'
-          source=gzip.decompress(base64.b64decode(match.group(1))).decode('utf-8')
-          assert hashlib.sha256(source.encode()).hexdigest()=='08031fe8097e9bde64f005418b2a47e64900f88eb4552f1ab35b00f6c09b1f72'
-          before="""    $ownerStmt = $central->prepare(\"SELECT id FROM company_users WHERE company_id = ? AND role_code = 'company_owner' AND status = 'active' ORDER BY id LIMIT 1\");
-              $ownerStmt->execute([TEST_TENANT_ID]);"""
-          after="""    $ownerStmt = $central->prepare(\"SELECT id FROM company_users WHERE company_id = ? AND login = ? AND status = 'active' ORDER BY id LIMIT 1\");
-              $ownerStmt->execute([TEST_TENANT_ID, 'p14_owner_260804221827']);"""
-          assert source.count(before)==1
-          source=source.replace(before,after)
-          assert hashlib.sha256(source.encode()).hexdigest()=='d45f56a3328e3e5ecc8381b156d7fe729c6259e9128dba464b2f57e1cf4c5e1c'
-          Path('/tmp/P16_apply_representative_fixtures.php').write_text(source,'utf-8')
-          PY
+          python .github/p16/P16_decode_fixture_v3.py
           php -l /tmp/P16_apply_representative_fixtures.php >/dev/null
       - name: Configure SSH
         env:
@@ -85,9 +69,9 @@ jobs:
           b=json.loads(Path('P16_fixture_output/P16_02_TEST_DATA_CREATED_SECOND.json').read_text('utf-8'))
           assert b['status']=='PASS'
           assert a['assertions']==b['assertions']
-          created=sum(int(x.get('created',0)) for x in b.get('stats',{}).values())
+          created=sum(int(x.get('created',0)) for x in b.get('stats',{}).values() if isinstance(x,dict) and 'created' in x)
           assert created==0, f'idempotency created {created} rows on second run'
-          Path('P16_fixture_output/P16_IDEMPOTENCY_SUMMARY.json').write_text(json.dumps({'status':'PASS','second_run_created':created,'assertions':b['assertions']},ensure_ascii=False,indent=2),'utf-8')
+          Path('P16_fixture_output/P16_IDEMPOTENCY_SUMMARY.json').write_text(json.dumps({'status':'PASS','second_run_created':created,'assertions':b['assertions'],'omitted_columns':b.get('stats',{}).get('_omitted_columns',{})},ensure_ascii=False,indent=2),'utf-8')
           print('P16_FIXTURE_IDEMPOTENCY=PASS')
           PY
           after_old="$("${ssh_base[@]}" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
