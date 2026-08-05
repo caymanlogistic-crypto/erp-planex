@@ -1,0 +1,4 @@
+P17R_V8_TRIGGER=2026-08-05T23:10:00+03:00
+PURPOSE=deploy complete linear route restore correction and run fresh factual acceptance
+IMPLEMENTATION_BRANCH=chatgpt/p15-p17-erp-fullhd-completion-20260805
+EXPECTED_IMPLEMENTATION_HEAD=355b16b7e6132006ba0440be2643cab18cf32128
