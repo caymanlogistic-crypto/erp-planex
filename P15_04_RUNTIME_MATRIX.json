@@ -1,0 +1,83 @@
+{
+  "prompt": "P15",
+  "runtime_url": "https://plan-ex.ru/erpv2/",
+  "viewport": "1920x1080",
+  "device_scale_factor": 1,
+  "locale": "ru-RU",
+  "timezone": "Europe/Moscow",
+  "deployed_sha": "8c7571c01bcd87f42c4f2e9300fc52a2499935fe",
+  "scenarios": [
+    {
+      "id": "P15-R01",
+      "scenario": "SUPERADMIN UI login and protected navigation",
+      "run": 30958430841,
+      "job": 92290426489,
+      "artifact": 8928352634,
+      "status": "PASS"
+    },
+    {
+      "id": "P15-R02",
+      "scenario": "Create linear trip after payment mapping fix",
+      "run": 31004709154,
+      "artifact": 8929805480,
+      "entity_id": 3,
+      "status": "PASS",
+      "sql_leak": false
+    },
+    {
+      "id": "P15-R03",
+      "scenario": "Reopen and edit trip with actual dates and financial terms",
+      "run": 31005836928,
+      "job": 92305372614,
+      "artifact": 8930280906,
+      "status": "PASS"
+    },
+    {
+      "id": "P15-R04",
+      "scenario": "Upload customer/carrier PDF, view, download and replace",
+      "run": 31005836928,
+      "artifact": 8930280906,
+      "status": "PASS",
+      "http_statuses": [200]
+    },
+    {
+      "id": "P15-R05",
+      "scenario": "Role visibility",
+      "run": 31005836928,
+      "artifact": 8930280906,
+      "status": "PASS",
+      "results": {
+        "COMPANY_OWNER": "visible",
+        "SENIOR_LOGIST": "visible",
+        "LOGIST_1": "foreign trip hidden",
+        "LOGIST_2": "foreign trip hidden",
+        "finance_menu_for_logistics_roles": "hidden"
+      }
+    },
+    {
+      "id": "P15-R06",
+      "scenario": "Soft-delete temporary route and expose SUPERADMIN deleted-data restore",
+      "run": 31006209536,
+      "artifact": 8930438028,
+      "entity_id": 4,
+      "status": "PASS_WITH_CORRECTION_LOOP",
+      "deleted_data_visible": true,
+      "restore_supported": true
+    },
+    {
+      "id": "P15-R07",
+      "scenario": "Archive empty duplicate tenant 26 through SUPERADMIN UI",
+      "run": 31006209536,
+      "artifact": 8930438028,
+      "status": "PASS",
+      "working_tenant_27_active": true
+    }
+  ],
+  "diagnostics": {
+    "console_errors": 0,
+    "page_errors": 0,
+    "request_failures": 0,
+    "unexpected_http_500": 0,
+    "raw_sql_exception_visible": false
+  }
+}
