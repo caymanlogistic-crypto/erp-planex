@@ -1,6 +1,16 @@
 'use strict';
 
 (() => {
+    const basePath = (document.querySelector('meta[name="erp-base-path"]')?.content || '').replace(/\/$/, '');
+    const correctionHref = `${basePath}/assets/css/p17-corrections.css?v=20260805-1`;
+    if (![...document.styleSheets].some((sheet) => String(sheet.href || '').includes('/p17-corrections.css'))) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = correctionHref;
+        link.dataset.p17Corrections = '1';
+        document.head.appendChild(link);
+    }
+
     const submitting = new WeakSet();
 
     document.addEventListener('submit', (event) => {
