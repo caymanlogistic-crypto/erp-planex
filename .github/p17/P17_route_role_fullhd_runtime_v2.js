@@ -9,6 +9,10 @@ const expectedAnchor = "  const expectedHttpFailures = local.httpFailures.filter
 const expectedReplacement = `${expectedAnchor}\n  const expectedConsoleErrors = local.consoleErrors.filter((message) => target.expected === 'DENY' && /403/.test(String(message)));\n  const unexpectedConsoleErrors = local.consoleErrors.filter((message) => !expectedConsoleErrors.includes(message));`;
 if (source.split(expectedAnchor).length !== 2) throw new Error('P17 expected-403 anchor mismatch.');
 source = source.replace(expectedAnchor, expectedReplacement);
+const modalAnchor = "[...document.querySelectorAll('.modal-foot,.modal-footer')]";
+const modalReplacement = "[...document.querySelectorAll('.modal-overlay.is-open .modal-foot,.modal-overlay.is-open .modal-footer,.modal.is-open .modal-foot,.modal.is-open .modal-footer')]";
+if (source.split(modalAnchor).length !== 2) throw new Error('P17 open-modal footer anchor mismatch.');
+source = source.replace(modalAnchor, modalReplacement);
 source = source.replace("    && local.consoleErrors.length === 0", "    && unexpectedConsoleErrors.length === 0");
 source = source.replace("    consoleErrors: local.consoleErrors,", "    consoleErrors: unexpectedConsoleErrors,\n    expectedConsoleErrors,");
 source = source.replace("  result.consoleErrors.push(...local.consoleErrors.map((message) => ({ role, route: target.path, message })));", "  result.consoleErrors.push(...unexpectedConsoleErrors.map((message) => ({ role, route: target.path, message }))); ");
