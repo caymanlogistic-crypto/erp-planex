@@ -94,6 +94,7 @@ if (empty($topbarCrumbs)) {
     <link rel="preload" href="<?= app_url('/assets/fonts/IBMPlexSans-Bold.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= app_url('/assets/css/app.css') ?>?v=<?= filemtime(base_path('public/assets/css/app.css')) ?>">
     <link rel="stylesheet" href="<?= app_url('/assets/css/erp-ui.css') ?>?v=<?= filemtime(base_path('public/assets/css/erp-ui.css')) ?>">
+    <link rel="stylesheet" href="<?= app_url('/assets/css/p16-fullhd.css') ?>?v=<?= filemtime(base_path('public/assets/css/p16-fullhd.css')) ?>">
 </head>
 <body>
     <div class="app">
@@ -418,5 +419,6 @@ if (empty($topbarCrumbs)) {
     <script src="<?= app_url('/assets/js/legal-entity-inn.js') ?>?v=<?= filemtime(base_path('public/assets/js/legal-entity-inn.js')) ?>"></script>
     <script src="<?= app_url('/assets/js/legal-entity-modal.js') ?>?v=<?= filemtime(base_path('public/assets/js/legal-entity-modal.js')) ?>"></script>
     <script src="<?= app_url('/assets/js/app.js') ?>?v=<?= filemtime(base_path('public/assets/js/app.js')) ?>"></script>
+    <script src="<?= app_url('/assets/js/p16-ui.js') ?>?v=<?= filemtime(base_path('public/assets/js/p16-ui.js')) ?>"></script>
 </body>
 </html>
