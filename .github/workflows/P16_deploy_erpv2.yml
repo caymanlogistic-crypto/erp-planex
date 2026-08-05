@@ -1,10 +1,6 @@
 name: P16 Deploy isolated ERPV2
 
 on:
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
-    paths:
-      - '.github/workflows/P16_deploy_erpv2.yml'
   workflow_dispatch:
 
 permissions:
