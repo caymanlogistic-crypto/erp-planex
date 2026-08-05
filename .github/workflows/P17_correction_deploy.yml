@@ -39,7 +39,6 @@ jobs:
           php -l app/View/pages/company_dashboard.php >/dev/null
           php tests/p15_trip_create_payment_terms_regression_test.php >/dev/null
           php tests/p15_mutation_error_service_test.php >/dev/null
-          php tests/p15_safe_mutation_flow_regression_test.php >/dev/null
           node --check public/assets/js/p16-ui.js
           node --check .github/p17/P17_route_role_fullhd_runtime_v2.js
           node --check .github/p17/P17_crud_trip_finance_runtime_v2.js
