@@ -1,5 +1,6 @@
 name: P15 Trip Create Runtime
 
+# Verifies the original P14 blocker against the deployed implementation SHA.
 on:
   pull_request:
     branches: [chatgpt/production-stabilization-20260802]
@@ -7,18 +8,15 @@ on:
       - '.github/p15/P15_trip_create_runtime.js'
       - '.github/workflows/P15_trip_create_runtime.yml'
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   trip-create-runtime:
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+        with: { ref: chatgpt/p15-p17-erp-fullhd-completion-20260805 }
       - name: Load encrypted credentials helper
         run: |
           set -euo pipefail
@@ -27,8 +25,7 @@ jobs:
           git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > /tmp/P15_credentials/decrypt.py
           git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > /tmp/P15_credentials/credentials.enc.json
       - name: Resolve credentials in memory
-        env:
-          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        env: { PRIVATE_KEY: '${{ secrets.ERPV2_SSH_PRIVATE_KEY }}' }
         run: |
           set -euo pipefail
           python -m pip install --quiet 'cryptography==46.0.3' >/dev/null
@@ -47,11 +44,9 @@ jobs:
           npm install --no-save playwright@1.54.2 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null 2>&1
       - name: Execute deployed trip create runtime
-        env:
-          P15_OUT: P15_trip_runtime_output
+        env: { P15_OUT: P15_trip_runtime_output }
         run: node .github/p15/P15_trip_create_runtime.js
-      - name: Clear credentials
-        if: always()
+      - if: always()
         run: printf 'P15_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
       - if: always()
         uses: actions/upload-artifact@v4
