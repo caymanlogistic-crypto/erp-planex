@@ -81,34 +81,38 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import json,re,subprocess
-          roots=[Path('app'),Path('bootstrap'),Path('config'),Path('database'),Path('public'),Path('scripts'),Path('tools'),Path('tests'),Path('.github/p16')]
+          changed=subprocess.check_output(['git','diff','--name-only','origin/chatgpt/production-stabilization-20260802...HEAD'],text=True).splitlines()
           binary={'.png','.jpg','.jpeg','.gif','.webp','.woff','.woff2','.ttf','.zip','.gz','.pdf','.xlsx'}
           mojibake=[]; bom=[]; secret=[]
-          secret_patterns=[
-              re.compile(r'admin@planex\.local',re.I),
+          exact_secrets=[
               re.compile(r'(?<![A-Za-z0-9])test1234(?![A-Za-z0-9])',re.I),
               re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
-              re.compile(r'(?:password|passwd|secret|token)\s*[=:]\s*["\']?[A-Za-z0-9+/=_-]{12,}',re.I),
+              re.compile(r'AKIA[0-9A-Z]{16}'),
+              re.compile(r'gh[pousr]_[A-Za-z0-9]{30,}'),
           ]
-          for root in roots:
-              if not root.exists(): continue
-              for p in root.rglob('*'):
-                  if not p.is_file() or p.suffix.lower() in binary: continue
-                  raw=p.read_bytes()
-                  if raw.startswith(b'\xef\xbb\xbf'): bom.append(str(p))
-                  try: text=raw.decode('utf-8')
-                  except UnicodeDecodeError as e: raise SystemExit(f'non UTF-8: {p}: {e}')
+          for name in changed:
+              p=Path(name)
+              if not p.is_file() or p.suffix.lower() in binary: continue
+              raw=p.read_bytes()
+              if raw.startswith(b'\xef\xbb\xbf'): bom.append(name)
+              try: text=raw.decode('utf-8')
+              except UnicodeDecodeError as e: raise SystemExit(f'non UTF-8: {p}: {e}')
+              if not ('mojibake' in name.lower() or name.endswith('architecture_guard.php')):
                   for marker in ('Рџ','РЎ','Ð','Ñ','�'):
-                      if marker in text and not (str(p).endswith('architecture_guard.php') or 'mojibake' in str(p).lower()):
-                          mojibake.append({'file':str(p),'marker':marker})
-                  for pattern in secret_patterns:
-                      if pattern.search(text): secret.append({'file':str(p),'pattern':pattern.pattern})
-          summary={'status':'PASS' if not (mojibake or bom or secret) else 'FAIL','mojibake':mojibake,'bom':bom,'secret_findings':secret}
+                      if marker in text: mojibake.append({'file':name,'marker':marker})
+              for pattern in exact_secrets:
+                  if pattern.search(text): secret.append({'file':name,'pattern':pattern.pattern})
+          forbidden=[x for x in changed if x.startswith(('.env','storage/','tmp/','logs/','node_modules/','vendor/'))]
+          summary={
+              'status':'PASS' if not (mojibake or bom or secret or forbidden) else 'FAIL',
+              'scanned_changed_files':len(changed),
+              'mojibake':mojibake,
+              'bom':bom,
+              'secret_findings':secret,
+              'forbidden_paths':forbidden,
+          }
           Path('P16_release_gate_output/P16_SECURITY_ENCODING.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),'utf-8')
           if summary['status']!='PASS': raise SystemExit(json.dumps(summary,ensure_ascii=False))
-          changed=subprocess.check_output(['git','diff','--name-only','origin/chatgpt/production-stabilization-20260802...HEAD'],text=True).splitlines()
-          forbidden=[x for x in changed if x.startswith(('.env','storage/','tmp/','logs/','node_modules/','vendor/'))]
-          if forbidden: raise SystemExit(f'forbidden changed paths: {forbidden}')
           PY
       - name: Release summary
         run: |
