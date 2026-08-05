@@ -7,6 +7,7 @@ on:
       - '.github/p15/P15_trip_create_runtime.js'
       - '.github/p15/P15_trip_create_runtime_v2.js'
       - '.github/p15/P15_trip_edit_discovery.js'
+      - '.github/p15/P15_trip_view_discovery.js'
       - '.github/workflows/P15_trip_create_runtime.yml'
   workflow_dispatch:
 permissions:
@@ -14,7 +15,7 @@ permissions:
 jobs:
   trip-runtime:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
         with: { ref: chatgpt/p15-p17-erp-fullhd-completion-20260805 }
@@ -47,7 +48,10 @@ jobs:
       - name: Verify trip creation idempotently
         env: { P15_OUT: P15_trip_runtime_output }
         run: node .github/p15/P15_trip_create_runtime_v2.js
-      - name: Discover exact edit lifecycle controls
+      - name: Discover trip view lifecycle controls
+        env: { P15_OUT: P15_trip_runtime_output }
+        run: node .github/p15/P15_trip_view_discovery.js
+      - name: Discover exact edit contract
         env: { P15_OUT: P15_trip_runtime_output }
         run: node .github/p15/P15_trip_edit_discovery.js
       - if: always()
