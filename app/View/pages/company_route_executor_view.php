@@ -80,7 +80,7 @@
         <p class="text-muted">Компания: <?= e($company['name']) ?></p>
     </div>
     <div class="page-head-actions">
-        <a href="/company/route-executors/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
+        <a href="<?= app_url('/company/route-executors/' . (int) $crew['id'] . '/edit') ?>" class="btn btn-primary">Редактировать</a>
         <a href="<?= app_url('/company/route-executors') ?>" class="btn btn-ghost">← К списку</a>
     </div>
 </div>
@@ -97,7 +97,7 @@
                         <span class="re-label">Название</span>
                         <span class="re-value">
                             <?php if (!empty($crew['contractor_id'])): ?>
-                                <a href="/company/contractors/<?= $crew['contractor_id'] ?>"><?= e($crew['contractor_name'] ?? '') ?: '—' ?></a>
+                                <a href="<?= app_url('/company/contractors/' . (int) $crew['contractor_id']) ?>"><?= e($crew['contractor_name'] ?? '') ?: '—' ?></a>
                             <?php else: ?>
                                 —
                             <?php endif; ?>
@@ -117,7 +117,7 @@
                         <span class="re-label">ФИО</span>
                         <span class="re-value">
                             <?php if (!empty($crew['driver_id'])): ?>
-                                <a href="/company/drivers/<?= $crew['driver_id'] ?>"><?= e($crew['driver_name'] ?? '') ?: '—' ?></a>
+                                <a href="<?= app_url('/company/drivers/' . (int) $crew['driver_id']) ?>"><?= e($crew['driver_name'] ?? '') ?: '—' ?></a>
                             <?php else: ?>
                                 —
                             <?php endif; ?>
@@ -141,7 +141,7 @@
                         <span class="re-label">Госномер</span>
                         <span class="re-value">
                             <?php if (!empty($crew['vehicle_set_id'])): ?>
-                                <a href="/company/vehicle-sets/<?= $crew['vehicle_set_id'] ?>">
+                                <a href="<?= app_url('/company/vehicle-sets/' . (int) $crew['vehicle_set_id']) ?>">
                                     <code><?= e($crew['primary_plate'] ?? '—') ?></code>
                                     <?php if (!empty($crew['secondary_plate'])): ?>
                                         + <code><?= e($crew['secondary_plate']) ?></code>
@@ -200,9 +200,9 @@
             <div class="re-section" data-re-section-actions>
                 <h3 class="re-section-title">Действия</h3>
                 <div class="form-actions">
-                    <a href="/company/route-executors/<?= $crew['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
+                    <a href="<?= app_url('/company/route-executors/' . (int) $crew['id'] . '/edit') ?>" class="btn btn-primary">Редактировать</a>
                     <?php if (($crew['status'] ?? '') !== 'archived'): ?>
-                    <form method="post" action="/company/route-executors/<?= $crew['id'] ?>/archive" class="inline-form">
+                    <form method="post" action="<?= app_url('/company/route-executors/' . (int) $crew['id'] . '/archive') ?>" class="inline-form">
                         <button type="button" class="btn btn-danger" onclick="window.confirmDeleteForm(this)">Удалить</button>
                     </form>
                     <?php else: ?>

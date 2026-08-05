@@ -6,7 +6,7 @@
     $companyId = (int)(getSessionCompanyId() ?? 0);
 
     if ($companyId <= 0) {
-        header('Location: /company/route-executors');
+        header('Location: ' . app_url('/company/route-executors'));
         exit;
     }
 
@@ -17,7 +17,7 @@
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$company || $company['status'] !== 'active') {
-            header('Location: /company/route-executors');
+            header('Location: ' . app_url('/company/route-executors'));
             exit;
         }
 
@@ -42,7 +42,7 @@
         $crew = $crewStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$crew) {
-            header('Location: /company/route-executors');
+            header('Location: ' . app_url('/company/route-executors'));
             exit;
         }
 
@@ -81,9 +81,9 @@
             error_log('Audit record failed for crew ' . $crewId . ': ' . $auditEx->getMessage());
         }
 
-        header('Location: /company/route-executors');
+        header('Location: ' . app_url('/company/route-executors'));
         exit;
     } catch (\Exception $e) {
-        header('Location: /company/route-executors');
+        header('Location: ' . app_url('/company/route-executors'));
         exit;
     }
