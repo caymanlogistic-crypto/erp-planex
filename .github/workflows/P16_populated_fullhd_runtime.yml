@@ -11,10 +11,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: erpv2-runtime-credentials
+  cancel-in-progress: false
+
 jobs:
   fullhd-runtime:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +40,23 @@ jobs:
           echo "P16_CREDENTIALS_B64=$payload" >> "$GITHUB_ENV"
           rm -rf /tmp/P16_credentials "${HOME}/.ssh/P16_runtime_key"
           unset payload PRIVATE_KEY
+      - name: Verify deployed SHA before browser runtime
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 17c0e01c89e9a43cd20a48631064698a3e21d223
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P16_marker_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P16_marker_key" "${HOME}/.ssh/known_hosts"
+          actual="$(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P16_marker_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$actual" = "$EXPECTED_SHA"
+          echo "P16_EXPECTED_SHA=$EXPECTED_SHA" >> "$GITHUB_ENV"
+          rm -f "${HOME}/.ssh/P16_marker_key"
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - name: JavaScript syntax
@@ -47,10 +68,11 @@ jobs:
       - name: Execute populated role and viewport runtime
         env:
           P16_OUT: P16_populated_runtime_output
-          P16_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node .github/p16/P16_populated_fullhd_runtime.js
       - if: always()
-        run: printf 'P16_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+        run: |
+          printf 'P16_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "${HOME}/.ssh/P16_marker_key" 2>/dev/null || true
       - if: always()
         uses: actions/upload-artifact@v4
         with:
