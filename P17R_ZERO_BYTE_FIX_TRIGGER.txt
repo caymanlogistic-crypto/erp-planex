@@ -1,0 +1,3 @@
+P17R_ZERO_BYTE_FIX_TRIGGER=2026-08-05T22:15:00+03:00
+PURPOSE=reject empty legal entity documents before persistence
+DEPLOYED_SHA_BEFORE=8e1b9659638d5aa86f156b7ece201da591753c82
