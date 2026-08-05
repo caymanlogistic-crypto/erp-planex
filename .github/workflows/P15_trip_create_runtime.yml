@@ -7,6 +7,7 @@ on:
       - '.github/p15/P15_trip_create_runtime.js'
       - '.github/p15/P15_trip_create_runtime_v2.js'
       - '.github/p15/P15_trip_lifecycle_runtime.js'
+      - '.github/p15/P15_cleanup_runtime.js'
       - '.github/workflows/P15_trip_create_runtime.yml'
   workflow_dispatch:
 permissions:
@@ -14,7 +15,7 @@ permissions:
 jobs:
   trip-runtime:
     runs-on: ubuntu-24.04
-    timeout-minutes: 28
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with: { ref: chatgpt/p15-p17-erp-fullhd-completion-20260805 }
@@ -50,12 +51,15 @@ jobs:
       - name: Execute full trip lifecycle
         env: { P15_OUT: P15_trip_runtime_output }
         run: node .github/p15/P15_trip_lifecycle_runtime.js
+      - name: Execute safe cleanup scenarios
+        env: { P15_OUT: P15_trip_runtime_output }
+        run: node .github/p15/P15_cleanup_runtime.js
       - if: always()
         run: printf 'P15_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: P15_trip_lifecycle_${{ github.sha }}
+          name: P15_trip_lifecycle_cleanup_${{ github.sha }}
           path: P15_trip_runtime_output/
           if-no-files-found: error
           retention-days: 30
