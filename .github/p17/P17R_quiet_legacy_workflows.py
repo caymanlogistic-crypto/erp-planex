@@ -31,6 +31,8 @@ TARGETS = [
     '.github/workflows/P17R_v4_complete_factual_acceptance.yml',
     '.github/workflows/P17R_v5_complete_acceptance.yml',
     '.github/workflows/P17R_source_contract_inventory.yml',
+    '.github/workflows/P17R_apply_zero_byte_document_fix.yml',
+    '.github/workflows/P17R_quiet_legacy_workflows.yml',
 ]
 
 
