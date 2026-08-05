@@ -1,0 +1,47 @@
+name: P15 Cleanup Restore
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/p15/P15_cleanup_restore_runtime.js'
+      - '.github/workflows/P15_cleanup_restore.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: chatgpt/p15-p17-erp-fullhd-completion-20260805 }
+      - name: Resolve encrypted credentials
+        env: { PRIVATE_KEY: '${{ secrets.ERPV2_SSH_PRIVATE_KEY }}' }
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2 >/dev/null 2>&1
+          mkdir -p /tmp/P15_credentials "${HOME}/.ssh"
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > /tmp/P15_credentials/decrypt.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > /tmp/P15_credentials/credentials.enc.json
+          python -m pip install --quiet 'cryptography==46.0.3' >/dev/null
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P15_runtime_key" && chmod 600 "${HOME}/.ssh/P15_runtime_key"
+          payload="$(python /tmp/P15_credentials/decrypt.py --key "${HOME}/.ssh/P15_runtime_key" --input /tmp/P15_credentials/credentials.enc.json)"
+          echo "::add-mask::$payload"; echo "P15_CREDENTIALS_B64=$payload" >> "$GITHUB_ENV"
+          rm -rf /tmp/P15_credentials "${HOME}/.ssh/P15_runtime_key"; unset payload PRIVATE_KEY
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install Chromium
+        run: npm install --no-save playwright@1.54.2 >/dev/null 2>&1 && npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Execute restore verification
+        env: { P15_OUT: P15_cleanup_restore_output }
+        run: node .github/p15/P15_cleanup_restore_runtime.js
+      - if: always()
+        run: printf 'P15_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P15_cleanup_restore_${{ github.sha }}
+          path: P15_cleanup_restore_output/
+          if-no-files-found: error
+          retention-days: 30
