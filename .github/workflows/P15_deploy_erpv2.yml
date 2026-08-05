@@ -1,9 +1,6 @@
 name: P15 Deploy isolated ERPV2
 
 on:
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
-    paths: ['.github/workflows/P15_deploy_erpv2.yml']
   workflow_dispatch:
 
 permissions:
@@ -36,8 +33,7 @@ jobs:
           php tests/p15_mutation_error_service_test.php >/dev/null
       - name: Build code artifact
         id: artifact
-        env:
-          DEPLOY_SHA: ${{ steps.meta.outputs.sha }}
+        env: { DEPLOY_SHA: '${{ steps.meta.outputs.sha }}' }
         run: |
           set -euo pipefail
           artifact="P15_erpv2_${DEPLOY_SHA}.tar.gz"
