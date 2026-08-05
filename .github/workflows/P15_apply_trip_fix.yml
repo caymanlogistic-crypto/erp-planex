@@ -1,0 +1,89 @@
+name: P15 Apply Trip Fix
+
+on:
+  push:
+    branches:
+      - chatgpt/p15-p17-erp-fullhd-completion-20260805
+    paths:
+      - '.github/p15/P15_apply_trip_fix.py'
+      - '.github/workflows/P15_apply_trip_fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: p15-apply-trip-fix
+  cancel-in-progress: false
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout implementation branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+
+      - name: Apply deterministic P15 patch
+        run: python .github/p15/P15_apply_trip_fix.py
+
+      - name: Verify PHP 8.3-compatible syntax and regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            app/Service/MutationErrorService.php
+            app/Service/LinearRouteService.php
+            app/Service/LinearTripEditSaveService.php
+            app/Http/Controllers/Company/LinearTripActions/create_submit.php
+            app/Http/Controllers/Company/LinearTripActions/modal_edit_submit_p13.php
+            app/Support/entrypoint_dependencies.php
+            tests/p15_trip_create_payment_terms_regression_test.php
+            tests/p15_mutation_error_service_test.php
+          )
+          for file in "${files[@]}"; do php -l "$file" >/dev/null; done
+          php tests/p15_trip_create_payment_terms_regression_test.php
+          php tests/p15_mutation_error_service_test.php
+          php tests/p15_linear_trip_executor_carrier_save_test.php
+          node --check public/assets/js/linear-trip-executor-carrier.js
+          if grep -RIn --exclude-dir=.git -E 'Рџ|РЎ|Ð|Ñ|�' app public tests; then
+            echo 'Mojibake detected' >&2
+            exit 1
+          fi
+
+      - name: Review allowed production diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git diff --name-only | sort)"
+          printf '%s\n' "$changed"
+          allowed='^(app/Http/Controllers/Company/LinearTripActions/create_submit.php|app/Http/Controllers/Company/LinearTripActions/modal_edit_submit_p13.php|app/Service/LinearRouteService.php|app/Service/LinearTripEditSaveService.php|app/Support/entrypoint_dependencies.php|tests/p15_trip_create_payment_terms_regression_test.php|tests/p15_mutation_error_service_test.php)$'
+          while IFS= read -r file; do
+            test -z "$file" && continue
+            echo "$file" | grep -Eq "$allowed" || { echo "Unexpected changed file: $file" >&2; exit 1; }
+          done <<< "$changed"
+
+      - name: Commit P15 production fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'P15 production patch already applied'
+            exit 0
+          fi
+          git config user.name 'erp-planex-p15-bot'
+          git config user.email 'erp-planex-p15-bot@users.noreply.github.com'
+          git add \
+            app/Http/Controllers/Company/LinearTripActions/create_submit.php \
+            app/Http/Controllers/Company/LinearTripActions/modal_edit_submit_p13.php \
+            app/Service/LinearRouteService.php \
+            app/Service/LinearTripEditSaveService.php \
+            app/Support/entrypoint_dependencies.php \
+            tests/p15_trip_create_payment_terms_regression_test.php \
+            tests/p15_mutation_error_service_test.php
+          git commit -m 'P15: fix trip creation, payment terms and safe error handling'
+          git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
