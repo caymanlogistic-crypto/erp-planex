@@ -1,0 +1,76 @@
+name: P17R Apply Route Executor Base-path Fix
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - 'P17R_EXECUTOR_BASEPATH_FIX_TRIGGER.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: erpv2-p17r-executor-basepath-fix
+  cancel-in-progress: false
+
+jobs:
+  apply-test-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+
+      - name: Apply guarded patch
+        run: |
+          set -euo pipefail
+          python .github/p17/P17R_apply_route_executor_basepath_fix.py
+
+      - name: Syntax and regression tests
+        run: |
+          set -euo pipefail
+          php -l app/View/pages/company_route_executor_view.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/archive.php
+          php -l tests/p17_route_executor_basepath_test.php
+          php tests/p17_route_executor_basepath_test.php
+          php tests/p15_trip_create_payment_terms_regression_test.php
+          php tests/p15_mutation_error_service_test.php
+          git diff --check
+          python - <<'PY'
+          from pathlib import Path
+          for name in [
+            'app/View/pages/company_route_executor_view.php',
+            'app/Http/Controllers/Company/RouteExecutorActions/archive.php',
+            'tests/p17_route_executor_basepath_test.php',
+          ]:
+            raw=Path(name).read_bytes()
+            assert not raw.startswith(b'\xef\xbb\xbf'), name
+            text=raw.decode('utf-8')
+            assert not any(marker in text for marker in ('Рџ','РЎ','Ð','Ñ','�')), name
+          PY
+
+      - name: Review and commit
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git diff --name-only | sort)
+          expected=(
+            app/Http/Controllers/Company/RouteExecutorActions/archive.php
+            app/View/pages/company_route_executor_view.php
+            tests/p17_route_executor_basepath_test.php
+          )
+          printf '%s\n' "${expected[@]}" | sort > /tmp/expected
+          printf '%s\n' "${files[@]}" | sort > /tmp/actual
+          diff -u /tmp/expected /tmp/actual
+          git config user.name 'erp-planex-p17r-bot'
+          git config user.email 'erp-planex-p17r-bot@users.noreply.github.com'
+          git add "${expected[@]}"
+          git commit -m 'P17: preserve ERP base path in route executor actions'
+          git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
