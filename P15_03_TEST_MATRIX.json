@@ -1,0 +1,60 @@
+{
+  "prompt": "P15",
+  "status": "PASS",
+  "php_version": "8.3",
+  "release_gate": {
+    "run": 31004020783,
+    "job": 92299441250,
+    "result": "PASS",
+    "checks": [
+      "PHP syntax across application/test files",
+      "P15 trip creation payment mapping regression",
+      "Mutation error sanitization regression",
+      "Executor/carrier save regression",
+      "JavaScript syntax",
+      "Secret scan",
+      "UTF-8 and mojibake scan",
+      "BOM scan",
+      "git diff --check",
+      "forbidden path review"
+    ]
+  },
+  "complete_suite": {
+    "run": 31006209539,
+    "job": 92306607175,
+    "artifact": 8930397682,
+    "tests_total": 3,
+    "tests_pass": 3,
+    "tests_fail": 0,
+    "tests": [
+      {
+        "file": "tests/p15_linear_trip_executor_carrier_save_test.php",
+        "exit_code": 0
+      },
+      {
+        "file": "tests/p15_mutation_error_service_test.php",
+        "exit_code": 0
+      },
+      {
+        "file": "tests/p15_trip_create_payment_terms_regression_test.php",
+        "exit_code": 0
+      }
+    ]
+  },
+  "runtime_covered": [
+    "UI create",
+    "reopen",
+    "edit",
+    "modern and legacy payment fields",
+    "actual dates",
+    "document upload/view/download/replace",
+    "role visibility",
+    "soft-delete",
+    "SUPERADMIN deleted-data",
+    "duplicate tenant isolation and archive"
+  ],
+  "known_test_limitations": [
+    "The repository contained three standalone p15*.php test files at the time of the complete suite run.",
+    "Runtime scenarios provide the integration/role/document coverage that is not represented by standalone unit files."
+  ]
+}
