@@ -5,6 +5,7 @@ on:
     branches: [chatgpt/production-stabilization-20260802]
     paths:
       - '.github/p16/P16_apply_representative_fixtures.php'
+      - '.github/p16/P16_apply_representative_fixtures_v2.php'
       - '.github/workflows/P16_apply_representative_fixtures.yml'
   workflow_dispatch:
 
@@ -23,7 +24,8 @@ jobs:
         run: |
           set -euo pipefail
           php -l .github/p16/P16_apply_representative_fixtures.php >/dev/null
-          php -r '$s=file_get_contents(".github/p16/P16_apply_representative_fixtures.php"); if (!str_contains($s,"08031fe8097e9bde64f005418b2a47e64900f88eb4552f1ab35b00f6c09b1f72")) exit(1);'
+          php -l .github/p16/P16_apply_representative_fixtures_v2.php >/dev/null
+          php -r '$s=file_get_contents(".github/p16/P16_apply_representative_fixtures_v2.php"); if (!str_contains($s,"d45f56a3328e3e5ecc8381b156d7fe729c6259e9128dba464b2f57e1cf4c5e1c")) exit(1);'
       - name: Configure SSH
         env:
           PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
@@ -48,7 +50,7 @@ jobs:
           before_old="$("${ssh_base[@]}" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
           deployed_sha="$("${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
           printf '%s\n' "$deployed_sha" > P16_fixture_output/P16_DEPLOYED_SHA_BEFORE_FIXTURES.txt
-          "${ssh_base[@]}" "cd '$live' && '$remote_php' -d display_errors=0" < .github/p16/P16_apply_representative_fixtures.php > P16_fixture_output/P16_02_TEST_DATA_CREATED_FIRST.json
+          "${ssh_base[@]}" "cd '$live' && '$remote_php' -d display_errors=0" < .github/p16/P16_apply_representative_fixtures_v2.php > P16_fixture_output/P16_02_TEST_DATA_CREATED_FIRST.json
           python -m json.tool P16_fixture_output/P16_02_TEST_DATA_CREATED_FIRST.json >/dev/null
           python - <<'PY'
           import json
@@ -58,7 +60,7 @@ jobs:
           assert all(x['pass'] for x in d['assertions'].values())
           print('P16_FIXTURE_FIRST=PASS')
           PY
-          "${ssh_base[@]}" "cd '$live' && '$remote_php' -d display_errors=0" < .github/p16/P16_apply_representative_fixtures.php > P16_fixture_output/P16_02_TEST_DATA_CREATED_SECOND.json
+          "${ssh_base[@]}" "cd '$live' && '$remote_php' -d display_errors=0" < .github/p16/P16_apply_representative_fixtures_v2.php > P16_fixture_output/P16_02_TEST_DATA_CREATED_SECOND.json
           python -m json.tool P16_fixture_output/P16_02_TEST_DATA_CREATED_SECOND.json >/dev/null
           python - <<'PY'
           import json
