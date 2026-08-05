@@ -1,0 +1,57 @@
+name: P15 Remote Layout Discovery
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P15_remote_layout_discovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover-layout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P15_layout_key"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P15_layout_key" "${HOME}/.ssh/known_hosts"
+      - name: Collect sanitized layout metadata
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p P15_remote_layout_output
+          ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P15_layout_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" '
+            set -e
+            root=/home/s/spugovxsim/planexp
+            echo DEPLOYED_SHA=$(cat "$root/deploy/P07_erpv2_deployed_commit.txt")
+            echo PATHS
+            find "$root" -maxdepth 7 \( -name .env -o -path "*/bootstrap/app.php" -o -path "*/public/index.php" \) -print 2>/dev/null | sort
+            echo SYMLINKS
+            find "$root" -maxdepth 5 -type l -printf "%p -> %l\n" 2>/dev/null | sort
+            echo DEPLOY_SCRIPT_PATHS
+            grep -E "(release|current|public_html|erpv2|shared|\.env)" "$root/deploy/P07_deploy_erpv2.sh" 2>/dev/null | sed -E "s/(password|secret|token|key)=.*/\1=[REDACTED]/Ig" || true
+          ' | sed -E 's#^/home/s/[^/]+/#~/#g; s# /home/s/[^/]+/# ~/#g' > P15_remote_layout_output/P15_REMOTE_LAYOUT.txt
+      - if: always()
+        run: rm -f "${HOME}/.ssh/P15_layout_key" 2>/dev/null || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P15_remote_layout_${{ github.sha }}
+          path: P15_remote_layout_output/
+          if-no-files-found: error
+          retention-days: 30
