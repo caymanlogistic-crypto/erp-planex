@@ -1,10 +1,11 @@
-name: P16 Finance Discovery
+name: P16 Finance and Schema Discovery
 
 on:
   pull_request:
     branches: [chatgpt/production-stabilization-20260802]
     paths:
       - '.github/p16/P16_finance_form_discovery.js'
+      - '.github/p16/P16_tenant_schema_inventory.php'
       - '.github/workflows/P16_finance_discovery.yml'
   workflow_dispatch:
 permissions:
@@ -12,7 +13,7 @@ permissions:
 jobs:
   discover:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with: { ref: chatgpt/p15-p17-erp-fullhd-completion-20260805 }
@@ -33,15 +34,53 @@ jobs:
         with: { node-version: '22' }
       - name: Install Chromium
         run: npm install --no-save playwright@1.54.2 >/dev/null 2>&1 && npx playwright install --with-deps chromium >/dev/null 2>&1
-      - name: Inspect forms
+      - name: Inspect finance forms
         env: { P16_OUT: P16_finance_discovery_output }
         run: node .github/p16/P16_finance_form_discovery.js
+      - name: Configure SSH for read-only schema inventory
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P16_schema_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P16_schema_key" "${HOME}/.ssh/known_hosts"
+      - name: Inventory deployed SHA and tenant 27 schema
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p P16_finance_discovery_output
+          ssh_base=(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P16_schema_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST")
+          live=/home/s/spugovxsim/planexp/public_html/erpv2
+          "${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt' > P16_finance_discovery_output/P16_DEPLOYED_SHA.txt
+          remote_php="$("${ssh_base[@]}" 'for c in php83 php8.3 /usr/local/bin/php83 /opt/php83/bin/php /usr/bin/php8.3 php; do command -v "$c" >/dev/null 2>&1 || continue; v=$("$c" -r "echo PHP_VERSION_ID;" 2>/dev/null || true); if test -n "$v" && test "$v" -ge 80300; then command -v "$c"; exit 0; fi; done; exit 1')"
+          printf '%s\n' "$remote_php" > P16_finance_discovery_output/P16_REMOTE_PHP_PATH.txt
+          "${ssh_base[@]}" "cd '$live' && '$remote_php' -d display_errors=0" < .github/p16/P16_tenant_schema_inventory.php > P16_finance_discovery_output/P16_TENANT_SCHEMA.json
+          python -m json.tool P16_finance_discovery_output/P16_TENANT_SCHEMA.json >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('P16_finance_discovery_output/P16_TENANT_SCHEMA.json').read_text('utf-8'))
+          by={int(x['id']):x for x in d['companies']}
+          assert d['status']=='PASS' and by[27]['name']=='UIUX TEST EXPEDITOR' and by[27]['status']=='active'
+          assert by[26]['status'] in {'archived','inactive','blocked'}
+          assert len({by[25]['db_fingerprint'],by[26]['db_fingerprint'],by[27]['db_fingerprint']})==3
+          assert len({by[25]['storage_fingerprint'],by[26]['storage_fingerprint'],by[27]['storage_fingerprint']})==3
+          print('P16_RECOVERY_SCHEMA=PASS')
+          PY
       - if: always()
-        run: printf 'P16_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+        run: |
+          printf 'P16_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "${HOME}/.ssh/P16_schema_key" 2>/dev/null || true
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: P16_finance_discovery_${{ github.sha }}
+          name: P16_finance_schema_discovery_${{ github.sha }}
           path: P16_finance_discovery_output/
           if-no-files-found: error
           retention-days: 30
