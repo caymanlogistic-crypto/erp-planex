@@ -47,7 +47,7 @@ jobs:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          EXPECTED_SHA: 17c0e01c89e9a43cd20a48631064698a3e21d223
+          EXPECTED_SHA: 316645450e3cce40ab1dc2422368527877176eec
         run: |
           set -euo pipefail
           printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P16_marker_key"
