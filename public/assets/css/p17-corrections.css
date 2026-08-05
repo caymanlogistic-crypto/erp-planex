@@ -1,0 +1,58 @@
+/* P17 correction loop: compact desktop fixes confirmed by runtime screenshots. */
+.deleted-data-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+}
+
+.deleted-data-table {
+    width: 100%;
+    min-width: 980px;
+    table-layout: fixed;
+}
+
+.deleted-data-table th:nth-child(1) { width: 145px; }
+.deleted-data-table th:nth-child(2) { width: 150px; }
+.deleted-data-table th:nth-child(3) { width: 150px; }
+.deleted-data-table th:nth-child(4) { width: 120px; }
+.deleted-data-table th:nth-child(5) { width: 145px; }
+.deleted-data-table th:nth-child(7) { width: 140px; }
+.deleted-data-table th:nth-child(8) { width: 190px; }
+
+.deleted-data-table td:not(.table-actions) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.deleted-data-table td.table-actions {
+    display: table-cell;
+    white-space: nowrap;
+    text-align: right;
+    overflow: visible;
+}
+
+.deleted-data-table td.table-actions > a,
+.deleted-data-table td.table-actions > form {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.deleted-data-table td.table-actions > * + * {
+    margin-left: 6px;
+}
+
+@media (max-width: 1366px) {
+    .deleted-data-table {
+        min-width: 930px;
+    }
+    .deleted-data-table th:nth-child(1) { width: 135px; }
+    .deleted-data-table th:nth-child(2),
+    .deleted-data-table th:nth-child(3) { width: 135px; }
+    .deleted-data-table th:nth-child(4) { width: 105px; }
+    .deleted-data-table th:nth-child(5) { width: 125px; }
+    .deleted-data-table th:nth-child(7) { width: 125px; }
+    .deleted-data-table th:nth-child(8) { width: 180px; }
+}
