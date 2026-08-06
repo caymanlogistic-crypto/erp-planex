@@ -1,0 +1,53 @@
+{
+  "routes_reviewed": 67,
+  "routes_pass": 67,
+  "routes_fail": 0,
+  "crud_scenarios": 45,
+  "crud_pass": 45,
+  "crud_fail": 0,
+  "crud_not_supported": 8,
+  "trip_scenarios": 24,
+  "trip_pass": 24,
+  "trip_fail": 0,
+  "document_scenarios": 14,
+  "document_pass": 14,
+  "document_fail": 0,
+  "finance_scenarios": 27,
+  "finance_pass": 26,
+  "finance_fail": 1,
+  "fullhd_pages": 67,
+  "viewport_1536_pages": 13,
+  "viewport_1366_pages": 13,
+  "console_errors": 0,
+  "page_errors": 0,
+  "request_failures": 0,
+  "expected_403": 6,
+  "unexpected_http_errors": 0,
+  "defects_blocker": 0,
+  "defects_critical": 0,
+  "defects_high": 0,
+  "defects_medium": 0,
+  "defects_low": 0,
+  "status": "FAIL",
+  "deployed_sha": "6594597d80cd8f21866ac63d553b04d250070a1b",
+  "run_id": "31081773575",
+  "source_run_id": "31081266876",
+  "correction_step": "failure",
+  "assemble_step": "failure",
+  "summary_step": "failure",
+  "summary_consistency_check": "FAIL",
+  "missing_or_failed": [
+    {
+      "code": "RUNTIME_STATUS_NOT_PASS",
+      "status": "FAIL"
+    },
+    {
+      "code": "FAILED_SCENARIOS",
+      "matrix": "finance",
+      "count": 1,
+      "ids": [
+        "finance-cash-expense"
+      ]
+    }
+  ]
+}
