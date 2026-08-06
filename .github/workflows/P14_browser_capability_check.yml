@@ -1,0 +1,49 @@
+name: P14 Browser capability check
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/p14/P14_browser_capability_check.js'
+      - '.github/workflows/P14_browser_capability_check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  P14_browser_smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout P14 audit branch
+        uses: actions/checkout@v4
+
+      - name: Configure Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Run isolated login-page browser smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check .github/p14/P14_browser_capability_check.js
+          node .github/p14/P14_browser_capability_check.js
+
+      - name: Upload P14 browser capability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P14_browser_capability_output
+          path: P14_browser_capability_output/
+          if-no-files-found: error
+          retention-days: 30
