@@ -1,0 +1,233 @@
+name: P17R V15 Final Correction Acceptance
+
+on:
+  pull_request:
+    branches: [chatgpt/p15-p17-erp-fullhd-completion-20260805]
+    paths:
+      - 'P17R_V15_PR_TRIGGER.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: erpv2-p17r-v15-final-correction
+  cancel-in-progress: false
+
+env:
+  EXPECTED_DEPLOYED_SHA: 6594597d80cd8f21866ac63d553b04d250070a1b
+  SOURCE_RUN_ID: '31081266876'
+  SOURCE_ARTIFACT: P17R_v14_final_correction_31081266876
+
+jobs:
+  final-correction:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_mysql, fileinfo
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Static and source evidence gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "${EXPECTED_DEPLOYED_SHA}^{commit}"
+          git merge-base --is-ancestor "$EXPECTED_DEPLOYED_SHA" HEAD
+          node --check .github/p17/P17R_v14_post_correction.js
+          node --check .github/p17/P17R_v15_post_correction.js
+          node --check .github/p17/P17R_evidence_assembler.js
+          node --check .github/p17/P17_summary_builder.js
+          node tests/p17_summary_builder_test.js
+          php tests/p17_linear_trip_archive_restore_test.php
+          php tests/p17_zero_byte_document_rejection_test.php
+          php tests/p17_route_executor_basepath_test.php
+          git diff --check
+          rm -rf /tmp/P17R_v14_source
+          mkdir -p /tmp/P17R_v14_source
+          gh run download "$SOURCE_RUN_ID" -n "$SOURCE_ARTIFACT" -D /tmp/P17R_v14_source
+          test -f /tmp/P17R_v14_source/P17R_full_runtime_output/P17_RUNTIME_SUMMARY.json
+          test -f /tmp/P17R_v14_source/P17R_route_output/P17_02_ROUTE_ROLE_MATRIX.json
+          test -f /tmp/P17R_v14_source/P17R_final_evidence/P17_16_FINAL_SUMMARY.json
+          rm -rf P17R_full_runtime_output P17R_route_output P17R_final_evidence
+          cp -a /tmp/P17R_v14_source/P17R_full_runtime_output .
+          cp -a /tmp/P17R_v14_source/P17R_route_output .
+          rm -rf /tmp/P17R_v14_source
+
+      - name: Verify deployed marker and old ERP baseline
+        id: baseline
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P17R_v15_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/P17R_v15_key" "${HOME}/.ssh/known_hosts"
+          ssh_base=(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17R_v15_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST")
+          actual="$("${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$actual" = "$EXPECTED_DEPLOYED_SHA"
+          old_fp="$("${ssh_base[@]}" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
+          echo "old_fp=$old_fp" >> "$GITHUB_OUTPUT"
+          echo "P17_DEPLOYED_SHA=$actual" >> "$GITHUB_ENV"
+          printf '%s\n' "$actual" > P17R_DEPLOYED_SHA.txt
+          printf '%s\n' "$old_fp" > P17R_OLD_ERP_FINGERPRINT_BEFORE.txt
+
+      - name: Resolve encrypted credentials
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2 >/dev/null 2>&1
+          mkdir -p /tmp/P17R_credentials
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > /tmp/P17R_credentials/decrypt.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > /tmp/P17R_credentials/credentials.enc.json
+          python -m pip install --quiet 'cryptography==46.0.3' >/dev/null
+          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P17R_v15_runtime_key"
+          chmod 600 "${HOME}/.ssh/P17R_v15_runtime_key"
+          payload="$(python /tmp/P17R_credentials/decrypt.py --key "${HOME}/.ssh/P17R_v15_runtime_key" --input /tmp/P17R_credentials/credentials.enc.json)"
+          echo "::add-mask::$payload"
+          echo "P17_CREDENTIALS_B64=$payload" >> "$GITHUB_ENV"
+          echo "P17R_CREDENTIALS_B64=$payload" >> "$GITHUB_ENV"
+          rm -rf /tmp/P17R_credentials "${HOME}/.ssh/P17R_v15_runtime_key"
+          unset payload PRIVATE_KEY
+
+      - name: Install correction browser runtime
+        run: |
+          npm install --no-save playwright@1.54.2 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+
+      - name: Repeat executor and cash expense scenarios with exact evidence
+        id: correction
+        continue-on-error: true
+        env:
+          P17R_OUT: P17R_full_runtime_output
+        run: node .github/p17/P17R_v15_post_correction.js
+
+      - name: Reassemble factual matrices
+        id: assemble
+        if: always()
+        continue-on-error: true
+        run: node .github/p17/P17R_evidence_assembler.js P17R_route_output P17R_full_runtime_output P17R_final_evidence
+
+      - name: Preserve immutable history and deployed evidence
+        if: always()
+        run: |
+          mkdir -p P17R_final_evidence/P17_FAILED_RUN_HISTORY
+          cp P17R_DEPLOYED_SHA.txt P17R_final_evidence/P17_DEPLOYED_SHA.txt 2>/dev/null || true
+          cp P17R_OLD_ERP_FINGERPRINT_BEFORE.txt P17R_final_evidence/P17_OLD_ERP_FINGERPRINT_BEFORE.txt 2>/dev/null || true
+          cat > P17R_final_evidence/P17_FAILED_RUN_HISTORY/README.md <<'EOF'
+          # P17 failed-run history
+
+          V2–V14 are retained as historical evidence and excluded from PASS totals.
+          V15 reuses immutable V14 evidence and repeats only the affected UI scenarios:
+          - executor archive/disappearance/restoration verified by `data-route-executor-id`;
+          - cash expense using the first available category with `data-direction=EXPENSE`.
+          EOF
+
+      - name: Strict matrix-derived summary
+        id: summary
+        if: always()
+        continue-on-error: true
+        run: node .github/p17/P17_summary_builder.js P17R_final_evidence P17R_final_evidence/P17_16_FINAL_SUMMARY.json
+
+      - name: Verify marker and old ERP after correction
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          BEFORE: ${{ steps.baseline.outputs.old_fp }}
+        run: |
+          set -euo pipefail
+          ssh_base=(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P17R_v15_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST")
+          actual="$("${ssh_base[@]}" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          after="$("${ssh_base[@]}" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
+          test "$actual" = "$EXPECTED_DEPLOYED_SHA"
+          test "$after" = "$BEFORE"
+          printf '%s\n' "$after" > P17R_final_evidence/P17_OLD_ERP_FINGERPRINT_AFTER.txt
+
+      - name: Build authoritative V15 result
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('P17R_final_evidence/P17_16_FINAL_SUMMARY.json')
+          s=json.loads(p.read_text('utf-8')) if p.is_file() else {'status':'FAIL','missing_or_failed':[{'code':'FINAL_SUMMARY_MISSING'}]}
+          keys=['routes_reviewed','routes_pass','routes_fail','crud_scenarios','crud_pass','crud_fail','crud_not_supported','trip_scenarios','trip_pass','trip_fail','document_scenarios','document_pass','document_fail','finance_scenarios','finance_pass','finance_fail','fullhd_pages','viewport_1536_pages','viewport_1366_pages','console_errors','page_errors','request_failures','expected_403','unexpected_http_errors','defects_blocker','defects_critical','defects_high','defects_medium','defects_low']
+          result={key:s.get(key,0) for key in keys}
+          result.update({
+              'status':s.get('status','FAIL'),
+              'deployed_sha':os.environ['EXPECTED_DEPLOYED_SHA'],
+              'run_id':os.environ.get('GITHUB_RUN_ID'),
+              'source_run_id':os.environ['SOURCE_RUN_ID'],
+              'correction_step':'${{ steps.correction.outcome }}',
+              'assemble_step':'${{ steps.assemble.outcome }}',
+              'summary_step':'${{ steps.summary.outcome }}',
+              'summary_consistency_check':s.get('summary_consistency_check','FAIL'),
+              'missing_or_failed':s.get('missing_or_failed',[]),
+          })
+          Path('P17R_V15_RESULT.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),'utf-8')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P17R_v15_final_correction_${{ github.run_id }}
+          path: |
+            P17R_V15_RESULT.json
+            P17R_final_evidence/
+            P17R_route_output/
+            P17R_full_runtime_output/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish observable V15 result
+        if: always()
+        run: |
+          set -euo pipefail
+          cp P17R_V15_RESULT.json /tmp/P17R_V15_RESULT.json
+          git fetch origin chatgpt/p15-p17-erp-fullhd-completion-20260805
+          git reset --hard origin/chatgpt/p15-p17-erp-fullhd-completion-20260805
+          cp /tmp/P17R_V15_RESULT.json P17R_V15_RESULT.json
+          git config user.name 'erp-planex-p17r-bot'
+          git config user.email 'erp-planex-p17r-bot@users.noreply.github.com'
+          git add P17R_V15_RESULT.json
+          git commit -m 'P17R: publish final V15 correction result' || true
+          git push origin HEAD:chatgpt/p15-p17-erp-fullhd-completion-20260805
+
+      - name: Final authoritative decision
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('P17R_V15_RESULT.json').read_text('utf-8'))
+          print('P17R_V15_FINAL_DECISION='+str(result.get('status')))
+          if result.get('status')!='PASS':
+              print(json.dumps(result.get('missing_or_failed',[]),ensure_ascii=False,indent=2))
+              raise SystemExit(1)
+          PY
+
+      - if: always()
+        run: |
+          printf 'P17_CREDENTIALS_B64=\nP17R_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "${HOME}/.ssh/P17R_v15_key" "${HOME}/.ssh/P17R_v15_runtime_key" 2>/dev/null || true
