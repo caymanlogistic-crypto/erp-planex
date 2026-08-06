@@ -1,0 +1,103 @@
+name: P19 Observable Preflight
+
+on:
+  push:
+    branches: [chatgpt/p19-uiux-safe-runtime-review-20260806]
+    paths: ['.github/workflows/P19_preflight_observable.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  preflight-observable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      OUT: .github/p19/P19_preflight_result.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p19-uiux-safe-runtime-review-20260806
+          fetch-depth: 0
+
+      - name: Run read-only preflight
+        id: check
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          RUNTIME_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+        run: |
+          set -uo pipefail
+          mkdir -p .github/p19
+          status=PASS
+          secrets_ok=PASS
+          for value in "$SSH_PRIVATE_KEY" "$SSH_KNOWN_HOSTS" "$SSH_HOST" "$SSH_PORT" "$SSH_USER" "$RUNTIME_CREDENTIALS"; do
+            if [ -z "$value" ]; then secrets_ok=FAIL; status=FAIL; fi
+          done
+          marker=UNAVAILABLE; p07=NO; oldfp=UNAVAILABLE; erpv2fp=UNAVAILABLE; dbfp=UNAVAILABLE
+          erpv2_http=000; old_erp_http=000; playwright=FAIL
+          if [ "$secrets_ok" = PASS ]; then
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/P19_key"
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+            chmod 600 "$HOME/.ssh/P19_key" "$HOME/.ssh/known_hosts"
+            state="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE' || true
+          OLD_ERP=/home/s/spugovxsim/planexp/public_html/erp
+          ERPV2=/home/s/spugovxsim/planexp/public_html/erpv2
+          DEPLOY=/home/s/spugovxsim/planexp/deploy
+          marker="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt" 2>/dev/null || true)"
+          p07=NO; test -x "$DEPLOY/P07_deploy_erpv2.sh" && p07=YES
+          oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          erpv2fp="$(cd "$ERPV2" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp=UNAVAILABLE
+          if php -m 2>/dev/null | grep -qi pdo_mysql; then
+            cat >/tmp/p19fp.php <<'PHP'
+          <?php function ef($p){$o=[];foreach(@file($p,FILE_IGNORE_NEW_LINES)?:[] as $l){$l=trim($l);if($l===''||$l[0]==='#'||!str_contains($l,'='))continue;[$k,$v]=explode('=',$l,2);$o[trim($k)]=trim($v," \t\n\r\0\x0B\"'");}return $o;}$e=ef('/home/s/spugovxsim/planexp/public_html/erpv2/.env');try{$p=new PDO('mysql:host='.($e['DB_HOST']??'127.0.0.1').';port='.($e['DB_PORT']??'3306').';dbname='.($e['DB_DATABASE']??'erp_planex'),$e['DB_USERNAME']??'root',$e['DB_PASSWORD']??'');$t=$p->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);sort($t);$a=[];foreach($t as $x){$r=$p->query('CHECKSUM TABLE `'.str_replace('`','``',$x).'`')->fetch(PDO::FETCH_NUM);$a[]=$x.':'.($r[1]??'NULL');}echo hash('sha256',implode('|',$a));}catch(Throwable $x){echo 'UNAVAILABLE_'.substr(hash('sha256',$x->getMessage()),0,12);}
+          PHP
+            dbfp="$(php /tmp/p19fp.php)"; rm -f /tmp/p19fp.php
+          fi
+          printf '%s|%s|%s|%s|%s' "$marker" "$p07" "$oldfp" "$erpv2fp" "$dbfp"
+          REMOTE
+            )"
+            IFS='|' read -r marker p07 oldfp erpv2fp dbfp <<<"$state"
+            [ "$p07" = YES ] || status=FAIL
+          fi
+          erpv2_http="$(curl -k -L -sS -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login || true)"
+          old_erp_http="$(curl -k -L -sS -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erp/ || true)"
+          case "$erpv2_http" in 200|302|401|403) ;; *) status=FAIL;; esac
+          case "$old_erp_http" in 200|302|401|403) ;; *) status=FAIL;; esac
+          npm install --no-save playwright@1.54.2 >/dev/null 2>&1 && npx playwright install chromium >/dev/null 2>&1 && node -e "require('playwright').chromium" && playwright=PASS || status=FAIL
+          export status secrets_ok marker p07 oldfp erpv2fp dbfp erpv2_http old_erp_http playwright
+          python - <<'PY'
+          import json,os
+          d={k:os.environ.get(k) for k in ['status','secrets_ok','marker','p07','oldfp','erpv2fp','dbfp','erpv2_http','old_erp_http','playwright']}
+          d.update(run_id=os.environ['GITHUB_RUN_ID'],job_id=os.environ.get('GITHUB_JOB'),head_sha=os.environ['GITHUB_SHA'])
+          json.dump(d,open(os.environ['OUT'],'w'),indent=2)
+          PY
+          rm -f "$HOME/.ssh/P19_key" 2>/dev/null || true
+          [ "$status" = PASS ]
+
+      - name: Commit observable result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$OUT" || printf '{"status":"FAIL","run_id":"%s","job_id":"%s","head_sha":"%s"}\n' "$GITHUB_RUN_ID" "$GITHUB_JOB" "$GITHUB_SHA" > "$OUT"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add "$OUT"
+          git commit -m 'P19: record preflight evidence' || exit 0
+          git push origin HEAD:chatgpt/p19-uiux-safe-runtime-review-20260806
+
+      - name: Upload preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_preflight_output
+          path: .github/p19/P19_preflight_result.json
+          if-no-files-found: error
+          retention-days: 30
