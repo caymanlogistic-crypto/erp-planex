@@ -1,6 +1,12 @@
 name: P14 Browser capability check
 
 on:
+  push:
+    branches:
+      - p14-browser-audit-20260806
+    paths:
+      - '.github/p14/P14_browser_capability_check.js'
+      - '.github/workflows/P14_browser_capability_check.yml'
   pull_request:
     branches:
       - chatgpt/production-stabilization-20260802
