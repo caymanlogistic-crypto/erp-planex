@@ -1,0 +1,20 @@
+{
+  "status": "P15_P16_P17_COMPLETE_PRODUCTION_ACCEPTED",
+  "repository": "caymanlogistic-crypto/erp-planex",
+  "branch": "chatgpt/p15-p17-erp-fullhd-completion-20260805",
+  "start_head": "381a187d7f5cc02eb338b81836dd7ce0099a78b2",
+  "deployed_sha": "6594597d80cd8f21866ac63d553b04d250070a1b",
+  "deploy_target": "/erpv2",
+  "deploy_run": 31045178630,
+  "acceptance_run": 31082422895,
+  "acceptance_job": 92554058665,
+  "acceptance_artifact": 8960025397,
+  "summary_consistency_check": "PASS",
+  "old_erp_mutated": false,
+  "production_company_mutated": false,
+  "test_tenant_only": true,
+  "force_push_used": false,
+  "merge_performed": false,
+  "report_bundle_parent_commit": "11a0ef006f9ff4e6c0365bafec4ae1418867cc75",
+  "owner_action": "Change the temporary SUPERADMIN password after review."
+}
