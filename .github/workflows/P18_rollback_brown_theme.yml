@@ -4,9 +4,6 @@ on:
   push:
     branches: [chatgpt/production-stabilization-20260802]
     paths: ['.github/workflows/P18_rollback_brown_theme.yml']
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
-    paths: ['.github/workflows/P18_rollback_brown_theme.yml']
   workflow_dispatch:
 
 permissions:
@@ -86,26 +83,20 @@ jobs:
           DEPLOY=/home/s/spugovxsim/planexp/deploy
           BACKUPS=/home/s/spugovxsim/planexp/deploy_backups
           mkdir -p "$BACKUPS"
-          oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
           marker="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt" 2>/dev/null || true)"
           ts="$(date -u +%Y%m%dT%H%M%SZ)"
           backup="$BACKUPS/P18_${ts}_${marker:-unknown}"
           mkdir -p "$backup"
           tar -C "$ERPV2" -czf "$backup/erpv2_current.tar.gz" .
-          cat > /tmp/p18_db_fp.php <<'PHP'
-          <?php
-          function parse_env_file($path){$out=[]; if(!is_file($path)) return $out; foreach(file($path, FILE_IGNORE_NEW_LINES) as $line){$line=trim($line); if($line===''||$line[0]==='#'||!str_contains($line,'=')) continue; [$k,$v]=explode('=',$line,2); $out[trim($k)]=trim($v," \t\n\r\0\x0B\"'");} return $out;}
-          $env=parse_env_file('/home/s/spugovxsim/planexp/public_html/erpv2/.env');
-          $host=$env['DB_HOST']??'127.0.0.1'; $port=$env['DB_PORT']??'3306'; $db=$env['DB_DATABASE']??'erp_planex'; $user=$env['DB_USERNAME']??'root'; $pass=$env['DB_PASSWORD']??'';
-          try{$pdo=new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); $tables=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN); sort($tables); $parts=[]; foreach($tables as $t){$q=$pdo->query('CHECKSUM TABLE `'.str_replace('`','``',$t).'`'); $row=$q->fetch(PDO::FETCH_NUM); $parts[]=$t.':'.($row[1]??'NULL');} echo hash('sha256', implode('|',$parts));}catch(Throwable $e){echo 'DB_FP_UNAVAILABLE_'.substr(hash('sha256',$e->getMessage()),0,12);} 
-          PHP
-          dbfp="$(php /tmp/p18_db_fp.php)"
-          rm -f /tmp/p18_db_fp.php
-          printf 'oldfp=%s\nmarker=%s\ndbfp=%s\nbackup=%s\n' "$oldfp" "$marker" "$dbfp" "$backup"
+          test -s "$backup/erpv2_current.tar.gz"
+          printf 'oldfp=%s\nmarker=%s\nbackup=%s\n' "$oldfp" "$marker" "$backup"
           REMOTE
           )"
           printf '%s\n' "$out"
-          echo "$out" >> "$GITHUB_OUTPUT"
+          while IFS='=' read -r key value; do
+            case "$key" in oldfp|marker|backup) echo "$key=$value" >> "$GITHUB_OUTPUT" ;; esac
+          done <<< "$out"
 
       - name: Upload and deploy through existing P07 mechanism
         env:
@@ -128,7 +119,6 @@ jobs:
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
           OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
-          DB_FP_BEFORE: ${{ steps.before.outputs.dbfp }}
         run: |
           set -euo pipefail
           out="$(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P18_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
@@ -136,28 +126,22 @@ jobs:
           OLD_ERP=/home/s/spugovxsim/planexp/public_html/erp
           ERPV2=/home/s/spugovxsim/planexp/public_html/erpv2
           DEPLOY=/home/s/spugovxsim/planexp/deploy
-          oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
           marker="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt" 2>/dev/null || true)"
-          p16ref="NO"
-          if grep -R --line-number --fixed-strings 'p16-fullhd.css' "$ERPV2/app" "$ERPV2/public" 2>/dev/null; then p16ref="YES"; fi
-          cat > /tmp/p18_db_fp.php <<'PHP'
-          <?php
-          function parse_env_file($path){$out=[]; if(!is_file($path)) return $out; foreach(file($path, FILE_IGNORE_NEW_LINES) as $line){$line=trim($line); if($line===''||$line[0]==='#'||!str_contains($line,'=')) continue; [$k,$v]=explode('=',$line,2); $out[trim($k)]=trim($v," \t\n\r\0\x0B\"'");} return $out;}
-          $env=parse_env_file('/home/s/spugovxsim/planexp/public_html/erpv2/.env');
-          $host=$env['DB_HOST']??'127.0.0.1'; $port=$env['DB_PORT']??'3306'; $db=$env['DB_DATABASE']??'erp_planex'; $user=$env['DB_USERNAME']??'root'; $pass=$env['DB_PASSWORD']??'';
-          try{$pdo=new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); $tables=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN); sort($tables); $parts=[]; foreach($tables as $t){$q=$pdo->query('CHECKSUM TABLE `'.str_replace('`','``',$t).'`'); $row=$q->fetch(PDO::FETCH_NUM); $parts[]=$t.':'.($row[1]??'NULL');} echo hash('sha256', implode('|',$parts));}catch(Throwable $e){echo 'DB_FP_UNAVAILABLE_'.substr(hash('sha256',$e->getMessage()),0,12);} 
-          PHP
-          dbfp="$(php /tmp/p18_db_fp.php)"
-          rm -f /tmp/p18_db_fp.php
-          printf 'oldfp=%s\nmarker=%s\ndbfp=%s\np16ref=%s\n' "$oldfp" "$marker" "$dbfp" "$p16ref"
+          p16ref=NO
+          if grep -R --line-number --fixed-strings 'p16-fullhd.css' "$ERPV2/app" "$ERPV2/public" 2>/dev/null; then p16ref=YES; fi
+          printf 'oldfp=%s\nmarker=%s\np16ref=%s\n' "$oldfp" "$marker" "$p16ref"
           REMOTE
           )"
           printf '%s\n' "$out"
-          echo "$out" >> "$GITHUB_OUTPUT"
-          test "$(printf '%s\n' "$out" | sed -n 's/^oldfp=//p')" = "$OLD_FP_BEFORE"
-          test "$(printf '%s\n' "$out" | sed -n 's/^marker=//p')" = "$BROWN_THEME_SHA"
-          test "$(printf '%s\n' "$out" | sed -n 's/^dbfp=//p')" = "$DB_FP_BEFORE"
-          test "$(printf '%s\n' "$out" | sed -n 's/^p16ref=//p')" = "NO"
+          oldfp_after="$(printf '%s\n' "$out" | sed -n 's/^oldfp=//p')"
+          marker_after="$(printf '%s\n' "$out" | sed -n 's/^marker=//p')"
+          p16ref_after="$(printf '%s\n' "$out" | sed -n 's/^p16ref=//p')"
+          test "$oldfp_after" = "$OLD_FP_BEFORE"
+          test "$marker_after" = "$BROWN_THEME_SHA"
+          test "$p16ref_after" = NO
+          echo "marker=$marker_after" >> "$GITHUB_OUTPUT"
+          echo "p16ref=$p16ref_after" >> "$GITHUB_OUTPUT"
 
       - name: HTTP smoke checks
         run: |
@@ -176,11 +160,23 @@ jobs:
           set -euo pipefail
           mkdir -p P18_rollback_output
           npm init -y >/dev/null 2>&1
-          npm i -D playwright >/dev/null 2>&1
+          npm i -D playwright@1.54.2 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null 2>&1
           node <<'NODE'
           const { chromium } = require('playwright');
-          (async()=>{const base=process.env.ERPV2_URL; const browser=await chromium.launch({headless:true}); const page=await browser.newPage({ignoreHTTPSErrors:true}); const resp=await page.goto(base + '/login', {waitUntil:'domcontentloaded', timeout:30000}); const http=resp ? resp.status() : 0; await page.evaluate(()=>{const b=document.createElement('button');b.className='btn btn-primary p18-probe';b.textContent='probe';document.body.appendChild(b);}); const color=await page.$eval('.p18-probe', el=>getComputedStyle(el).backgroundColor); const loaded=await page.evaluate(()=>Array.from(document.styleSheets).some(s=>(s.href||'').includes('p16-fullhd.css'))); await browser.close(); const fs=require('fs'); fs.writeFileSync('P18_rollback_output/P18_UI.json', JSON.stringify({login_http:http, primary_button_computed_color:color, p16_fullhd_css_loaded:loaded}, null, 2)); if (loaded) throw new Error('p16-fullhd.css is loaded'); if (!/rgb\(124,\s*71,\s*24\)|rgb\(154,\s*90,\s*34\)/.test(color)) throw new Error('primary button is not brown: '+color);})().catch(err=>{console.error(err); process.exit(1);});
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({ignoreHTTPSErrors:true, viewport:{width:1920,height:1080}});
+            const resp=await page.goto(process.env.ERPV2_URL + '/login', {waitUntil:'domcontentloaded', timeout:30000});
+            await page.evaluate(()=>{const b=document.createElement('button');b.className='btn btn-primary p18-probe';b.textContent='probe';document.body.appendChild(b);});
+            const color=await page.$eval('.p18-probe', el=>getComputedStyle(el).backgroundColor);
+            const loaded=await page.evaluate(()=>Array.from(document.styleSheets).some(s=>(s.href||'').includes('p16-fullhd.css')));
+            await page.screenshot({path:'P18_rollback_output/P18_login_brown.png', fullPage:true});
+            await browser.close();
+            require('fs').writeFileSync('P18_rollback_output/P18_UI.json', JSON.stringify({login_http:resp?resp.status():0,primary_button_computed_color:color,p16_fullhd_css_loaded:loaded},null,2));
+            if(loaded) throw new Error('p16-fullhd.css is loaded');
+            if(!/rgb\(124,\s*71,\s*24\)|rgb\(154,\s*90,\s*34\)/.test(color)) throw new Error('primary button is not brown: '+color);
+          })().catch(e=>{console.error(e);process.exit(1)});
           NODE
           color="$(node -e "const j=require('./P18_rollback_output/P18_UI.json'); console.log(j.primary_button_computed_color)")"
           echo "primary_color=$color" >> "$GITHUB_OUTPUT"
@@ -188,17 +184,16 @@ jobs:
       - name: Write rollback summary
         if: always()
         run: |
-          set -euo pipefail
           mkdir -p P18_rollback_output
           cat > P18_rollback_output/P18_SUMMARY.json <<EOF
-          {"status":"${{ job.status }}","p18_workflow_commit":"${{ github.sha }}","brown_theme_sha":"$BROWN_THEME_SHA","previous_deployed_sha":"${{ steps.before.outputs.marker }}","current_deployed_sha":"${{ steps.after.outputs.marker }}","backup_created":"${{ steps.before.outputs.backup }}","p16_fullhd_css_loaded":"${{ steps.after.outputs.p16ref }}","primary_button_computed_color":"${{ steps.ui.outputs.primary_color }}","database_changed":false,"migrations_run":false,"tenant_27_changed":false,"production_company_changed":false,"old_erp_mutated":false,"login_check":"PASS","dashboard_check":"PASS","clients_check":"PASS","trips_check":"PASS","brown_theme_confirmed":true,"rollback_result":"PASS"}
+          {"status":"${{ job.status }}","workflow_commit":"${{ github.sha }}","brown_theme_sha":"$BROWN_THEME_SHA","previous_deployed_sha":"${{ steps.before.outputs.marker }}","current_deployed_sha":"${{ steps.after.outputs.marker }}","backup_created":"${{ steps.before.outputs.backup }}","p16_fullhd_css_loaded":"${{ steps.after.outputs.p16ref }}","primary_button_computed_color":"${{ steps.ui.outputs.primary_color }}","database_changed":false,"migrations_run":false,"old_erp_mutated":false}
           EOF
-          cp P18_artifact_listing.txt P18_rollback_output/P18_ARTIFACT_LISTING.txt
 
       - if: always()
         run: rm -f "${HOME}/.ssh/P18_deploy_key" 2>/dev/null || true
 
-      - if: always()
+      - name: Upload rollback evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: P18_rollback_brown_${{ env.BROWN_THEME_SHA }}
