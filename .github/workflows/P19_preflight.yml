@@ -1,0 +1,122 @@
+name: P19 Preflight
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P19_preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify required secrets are present
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          RUNTIME_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          test -n "$SSH_HOST"
+          test -n "$SSH_PORT"
+          test -n "$SSH_USER"
+          test -n "$RUNTIME_CREDENTIALS"
+          echo 'SECRETS_REQUIRED=PASS'
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/P19_key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P19_key" "$HOME/.ssh/known_hosts"
+
+      - name: Read server state and guards
+        id: server
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p P19_preflight_output
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' > P19_preflight_output/P19_SERVER_STATE.txt <<'REMOTE'
+          set -euo pipefail
+          OLD_ERP=/home/s/spugovxsim/planexp/public_html/erp
+          ERPV2=/home/s/spugovxsim/planexp/public_html/erpv2
+          DEPLOY=/home/s/spugovxsim/planexp/deploy
+          marker="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt" 2>/dev/null || true)"
+          p07=NO
+          test -x "$DEPLOY/P07_deploy_erpv2.sh" && p07=YES
+          oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          erpv2fp="$(cd "$ERPV2" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp=UNAVAILABLE
+          if command -v php >/dev/null 2>&1 && php -m | grep -qi pdo_mysql; then
+            cat > /tmp/p19_db_fp.php <<'PHP'
+          <?php
+          function envf($p){$o=[];foreach(@file($p, FILE_IGNORE_NEW_LINES)?:[] as $l){$l=trim($l);if($l===''||$l[0]==='#'||!str_contains($l,'='))continue;[$k,$v]=explode('=',$l,2);$o[trim($k)]=trim($v," \t\n\r\0\x0B\"'");}return $o;}
+          $e=envf('/home/s/spugovxsim/planexp/public_html/erpv2/.env');
+          try{$pdo=new PDO('mysql:host='.($e['DB_HOST']??'127.0.0.1').';port='.($e['DB_PORT']??'3306').';dbname='.($e['DB_DATABASE']??'erp_planex').';charset=utf8mb4',$e['DB_USERNAME']??'root',$e['DB_PASSWORD']??'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$t=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);sort($t);$p=[];foreach($t as $x){$r=$pdo->query('CHECKSUM TABLE `'.str_replace('`','``',$x).'`')->fetch(PDO::FETCH_NUM);$p[]=$x.':'.($r[1]??'NULL');}echo hash('sha256',implode('|',$p));}catch(Throwable $x){echo 'UNAVAILABLE_'.substr(hash('sha256',$x->getMessage()),0,12);} 
+          PHP
+            dbfp="$(php /tmp/p19_db_fp.php)"
+            rm -f /tmp/p19_db_fp.php
+          fi
+          printf 'CURRENT_DEPLOYED_SHA=%s\nP07_DEPLOY_AVAILABLE=%s\nOLD_ERP_FINGERPRINT=%s\nERPV2_FINGERPRINT=%s\nDB_FINGERPRINT=%s\n' "$marker" "$p07" "$oldfp" "$erpv2fp" "$dbfp"
+          REMOTE
+          grep -F 'P07_DEPLOY_AVAILABLE=YES' P19_preflight_output/P19_SERVER_STATE.txt
+
+      - name: HTTP availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P19_preflight_output
+          for item in erpv2_login:https://plan-ex.ru/erpv2/login old_erp:https://plan-ex.ru/erp/; do
+            name=${item%%:*}; url=${item#*:}
+            code=$(curl -k -L -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url")
+            printf '%s=%s\n' "$name" "$code" | tee -a P19_preflight_output/P19_HTTP.txt
+            case "$code" in 200|302|401|403) ;; *) exit 1 ;; esac
+          done
+
+      - name: Verify Playwright installation capability
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          node -e "const {chromium}=require('playwright'); console.log(Boolean(chromium)?'PLAYWRIGHT_ACTIONS_AVAILABLE=PASS':'PLAYWRIGHT_ACTIONS_AVAILABLE=FAIL')"
+
+      - name: Write summary
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p P19_preflight_output
+          printf '{"status":"%s","run_id":"%s","job":"preflight","head_sha":"%s"}\n' "${{ job.status }}" "${{ github.run_id }}" "${{ github.sha }}" > P19_preflight_output/P19_PREFLIGHT_SUMMARY.json
+          rm -f "$HOME/.ssh/P19_key" 2>/dev/null || true
+
+      - name: Upload preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_preflight_output
+          path: P19_preflight_output/
+          if-no-files-found: error
+          retention-days: 30
