@@ -1,6 +1,11 @@
 name: P19 Preflight
 
 on:
+  push:
+    branches:
+      - chatgpt/p19-uiux-safe-runtime-review-20260806
+    paths:
+      - '.github/workflows/P19_preflight.yml'
   pull_request:
     branches:
       - chatgpt/production-stabilization-20260802
@@ -50,7 +55,6 @@ jobs:
           chmod 600 "$HOME/.ssh/P19_key" "$HOME/.ssh/known_hosts"
 
       - name: Read server state and guards
-        id: server
         shell: bash
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
