@@ -1,1 +1,2 @@
 P21 final read-only server unchanged verification trigger. No deploy.
+Retry after evidence-first guard update.
