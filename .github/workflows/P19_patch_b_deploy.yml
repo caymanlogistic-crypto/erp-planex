@@ -1,0 +1,184 @@
+name: P19 PATCH_B isolated deploy
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P19_patch_b_deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ACCEPTED_A: ef47dabe3249625280e6577de7b249f5b4d14a9d
+  TARGET_B: f42a37539da13d50af1fddefe528a82dba022dbe
+  EXPECTED_P07_SHA256: 1e3328e2cd40dc2139eb9f87f01a69c848717b4b1ba4785ce8ecd8feeecb6b95
+  EXPECTED_OLD_ERP_FP: c6a6522dacbe0c919ba5d22f4cf0501426a6ce31bc8ac091405537076e9a42da
+  EXPECTED_DB_FP: cca07e25969163877994635a6a99209e84cd26fc9eb0d793f638a0c6d9106d0a
+  OUT: P19_patch_b_deploy_output
+
+jobs:
+  deploy-b:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p19-execution-isolated-20260807
+          fetch-depth: 0
+
+      - name: PATCH_B exact static gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          git fetch --quiet origin chatgpt/p19-patch-b-deploy-exact-20260807 chatgpt/p19-uiux-safe-runtime-review-20260806
+          for sha in "$ACCEPTED_A" "$TARGET_B"; do git cat-file -e "${sha}^{commit}"; done
+          changed="$(git diff --name-only "$ACCEPTED_A" "$TARGET_B" -- app bootstrap config database public scripts tools tests)"
+          printf '%s\n' "$changed" | tee "$OUT/P19_44_PATCH_B_CHANGED_FILES.txt"
+          test "$changed" = 'public/assets/css/finance-operation-actions.css'
+          test "$(git rev-parse "$TARGET_B^")" = "$ACCEPTED_A"
+          git diff "$ACCEPTED_A" "$TARGET_B" -- public/assets/css/finance-operation-actions.css > "$OUT/P19_45_PATCH_B_EXACT_DIFF.patch"
+          git show "$TARGET_B:public/assets/css/finance-operation-actions.css" > /tmp/P19_B.css
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          css=Path('/tmp/P19_B.css').read_text(encoding='utf-8')
+          if css.count('{')!=css.count('}'): raise SystemExit('CSS brace balance failed')
+          forbidden=[
+            r'(^|})button:disabled\{',
+            r'(^|})\.modal-overlay\s',
+            r'var\(--muted', r'var\(--border', r'var\(--surface,',
+            r'p16-fullhd', r'p17-corrections', r'!important'
+          ]
+          for pat in forbidden:
+            if re.search(pat,css,re.I): raise SystemExit('Forbidden/global selector or token: '+pat)
+          required=[
+            '.finance-operation-card button:disabled',
+            '#operation-view-modal button:disabled',
+            '#operation-allocate-modal button:disabled',
+            '#operation-view-modal .modal.modal-lg',
+            '#operation-allocate-modal .modal.modal-lg',
+            'var(--text-faint)','var(--line-soft)','var(--surface-strong)','var(--surface-field-alt)'
+          ]
+          for item in required:
+            if item not in css: raise SystemExit('Missing PATCH_B contract: '+item)
+          defs=''
+          for p in ['public/assets/css/app.css','public/assets/css/erp-ui.css']:
+            defs+=Path(p).read_text(encoding='utf-8')
+          defined=set(re.findall(r'--([A-Za-z0-9_-]+)\s*:',defs+css))
+          used=set(re.findall(r'var\(\s*--([A-Za-z0-9_-]+)',css))
+          missing=sorted(used-defined)
+          if missing: raise SystemExit('Undefined PATCH_B vars: '+','.join(missing))
+          print('PATCH_B_STATIC=PASS')
+          PY
+          cat > "$OUT/P19_46_PATCH_B_STATIC_GATE.json" <<EOF
+          {"status":"PASS","changed_files":["public/assets/css/finance-operation-actions.css"],"global_selectors_added":false,"migrations_added":false,"database_changes":false,"parent":"$ACCEPTED_A","target":"$TARGET_B"}
+          EOF
+
+      - name: Configure SSH and DB helper
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19B_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P19B_key" "$HOME/.ssh/known_hosts"
+          git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_readonly_db_fingerprint.php > /tmp/P19_db_fp.php
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19B_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P19_db_fp.php "$SSH_USER@$SSH_HOST:/tmp/P19B_db_${GITHUB_RUN_ID}.php"
+
+      - name: Pre-deploy PATCH_B guards and backup accepted PATCH_A
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' ACCEPTED_A='$ACCEPTED_A' EXPECTED_P07_SHA256='$EXPECTED_P07_SHA256' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_47_PATCH_B_PREDEPLOY.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp; LIVE="$ROOT/public_html/erpv2"; OLD="$ROOT/public_html/erp"; DEPLOY="$ROOT/deploy"; P07="$DEPLOY/P07_deploy_erpv2.sh"; BACKUPS="$ROOT/deploy_backups"
+          marker="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"; test "$marker" = "$ACCEPTED_A"
+          test "$(sha256sum "$P07"|awk '{print $1}')" = "$EXPECTED_P07_SHA256"; test -x "$P07"
+          grep -Fq 'LIVE="$ROOT/public_html/erpv2"' "$P07"
+          if grep -E '(cp|mv|rm|rsync|ln|tar|mkdir|install)[^#]*\$PRODUCTION' "$P07"; then exit 42; fi
+          if sed '/^[[:space:]]*#/d' "$P07" | grep -Eiq '(artisan[[:space:]]+migrate|php[^[:cntrl:]]*(migrat|migration))'; then exit 41; fi
+          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null|sort|sha256sum|awk '{print $1}')"
+          dbfp="$(php "/tmp/P19B_db_${GITHUB_RUN_ID}.php")"
+          test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"
+          backup="$BACKUPS/P19B_${GITHUB_RUN_ID}_${marker}"; test ! -e "$backup"; mkdir -p "$BACKUPS"; cp -a "$LIVE" "$backup"; test -d "$backup"
+          printf 'CURRENT_DEPLOYED_SHA=%s\nP07_DEPLOY_AVAILABLE=YES\nTARGET_ONLY_ERPV2=YES\nMIGRATIONS_DISABLED=YES\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nBACKUP_PATH=%s\nBACKUP_CREATED=YES\n' "$marker" "$oldfp" "$dbfp" "$backup"
+          REMOTE
+          cat "$OUT/P19_47_PATCH_B_PREDEPLOY.txt"
+          backup="$(awk '/^BACKUP_PATH=/{sub(/^BACKUP_PATH=/,"");print}' "$OUT/P19_47_PATCH_B_PREDEPLOY.txt")"; test -n "$backup"; printf 'P19B_BACKUP_PATH=%s\n' "$backup" >> "$GITHUB_ENV"
+
+      - name: Build exact PATCH_B application artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact="P19B_${TARGET_B}.tar.gz"
+          git archive --format=tar --output=P19B.tar "$TARGET_B" -- app bootstrap config database public scripts tools tests
+          gzip -n P19B.tar && mv P19B.tar.gz "$artifact"
+          tar -tzf "$artifact" > "$OUT/P19_48_PATCH_B_ARTIFACT_LISTING.txt"
+          if grep -E '(^|/)(\.git|\.env([^/]*)?|storage|tmp|logs|screenshots|node_modules|vendor)(/|$)|(^|/)(cookies?|reports)(/|$)' "$OUT/P19_48_PATCH_B_ARTIFACT_LISTING.txt"; then exit 1; fi
+          sha="$(sha256sum "$artifact"|awk '{print $1}')"; printf '%s\n' "$sha" > "$OUT/P19_49_PATCH_B_ARTIFACT_SHA256.txt"; printf 'artifact=%s\nsha=%s\n' "$artifact" "$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Upload and deploy PATCH_B through P07
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.artifact.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.artifact.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P19B_${TARGET_B}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19B_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$TARGET_B'" | tee "$OUT/P19_50_PATCH_B_P07_DEPLOY.log"
+          deployed="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"; test "$deployed" = "$TARGET_B"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Post-deploy PATCH_B invariants
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' TARGET_B='$TARGET_B' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_51_PATCH_B_POSTDEPLOY.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp; marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null|sort|sha256sum|awk '{print $1}')"; dbfp="$(php "/tmp/P19B_db_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$TARGET_B"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker" "$oldfp" "$dbfp"; rm -f "/tmp/P19B_db_${GITHUB_RUN_ID}.php"
+          REMOTE
+          cat "$OUT/P19_51_PATCH_B_POSTDEPLOY.txt"
+          test "$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)" = '200'
+          test "$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erp/)" = '200'
+          cat > "$OUT/P19_52_PATCH_B_DEPLOY_DECISION.json" <<EOF
+          {"status":"PASS","accepted_a":"$ACCEPTED_A","patch_b_commit":"$TARGET_B","backup_path":"$P19B_BACKUP_PATH","changed_files":["public/assets/css/finance-operation-actions.css"],"database_changed":false,"old_erp_changed":false,"migrations_run":false}
+          EOF
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_patch_b_deploy_${{ github.run_id }}
+          path: ${{ env.OUT }}/
+          if-no-files-found: error
+          retention-days: 30
+      - if: always()
+        shell: bash
+        run: rm -f "$HOME/.ssh/P19B_key" /tmp/P19_db_fp.php /tmp/P19_B.css 2>/dev/null || true
