@@ -1,0 +1,70 @@
+name: P19 P07 scope inspection
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P19_p07_scope_inspect.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p19-uiux-safe-runtime-review-20260806
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19_p07_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P19_p07_key" "$HOME/.ssh/known_hosts"
+      - name: Inspect P07 path and file-operation semantics read-only
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P19_p07_scope_output
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_p07_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' > P19_p07_scope_output/P19_P07_SCOPE.txt <<'REMOTE'
+          set -euo pipefail
+          f=/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh
+          test -r "$f"
+          printf 'P07_SHA256='; sha256sum "$f" | awk '{print $1}'
+          printf 'P07_EXECUTABLE='; test -x "$f" && echo YES || echo NO
+          printf '%s\n' '--- STRUCTURAL LINES ---'
+          nl -ba "$f" \
+            | grep -E 'public_html|erpv2|deploy_backups|TARGET|DEST|ROOT|LIVE|OLD|BACKUP|ARTIFACT|sha256|tar|rsync|(^|[[:space:]])(cp|mv|rm|ln|mkdir|install)[[:space:]]' \
+            | sed 's#/home/s/spugovxsim#<HOME>#g'
+          printf '%s\n' '--- WRITE-LIKE LINES REFERENCING OLD ERP EXACT PATH ---'
+          nl -ba "$f" \
+            | grep -E '(cp|mv|rm|rsync|ln|tar|mkdir|install)[^#]*public_html/erp([/"'"'[:space:]]|$)' \
+            | sed 's#/home/s/spugovxsim#<HOME>#g' || true
+          printf '%s\n' '--- WRITE-LIKE LINES REFERENCING ERPV2 ---'
+          nl -ba "$f" \
+            | grep -E '(cp|mv|rm|rsync|ln|tar|mkdir|install)[^#]*public_html/erpv2' \
+            | sed 's#/home/s/spugovxsim#<HOME>#g' || true
+          REMOTE
+          cat P19_p07_scope_output/P19_P07_SCOPE.txt
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_p07_scope_${{ github.run_id }}
+          path: P19_p07_scope_output/
+          if-no-files-found: error
+          retention-days: 30
+      - if: always()
+        run: rm -f "$HOME/.ssh/P19_p07_key" 2>/dev/null || true
