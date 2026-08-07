@@ -1,107 +1,18 @@
-name: P15 Deploy isolated ERPV2
+name: P15 Legacy Deploy ERPV2 (disabled)
 
 on:
-  pull_request:
-    branches: [chatgpt/production-stabilization-20260802]
-    paths: ['.github/workflows/P15_deploy_erpv2.yml']
   workflow_dispatch:
 
 permissions:
   contents: read
-concurrency:
-  group: erpv2-deploy
-  cancel-in-progress: false
-
-env:
-  IMPLEMENTATION_BRANCH: chatgpt/p15-p17-erp-fullhd-completion-20260805
 
 jobs:
-  deploy-erpv2:
+  disabled:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: chatgpt/p15-p17-erp-fullhd-completion-20260805
-          fetch-depth: 0
-      - name: Resolve exact implementation SHA
-        id: meta
+      - name: Legacy deploy disabled
+        shell: bash
         run: |
-          set -euo pipefail
-          sha="$(git rev-parse HEAD)"
-          git merge-base --is-ancestor f6688855fa3c5e58ee690ca4c8a09e2f0a257e7c "$sha"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          php -l app/Service/MutationErrorService.php >/dev/null
-          php tests/p15_trip_create_payment_terms_regression_test.php >/dev/null
-          php tests/p15_mutation_error_service_test.php >/dev/null
-      - name: Build code artifact
-        id: artifact
-        env:
-          DEPLOY_SHA: ${{ steps.meta.outputs.sha }}
-        run: |
-          set -euo pipefail
-          artifact="P15_erpv2_${DEPLOY_SHA}.tar.gz"
-          git archive --format=tar --output=P15_erpv2.tar "$DEPLOY_SHA" -- app bootstrap config database public scripts tools tests
-          gzip -n P15_erpv2.tar && mv P15_erpv2.tar.gz "$artifact"
-          tar -tzf "$artifact" > P15_erpv2_listing.txt
-          if grep -E '(^|/)(\.git|\.env([^/]*)?|storage|tmp|logs|screenshots|node_modules|vendor)(/|$)|(^|/)(cookies?|reports)(/|$)' P15_erpv2_listing.txt; then exit 1; fi
-          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(sha256sum "$artifact" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-      - name: Configure SSH
-        env:
-          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
-          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          install -d -m 700 "${HOME}/.ssh"
-          printf '%s\n' "$PRIVATE_KEY" > "${HOME}/.ssh/P15_deploy_key"
-          printf '%s\n' "$KNOWN_HOSTS" > "${HOME}/.ssh/known_hosts"
-          chmod 600 "${HOME}/.ssh/P15_deploy_key" "${HOME}/.ssh/known_hosts"
-      - name: Snapshot old ERP fingerprint
-        id: old
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-        run: |
-          set -euo pipefail
-          fp="$(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P15_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
-          echo "fingerprint=$fp" >> "$GITHUB_OUTPUT"
-      - name: Deploy through existing P07 mechanism
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          ARTIFACT: ${{ steps.artifact.outputs.artifact }}
-          ARTIFACT_SHA: ${{ steps.artifact.outputs.sha256 }}
-          DEPLOY_SHA: ${{ steps.meta.outputs.sha }}
-        run: |
-          set -euo pipefail
-          remote="/home/s/spugovxsim/planexp/deploy/P15_artifact_${DEPLOY_SHA}.tar.gz"
-          scp -P "$SSH_PORT" -i "${HOME}/.ssh/P15_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
-          ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P15_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$DEPLOY_SHA'"
-          ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P15_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "test \"\$(cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt)\" = '$DEPLOY_SHA' && rm -f '$remote'"
-      - name: Verify old ERP unchanged
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          BEFORE: ${{ steps.old.outputs.fingerprint }}
-          DEPLOY_SHA: ${{ steps.meta.outputs.sha }}
-        run: |
-          set -euo pipefail
-          after="$(ssh -p "$SSH_PORT" -i "${HOME}/.ssh/P15_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
-          test "$after" = "$BEFORE"
-          mkdir -p P15_deploy_output
-          printf '%s\n' "$DEPLOY_SHA" > P15_deploy_output/P15_DEPLOYED_SHA.txt
-          printf '%s\n' "$BEFORE" > P15_deploy_output/P15_OLD_ERP_FINGERPRINT.txt
-          printf '{"status":"PASS","deployed_sha":"%s","target":"/erpv2","old_erp_mutated":false}\n' "$DEPLOY_SHA" > P15_deploy_output/P15_DEPLOY_SUMMARY.json
-      - if: always()
-        run: rm -f "${HOME}/.ssh/P15_deploy_key" 2>/dev/null || true
-      - if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: P15_deploy_${{ steps.meta.outputs.sha }}
-          path: P15_deploy_output/
-          if-no-files-found: error
-          retention-days: 30
+          echo 'Legacy P15 deploy is disabled by P21.'
+          echo 'Use ERPv2 Controlled Deploy with an explicit source_sha and DEPLOY_ERPV2 confirmation.'
+          exit 1
