@@ -1,138 +1,18 @@
-name: P22 Deploy client creation fix
+name: P22 Legacy Client Fix Deploy (disabled)
 
 on:
-  push:
-    branches:
-      - chatgpt/p22-client-create-migration-fix-20260807
-  pull_request:
-    branches:
-      - chatgpt/p20-finance-operation-history-fix-20260807-impl
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
-    if: github.event_name == 'push' || github.head_ref == 'chatgpt/p22-client-create-migration-fix-20260807'
+  disabled:
     runs-on: ubuntu-24.04
-    env:
-      BASE_SHA: b96c085a254a885da26f8f5ca342b3781aea12ad
-      TARGET_SHA: f95276c747e1ea6fafd58bf89f6edca7adacaa3f
-      EXPECTED_P07_SHA256: 1e3328e2cd40dc2139eb9f87f01a69c848717b4b1ba4785ce8ecd8feeecb6b95
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Verify exact patch
+      - name: Legacy deploy disabled
         shell: bash
         run: |
-          set -euo pipefail
-          git cat-file -e "${TARGET_SHA}^{commit}"
-          test "$(git rev-parse "${TARGET_SHA}^")" = "$BASE_SHA"
-          changed="$(git diff --name-only "$BASE_SHA" "$TARGET_SHA")"
-          test "$changed" = "app/Service/ClientService.php"
-          git show "$TARGET_SHA:app/Service/ClientService.php" > /tmp/ClientService.php
-          php -l /tmp/ClientService.php
-
-      - name: Configure SSH
-        shell: bash
-        env:
-          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
-          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          test -n "$PRIVATE_KEY"
-          test -n "$KNOWN_HOSTS"
-          install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P22_deploy_key"
-          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/P22_deploy_key" "$HOME/.ssh/known_hosts"
-
-      - name: Predeploy guard and backup
-        shell: bash
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-        run: |
-          set -euo pipefail
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "BASE_SHA='$BASE_SHA' TARGET_SHA='$TARGET_SHA' EXPECTED_P07_SHA256='$EXPECTED_P07_SHA256' RUN_ID='$GITHUB_RUN_ID' bash -se" <<'REMOTE'
-          set -euo pipefail
-          ROOT="$HOME/planexp"
-          LIVE="$ROOT/public_html/erpv2"
-          OLD="$ROOT/public_html/erp"
-          P07="$ROOT/deploy/P07_deploy_erpv2.sh"
-          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
-          case "$marker" in
-            "$BASE_SHA"|"$TARGET_SHA") ;;
-            *) echo "UNEXPECTED_CURRENT_MARKER=$marker"; exit 42 ;;
-          esac
-          p07sha="$(sha256sum "$P07" | awk '{print $1}')"
-          test "$p07sha" = "$EXPECTED_P07_SHA256"
-          test -x "$P07"
-          grep -Fq 'LIVE="$ROOT/public_html/erpv2"' "$P07"
-          if sed '/^[[:space:]]*#/d' "$P07" | grep -Eiq '(artisan[[:space:]]+migrate|php[^[:cntrl:]]*(migrat|migration)|mysql[[:space:]][^<]*<[^[:space:]]*(migrat|migration))'; then
-            echo 'MIGRATIONS_DISABLED=NO'
-            exit 41
-          fi
-          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
-          backup="$ROOT/deploy_backups/P22_${RUN_ID}_${marker}"
-          test ! -e "$backup"
-          cp -a "$LIVE" "$backup"
-          printf 'CURRENT_MARKER=%s\nOLD_ERP_FP=%s\nBACKUP_PATH=%s\nMIGRATIONS_DISABLED=YES\nTARGET_ONLY_ERPV2=YES\n' "$marker" "$oldfp" "$backup"
-          REMOTE
-
-      - name: Build exact target artifact
-        id: build
-        shell: bash
-        run: |
-          set -euo pipefail
-          artifact="P22_${TARGET_SHA}.tar.gz"
-          git archive --format=tar --output=P22.tar "$TARGET_SHA" -- app bootstrap config database public scripts tools tests
-          gzip -n P22.tar
-          mv P22.tar.gz "$artifact"
-          sha="$(sha256sum "$artifact" | awk '{print $1}')"
-          printf 'artifact=%s\nsha=%s\n' "$artifact" "$sha" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy exact target through P07
-        shell: bash
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          ARTIFACT: ${{ steps.build.outputs.artifact }}
-          ARTIFACT_SHA: ${{ steps.build.outputs.sha }}
-        run: |
-          set -euo pipefail
-          remote="planexp/deploy/P22_${TARGET_SHA}.tar.gz"
-          scp -P "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "ARTIFACT_REL='$remote' ARTIFACT_SHA='$ARTIFACT_SHA' TARGET_SHA='$TARGET_SHA' bash -se" <<'REMOTE'
-          set -euo pipefail
-          "$HOME/planexp/deploy/P07_deploy_erpv2.sh" "$HOME/$ARTIFACT_REL" "$ARTIFACT_SHA" "$TARGET_SHA"
-          rm -f "$HOME/$ARTIFACT_REL"
-          REMOTE
-
-      - name: Verify deployed marker and HTTP
-        shell: bash
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-        run: |
-          set -euo pipefail
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "TARGET_SHA='$TARGET_SHA' bash -se" <<'REMOTE'
-          set -euo pipefail
-          ROOT="$HOME/planexp"
-          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
-          test "$marker" = "$TARGET_SHA"
-          login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
-          clients="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/company/clients)"
-          test "$login" = 200
-          printf 'DEPLOYED_SHA=%s\nERPV2_LOGIN_HTTP=%s\nCLIENTS_UNAUTH_HTTP=%s\n' "$marker" "$login" "$clients"
-          REMOTE
-
-      - name: Cleanup SSH key
-        if: always()
-        shell: bash
-        run: rm -f "$HOME/.ssh/P22_deploy_key"
+          echo 'P22 automatic deploy disabled by P21 control-plane stabilization.'
+          echo 'Use ERPv2 Controlled Deploy with an explicit source_sha and DEPLOY_ERPV2 confirmation.'
+          exit 1
