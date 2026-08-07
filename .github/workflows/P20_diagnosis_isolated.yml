@@ -1,0 +1,165 @@
+name: P20 isolated read-only history diagnosis
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P20_diagnosis_isolated.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ACCEPTED_P19_SHA: f42a37539da13d50af1fddefe528a82dba022dbe
+  EXPECTED_OLD_ERP_FP: c6a6522dacbe0c919ba5d22f4cf0501426a6ce31bc8ac091405537076e9a42da
+  EXPECTED_DB_FP: cca07e25969163877994635a6a99209e84cd26fc9eb0d793f638a0c6d9106d0a
+  OUT: P20_diagnosis_output
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p20-execution-isolated-20260807
+          fetch-depth: 0
+      - name: Prepare diagnosis sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          git fetch --quiet origin chatgpt/p20-finance-operation-history-fix-20260807 chatgpt/p19-uiux-safe-runtime-review-20260806 p11-audit-v2
+          git show origin/chatgpt/p20-finance-operation-history-fix-20260807:.github/p20/P20_readonly_diagnose.php > /tmp/P20_readonly_diagnose.php
+          git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_readonly_db_fingerprint.php > /tmp/P20_db_fp.php
+          php -l /tmp/P20_readonly_diagnose.php
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P20_diag_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P20_diag_key" "$HOME/.ssh/known_hosts"
+      - name: Verify accepted P19 state
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P20_diag_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P20_db_fp.php "$SSH_USER@$SSH_HOST:/tmp/P20_diag_db_${GITHUB_RUN_ID}.php"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_diag_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' ACCEPTED_P19_SHA='$ACCEPTED_P19_SHA' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P20_01_START_STATE.json" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P20_diag_db_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$ACCEPTED_P19_SHA"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"
+          printf '{"server_marker":"%s","old_erp_fingerprint":"%s","production_db_fingerprint":"%s","migrations_run":false}\n' "$marker" "$oldfp" "$dbfp"
+          REMOTE
+      - name: Resolve OWNER runtime credential
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"; tmpdir="$(mktemp -d)"
+          if [ -z "$credentials" ]; then
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > "$tmpdir/decrypt.py"
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > "$tmpdir/credentials.enc.json"
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P20_cred_key"; chmod 600 "$HOME/.ssh/P20_cred_key"
+            credentials="$(python "$tmpdir/decrypt.py" --key "$HOME/.ssh/P20_cred_key" --input "$tmpdir/credentials.enc.json")"
+          fi
+          test -n "$credentials"; echo "::add-mask::$credentials"
+          CREDENTIALS="$credentials" python - <<'PY'
+          import base64,json,os
+          d=json.loads(base64.b64decode(os.environ['CREDENTIALS']).decode())
+          assert any(str(x.get('role','')).upper()=='OWNER' for x in d if isinstance(x,dict))
+          PY
+          printf 'P20_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+          rm -rf "$tmpdir" "$HOME/.ssh/P20_cred_key"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright 1.54.2 Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Reproduce OWNER history 500 with correlation ID
+        shell: bash
+        env:
+          P20_CID: P20-${{ github.run_id }}-history
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs=require('fs');const{chromium}=require('playwright');
+          const BASE='https://plan-ex.ru/erpv2/';const cid=process.env.P20_CID;const data=JSON.parse(Buffer.from(process.env.P20_CREDENTIALS_B64,'base64').toString());const cred=data.find(x=>String(x.role||'').toUpperCase()==='OWNER');
+          (async()=>{const out={correlation_id:cid,operation_id:null,direct_history:null,modal_history:null,console_errors:[],page_errors:[],request_failures:[]};const b=await chromium.launch({headless:true});const c=await b.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',extraHTTPHeaders:{'X-P20-Correlation-ID':cid}});const p=await c.newPage();p.on('console',m=>{if(m.type()==='error')out.console_errors.push(m.text().slice(0,500))});p.on('pageerror',e=>out.page_errors.push(String(e.message||e).slice(0,500)));p.on('requestfailed',r=>out.request_failures.push({url:r.url(),error:r.failure()?.errorText||''}));await p.goto(BASE+'login',{waitUntil:'domcontentloaded'});await p.locator('input[name="login"],input[name="username"],input[type="text"]').first().fill(cred.username);await p.locator('input[type="password"]').first().fill(cred.password);await Promise.all([p.waitForLoadState('domcontentloaded').catch(()=>{}),p.locator('button[type="submit"],input[type="submit"]').first().click()]);await p.goto(BASE+'company/finance/operations',{waitUntil:'networkidle'});const row=p.locator('tr[data-operation-id]').first();out.operation_id=Number(await row.getAttribute('data-operation-id'));const direct=await p.evaluate(async({BASE,id,cid})=>{const r=await fetch(BASE+`company/finance/operations/${id}/history?p20_cid=${encodeURIComponent(cid)}`,{headers:{'X-Requested-With':'XMLHttpRequest','X-P20-Correlation-ID':cid}});return{status:r.status,body:(await r.text()).slice(0,700)}},{BASE,id:out.operation_id,cid});out.direct_history=direct;const waiter=p.waitForResponse(r=>/\/company\/finance\/operations\/\d+\/history(?:\?|$)/.test(r.url()),{timeout:10000}).then(async r=>({status:r.status,url:r.url(),body:(await r.text()).slice(0,700)})).catch(()=>null);await row.dblclick();out.modal_history=await waiter;await p.screenshot({path:process.env.OUT+'/P20_DIAG_OWNER_HISTORY.png',fullPage:false});fs.writeFileSync(process.env.OUT+'/P20_DIAG_BROWSER.json',JSON.stringify(out,null,2));fs.writeFileSync(process.env.OUT+'/P20_DIAG_OPERATION_ID.txt',String(out.operation_id));await c.close();await b.close();console.log(`DIRECT_HISTORY_HTTP=${direct.status}`);console.log(`MODAL_HISTORY_HTTP=${out.modal_history&&out.modal_history.status}`);})();
+          JS
+      - name: Direct service and schema diagnosis with private stack artifact
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P20_diag_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P20_readonly_diagnose.php "$SSH_USER@$SSH_HOST:/tmp/P20_readonly_diagnose_${GITHUB_RUN_ID}.php"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_diag_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "P20_ROOT='/home/s/spugovxsim/planexp/public_html/erpv2' php '/tmp/P20_readonly_diagnose_${GITHUB_RUN_ID}.php'" > "$OUT/P20_DIAG_SERVICE_STACK.json"
+          python - <<'PY'
+          import json
+          d=json.load(open('P20_diagnosis_output/P20_DIAG_SERVICE_STACK.json'))
+          print('SERVICE_CALL='+str(d.get('service_call',{}).get('status')))
+          e=d.get('exception') or {}
+          print('EXCEPTION_CLASS='+str(e.get('class','NONE')))
+          print('EXCEPTION_FILE='+str(e.get('file','NONE')))
+          print('EXCEPTION_LINE='+str(e.get('line','NONE')))
+          PY
+      - name: Correlated server log lookup
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          P20_CID: P20-${{ github.run_id }}-history
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_diag_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "CID='$P20_CID' bash -se" > "$OUT/P20_DIAG_SERVER_LOGS.txt" <<'REMOTE'
+          set +e; found=0
+          for root in /home/s/spugovxsim/logs /home/s/spugovxsim/planexp/logs; do
+            [ -d "$root" ] || continue
+            while IFS= read -r f; do
+              if grep -F "$CID" "$f" >/dev/null 2>&1; then grep -H -F "$CID" "$f" | tail -n 20; found=1; fi
+            done < <(find "$root" -maxdepth 4 -type f -mmin -30 2>/dev/null)
+          done
+          [ "$found" -eq 1 ] || echo 'CORRELATION_LOG_MATCH=NOT_FOUND'
+          REMOTE
+      - name: Cleanup
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_diag_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '/tmp/P20_readonly_diagnose_${GITHUB_RUN_ID}.php' '/tmp/P20_diag_db_${GITHUB_RUN_ID}.php'" || true
+          printf 'P20_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "$HOME/.ssh/P20_diag_key" /tmp/P20_readonly_diagnose.php /tmp/P20_db_fp.php
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P20_isolated_diagnosis_${{ github.run_id }}
+          path: ${{ env.OUT }}/
+          if-no-files-found: error
+          retention-days: 30
