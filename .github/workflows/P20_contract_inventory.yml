@@ -1,0 +1,105 @@
+name: P20 history contract inventory
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ACCEPTED_P19_SHA: f42a37539da13d50af1fddefe528a82dba022dbe
+  OUT: P20_contract_inventory_output
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p20-execution-isolated-20260807
+          fetch-depth: 0
+      - name: Prepare sources and OWNER login
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          git fetch --quiet origin chatgpt/p20-finance-operation-history-fix-20260807 p11-audit-v2
+          git show origin/chatgpt/p20-finance-operation-history-fix-20260807:.github/p20/P20_contract_inventory.php > /tmp/P20_inventory.php
+          php -l /tmp/P20_inventory.php
+          credentials="${SECRET_CREDENTIALS:-}"; tmpdir="$(mktemp -d)"
+          if [ -z "$credentials" ]; then
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > "$tmpdir/decrypt.py"
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > "$tmpdir/credentials.enc.json"
+            python -m pip install --disable-pip-version-check --quiet cryptography==46.0.3
+            printf '%s\n' "$PRIVATE_KEY" > "$tmpdir/key"; chmod 600 "$tmpdir/key"
+            credentials="$(python "$tmpdir/decrypt.py" --key "$tmpdir/key" --input "$tmpdir/credentials.enc.json")"
+          fi
+          login="$(CREDENTIALS="$credentials" python - <<'PY'
+          import base64,json,os
+          d=json.loads(base64.b64decode(os.environ['CREDENTIALS']).decode())
+          print(next(x['username'] for x in d if isinstance(x,dict) and str(x.get('role','')).upper()=='OWNER'))
+          PY
+          )"
+          test -n "$login"; echo "::add-mask::$login"; printf 'P20_OWNER_LOGIN=%s\n' "$login" >> "$GITHUB_ENV"
+          rm -rf "$tmpdir"
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P20_inventory_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P20_inventory_key" "$HOME/.ssh/known_hosts"
+      - name: Inventory contract cases read-only
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P20_inventory_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P20_inventory.php "$SSH_USER@$SSH_HOST:/tmp/P20_inventory_${GITHUB_RUN_ID}.php"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_inventory_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "ACCEPTED_P19_SHA='$ACCEPTED_P19_SHA' OWNER_LOGIN='$P20_OWNER_LOGIN' GITHUB_RUN_ID='$GITHUB_RUN_ID' bash -se" > "$OUT/P20_CONTRACT_INVENTORY.json" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          test "$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")" = "$ACCEPTED_P19_SHA"
+          PHPBIN=''; for c in php83 php8.3 /usr/local/bin/php83 /usr/bin/php83 /usr/bin/php8.3; do if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then PHPBIN="$c"; break; fi; done; test -n "$PHPBIN"
+          P20_ROOT="$ROOT/public_html/erpv2" P20_OWNER_LOGIN="$OWNER_LOGIN" "$PHPBIN" "/tmp/P20_inventory_${GITHUB_RUN_ID}.php"
+          REMOTE
+          python - <<'PY'
+          import json
+          d=json.load(open('P20_contract_inventory_output/P20_CONTRACT_INVENTORY.json'))
+          print('WITH_HISTORY='+str((d.get('with_history') or {}).get('id')))
+          print('WITHOUT_HISTORY='+str((d.get('without_history') or {}).get('id')))
+          print('BANK='+str((d.get('bank_operation') or {}).get('id')))
+          print('CASH='+str((d.get('cash_operation') or {}).get('id')))
+          print('FOREIGN='+str(((d.get('foreign_operation') or {}).get('operation') or {}).get('id')))
+          PY
+      - name: Cleanup
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_inventory_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '/tmp/P20_inventory_${GITHUB_RUN_ID}.php'" || true
+          printf 'P20_OWNER_LOGIN=\n' >> "$GITHUB_ENV"
+          rm -f "$HOME/.ssh/P20_inventory_key" /tmp/P20_inventory.php
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P20_contract_inventory_${{ github.run_id }}
+          path: ${{ env.OUT }}/
+          if-no-files-found: error
+          retention-days: 30
