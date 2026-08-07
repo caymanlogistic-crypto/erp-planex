@@ -107,8 +107,11 @@ jobs:
           set -euo pipefail
           remote="planexp/deploy/P22_${TARGET_SHA}.tar.gz"
           scp -P "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "$HOME/planexp/deploy/P07_deploy_erpv2.sh '$HOME/$remote' '$ARTIFACT_SHA' '$TARGET_SHA'"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$HOME/$remote'"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "ARTIFACT_REL='$remote' ARTIFACT_SHA='$ARTIFACT_SHA' TARGET_SHA='$TARGET_SHA' bash -se" <<'REMOTE'
+          set -euo pipefail
+          "$HOME/planexp/deploy/P07_deploy_erpv2.sh" "$HOME/$ARTIFACT_REL" "$ARTIFACT_SHA" "$TARGET_SHA"
+          rm -f "$HOME/$ARTIFACT_REL"
+          REMOTE
 
       - name: Verify deployed marker and HTTP
         shell: bash
