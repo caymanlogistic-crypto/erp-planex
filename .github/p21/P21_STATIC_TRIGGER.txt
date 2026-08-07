@@ -1,0 +1,1 @@
+P21 control-plane static verification trigger. No deploy. No runtime mutation.
