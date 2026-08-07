@@ -36,11 +36,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$OUT"
+          mkdir -p "$OUT" .github/p19-runtime
           git fetch --quiet origin chatgpt/p19-uiux-safe-runtime-review-20260806
           git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_readonly_db_fingerprint.php > /tmp/P19_db_fp.php
-          git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_patch_a_runtime.js > /tmp/P19_patch_a_runtime.js
-          node --check /tmp/P19_patch_a_runtime.js
+          git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_patch_a_runtime.js > .github/p19-runtime/P19_patch_a_runtime.js
+          node --check .github/p19-runtime/P19_patch_a_runtime.js
 
       - name: Configure SSH
         env:
@@ -135,7 +135,7 @@ jobs:
           P19_DEPLOYED_SHA: ${{ env.DEPLOYED_COMMIT }}
         run: |
           set -euo pipefail
-          node /tmp/P19_patch_a_runtime.js | tee "$OUT/P19_13_RUNTIME_CONSOLE.txt"
+          node .github/p19-runtime/P19_patch_a_runtime.js | tee "$OUT/P19_13_RUNTIME_CONSOLE.txt"
 
       - name: Verify marker DB old ERP after browser runtime
         if: always()
@@ -187,4 +187,5 @@ jobs:
         shell: bash
         run: |
           printf 'P19_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
-          rm -f "$HOME/.ssh/P19_runtime_key" /tmp/P19_db_fp.php /tmp/P19_patch_a_runtime.js 2>/dev/null || true
+          rm -f "$HOME/.ssh/P19_runtime_key" /tmp/P19_db_fp.php 2>/dev/null || true
+          rm -rf .github/p19-runtime 2>/dev/null || true
