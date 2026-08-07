@@ -114,6 +114,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/p20/P20_runtime_mutation_free.js')
+          s=p.read_text(encoding='utf-8')
+          old="await p.waitForFunction(sel=>{const el=document.querySelector(sel);return !!el&&String(el.textContent||'').includes('История изменений пуста');},'#operation-view-modal [data-operation-history-container]',{timeout:10000});"
+          new="await history.getByText('История изменений пуста',{exact:false}).first().waitFor({state:'attached',timeout:10000});"
+          if s.count(old)!=1: raise SystemExit('CSP_WAIT_PATCH_TARGET_MISMATCH')
+          p.write_text(s.replace(old,new),encoding='utf-8')
+          PY
+          node --check .github/p20/P20_runtime_mutation_free.js
+          cp .github/p20/P20_runtime_mutation_free.js "$OUT/P20_RUNTIME_HARNESS_EXECUTED.js"
           node .github/p20/P20_runtime_mutation_free.js | tee "$OUT/P20_RUNTIME_CONSOLE.txt"
       - name: Post-runtime DB old ERP tenant guards
         if: always()
