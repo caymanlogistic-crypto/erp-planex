@@ -1,0 +1,182 @@
+name: P19 isolated PATCH_A runtime v2
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P19_isolated_runtime_v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_PATCH_COMMIT: 91abe9c80947c277273f35ab4cf6d75b33187d4d
+  DEPLOYED_COMMIT: ef47dabe3249625280e6577de7b249f5b4d14a9d
+  EXPECTED_OLD_ERP_FP: c6a6522dacbe0c919ba5d22f4cf0501426a6ce31bc8ac091405537076e9a42da
+  EXPECTED_DB_FP: cca07e25969163877994635a6a99209e84cd26fc9eb0d793f638a0c6d9106d0a
+  OUT: P19_patch_a_runtime_v2_output
+
+jobs:
+  runtime-v2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p19-execution-isolated-20260807
+          fetch-depth: 0
+
+      - name: Prepare read-only DB helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          git fetch --quiet origin chatgpt/p19-uiux-safe-runtime-review-20260806
+          git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_readonly_db_fingerprint.php > /tmp/P19_db_fp.php
+          node --check .github/p19/P19_patch_a_runtime_v2.js
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19_runtime_v2_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P19_runtime_v2_key" "$HOME/.ssh/known_hosts"
+
+      - name: Verify marker DB old ERP and HTTP before runtime
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19_runtime_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P19_db_fp.php "$SSH_USER@$SSH_HOST:/tmp/P19_runtime_v2_db_${GITHUB_RUN_ID}.php"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_runtime_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_COMMIT='$DEPLOYED_COMMIT' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_19_RUNTIME_V2_PRE_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P19_runtime_v2_db_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$DEPLOYED_COMMIT"
+          test "$oldfp" = "$EXPECTED_OLD_ERP_FP"
+          test "$dbfp" = "$EXPECTED_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker" "$oldfp" "$dbfp"
+          REMOTE
+          cat "$OUT/P19_19_RUNTIME_V2_PRE_GUARDS.txt"
+          test "$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)" = '200'
+          test "$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erp/)" = '200'
+
+      - name: Resolve existing SUPERADMIN OWNER LOGIST credentials
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          source_label='ACTIONS_SECRET'
+          tmpdir="$(mktemp -d)"
+          if [ -z "$credentials" ]; then
+            source_label='P11_ENCRYPTED_FALLBACK'
+            git fetch --quiet origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > "$tmpdir/decrypt.py"
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > "$tmpdir/credentials.enc.json"
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19_v2_credential_key"
+            chmod 600 "$HOME/.ssh/P19_v2_credential_key"
+            credentials="$(python "$tmpdir/decrypt.py" --key "$HOME/.ssh/P19_v2_credential_key" --input "$tmpdir/credentials.enc.json")"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          CREDENTIALS="$credentials" python - <<'PY'
+          import base64,json,os
+          d=json.loads(base64.b64decode(os.environ['CREDENTIALS']).decode('utf-8'))
+          roles={str(x.get('role','')).upper() for x in d if isinstance(x,dict)}
+          missing={'SUPERADMIN','OWNER','LOGIST'}-roles
+          if missing: raise SystemExit('Missing required roles: '+','.join(sorted(missing)))
+          print('RUNTIME_ROLES=SUPERADMIN,OWNER,LOGIST')
+          print('SENIOR_LOGIST=NOT_TESTED_CREDENTIAL_UNAVAILABLE')
+          PY
+          printf 'P19_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+          printf 'RUNTIME_CREDENTIAL_SOURCE=%s\n' "$source_label" >> "$GITHUB_ENV"
+          rm -rf "$tmpdir" "$HOME/.ssh/P19_v2_credential_key"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright 1.54.2 Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Execute corrected PATCH_A browser matrix
+        env:
+          P19_OUT: ${{ env.OUT }}
+          P19_DEPLOYED_SHA: ${{ env.DEPLOYED_COMMIT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p19/P19_patch_a_runtime_v2.js | tee "$OUT/P19_20_RUNTIME_V2_CONSOLE.txt"
+
+      - name: Verify marker DB old ERP after runtime
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_runtime_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_COMMIT='$DEPLOYED_COMMIT' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_21_RUNTIME_V2_POST_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P19_runtime_v2_db_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$DEPLOYED_COMMIT"
+          test "$oldfp" = "$EXPECTED_OLD_ERP_FP"
+          test "$dbfp" = "$EXPECTED_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker" "$oldfp" "$dbfp"
+          rm -f "/tmp/P19_runtime_v2_db_${GITHUB_RUN_ID}.php"
+          REMOTE
+          cat "$OUT/P19_21_RUNTIME_V2_POST_GUARDS.txt"
+
+      - name: Write PATCH_A accepted decision
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os
+          p=os.path.join(os.environ['OUT'],'P19_18_PATCH_A_RUNTIME_SUMMARY_V2.json')
+          d=json.load(open(p,encoding='utf-8'))
+          assert d['status']=='PASS'
+          out={'decision':'PATCH_A_ACCEPTED','source_patch_commit':os.environ['SOURCE_PATCH_COMMIT'],'deployed_commit':os.environ['DEPLOYED_COMMIT'],'required_roles':['SUPERADMIN','OWNER','LOGIST'],'senior_logist':'NOT_TESTED_CREDENTIAL_UNAVAILABLE','viewports':['1920x1080','1536x864','1366x768'],'database_changed':False,'old_erp_changed':False,'backup_path':'/home/s/spugovxsim/planexp/deploy_backups/P19A_31165139010_8c7571c01bcd87f42c4f2e9300fc52a2499935fe'}
+          json.dump(out,open(os.path.join(os.environ['OUT'],'P19_22_PATCH_A_DECISION.json'),'w'),ensure_ascii=False,indent=2)
+          PY
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_patch_a_runtime_v2_${{ github.run_id }}
+          path: ${{ env.OUT }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - if: always()
+        shell: bash
+        run: |
+          printf 'P19_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "$HOME/.ssh/P19_runtime_v2_key" /tmp/P19_db_fp.php 2>/dev/null || true
