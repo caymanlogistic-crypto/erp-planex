@@ -1,0 +1,138 @@
+name: P19 PATCH_B final reconcile
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths:
+      - '.github/workflows/P19_patch_b_final_reconcile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DEPLOYED_B: f42a37539da13d50af1fddefe528a82dba022dbe
+  EXPECTED_OLD_ERP_FP: c6a6522dacbe0c919ba5d22f4cf0501426a6ce31bc8ac091405537076e9a42da
+  EXPECTED_DB_FP: cca07e25969163877994635a6a99209e84cd26fc9eb0d793f638a0c6d9106d0a
+  OUT: P19_patch_b_reconcile_output
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p19-execution-isolated-20260807
+          fetch-depth: 0
+      - name: Configure SSH and DB helper
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT" "$HOME/.ssh"
+          git fetch --quiet origin chatgpt/p19-uiux-safe-runtime-review-20260806
+          git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_readonly_db_fingerprint.php > /tmp/P19_db_fp.php
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19B_reconcile_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P19B_reconcile_key" "$HOME/.ssh/known_hosts"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19B_reconcile_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P19_db_fp.php "$SSH_USER@$SSH_HOST:/tmp/P19B_reconcile_db_${GITHUB_RUN_ID}.php"
+      - name: Pre-reconcile server invariants and direct font HTTP
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_reconcile_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_B='$DEPLOYED_B' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_66_RECONCILE_PRE_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp"&&find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null|sort|sha256sum|awk '{print $1}')"
+          dbfp="$(php "/tmp/P19B_reconcile_db_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$DEPLOYED_B"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker"
+          REMOTE
+          font_code="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/fonts/IBMPlexSans-Bold.woff2)"
+          test "$font_code" = '200'
+          printf 'IBMPLEX_BOLD_HTTP=%s\n' "$font_code" > "$OUT/P19_67_FONT_HTTP.txt"
+      - name: Resolve LOGIST credential
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"; tmpdir="$(mktemp -d)"
+          if [ -z "$credentials" ]; then
+            git fetch --quiet origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > "$tmpdir/decrypt.py"
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > "$tmpdir/credentials.enc.json"
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19B_reconcile_cred"; chmod 600 "$HOME/.ssh/P19B_reconcile_cred"
+            credentials="$(python "$tmpdir/decrypt.py" --key "$HOME/.ssh/P19B_reconcile_cred" --input "$tmpdir/credentials.enc.json")"
+          fi
+          echo "::add-mask::$credentials"
+          CREDENTIALS="$credentials" python - <<'PY'
+          import base64,json,os
+          d=json.loads(base64.b64decode(os.environ['CREDENTIALS']).decode())
+          assert any(str(x.get('role','')).upper()=='LOGIST' for x in d if isinstance(x,dict))
+          PY
+          printf 'P19_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+          rm -rf "$tmpdir" "$HOME/.ssh/P19B_reconcile_cred"
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install Playwright 1.54.2 Chromium
+        run: |
+          npm install --no-save playwright@1.54.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Verify LOGIST finance deny after fonts settled
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs=require('fs'),path=require('path');const{chromium}=require('playwright');
+          const out=process.env.OUT,base='https://plan-ex.ru/erpv2/',u=p=>new URL(p.replace(/^\//,''),base).href;
+          const data=JSON.parse(Buffer.from(process.env.P19_CREDENTIALS_B64,'base64').toString('utf8'));
+          const c=data.find(x=>String(x.role||'').toUpperCase()==='LOGIST');
+          const vps=[{width:1920,height:1080},{width:1536,height:864},{width:1366,height:768}];
+          (async()=>{const b=await chromium.launch({headless:true}),rows=[];for(const vp of vps){const ctx=await b.newContext({viewport:vp,locale:'ru-RU',timezoneId:'Europe/Moscow'}),p=await ctx.newPage(),consoleErrors=[],failures=[];p.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});p.on('requestfailed',r=>failures.push({url:r.url(),type:r.resourceType(),error:r.failure()?.errorText||'failed'}));await p.goto(u('/login'),{waitUntil:'domcontentloaded'});await p.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(c.username);await p.locator('input[type="password"]').first().fill(c.password);await Promise.all([p.waitForLoadState('domcontentloaded').catch(()=>{}),p.locator('button[type="submit"],input[type="submit"]').first().click()]);await p.goto(u('/company/dashboard'),{waitUntil:'networkidle'});await p.evaluate(async()=>{if(document.fonts)await document.fonts.ready;const r=await fetch('/erpv2/assets/fonts/IBMPlexSans-Bold.woff2',{cache:'no-store'});if(!r.ok)throw new Error('font '+r.status);});consoleErrors.length=0;failures.length=0;const r=await p.goto(u('/company/finance/operations'),{waitUntil:'domcontentloaded'});await p.waitForTimeout(250);const unexpectedConsole=consoleErrors.filter(x=>!/status of 403|\b403\b/i.test(x));const unexpectedFailures=failures.filter(x=>!(x.error==='net::ERR_ABORTED'&&x.type==='font'));rows.push({viewport:`${vp.width}x${vp.height}`,httpStatus:r?.status()??null,unexpectedConsole,unexpectedFailures,pass:r?.status()===403&&unexpectedConsole.length===0&&unexpectedFailures.length===0});await ctx.close();}await b.close();const result={status:rows.every(x=>x.pass)?'PASS':'FAIL',rows};fs.writeFileSync(path.join(out,'P19_68_LOGIST_RECONCILE.json'),JSON.stringify(result,null,2));console.log('P19_PATCH_B_RECONCILE='+result.status);process.exitCode=result.status==='PASS'?0:1;})().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+      - name: Post-reconcile invariants and final PATCH_B decision
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_reconcile_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_B='$DEPLOYED_B' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_69_RECONCILE_POST_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp"&&find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null|sort|sha256sum|awk '{print $1}')"
+          dbfp="$(php "/tmp/P19B_reconcile_db_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$DEPLOYED_B"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker"
+          rm -f "/tmp/P19B_reconcile_db_${GITHUB_RUN_ID}.php"
+          REMOTE
+          cat > "$OUT/P19_70_PATCH_B_FINAL_DECISION.json" <<EOF
+          {"decision":"PATCH_B_ACCEPTED","deployed_b":"$DEPLOYED_B","owner_modal_runtime":"PASS_RUN_31167699995","logist_reconcile":"PASS","known_unrelated_backend_finding":"HTTP 500 on unchanged finance operation history endpoint","database_changed":false,"old_erp_changed":false}
+          EOF
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_patch_b_final_reconcile_${{ github.run_id }}
+          path: ${{ env.OUT }}/
+          if-no-files-found: error
+          retention-days: 30
+      - if: always()
+        run: |
+          printf 'P19_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "$HOME/.ssh/P19B_reconcile_key" /tmp/P19_db_fp.php 2>/dev/null || true
