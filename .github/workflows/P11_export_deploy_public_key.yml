@@ -1,16 +1,6 @@
-name: P11 Export deploy public key
+name: P11 Export deploy public key (manual legacy utility)
 
 on:
-  push:
-    branches:
-      - chatgpt/production-stabilization-20260802
-    paths:
-      - '.github/workflows/P11_export_deploy_public_key.yml'
-  pull_request:
-    branches:
-      - chatgpt/production-stabilization-20260802
-    paths:
-      - '.github/workflows/P11_export_deploy_public_key.yml'
   workflow_dispatch:
 
 permissions:
