@@ -40,7 +40,7 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/P21_guard_key" "$HOME/.ssh/known_hosts"
 
-      - name: Read marker DB and old ERP fingerprints
+      - name: Read and record marker DB and old ERP fingerprints
         shell: bash
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
@@ -53,13 +53,18 @@ jobs:
           oldfp="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/P21_guard_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk "{print \$1}"')"
           dbfp="$(cat .github/p21/P21_readonly_db_fingerprint.php | ssh -p "$SSH_PORT" -i "$HOME/.ssh/P21_guard_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'php')"
           login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
-          test "$marker" = "$EXPECTED_SERVER_SHA"
-          test "$oldfp" = "$EXPECTED_OLD_ERP_FP"
-          test "$dbfp" = "$EXPECTED_DB_FP"
-          test "$login" = 200
+          marker_ok=false; old_ok=false; db_ok=false; login_ok=false
+          [ "$marker" = "$EXPECTED_SERVER_SHA" ] && marker_ok=true
+          [ "$oldfp" = "$EXPECTED_OLD_ERP_FP" ] && old_ok=true
+          [ "$dbfp" = "$EXPECTED_DB_FP" ] && db_ok=true
+          [ "$login" = 200 ] && login_ok=true
+          status=FAIL
+          if $marker_ok && $old_ok && $db_ok && $login_ok; then status=PASS; fi
           cat > "$OUT/P21_11_SERVER_UNCHANGED_GUARD.json" <<EOF
-          {"status":"PASS","current_server_sha":"$marker","erpv2_login_http":$login,"database_fingerprint":"$dbfp","database_changed":false,"old_erp_fingerprint":"$oldfp","old_erp_changed":false,"server_changed":false,"deploy_executed":false}
+          {"status":"$status","current_server_sha":"$marker","expected_server_sha":"$EXPECTED_SERVER_SHA","marker_match":$marker_ok,"erpv2_login_http":$login,"login_match":$login_ok,"database_fingerprint":"$dbfp","expected_database_fingerprint":"$EXPECTED_DB_FP","database_match":$db_ok,"old_erp_fingerprint":"$oldfp","expected_old_erp_fingerprint":"$EXPECTED_OLD_ERP_FP","old_erp_match":$old_ok,"deploy_executed":false}
           EOF
+          cat "$OUT/P21_11_SERVER_UNCHANGED_GUARD.json"
+          test "$status" = PASS
 
       - name: Upload guard evidence
         if: always()
