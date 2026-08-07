@@ -1,138 +1,16 @@
-name: P12 Direct isolated ERPV2 deploy
+name: P12 Legacy Direct ERPV2 Deploy (disabled)
 
 on:
-  pull_request:
-    branches:
-      - chatgpt/production-stabilization-20260802
-    paths:
-      - '.github/workflows/P12_direct_erpv2_deploy.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: erpv2-deploy
-  cancel-in-progress: false
-
-env:
-  TARGET_COMMIT: 29bbedec7068b5ae349ca14d0c0e61e178b8cfa9
-
 jobs:
-  deploy-erpv2:
+  disabled:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
-      - name: Checkout exact application commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_COMMIT }}
-          fetch-depth: 1
-
-      - name: Build and verify P12 code artifact
-        id: artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${TARGET_COMMIT}"
-          artifact="P12_erpv2_${TARGET_COMMIT}.tar.gz"
-          git archive --format=tar --output=P12_erpv2.tar "${TARGET_COMMIT}" -- \
-            app bootstrap config database public scripts tools tests
-          gzip -n P12_erpv2.tar
-          mv P12_erpv2.tar.gz "${artifact}"
-          listing="P12_erpv2_${TARGET_COMMIT}_listing.txt"
-          tar -tzf "${artifact}" > "${listing}"
-          if grep -E '(^|/)(\.git|\.env([^/]*)?|storage|tmp|logs|screenshots|node_modules|vendor)(/|$)|(^|/)(cookies?|reports)(/|$)' "${listing}"; then
-            echo 'Forbidden path in artifact' >&2
-            exit 1
-          fi
-          if grep -E '(^|/)(runtime[-_]?fixtures?|.*credential.*)(/|$)' "${listing}"; then
-            echo 'Forbidden runtime fixture or credential path in artifact' >&2
-            exit 1
-          fi
-          sha256="$(sha256sum "${artifact}" | awk '{print $1}')"
-          printf 'artifact=%s\n' "${artifact}" >> "${GITHUB_OUTPUT}"
-          printf 'sha256=%s\n' "${sha256}" >> "${GITHUB_OUTPUT}"
-          printf '%s\n' "${TARGET_COMMIT}" > P12_DEPLOY_TARGET_COMMIT.txt
-          printf '%s\n' "${sha256}" > P12_DEPLOY_ARTIFACT_SHA256.txt
-          cp "${listing}" P12_DEPLOY_ARTIFACT_LISTING.txt
-
-      - name: Configure isolated SSH credentials
-        shell: bash
-        env:
-          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
-          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          test -n "${PRIVATE_KEY}"
-          test -n "${KNOWN_HOSTS}"
-          install -d -m 700 "${HOME}/.ssh"
-          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/P12_erpv2_deploy"
-          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
-          chmod 600 "${HOME}/.ssh/P12_erpv2_deploy" "${HOME}/.ssh/known_hosts"
-
-      - name: Upload private artifact
-        shell: bash
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          ARTIFACT: ${{ steps.artifact.outputs.artifact }}
-        run: |
-          set -euo pipefail
-          remote="/home/s/spugovxsim/planexp/deploy/P12_artifact_${TARGET_COMMIT}.tar.gz"
-          scp -P "${SSH_PORT}" -i "${HOME}/.ssh/P12_erpv2_deploy" \
-            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "${ARTIFACT}" "${SSH_USER}@${SSH_HOST}:${remote}"
-
-      - name: Deploy and verify isolated ERPV2
-        shell: bash
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          ARTIFACT_SHA: ${{ steps.artifact.outputs.sha256 }}
-        run: |
-          set -euo pipefail
-          remote="/home/s/spugovxsim/planexp/deploy/P12_artifact_${TARGET_COMMIT}.tar.gz"
-          ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P12_erpv2_deploy" \
-            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "${SSH_USER}@${SSH_HOST}" \
-            "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '${remote}' '${ARTIFACT_SHA}' '${TARGET_COMMIT}'"
-          deployed="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P12_erpv2_deploy" \
-            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "${SSH_USER}@${SSH_HOST}" \
-            "cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt")"
-          test "${deployed}" = "${TARGET_COMMIT}"
-          printf '%s\n' "${deployed}" > P12_DEPLOYED_MARKER_SSH.txt
-          ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/P12_erpv2_deploy" \
-            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "${SSH_USER}@${SSH_HOST}" "rm -f '${remote}'"
-
-      - name: Verify public marker and CSS
-        shell: bash
-        run: |
-          set -euo pipefail
-          public_marker="$(curl -fsSL --max-time 30 https://plan-ex.ru/erpv2/DEPLOYED_COMMIT.txt)"
-          test "${public_marker}" = "${TARGET_COMMIT}"
-          css="$(curl -fsSL --max-time 30 'https://plan-ex.ru/erpv2/assets/css/erp-ui.css?P12deploy=1')"
-          printf '%s' "${css}" | grep -Fq 'P12 responsible assignments mass toolbar'
-          printf '%s' "${css}" | grep -Fq '#massReassignToolbarForm'
-          printf '%s' "${css}" | grep -Fq 'flex-flow: row nowrap'
-          printf '%s\n' "${public_marker}" > P12_DEPLOYED_MARKER_PUBLIC.txt
-          printf '%s\n' 'PASS' > P12_DEPLOYED_CSS_FINGERPRINT.txt
-
-      - name: Upload P12 deployment evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: P12_direct_deployment_evidence
-          path: |
-            P12_DEPLOY_TARGET_COMMIT.txt
-            P12_DEPLOY_ARTIFACT_SHA256.txt
-            P12_DEPLOY_ARTIFACT_LISTING.txt
-            P12_DEPLOYED_MARKER_SSH.txt
-            P12_DEPLOYED_MARKER_PUBLIC.txt
-            P12_DEPLOYED_CSS_FINGERPRINT.txt
-          if-no-files-found: warn
-          retention-days: 30
+      - run: |
+          echo 'Legacy P12 direct deployment workflow disabled by P21.'
+          echo 'Use ERPv2 Controlled Deploy.'
+          exit 1
