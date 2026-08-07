@@ -1,0 +1,319 @@
+name: P19 PATCH_A observable deploy runtime
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P19_patch_a_observable_deploy_runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p19-patch-a-observable-deploy-runtime
+  cancel-in-progress: false
+
+env:
+  TARGET_COMMIT: 91abe9c80947c277273f35ab4cf6d75b33187d4d
+  EXPECTED_CURRENT_COMMIT: 8c7571c01bcd87f42c4f2e9300fc52a2499935fe
+  P19_OUT: P19_patch_a_observable_output
+
+jobs:
+  patch-a:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Checkout P19 control branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p19-uiux-safe-runtime-review-20260806
+          fetch-depth: 0
+
+      - name: Verify exact PATCH_A delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$P19_OUT"
+          git cat-file -e "${TARGET_COMMIT}^{commit}"
+          git cat-file -e "${EXPECTED_CURRENT_COMMIT}^{commit}"
+          changed="$(git diff --name-only "$EXPECTED_CURRENT_COMMIT" "$TARGET_COMMIT" -- app bootstrap config database public scripts tools tests)"
+          printf '%s\n' "$changed" | tee "$P19_OUT/P19_09_PATCH_A_PRODUCTION_FILES.txt"
+          test "$changed" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
+          git diff "$EXPECTED_CURRENT_COMMIT" "$TARGET_COMMIT" -- app/View/layouts/main.php public/assets/css/app.css > "$P19_OUT/P19_10_PATCH_A_EXACT_DIFF.patch"
+          grep -Fq "fill='%237c4718'" <(git show "$TARGET_COMMIT:app/View/layouts/main.php")
+          grep -Fq 'color: var(--text-main);' <(git show "$TARGET_COMMIT:public/assets/css/app.css")
+          grep -Fq 'background: var(--surface-strong);' <(git show "$TARGET_COMMIT:public/assets/css/app.css")
+          grep -Fq 'border-radius: 2px;' <(git show "$TARGET_COMMIT:public/assets/css/app.css")
+
+      - name: Configure isolated SSH
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "${PRIVATE_KEY:-}"
+          test -n "${KNOWN_HOSTS:-}"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19A_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/P19A_key" "$HOME/.ssh/known_hosts"
+
+      - name: Install read-only DB fingerprint helper on remote temp path
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            .github/p19/P19_readonly_db_fingerprint.php \
+            "$SSH_USER@$SSH_HOST:/tmp/P19_db_fp_${GITHUB_RUN_ID}.php"
+
+      - name: Pre-deploy marker fingerprints backup and safety guards
+        id: pre
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' EXPECTED_CURRENT_COMMIT='$EXPECTED_CURRENT_COMMIT' bash -se" \
+            > "$P19_OUT/P19_11_PATCH_A_PREDEPLOY_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          OLD_ERP="$ROOT/public_html/erp"
+          ERPV2="$ROOT/public_html/erpv2"
+          DEPLOY="$ROOT/deploy"
+          BACKUPS="$ROOT/deploy_backups"
+          marker="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt" 2>/dev/null || true)"
+          printf 'CURRENT_DEPLOYED_SHA=%s\n' "$marker"
+          test "$marker" = "$EXPECTED_CURRENT_COMMIT"
+          test -x "$DEPLOY/P07_deploy_erpv2.sh"
+          printf 'P07_DEPLOY_AVAILABLE=YES\n'
+          script_body="$(sed '/^[[:space:]]*#/d' "$DEPLOY/P07_deploy_erpv2.sh")"
+          if printf '%s\n' "$script_body" | grep -Eiq '(artisan[[:space:]]+migrate|php[^[:cntrl:]]*(migrat|migration)|mysql[[:space:]][^<]*<[^[:space:]]*(migrat|migration))'; then
+            printf 'MIGRATIONS_DISABLED=NO\n'
+            exit 41
+          fi
+          printf 'MIGRATIONS_DISABLED=YES\n'
+          non_erpv2="$(printf '%s\n' "$script_body" | sed 's#/erpv2##g')"
+          if printf '%s\n' "$non_erpv2" | grep -Fq '/public_html/erp'; then
+            printf 'TARGET_ONLY_ERPV2=NO\n'
+            exit 42
+          fi
+          printf 'TARGET_ONLY_ERPV2=YES\n'
+          oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          erpv2fp="$(cd "$ERPV2" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P19_db_fp_${GITHUB_RUN_ID}.php")"
+          printf '%s' "$dbfp" | grep -Eq '^[0-9a-f]{64}$'
+          backup="$BACKUPS/P19A_${GITHUB_RUN_ID}_${marker}"
+          test ! -e "$backup"
+          mkdir -p "$BACKUPS"
+          cp -a "$ERPV2" "$backup"
+          test -d "$backup"
+          printf 'OLD_ERP_FINGERPRINT=%s\nERPV2_FINGERPRINT_BEFORE=%s\nDB_FINGERPRINT=%s\nBACKUP_PATH=%s\nBACKUP_CREATED=YES\n' "$oldfp" "$erpv2fp" "$dbfp" "$backup"
+          REMOTE
+          cat "$P19_OUT/P19_11_PATCH_A_PREDEPLOY_GUARDS.txt"
+          oldfp="$(awk -F= '/^OLD_ERP_FINGERPRINT=/{print $2}' "$P19_OUT/P19_11_PATCH_A_PREDEPLOY_GUARDS.txt")"
+          dbfp="$(awk -F= '/^DB_FINGERPRINT=/{print $2}' "$P19_OUT/P19_11_PATCH_A_PREDEPLOY_GUARDS.txt")"
+          backup="$(awk '/^BACKUP_PATH=/{sub(/^BACKUP_PATH=/,"");print}' "$P19_OUT/P19_11_PATCH_A_PREDEPLOY_GUARDS.txt")"
+          test -n "$oldfp"; test -n "$dbfp"; test -n "$backup"
+          printf 'PRE_OLD_ERP_FP=%s\nPRE_DB_FP=%s\nP19_BACKUP_PATH=%s\n' "$oldfp" "$dbfp" "$backup" >> "$GITHUB_ENV"
+
+      - name: Build exact P07 artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact="P19A_erpv2_${TARGET_COMMIT}.tar.gz"
+          git archive --format=tar --output=P19A.tar "$TARGET_COMMIT" -- app bootstrap config database public scripts tools tests
+          gzip -n P19A.tar
+          mv P19A.tar.gz "$artifact"
+          tar -tzf "$artifact" > "$P19_OUT/P19_12_PATCH_A_ARTIFACT_LISTING.txt"
+          if grep -E '(^|/)(\.git|\.env([^/]*)?|storage|tmp|logs|screenshots|node_modules|vendor)(/|$)|(^|/)(cookies?|reports)(/|$)' "$P19_OUT/P19_12_PATCH_A_ARTIFACT_LISTING.txt"; then
+            echo 'Forbidden deployment artifact path' >&2
+            exit 1
+          fi
+          sha="$(sha256sum "$artifact" | awk '{print $1}')"
+          printf '%s\n' "$sha" > "$P19_OUT/P19_13_PATCH_A_ARTIFACT_SHA256.txt"
+          printf 'artifact=%s\nsha=%s\n' "$artifact" "$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Upload exact artifact to private deploy area
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.artifact.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P19A_artifact_${TARGET_COMMIT}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+
+      - name: Deploy PATCH_A through P07 only
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT_SHA: ${{ steps.artifact.outputs.sha }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P19A_artifact_${TARGET_COMMIT}.tar.gz"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$TARGET_COMMIT'" \
+            | tee "$P19_OUT/P19_14_PATCH_A_P07_DEPLOY_LOG.txt"
+          deployed="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$deployed" = "$TARGET_COMMIT"
+          printf 'P19_DEPLOYED_SHA=%s\n' "$deployed" >> "$GITHUB_ENV"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Verify post-deploy marker DB old ERP and HTTP
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' PRE_OLD_ERP_FP='$PRE_OLD_ERP_FP' PRE_DB_FP='$PRE_DB_FP' TARGET_COMMIT='$TARGET_COMMIT' bash -se" \
+            > "$P19_OUT/P19_15_PATCH_A_POSTDEPLOY_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P19_db_fp_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$TARGET_COMMIT"
+          test "$oldfp" = "$PRE_OLD_ERP_FP"
+          test "$dbfp" = "$PRE_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker" "$oldfp" "$dbfp"
+          REMOTE
+          cat "$P19_OUT/P19_15_PATCH_A_POSTDEPLOY_GUARDS.txt"
+          public_marker="$(curl -fsSL --max-time 30 https://plan-ex.ru/erpv2/DEPLOYED_COMMIT.txt)"
+          login_code="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          test "$public_marker" = "$TARGET_COMMIT"
+          test "$login_code" = '200'
+          printf 'PUBLIC_MARKER=%s\nERPV2_LOGIN_HTTP=%s\n' "$public_marker" "$login_code" | tee "$P19_OUT/P19_16_PATCH_A_HTTP.txt"
+
+      - name: Resolve existing SUPERADMIN OWNER LOGIST credentials
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          source_label='ACTIONS_SECRET'
+          tmpdir="$(mktemp -d)"
+          if [ -z "$credentials" ]; then
+            source_label='P11_ENCRYPTED_FALLBACK'
+            git fetch --quiet origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > "$tmpdir/decrypt.py"
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > "$tmpdir/credentials.enc.json"
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19A_credential_key"
+            chmod 600 "$HOME/.ssh/P19A_credential_key"
+            credentials="$(python "$tmpdir/decrypt.py" --key "$HOME/.ssh/P19A_credential_key" --input "$tmpdir/credentials.enc.json")"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          CREDENTIALS="$credentials" python - <<'PY'
+          import base64,json,os
+          d=json.loads(base64.b64decode(os.environ['CREDENTIALS']).decode('utf-8'))
+          roles={str(x.get('role','')).upper() for x in d if isinstance(x,dict)}
+          missing={'SUPERADMIN','OWNER','LOGIST'}-roles
+          if missing: raise SystemExit('Missing required role names: '+','.join(sorted(missing)))
+          print('RUNTIME_ROLES=SUPERADMIN,OWNER,LOGIST')
+          print('SENIOR_LOGIST=NOT_TESTED_CREDENTIAL_UNAVAILABLE')
+          PY
+          printf 'P19_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+          printf 'RUNTIME_CREDENTIAL_SOURCE=%s\n' "$source_label" >> "$GITHUB_ENV"
+          rm -rf "$tmpdir" "$HOME/.ssh/P19A_credential_key"
+
+      - name: Configure Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright 1.54.2 Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Execute PATCH_A browser matrix
+        shell: bash
+        env:
+          P19_OUT: ${{ env.P19_OUT }}
+        run: |
+          set -euo pipefail
+          node --check .github/p19/P19_patch_a_runtime.js
+          node .github/p19/P19_patch_a_runtime.js | tee "$P19_OUT/P19_17_PATCH_A_RUNTIME_CONSOLE.txt"
+
+      - name: Reconfirm DB old ERP and marker after runtime
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19A_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' PRE_OLD_ERP_FP='$PRE_OLD_ERP_FP' PRE_DB_FP='$PRE_DB_FP' TARGET_COMMIT='$TARGET_COMMIT' bash -se" \
+            > "$P19_OUT/P19_18_PATCH_A_POSTRUNTIME_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P19_db_fp_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$TARGET_COMMIT"
+          test "$oldfp" = "$PRE_OLD_ERP_FP"
+          test "$dbfp" = "$PRE_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker"
+          rm -f "/tmp/P19_db_fp_${GITHUB_RUN_ID}.php"
+          REMOTE
+          cat "$P19_OUT/P19_18_PATCH_A_POSTRUNTIME_GUARDS.txt"
+
+      - name: Write PATCH_A acceptance decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os
+          p=os.path.join(os.environ['P19_OUT'],'P19_07_PATCH_A_RUNTIME_SUMMARY.json')
+          d=json.load(open(p,encoding='utf-8'))
+          assert d['status']=='PASS'
+          out={'decision':'PATCH_A_ACCEPTED','deployed_sha':os.environ['TARGET_COMMIT'],'roles_required':['SUPERADMIN','OWNER','LOGIST'],'senior_logist':'NOT_TESTED_CREDENTIAL_UNAVAILABLE','database_changed':False,'old_erp_changed':False,'backup_path':os.environ.get('P19_BACKUP_PATH'),'viewports':['1920x1080','1536x864','1366x768']}
+          json.dump(out,open(os.path.join(os.environ['P19_OUT'],'P19_19_PATCH_A_DECISION.json'),'w'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Upload observable PATCH_A evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_patch_a_observable_${{ github.run_id }}
+          path: ${{ env.P19_OUT }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Secure cleanup
+        if: always()
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          printf 'P19_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
+          rm -f "$HOME/.ssh/P19A_key" "$HOME/.ssh/P19A_credential_key" 2>/dev/null || true
+          if [ -n "${SSH_HOST:-}" ] && [ -n "${SSH_PORT:-}" ] && [ -n "${SSH_USER:-}" ] && [ -f "$HOME/.ssh/known_hosts" ]; then
+            true
+          fi
