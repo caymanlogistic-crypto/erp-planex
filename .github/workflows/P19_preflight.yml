@@ -19,11 +19,14 @@ permissions:
 jobs:
   preflight:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout P19 branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Verify required secrets are present
+      - name: Verify required SSH secrets by name
         shell: bash
         env:
           SSH_PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
@@ -31,16 +34,52 @@ jobs:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          RUNTIME_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
         run: |
           set -euo pipefail
-          test -n "$SSH_PRIVATE_KEY"
-          test -n "$SSH_KNOWN_HOSTS"
-          test -n "$SSH_HOST"
-          test -n "$SSH_PORT"
-          test -n "$SSH_USER"
-          test -n "$RUNTIME_CREDENTIALS"
-          echo 'SECRETS_REQUIRED=PASS'
+          missing=0
+          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then echo 'MISSING_SECRET=ERPV2_SSH_PRIVATE_KEY'; missing=1; fi
+          if [ -z "${SSH_KNOWN_HOSTS:-}" ]; then echo 'MISSING_SECRET=ERPV2_SSH_KNOWN_HOSTS'; missing=1; fi
+          if [ -z "${SSH_HOST:-}" ]; then echo 'MISSING_SECRET=ERPV2_SSH_HOST'; missing=1; fi
+          if [ -z "${SSH_PORT:-}" ]; then echo 'MISSING_SECRET=ERPV2_SSH_PORT'; missing=1; fi
+          if [ -z "${SSH_USER:-}" ]; then echo 'MISSING_SECRET=ERPV2_SSH_USER'; missing=1; fi
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+          echo 'REQUIRED_SSH_SECRETS=PASS'
+
+      - name: Resolve historical runtime credential channel securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          source_label='ACTIONS_SECRET'
+          tmpdir="$(mktemp -d)"
+          cleanup() {
+            rm -rf "$tmpdir"
+            rm -f "$HOME/.ssh/P19_runtime_credentials_key" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          if [ -z "$credentials" ]; then
+            source_label='P11_ENCRYPTED_FALLBACK'
+            git fetch --quiet origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > "$tmpdir/P11_decrypt_credentials.py"
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > "$tmpdir/P11_runtime_credentials.enc.json"
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19_runtime_credentials_key"
+            chmod 600 "$HOME/.ssh/P19_runtime_credentials_key"
+            credentials="$(python "$tmpdir/P11_decrypt_credentials.py" --key "$HOME/.ssh/P19_runtime_credentials_key" --input "$tmpdir/P11_runtime_credentials.enc.json")"
+          fi
+
+          if [ -z "$credentials" ]; then
+            echo 'RUNTIME_CREDENTIAL_CHANNEL=FAIL'
+            exit 1
+          fi
+          echo "::add-mask::${credentials}"
+          echo "RUNTIME_CREDENTIAL_SOURCE=${source_label}"
+          echo 'RUNTIME_CREDENTIAL_CHANNEL=PASS'
 
       - name: Configure SSH
         shell: bash
@@ -79,7 +118,7 @@ jobs:
           <?php
           function envf($p){$o=[];foreach(@file($p, FILE_IGNORE_NEW_LINES)?:[] as $l){$l=trim($l);if($l===''||$l[0]==='#'||!str_contains($l,'='))continue;[$k,$v]=explode('=',$l,2);$o[trim($k)]=trim($v," \t\n\r\0\x0B\"'");}return $o;}
           $e=envf('/home/s/spugovxsim/planexp/public_html/erpv2/.env');
-          try{$pdo=new PDO('mysql:host='.($e['DB_HOST']??'127.0.0.1').';port='.($e['DB_PORT']??'3306').';dbname='.($e['DB_DATABASE']??'erp_planex').';charset=utf8mb4',$e['DB_USERNAME']??'root',$e['DB_PASSWORD']??'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$t=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);sort($t);$p=[];foreach($t as $x){$r=$pdo->query('CHECKSUM TABLE `'.str_replace('`','``',$x).'`')->fetch(PDO::FETCH_NUM);$p[]=$x.':'.($r[1]??'NULL');}echo hash('sha256',implode('|',$p));}catch(Throwable $x){echo 'UNAVAILABLE_'.substr(hash('sha256',$x->getMessage()),0,12);} 
+          try{$pdo=new PDO('mysql:host='.($e['DB_HOST']??'127.0.0.1').';port='.($e['DB_PORT']??'3306').';dbname='.($e['DB_DATABASE']??'erp_planex').';charset=utf8mb4',$e['DB_USERNAME']??'root',$e['DB_PASSWORD']??'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$t=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);sort($t);$p=[];foreach($t as $x){$r=$pdo->query('CHECKSUM TABLE `'.str_replace('`','``',$x).'`')->fetch(PDO::FETCH_NUM);$p[]=$x.':'.($r[1]??'NULL');}echo hash('sha256',implode('|',$p));}catch(Throwable $x){echo 'UNAVAILABLE_'.substr(hash('sha256',$x->getMessage()),0,12);}
           PHP
             dbfp="$(php /tmp/p19_db_fp.php)"
             rm -f /tmp/p19_db_fp.php
@@ -99,6 +138,11 @@ jobs:
             printf '%s=%s\n' "$name" "$code" | tee -a P19_preflight_output/P19_HTTP.txt
             case "$code" in 200|302|401|403) ;; *) exit 1 ;; esac
           done
+
+      - name: Configure Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Verify Playwright installation capability
         shell: bash
