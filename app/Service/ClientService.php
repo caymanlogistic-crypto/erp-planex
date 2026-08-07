@@ -34,7 +34,6 @@ final class ClientService
         $localDbConfig = companyDatabaseConfig($this->config, $company);
         $localDb = new Database($localDbConfig);
         $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
         $this->ensureClientTables($localPdo);
         return $localPdo;
     }
@@ -137,13 +136,13 @@ final class ClientService
             $errors['ogrn'] = 'ОГРН/ОГРНИП должен содержать 13 или 15 цифр';
         }
 
-        if (($_POST['bank_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_account'])) {
+        if (($data['bank_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $data['bank_account'])) {
             $errors['bank_account'] = 'Расчётный счёт должен содержать 20 цифр';
         }
-        if (($_POST['bank_bik'] ?? '') !== '' && !preg_match('/^\d{9}$/', $_POST['bank_bik'])) {
+        if (($data['bank_bik'] ?? '') !== '' && !preg_match('/^\d{9}$/', $data['bank_bik'])) {
             $errors['bank_bik'] = 'БИК должен содержать 9 цифр';
         }
-        if (($_POST['bank_corr_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $_POST['bank_corr_account'])) {
+        if (($data['bank_corr_account'] ?? '') !== '' && !preg_match('/^\d{20}$/', $data['bank_corr_account'])) {
             $errors['bank_corr_account'] = 'Корр. счёт должен содержать 20 цифр';
         }
 
