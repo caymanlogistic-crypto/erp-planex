@@ -1,0 +1,96 @@
+name: P20 static gate
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  P19_SHA: f42a37539da13d50af1fddefe528a82dba022dbe
+  P20_SHA: b96c085a254a885da26f8f5ca342b3781aea12ad
+  IMPL_BRANCH: chatgpt/p20-finance-operation-history-fix-20260807-impl
+  OUT: P20_static_gate_output
+
+jobs:
+  static-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p20-execution-isolated-20260807
+          fetch-depth: 0
+      - name: Fetch exact implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          git fetch --quiet origin "$IMPL_BRANCH"
+          test "$(git rev-parse "origin/$IMPL_BRANCH")" = "$P20_SHA"
+          test "$(git rev-parse "$P20_SHA^")" = "$P19_SHA"
+          changed="$(git diff --name-only "$P19_SHA" "$P20_SHA")"
+          expected=$'app/Http/Controllers/Company/FinanceOperationActions/history.php\napp/Support/entrypoint_dependencies.php\ntests/p20_finance_operation_history_regression_test.php'
+          test "$changed" = "$expected"
+          printf '%s\n' "$changed" > "$OUT/P20_CHANGED_FILES.txt"
+          git diff "$P19_SHA" "$P20_SHA" -- app/Http/Controllers/Company/FinanceOperationActions/history.php app/Support/entrypoint_dependencies.php tests/p20_finance_operation_history_regression_test.php > "$OUT/P20_03_EXACT_DIFF.patch"
+      - name: PHP lint and regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$P20_SHA"
+          php -l app/Support/entrypoint_dependencies.php
+          php -l app/Http/Controllers/Company/FinanceOperationActions/history.php
+          php -l app/Service/FinanceOperationActionService.php
+          php -l tests/p20_finance_operation_history_regression_test.php
+          php tests/p20_finance_operation_history_regression_test.php | tee "$OUT/P20_REGRESSION_TEST.txt"
+      - name: Architecture route role tenant and contract guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "require_once base_path('app/Service/FinanceOperationActionService.php');" app/Support/entrypoint_dependencies.php
+          grep -Fq "company/finance/operations/{id}/history" app/Http/Routes/company_finance_operations.php
+          grep -Fq "requireRole(['company_owner']);" app/Http/Controllers/Company/FinanceOperationActions/history.php
+          grep -Fq "SELECT id FROM finance_operations WHERE id = ? LIMIT 1" app/Http/Controllers/Company/FinanceOperationActions/history.php
+          grep -Fq 'http_response_code(404);' app/Http/Controllers/Company/FinanceOperationActions/history.php
+          grep -Fq 'FinanceOperationActionService::fetchOperationHistory' app/Http/Controllers/Company/FinanceOperationActions/history.php
+          grep -Fq 'company_finance_history_view.php' app/Http/Controllers/Company/FinanceOperationActions/history.php
+          grep -Fq 'История изменений пуста' app/View/partials/company_finance_history_view.php
+          grep -Fq 'old_values' app/View/partials/company_finance_history_view.php
+          grep -Fq 'new_values' app/View/partials/company_finance_history_view.php
+          if grep -Fq 'json_encode(' app/Http/Controllers/Company/FinanceOperationActions/history.php; then echo 'HISTORY_RESPONSE_CONTRACT_CHANGED_TO_JSON'; exit 1; fi
+          printf 'ROUTE_CONTRACT=PASS\nROLE_GUARD=PASS\nTENANT_LOCAL_EXISTENCE_GUARD=PASS\nHTML_CONTRACT=PASS\nJSON_PAYLOAD_FIELDS_RENDERED_IN_HTML=PASS\n' > "$OUT/P20_ARCHITECTURE_CONTRACT.txt"
+      - name: No migration CSS JS or unrelated production changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git diff --name-only "$P19_SHA" "$P20_SHA" -- database)"
+          test -z "$(git diff --name-only "$P19_SHA" "$P20_SHA" -- '*.css')"
+          test -z "$(git diff --name-only "$P19_SHA" "$P20_SHA" -- '*.js')"
+          test -z "$(git diff --name-only "$P19_SHA" "$P20_SHA" -- public/assets/css/app.css public/assets/css/erp-ui.css public/assets/css/finance-operation-actions.css app/View/layouts/main.php)"
+          printf 'MIGRATIONS_CHANGED=NO\nCSS_CHANGED=NO\nJS_CHANGED=NO\nP19_UI_CHANGED=NO\n' > "$OUT/P20_SCOPE_GUARD.txt"
+      - name: Secret and mojibake scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          files='app/Support/entrypoint_dependencies.php app/Http/Controllers/Company/FinanceOperationActions/history.php tests/p20_finance_operation_history_regression_test.php'
+          if grep -En '(BEGIN (RSA|OPENSSH) PRIVATE KEY|password[[:space:]]*=[[:space:]]*["'"'][^"'"']+|ssh-rsa|AKIA[0-9A-Z]{16})' $files; then exit 1; fi
+          if grep -En 'Р[А-Яа-я]|С[А-Яа-я].*[РС][А-Яа-я]' $files; then echo 'POTENTIAL_MOJIBAKE'; exit 1; fi
+          printf 'SECRET_SCAN=PASS\nMOJIBAKE_SCAN=PASS\n' > "$OUT/P20_TEXT_SAFETY.txt"
+      - name: Write static decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$OUT/P20_04_STATIC_GATE.json" <<EOF
+          {"status":"PASS","p19_sha":"$P19_SHA","p20_commit":"$P20_SHA","php_lint":"PASS","regression_test":"PASS","architecture_guard":"PASS","route_contract":"PASS","role_guard":"PASS","tenant_isolation_guard":"PASS","html_contract":"PASS","migration_files_changed":false,"css_changed":false,"js_changed":false,"secret_scan":"PASS","mojibake_scan":"PASS"}
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P20_static_gate_${{ github.run_id }}
+          path: ${{ env.OUT }}/
+          if-no-files-found: error
+          retention-days: 30
