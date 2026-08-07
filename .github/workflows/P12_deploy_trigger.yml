@@ -1,41 +1,15 @@
-name: P12 Deploy trigger
+name: P12 Legacy Deploy Trigger (disabled)
 
 on:
-  pull_request:
-    branches:
-      - chatgpt/production-stabilization-20260802
-    paths:
-      - '.github/workflows/P12_deploy_trigger.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  trigger:
+  disabled:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - name: Checkout exact application branch
-        uses: actions/checkout@v4
-        with:
-          ref: chatgpt/production-stabilization-20260802
-          fetch-depth: 0
-
-      - name: Create ordinary push event without file changes
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'e27a6c33516b07e82f493a5ab9f378ece286bb71'
-          git config user.name 'P12 deploy automation'
-          git config user.email 'p12-deploy@users.noreply.github.com'
-          git commit --allow-empty -m 'chore(P12): trigger isolated ERPV2 deployment'
-          git push origin HEAD:chatgpt/production-stabilization-20260802
-          git rev-parse HEAD | tee P12_DEPLOY_TRIGGER_COMMIT.txt
-
-      - name: Upload trigger commit
-        uses: actions/upload-artifact@v4
-        with:
-          name: P12_deploy_trigger_commit
-          path: P12_DEPLOY_TRIGGER_COMMIT.txt
-          retention-days: 1
+      - run: |
+          echo 'Legacy P12 repository-push deploy trigger disabled by P21.'
+          exit 1
