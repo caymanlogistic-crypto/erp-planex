@@ -1,0 +1,73 @@
+name: P19 prepare exact PATCH_A deployment commit
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P19_prepare_patch_a_deploy_commit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DEPLOY_BRANCH: chatgpt/p19-patch-a-deploy-exact-20260807
+  PROD_BASE: 8c7571c01bcd87f42c4f2e9300fc52a2499935fe
+  PATCH_SOURCE: 91abe9c80947c277273f35ab4cf6d75b33187d4d
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout deployment branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_BRANCH }}
+          fetch-depth: 0
+
+      - name: Apply only PATCH_A commit onto deployed production base
+        id: patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin chatgpt/p19-uiux-safe-runtime-review-20260806
+          current="$(git rev-parse HEAD)"
+          if [ "$current" = "$PROD_BASE" ]; then
+            git cherry-pick --no-commit "$PATCH_SOURCE"
+            changed="$(git diff --name-only)"
+            test "$changed" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
+            grep -Fq "fill='%237c4718'" app/View/layouts/main.php
+            grep -Fq 'color: var(--text-main);' public/assets/css/app.css
+            grep -Fq 'background: var(--surface-strong);' public/assets/css/app.css
+            grep -Fq 'border-radius: 2px;' public/assets/css/app.css
+            git config user.name 'P19 runtime automation'
+            git config user.email 'p19-runtime@users.noreply.github.com'
+            git add app/View/layouts/main.php public/assets/css/app.css
+            staged="$(git diff --cached --name-only)"
+            test "$staged" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
+            git commit -m 'P19-A: exact UI patch rebased onto deployed ERPV2'
+            git push origin "HEAD:$DEPLOY_BRANCH"
+          fi
+          final="$(git rev-parse HEAD)"
+          changed_final="$(git diff --name-only "$PROD_BASE" "$final" -- app bootstrap config database public scripts tools tests)"
+          printf '%s\n' "$changed_final"
+          test "$changed_final" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
+          git diff "$PROD_BASE" "$final" -- app/View/layouts/main.php public/assets/css/app.css > P19_PATCH_A_REBASED_DIFF.patch
+          grep -Fq "fill='%237c4718'" <(git show "$final:app/View/layouts/main.php")
+          grep -Fq 'color: var(--text-main);' <(git show "$final:public/assets/css/app.css")
+          grep -Fq 'background: var(--surface-strong);' <(git show "$final:public/assets/css/app.css")
+          grep -Fq 'border-radius: 2px;' <(git show "$final:public/assets/css/app.css")
+          printf '%s\n' "$final" > P19_PATCH_A_DEPLOY_COMMIT.txt
+          printf 'deploy_sha=%s\n' "$final" >> "$GITHUB_OUTPUT"
+
+      - name: Upload preparation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_patch_a_rebased_commit_${{ github.run_id }}
+          path: |
+            P19_PATCH_A_DEPLOY_COMMIT.txt
+            P19_PATCH_A_REBASED_DIFF.patch
+          if-no-files-found: error
+          retention-days: 30
