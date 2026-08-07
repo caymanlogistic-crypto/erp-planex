@@ -105,10 +105,10 @@ jobs:
           ARTIFACT_SHA: ${{ steps.build.outputs.sha }}
         run: |
           set -euo pipefail
-          remote="$HOME/P22_${TARGET_SHA}.tar.gz"
+          remote="planexp/deploy/P22_${TARGET_SHA}.tar.gz"
           scp -P "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "$HOME/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$TARGET_SHA'"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "$HOME/planexp/deploy/P07_deploy_erpv2.sh '$HOME/$remote' '$ARTIFACT_SHA' '$TARGET_SHA'"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$HOME/$remote'"
 
       - name: Verify deployed marker and HTTP
         shell: bash
