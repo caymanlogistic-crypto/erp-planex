@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - chatgpt/p22-client-create-migration-fix-20260807
+  pull_request:
+    branches:
+      - chatgpt/p20-finance-operation-history-fix-20260807-impl
 
 permissions:
   contents: read
 
 jobs:
   deploy:
+    if: github.event_name == 'push' || github.head_ref == 'chatgpt/p22-client-create-migration-fix-20260807'
     runs-on: ubuntu-24.04
     env:
       BASE_SHA: b96c085a254a885da26f8f5ca342b3781aea12ad
@@ -28,7 +32,8 @@ jobs:
           test "$(git rev-parse "${TARGET_SHA}^")" = "$BASE_SHA"
           changed="$(git diff --name-only "$BASE_SHA" "$TARGET_SHA")"
           test "$changed" = "app/Service/ClientService.php"
-          php -l app/Service/ClientService.php
+          git show "$TARGET_SHA:app/Service/ClientService.php" > /tmp/ClientService.php
+          php -l /tmp/ClientService.php
 
       - name: Configure SSH
         shell: bash
@@ -52,14 +57,17 @@ jobs:
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "BASE_SHA='$BASE_SHA' EXPECTED_P07_SHA256='$EXPECTED_P07_SHA256' bash -se" <<'REMOTE'
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P22_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "BASE_SHA='$BASE_SHA' TARGET_SHA='$TARGET_SHA' EXPECTED_P07_SHA256='$EXPECTED_P07_SHA256' RUN_ID='$GITHUB_RUN_ID' bash -se" <<'REMOTE'
           set -euo pipefail
           ROOT="$HOME/planexp"
           LIVE="$ROOT/public_html/erpv2"
           OLD="$ROOT/public_html/erp"
           P07="$ROOT/deploy/P07_deploy_erpv2.sh"
           marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
-          test "$marker" = "$BASE_SHA"
+          case "$marker" in
+            "$BASE_SHA"|"$TARGET_SHA") ;;
+            *) echo "UNEXPECTED_CURRENT_MARKER=$marker"; exit 42 ;;
+          esac
           p07sha="$(sha256sum "$P07" | awk '{print $1}')"
           test "$p07sha" = "$EXPECTED_P07_SHA256"
           test -x "$P07"
@@ -69,7 +77,7 @@ jobs:
             exit 41
           fi
           oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
-          backup="$ROOT/deploy_backups/P22_${GITHUB_RUN_ID:-manual}_${marker}"
+          backup="$ROOT/deploy_backups/P22_${RUN_ID}_${marker}"
           test ! -e "$backup"
           cp -a "$LIVE" "$backup"
           printf 'CURRENT_MARKER=%s\nOLD_ERP_FP=%s\nBACKUP_PATH=%s\nMIGRATIONS_DISABLED=YES\nTARGET_ONLY_ERPV2=YES\n' "$marker" "$oldfp" "$backup"
