@@ -1,0 +1,169 @@
+name: P19 Patch A apply and static gate
+
+on:
+  push:
+    branches:
+      - chatgpt/p19-uiux-safe-runtime-review-20260806
+    paths:
+      - '.github/workflows/P19_patch_a_apply.yml'
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P19_patch_a_apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-a-static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact P19 branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p19-uiux-safe-runtime-review-20260806
+          fetch-depth: 0
+
+      - name: Apply only approved PATCH_A edits
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p P19_patch_a_static_output
+          cp public/assets/css/app.css /tmp/P19_app_before.css
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+
+          replace_once(
+              'app/View/layouts/main.php',
+              "fill='%230f766e'",
+              "fill='%237c4718'",
+              'favicon brown replacement'
+          )
+          replace_once(
+              'public/assets/css/app.css',
+              ".linear-trip-row-remove {\n  width: 32px;\n  height: 32px;\n  border: 1px solid var(--line);\n  background: #fff;\n  color: var(--text);",
+              ".linear-trip-row-remove {\n  width: 32px;\n  height: 32px;\n  border: 1px solid var(--line);\n  background: #fff;\n  color: var(--text-main);",
+              'linear trip text variable'
+          )
+          replace_once(
+              'public/assets/css/app.css',
+              ".user-view-card {\n  background: var(--surface-bg);\n  border-radius: 8px;",
+              ".user-view-card {\n  background: var(--surface-strong);\n  border-radius: 2px;",
+              'user view surface and radius'
+          )
+          PY
+
+      - name: Verify exact production diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only)"
+          printf '%s\n' "$files"
+          test "$files" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
+          git diff -- app/View/layouts/main.php public/assets/css/app.css > P19_patch_a_static_output/P19_03_PATCH_A_EXACT_DIFF.patch
+          grep -Fq "fill='%237c4718'" app/View/layouts/main.php
+          ! grep -Fq "fill='%230f766e'" app/View/layouts/main.php
+          grep -Fq 'color: var(--text-main);' public/assets/css/app.css
+          grep -Fq 'background: var(--surface-strong);' public/assets/css/app.css
+          grep -Fq 'border-radius: 2px;' public/assets/css/app.css
+          ! grep -Fq 'color: var(--text);' public/assets/css/app.css
+          ! grep -Fq 'background: var(--surface-bg);' public/assets/css/app.css
+          grep -Fq -- '--color-primary: #7c4718;' public/assets/css/app.css
+          grep -Fq -- '--accent: #7c4718;' public/assets/css/app.css
+          grep -Fq -- '--alert-error: #B84C3A;' public/assets/css/app.css
+          grep -Fq -- '--alert-warning: #7a5210;' public/assets/css/app.css
+          grep -Fq -- '--alert-success: #1f6b43;' public/assets/css/app.css
+          grep -Fq -- '--alert-info: #2c5282;' public/assets/css/app.css
+          before_important="$(grep -o '!important' /tmp/P19_app_before.css | wc -l)"
+          after_important="$(grep -o '!important' public/assets/css/app.css | wc -l)"
+          test "$before_important" = "$after_important"
+
+      - name: PHP lint gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/View/layouts/main.php >/dev/null
+          count=0
+          while IFS= read -r -d '' file; do
+            php -l "$file" >/dev/null
+            count=$((count+1))
+          done < <(find app bootstrap config public -type f -name '*.php' -print0)
+          echo "PHP_LINT_FILES=$count"
+
+      - name: CSS static gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+          import re
+          css = Path('public/assets/css/app.css').read_text(encoding='utf-8')
+          stripped = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+          if stripped.count('{') != stripped.count('}'):
+              raise SystemExit('CSS brace balance failed')
+          defs = set(re.findall(r'--([A-Za-z0-9_-]+)\s*:', css))
+          missing = []
+          for m in re.finditer(r'var\(\s*--([A-Za-z0-9_-]+)([^)]*)\)', css):
+              name, tail = m.group(1), m.group(2)
+              if name not in defs and ',' not in tail:
+                  missing.append(name)
+          if missing:
+              raise SystemExit('Undefined CSS vars without fallback: ' + ', '.join(sorted(set(missing))))
+          if '\ufffd' in css:
+              raise SystemExit('Replacement-character mojibake found')
+          PY
+          if grep -R --line-number --fixed-strings '#0f766e' app public 2>/dev/null; then
+            echo 'Green primary/fav token remains in production UI' >&2
+            exit 1
+          fi
+          for forbidden in p16-fullhd.css p17-corrections.css p16-ui.js; do
+            if grep -R --line-number --fixed-strings "$forbidden" app public config bootstrap scripts tools 2>/dev/null; then
+              echo "Forbidden correction layer reference: $forbidden" >&2
+              exit 1
+            fi
+          done
+          if grep -R -E --line-number '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}' app/View/layouts/main.php public/assets/css/app.css; then
+            echo 'Secret material pattern detected in PATCH_A files' >&2
+            exit 1
+          fi
+
+      - name: Record static gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > P19_patch_a_static_output/P19_04_PATCH_A_STATIC_GATE.json <<EOF
+          {"status":"PASS","production_files":["app/View/layouts/main.php","public/assets/css/app.css"],"semantic_alert_tokens_unchanged":true,"brown_base_preserved":true,"green_token_absent":true,"new_important":0,"migrations_added":false,"sql_changed":false}
+          EOF
+
+      - name: Commit exact PATCH_A on push only
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'P19 runtime automation'
+          git config user.email 'p19-runtime@users.noreply.github.com'
+          git add app/View/layouts/main.php public/assets/css/app.css
+          staged="$(git diff --cached --name-only)"
+          test "$staged" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
+          git commit -m 'P19-A: apply safe UI stabilization patch'
+          git push origin HEAD:chatgpt/p19-uiux-safe-runtime-review-20260806
+
+      - name: Upload PATCH_A static evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P19_patch_a_static_output
+          path: P19_patch_a_static_output/
+          if-no-files-found: error
+          retention-days: 30
