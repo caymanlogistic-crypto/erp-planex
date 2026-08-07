@@ -1,4 +1,4 @@
-name: P19 isolated P07 scope
+name: P19 isolated PATCH_A deploy
 
 on:
   pull_request:
@@ -11,12 +11,45 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: p19-isolated-patch-a-deploy
+  cancel-in-progress: false
+
+env:
+  SOURCE_PATCH_COMMIT: 91abe9c80947c277273f35ab4cf6d75b33187d4d
+  TARGET_COMMIT: ef47dabe3249625280e6577de7b249f5b4d14a9d
+  EXPECTED_CURRENT_COMMIT: 8c7571c01bcd87f42c4f2e9300fc52a2499935fe
+  EXPECTED_P07_SHA256: 1e3328e2cd40dc2139eb9f87f01a69c848717b4b1ba4785ce8ecd8feeecb6b95
+  OUT: P19_patch_a_deploy_output
+
 jobs:
-  inspect:
+  deploy:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout execution branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch exact patch and read-only helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUT"
+          git fetch --quiet origin chatgpt/p19-patch-a-deploy-exact-20260807 chatgpt/p19-uiux-safe-runtime-review-20260806
+          git cat-file -e "${TARGET_COMMIT}^{commit}"
+          git cat-file -e "${SOURCE_PATCH_COMMIT}^{commit}"
+          git cat-file -e "${EXPECTED_CURRENT_COMMIT}^{commit}"
+          git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_readonly_db_fingerprint.php > /tmp/P19_db_fp.php
+          changed="$(git diff --name-only "$EXPECTED_CURRENT_COMMIT" "$TARGET_COMMIT" -- app bootstrap config database public scripts tools tests)"
+          printf '%s\n' "$changed" | tee "$OUT/P19_01_DEPLOY_FILES.txt"
+          test "$changed" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
+          test "$(git rev-parse "$SOURCE_PATCH_COMMIT:app/View/layouts/main.php")" = "$(git rev-parse "$TARGET_COMMIT:app/View/layouts/main.php")"
+          test "$(git rev-parse "$SOURCE_PATCH_COMMIT:public/assets/css/app.css")" = "$(git rev-parse "$TARGET_COMMIT:public/assets/css/app.css")"
+          git diff "$EXPECTED_CURRENT_COMMIT" "$TARGET_COMMIT" -- app/View/layouts/main.php public/assets/css/app.css > "$OUT/P19_02_DEPLOY_EXACT_DIFF.patch"
+          printf 'SOURCE_PATCH_COMMIT=%s\nDEPLOYMENT_EQUIVALENT_COMMIT=%s\n' "$SOURCE_PATCH_COMMIT" "$TARGET_COMMIT" > "$OUT/P19_03_COMMIT_MAP.txt"
+
       - name: Configure SSH
         env:
           PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
@@ -24,11 +57,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -n "${PRIVATE_KEY:-}"; test -n "${KNOWN_HOSTS:-}"
           install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19_scope_key"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19_deploy_key"
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/P19_scope_key" "$HOME/.ssh/known_hosts"
-      - name: Inspect P07 deployment semantics read-only
+          chmod 600 "$HOME/.ssh/P19_deploy_key" "$HOME/.ssh/known_hosts"
+
+      - name: Install DB fingerprint helper in remote temp
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
@@ -36,29 +71,145 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p P19_scope_output
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_scope_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' > P19_scope_output/P19_P07_SCOPE.txt <<'REMOTE'
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P19_db_fp.php "$SSH_USER@$SSH_HOST:/tmp/P19_db_fp_${GITHUB_RUN_ID}.php"
+
+      - name: Pre-deploy guards and backup
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
           set -euo pipefail
-          f=/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh
-          test -r "$f"
-          printf 'P07_SHA256='; sha256sum "$f" | awk '{print $1}'
-          printf 'P07_EXECUTABLE='; test -x "$f" && echo YES || echo NO
-          printf '%s\n' '--- STRUCTURAL LINES ---'
-          nl -ba "$f" | grep -E 'public_html|erpv2|deploy_backups|TARGET|DEST|ROOT|LIVE|OLD|BACKUP|ARTIFACT|sha256|tar|rsync|(^|[[:space:]])(cp|mv|rm|ln|mkdir|install)[[:space:]]' | sed 's#/home/s/spugovxsim#<HOME>#g'
-          printf '%s\n' '--- EXACT OLD ERP REFERENCES ---'
-          nl -ba "$f" | grep -E "/public_html/erp([/\"'[:space:]]|$)" | sed 's#/home/s/spugovxsim#<HOME>#g' || true
-          printf '%s\n' '--- WRITE-LIKE OLD ERP REFERENCES ---'
-          nl -ba "$f" | grep -E "(cp|mv|rm|rsync|ln|tar|mkdir|install)[^#]*public_html/erp([/\"'[:space:]]|$)" | sed 's#/home/s/spugovxsim#<HOME>#g' || true
-          printf '%s\n' '--- WRITE-LIKE ERPV2 REFERENCES ---'
-          nl -ba "$f" | grep -E '(cp|mv|rm|rsync|ln|tar|mkdir|install)[^#]*public_html/erpv2' | sed 's#/home/s/spugovxsim#<HOME>#g' || true
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' EXPECTED_CURRENT_COMMIT='$EXPECTED_CURRENT_COMMIT' EXPECTED_P07_SHA256='$EXPECTED_P07_SHA256' bash -se" > "$OUT/P19_04_PREDEPLOY_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          OLD="$ROOT/public_html/erp"
+          DEPLOY="$ROOT/deploy"
+          P07="$DEPLOY/P07_deploy_erpv2.sh"
+          BACKUPS="$ROOT/deploy_backups"
+          marker="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt" 2>/dev/null || true)"
+          p07sha="$(sha256sum "$P07" | awk '{print $1}')"
+          printf 'CURRENT_DEPLOYED_SHA=%s\nP07_SHA256=%s\n' "$marker" "$p07sha"
+          test "$marker" = "$EXPECTED_CURRENT_COMMIT"
+          test -x "$P07"
+          test "$p07sha" = "$EXPECTED_P07_SHA256"
+          grep -Fq 'LIVE="$ROOT/public_html/erpv2"' "$P07"
+          grep -Fq 'PRODUCTION="$ROOT/public_html/erp"' "$P07"
+          if grep -E '(cp|mv|rm|rsync|ln|tar|mkdir|install)[^#]*\$PRODUCTION' "$P07"; then
+            echo 'TARGET_ONLY_ERPV2=NO_WRITE_TO_OLD_ERP'; exit 42
+          fi
+          if sed '/^[[:space:]]*#/d' "$P07" | grep -Eiq '(artisan[[:space:]]+migrate|php[^[:cntrl:]]*(migrat|migration)|mysql[[:space:]][^<]*<[^[:space:]]*(migrat|migration))'; then
+            echo 'MIGRATIONS_DISABLED=NO'; exit 41
+          fi
+          printf 'P07_DEPLOY_AVAILABLE=YES\nTARGET_ONLY_ERPV2=YES\nMIGRATIONS_DISABLED=YES\n'
+          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          erpv2fp="$(cd "$LIVE" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P19_db_fp_${GITHUB_RUN_ID}.php")"
+          printf '%s' "$dbfp" | grep -Eq '^[0-9a-f]{64}$'
+          backup="$BACKUPS/P19A_${GITHUB_RUN_ID}_${marker}"
+          test ! -e "$backup"
+          mkdir -p "$BACKUPS"
+          cp -a "$LIVE" "$backup"
+          test -d "$backup"
+          printf 'OLD_ERP_FINGERPRINT=%s\nERPV2_FINGERPRINT_BEFORE=%s\nDB_FINGERPRINT=%s\nBACKUP_PATH=%s\nBACKUP_CREATED=YES\n' "$oldfp" "$erpv2fp" "$dbfp" "$backup"
           REMOTE
-          cat P19_scope_output/P19_P07_SCOPE.txt
+          cat "$OUT/P19_04_PREDEPLOY_GUARDS.txt"
+          oldfp="$(awk -F= '/^OLD_ERP_FINGERPRINT=/{print $2}' "$OUT/P19_04_PREDEPLOY_GUARDS.txt")"
+          dbfp="$(awk -F= '/^DB_FINGERPRINT=/{print $2}' "$OUT/P19_04_PREDEPLOY_GUARDS.txt")"
+          backup="$(awk '/^BACKUP_PATH=/{sub(/^BACKUP_PATH=/,"");print}' "$OUT/P19_04_PREDEPLOY_GUARDS.txt")"
+          test -n "$oldfp"; test -n "$dbfp"; test -n "$backup"
+          printf 'PRE_OLD_ERP_FP=%s\nPRE_DB_FP=%s\nP19_BACKUP_PATH=%s\n' "$oldfp" "$dbfp" "$backup" >> "$GITHUB_ENV"
+
+      - name: Build exact application artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact="P19A_${TARGET_COMMIT}.tar.gz"
+          git archive --format=tar --output=P19A.tar "$TARGET_COMMIT" -- app bootstrap config database public scripts tools tests
+          gzip -n P19A.tar && mv P19A.tar.gz "$artifact"
+          tar -tzf "$artifact" > "$OUT/P19_05_ARTIFACT_LISTING.txt"
+          if grep -E '(^|/)(\.git|\.env([^/]*)?|storage|tmp|logs|screenshots|node_modules|vendor)(/|$)|(^|/)(cookies?|reports)(/|$)' "$OUT/P19_05_ARTIFACT_LISTING.txt"; then exit 1; fi
+          sha="$(sha256sum "$artifact" | awk '{print $1}')"
+          printf '%s\n' "$sha" > "$OUT/P19_06_ARTIFACT_SHA256.txt"
+          printf 'artifact=%s\nsha=%s\n' "$artifact" "$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Upload private artifact
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.artifact.outputs.artifact }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P19A_${TARGET_COMMIT}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P19_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+
+      - name: Deploy PATCH_A through P07
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT_SHA: ${{ steps.artifact.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P19A_${TARGET_COMMIT}.tar.gz"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$TARGET_COMMIT'" | tee "$OUT/P19_07_P07_DEPLOY.log"
+          deployed="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$deployed" = "$TARGET_COMMIT"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Post-deploy invariants
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "GITHUB_RUN_ID='$GITHUB_RUN_ID' TARGET_COMMIT='$TARGET_COMMIT' PRE_OLD_ERP_FP='$PRE_OLD_ERP_FP' PRE_DB_FP='$PRE_DB_FP' bash -se" > "$OUT/P19_08_POSTDEPLOY_GUARDS.txt" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          dbfp="$(php "/tmp/P19_db_fp_${GITHUB_RUN_ID}.php")"
+          test "$marker" = "$TARGET_COMMIT"
+          test "$oldfp" = "$PRE_OLD_ERP_FP"
+          test "$dbfp" = "$PRE_DB_FP"
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker" "$oldfp" "$dbfp"
+          rm -f "/tmp/P19_db_fp_${GITHUB_RUN_ID}.php"
+          REMOTE
+          cat "$OUT/P19_08_POSTDEPLOY_GUARDS.txt"
+          public_marker="$(curl -fsSL --max-time 30 https://plan-ex.ru/erpv2/DEPLOYED_COMMIT.txt)"
+          login_code="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          old_code="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erp/)"
+          test "$public_marker" = "$TARGET_COMMIT"
+          test "$login_code" = '200'
+          test "$old_code" = '200'
+          printf 'PUBLIC_MARKER=%s\nERPV2_LOGIN_HTTP=%s\nOLD_ERP_HTTP=%s\n' "$public_marker" "$login_code" "$old_code" | tee "$OUT/P19_09_PUBLIC_HTTP.txt"
+
+      - name: Write deploy decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$OUT/P19_10_DEPLOY_DECISION.json" <<EOF
+          {"status":"PASS","source_patch_commit":"$SOURCE_PATCH_COMMIT","deployed_commit":"$TARGET_COMMIT","backup_path":"$P19_BACKUP_PATH","migrations_run":false,"database_changed":false,"old_erp_changed":false,"target":"/erpv2"}
+          EOF
+
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: P19_isolated_scope_${{ github.run_id }}
-          path: P19_scope_output/
+          name: P19_patch_a_deploy_${{ github.run_id }}
+          path: ${{ env.OUT }}/
           if-no-files-found: error
           retention-days: 30
+
       - if: always()
-        run: rm -f "$HOME/.ssh/P19_scope_key" 2>/dev/null || true
+        shell: bash
+        run: rm -f "$HOME/.ssh/P19_deploy_key" /tmp/P19_db_fp.php 2>/dev/null || true
