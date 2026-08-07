@@ -27,21 +27,53 @@ jobs:
           ref: ${{ env.DEPLOY_BRANCH }}
           fetch-depth: 0
 
-      - name: Apply only PATCH_A commit onto deployed production base
+      - name: Apply exact PATCH_A semantics onto deployed production base
         id: patch
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --quiet origin chatgpt/p19-uiux-safe-runtime-review-20260806
           current="$(git rev-parse HEAD)"
           if [ "$current" = "$PROD_BASE" ]; then
-            git cherry-pick --no-commit "$PATCH_SOURCE"
+            python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+
+          replace_once(
+              'app/View/layouts/main.php',
+              "fill='%230f766e'",
+              "fill='%237c4718'",
+              'favicon brown replacement'
+          )
+          replace_once(
+              'public/assets/css/app.css',
+              ".linear-trip-row-remove {\n  width: 32px;\n  height: 32px;\n  border: 1px solid var(--line);\n  background: #fff;\n  color: var(--text);",
+              ".linear-trip-row-remove {\n  width: 32px;\n  height: 32px;\n  border: 1px solid var(--line);\n  background: #fff;\n  color: var(--text-main);",
+              'linear trip text variable'
+          )
+          replace_once(
+              'public/assets/css/app.css',
+              ".user-view-card {\n  background: var(--surface-bg);\n  border-radius: 8px;",
+              ".user-view-card {\n  background: var(--surface-strong);\n  border-radius: 2px;",
+              'user view surface and radius'
+          )
+          PY
             changed="$(git diff --name-only)"
+            printf '%s\n' "$changed"
             test "$changed" = $'app/View/layouts/main.php\npublic/assets/css/app.css'
             grep -Fq "fill='%237c4718'" app/View/layouts/main.php
+            ! grep -Fq "fill='%230f766e'" app/View/layouts/main.php
             grep -Fq 'color: var(--text-main);' public/assets/css/app.css
             grep -Fq 'background: var(--surface-strong);' public/assets/css/app.css
             grep -Fq 'border-radius: 2px;' public/assets/css/app.css
+            ! grep -Fq 'color: var(--text);' public/assets/css/app.css
+            ! grep -Fq 'background: var(--surface-bg);' public/assets/css/app.css
             git config user.name 'P19 runtime automation'
             git config user.email 'p19-runtime@users.noreply.github.com'
             git add app/View/layouts/main.php public/assets/css/app.css
@@ -59,6 +91,7 @@ jobs:
           grep -Fq 'color: var(--text-main);' <(git show "$final:public/assets/css/app.css")
           grep -Fq 'background: var(--surface-strong);' <(git show "$final:public/assets/css/app.css")
           grep -Fq 'border-radius: 2px;' <(git show "$final:public/assets/css/app.css")
+          printf '%s\n' "$PATCH_SOURCE" > P19_PATCH_A_SOURCE_COMMIT.txt
           printf '%s\n' "$final" > P19_PATCH_A_DEPLOY_COMMIT.txt
           printf 'deploy_sha=%s\n' "$final" >> "$GITHUB_OUTPUT"
 
@@ -67,6 +100,7 @@ jobs:
         with:
           name: P19_patch_a_rebased_commit_${{ github.run_id }}
           path: |
+            P19_PATCH_A_SOURCE_COMMIT.txt
             P19_PATCH_A_DEPLOY_COMMIT.txt
             P19_PATCH_A_REBASED_DIFF.patch
           if-no-files-found: error
