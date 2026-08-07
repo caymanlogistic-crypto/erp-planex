@@ -108,20 +108,34 @@ jobs:
           python <<'PY'
           from pathlib import Path
           import re
-          css = Path('public/assets/css/app.css').read_text(encoding='utf-8')
-          stripped = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+
+          def unresolved(text):
+              defs = set(re.findall(r'--([A-Za-z0-9_-]+)\s*:', text))
+              out = set()
+              for m in re.finditer(r'var\(\s*--([A-Za-z0-9_-]+)([^)]*)\)', text):
+                  name, tail = m.group(1), m.group(2)
+                  if name not in defs and ',' not in tail:
+                      out.add(name)
+              return out
+
+          before = Path('/tmp/P19_app_before.css').read_text(encoding='utf-8')
+          after = Path('public/assets/css/app.css').read_text(encoding='utf-8')
+          stripped = re.sub(r'/\*.*?\*/', '', after, flags=re.S)
           if stripped.count('{') != stripped.count('}'):
               raise SystemExit('CSS brace balance failed')
-          defs = set(re.findall(r'--([A-Za-z0-9_-]+)\s*:', css))
-          missing = []
-          for m in re.finditer(r'var\(\s*--([A-Za-z0-9_-]+)([^)]*)\)', css):
-              name, tail = m.group(1), m.group(2)
-              if name not in defs and ',' not in tail:
-                  missing.append(name)
-          if missing:
-              raise SystemExit('Undefined CSS vars without fallback: ' + ', '.join(sorted(set(missing))))
-          if '\ufffd' in css:
+          before_missing = unresolved(before)
+          after_missing = unresolved(after)
+          newly_missing = after_missing - before_missing
+          if newly_missing:
+              raise SystemExit('PATCH_A introduced undefined CSS vars: ' + ', '.join(sorted(newly_missing)))
+          if 'text' in after_missing or 'surface-bg' in after_missing:
+              raise SystemExit('PATCH_A did not resolve approved undefined variables')
+          if not {'text','surface-bg'}.issubset(before_missing):
+              raise SystemExit('Expected approved baseline undefined variables were not present')
+          if '\ufffd' in after:
               raise SystemExit('Replacement-character mojibake found')
+          print('BASELINE_UNDEFINED=' + ','.join(sorted(before_missing)))
+          print('AFTER_UNDEFINED=' + ','.join(sorted(after_missing)))
           PY
           if grep -R --line-number --fixed-strings '#0f766e' app public 2>/dev/null; then
             echo 'Green primary/fav token remains in production UI' >&2
@@ -143,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           cat > P19_patch_a_static_output/P19_04_PATCH_A_STATIC_GATE.json <<EOF
-          {"status":"PASS","production_files":["app/View/layouts/main.php","public/assets/css/app.css"],"semantic_alert_tokens_unchanged":true,"brown_base_preserved":true,"green_token_absent":true,"new_important":0,"migrations_added":false,"sql_changed":false}
+          {"status":"PASS","production_files":["app/View/layouts/main.php","public/assets/css/app.css"],"semantic_alert_tokens_unchanged":true,"brown_base_preserved":true,"green_token_absent":true,"approved_undefined_vars_resolved":["text","surface-bg"],"new_undefined_vars":0,"new_important":0,"migrations_added":false,"sql_changed":false}
           EOF
 
       - name: Commit exact PATCH_A on push only
