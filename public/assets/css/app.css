@@ -3820,7 +3820,7 @@ a.nav-sub-item:visited {
   height: 32px;
   border: 1px solid var(--line);
   background: #fff;
-  color: var(--text);
+  color: var(--text-main);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -3896,8 +3896,8 @@ a.nav-sub-item:visited {
   padding: 16px;
 }
 .user-view-card {
-  background: var(--surface-bg);
-  border-radius: 8px;
+  background: var(--surface-strong);
+  border-radius: 2px;
   overflow: hidden;
 }
 .user-view-details {
