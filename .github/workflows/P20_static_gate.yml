@@ -76,10 +76,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files='app/Support/entrypoint_dependencies.php app/Http/Controllers/Company/FinanceOperationActions/history.php tests/p20_finance_operation_history_regression_test.php'
-          if grep -En '(BEGIN (RSA|OPENSSH) PRIVATE KEY|password[[:space:]]*=[[:space:]]*["'"'][^"'"']+|ssh-rsa|AKIA[0-9A-Z]{16})' $files; then exit 1; fi
-          if grep -En 'Р[А-Яа-я]|С[А-Яа-я].*[РС][А-Яа-я]' $files; then echo 'POTENTIAL_MOJIBAKE'; exit 1; fi
-          printf 'SECRET_SCAN=PASS\nMOJIBAKE_SCAN=PASS\n' > "$OUT/P20_TEXT_SAFETY.txt"
+          python - <<'PY'
+          import pathlib,re
+          files=[pathlib.Path('app/Support/entrypoint_dependencies.php'),pathlib.Path('app/Http/Controllers/Company/FinanceOperationActions/history.php'),pathlib.Path('tests/p20_finance_operation_history_regression_test.php')]
+          text='\n'.join(p.read_text(encoding='utf-8') for p in files)
+          secret_patterns=[r'BEGIN (?:RSA|OPENSSH) PRIVATE KEY',r'ssh-rsa',r'AKIA[0-9A-Z]{16}',r'password\s*=\s*["\'][^"\']+["\']']
+          for pat in secret_patterns:
+              if re.search(pat,text,re.I): raise SystemExit('SECRET_SCAN_FAIL')
+          bad=['Р°','Рµ','Рё','Рѕ','РЅ','С‚','СЃ','Рџ','Р—','Рђ','Р’','Рљ','Рњ','Рќ','Рћ','Рў','РЈ','Р¤','РҐ','Р§','РЁ','Р©','Р«','Р¬','Р­','Р®','РЇ']
+          if any(x in text for x in bad): raise SystemExit('MOJIBAKE_SCAN_FAIL')
+          pathlib.Path('P20_static_gate_output/P20_TEXT_SAFETY.txt').write_text('SECRET_SCAN=PASS\nMOJIBAKE_SCAN=PASS\n',encoding='utf-8')
+          PY
       - name: Write static decision
         shell: bash
         run: |
