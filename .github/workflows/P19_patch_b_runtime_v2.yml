@@ -2,10 +2,10 @@ name: P19 PATCH_B isolated runtime v2
 
 on:
   pull_request:
-    branches:
-      - chatgpt/production-stabilization-20260802
+    branches: [chatgpt/production-stabilization-20260802]
     paths:
       - '.github/workflows/P19_patch_b_runtime_v2.yml'
+      - '.github/p19/P19_patch_b_runtime_v2.js'
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
         with:
           ref: chatgpt/p19-execution-isolated-20260807
           fetch-depth: 0
-      - name: Prepare read-only DB helper and verify PATCH_B scope
+      - name: Prepare scope and DB helper
         shell: bash
         run: |
           set -euo pipefail
@@ -49,7 +49,7 @@ jobs:
           printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19B_v2_key"
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/P19B_v2_key" "$HOME/.ssh/known_hosts"
-      - name: Verify marker DB old ERP before runtime
+      - name: Pre-runtime invariants
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
@@ -58,8 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           scp -P "$SSH_PORT" -i "$HOME/.ssh/P19B_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P19_db_fp.php "$SSH_USER@$SSH_HOST:/tmp/P19B_v2_db_${GITHUB_RUN_ID}.php"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
-            "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_B='$DEPLOYED_B' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_62_PATCH_B_PRE_GUARDS.txt" <<'REMOTE'
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_B='$DEPLOYED_B' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_62_PATCH_B_PRE_GUARDS.txt" <<'REMOTE'
           set -euo pipefail
           ROOT=/home/s/spugovxsim/planexp
           marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
@@ -68,7 +67,6 @@ jobs:
           test "$marker" = "$DEPLOYED_B"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"
           printf 'DEPLOYED_SHA=%s\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker" "$oldfp" "$dbfp"
           REMOTE
-          cat "$OUT/P19_62_PATCH_B_PRE_GUARDS.txt"
       - name: Resolve OWNER LOGIST credentials
         env:
           SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
@@ -86,7 +84,7 @@ jobs:
             printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P19B_v2_cred_key"; chmod 600 "$HOME/.ssh/P19B_v2_cred_key"
             credentials="$(python "$tmpdir/decrypt.py" --key "$HOME/.ssh/P19B_v2_cred_key" --input "$tmpdir/credentials.enc.json")"
           fi
-          test -n "$credentials"; echo "::add-mask::$credentials"
+          echo "::add-mask::$credentials"
           CREDENTIALS="$credentials" python - <<'PY'
           import base64,json,os
           d=json.loads(base64.b64decode(os.environ['CREDENTIALS']).decode('utf-8'))
@@ -97,26 +95,19 @@ jobs:
           print('SENIOR_LOGIST=NOT_TESTED_CREDENTIAL_UNAVAILABLE')
           PY
           printf 'P19_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
-          printf 'RUNTIME_CREDENTIAL_SOURCE=%s\n' "$source_label" >> "$GITHUB_ENV"
           rm -rf "$tmpdir" "$HOME/.ssh/P19B_v2_cred_key"
       - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+        with: {node-version: '22'}
       - name: Install Playwright 1.54.2 Chromium
-        shell: bash
         run: |
-          set -euo pipefail
           npm install --no-save playwright@1.54.2 >/dev/null
           npx playwright install --with-deps chromium >/dev/null
       - name: Execute corrected PATCH_B runtime
         env:
           P19_OUT: ${{ env.OUT }}
           P19_DEPLOYED_SHA: ${{ env.DEPLOYED_B }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          node .github/p19/P19_patch_b_runtime_v2.js | tee "$OUT/P19_63_PATCH_B_RUNTIME_V2_CONSOLE.txt"
-      - name: Verify marker DB old ERP after runtime
+        run: node .github/p19/P19_patch_b_runtime_v2.js | tee "$OUT/P19_63_PATCH_B_RUNTIME_V2_CONSOLE.txt"
+      - name: Post-runtime invariants
         if: always()
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
@@ -125,8 +116,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
-            "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_B='$DEPLOYED_B' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_64_PATCH_B_POST_GUARDS.txt" <<'REMOTE'
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P19B_v2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' DEPLOYED_B='$DEPLOYED_B' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' bash -se" > "$OUT/P19_64_PATCH_B_POST_GUARDS.txt" <<'REMOTE'
           set -euo pipefail
           ROOT=/home/s/spugovxsim/planexp
           marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
@@ -136,15 +126,13 @@ jobs:
           printf 'DEPLOYED_SHA=%s\nOLD_ERP_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nOLD_ERP_UNCHANGED=YES\nDATABASE_UNCHANGED=YES\n' "$marker" "$oldfp" "$dbfp"
           rm -f "/tmp/P19B_v2_db_${GITHUB_RUN_ID}.php"
           REMOTE
-          cat "$OUT/P19_64_PATCH_B_POST_GUARDS.txt"
       - name: Write PATCH_B acceptance decision
         if: success()
         shell: bash
         run: |
-          set -euo pipefail
           python - <<'PY'
           import json,os
-          p=os.path.join(os.environ['OUT'],'P19_60_PATCH_B_RUNTIME_SUMMARY_V2.json'); d=json.load(open(p,encoding='utf-8')); assert d['status']=='PASS'
+          d=json.load(open(os.path.join(os.environ['OUT'],'P19_60_PATCH_B_RUNTIME_SUMMARY_V2.json'),encoding='utf-8')); assert d['status']=='PASS'
           out={'decision':'PATCH_B_ACCEPTED','accepted_a':os.environ['ACCEPTED_A'],'deployed_b':os.environ['DEPLOYED_B'],'owner':'PASS','logist':'PASS_EXPECTED_FINANCE_DENY','senior_logist':'NOT_TESTED_CREDENTIAL_UNAVAILABLE','known_unrelated_backend_finding':'HTTP 500 on unchanged finance operation history endpoint','database_changed':False,'old_erp_changed':False,'rollback_backup':'/home/s/spugovxsim/planexp/deploy_backups/P19B_31166803648_ef47dabe3249625280e6577de7b249f5b4d14a9d'}
           json.dump(out,open(os.path.join(os.environ['OUT'],'P19_65_PATCH_B_DECISION.json'),'w'),ensure_ascii=False,indent=2)
           PY
@@ -156,7 +144,6 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - if: always()
-        shell: bash
         run: |
           printf 'P19_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
           rm -f "$HOME/.ssh/P19B_v2_key" /tmp/P19_db_fp.php 2>/dev/null || true
