@@ -35,6 +35,13 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Preserve read-only control helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .github/p21/P21_readonly_db_fingerprint.php /tmp/P21_readonly_db_fingerprint.php
+          php -l /tmp/P21_readonly_db_fingerprint.php >/dev/null
+
       - name: Validate explicit source SHA and checkout exact commit
         id: source
         shell: bash
@@ -84,20 +91,7 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/erpv2_controlled_deploy_key" "$HOME/.ssh/known_hosts"
 
-      - name: Upload read-only DB fingerprint helper
-        shell: bash
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-        run: |
-          set -euo pipefail
-          git show "${{ github.workflow_sha }}:.github/p21/P21_readonly_db_fingerprint.php" > /tmp/P21_readonly_db_fingerprint.php
-          php -l /tmp/P21_readonly_db_fingerprint.php >/dev/null
-          scp -P "$SSH_PORT" -i "$HOME/.ssh/erpv2_controlled_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            /tmp/P21_readonly_db_fingerprint.php "$SSH_USER@$SSH_HOST:/tmp/P21_readonly_db_fingerprint_${GITHUB_RUN_ID}.php"
-
-      - name: Snapshot current server state and create backup
+      - name: Snapshot server state and create backup
         id: before
         shell: bash
         env:
@@ -106,6 +100,8 @@ jobs:
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/erpv2_controlled_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            /tmp/P21_readonly_db_fingerprint.php "$SSH_USER@$SSH_HOST:/tmp/P21_readonly_db_fingerprint_${GITHUB_RUN_ID}.php"
           out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/erpv2_controlled_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' bash -se" <<'REMOTE'
           set -euo pipefail
           ROOT=/home/s/spugovxsim/planexp
@@ -118,19 +114,23 @@ jobs:
           oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
           dbfp="$(php "/tmp/P21_readonly_db_fingerprint_${GITHUB_RUN_ID}.php")"
           envfp="$(sha256sum "$LIVE/.env" | awk '{print $1}')"
+          runtime_dirs=''
+          for d in storage uploads logs; do
+            if [ -d "$LIVE/$d" ]; then runtime_dirs="${runtime_dirs}${d},"; fi
+          done
           ts="$(date -u +%Y%m%dT%H%M%SZ)"
           backup="$BACKUPS/P21_${ts}_${current}"
           mkdir -p "$backup"
           tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
           test -s "$backup/erpv2_current.tar.gz"
-          printf 'current=%s\noldfp=%s\ndbfp=%s\nenvfp=%s\nbackup=%s\n' "$current" "$oldfp" "$dbfp" "$envfp" "$backup"
+          printf 'current=%s\noldfp=%s\ndbfp=%s\nenvfp=%s\nruntime_dirs=%s\nbackup=%s\n' "$current" "$oldfp" "$dbfp" "$envfp" "$runtime_dirs" "$backup"
           REMOTE
           )"
           printf '%s\n' "$out"
           while IFS='=' read -r key value; do
-            case "$key" in current|oldfp|dbfp|envfp|backup) printf '%s=%s\n' "$key" "$value" >> "$GITHUB_OUTPUT" ;; esac
+            case "$key" in current|oldfp|dbfp|envfp|runtime_dirs|backup) printf '%s=%s\n' "$key" "$value" >> "$GITHUB_OUTPUT" ;; esac
           done <<< "$out"
-          printf 'CURRENT_SERVER_SHA=%s\n' "${{ steps.before.outputs.current }}"
+          printf 'CURRENT_SERVER_SHA=%s\n' "$(printf '%s\n' "$out" | sed -n 's/^current=//p')"
           printf 'TARGET=%s\n' "$TARGET"
 
       - name: Upload exact artifact and deploy through P07 engine
@@ -161,12 +161,13 @@ jobs:
           OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
           DB_FP_BEFORE: ${{ steps.before.outputs.dbfp }}
           ENV_FP_BEFORE: ${{ steps.before.outputs.envfp }}
+          RUNTIME_DIRS_BEFORE: ${{ steps.before.outputs.runtime_dirs }}
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
-          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/erpv2_controlled_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' SOURCE_SHA='$SOURCE_SHA' bash -se" <<'REMOTE'
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/erpv2_controlled_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' SOURCE_SHA='$SOURCE_SHA' RUNTIME_DIRS_BEFORE='$RUNTIME_DIRS_BEFORE' bash -se" <<'REMOTE'
           set -euo pipefail
           ROOT=/home/s/spugovxsim/planexp
           LIVE="$ROOT/public_html/erpv2"
@@ -176,7 +177,10 @@ jobs:
           dbfp="$(php "/tmp/P21_readonly_db_fingerprint_${GITHUB_RUN_ID}.php")"
           envfp="$(sha256sum "$LIVE/.env" | awk '{print $1}')"
           test "$marker" = "$SOURCE_SHA"
-          test -d "$LIVE/storage" || true
+          IFS=',' read -r -a dirs <<< "$RUNTIME_DIRS_BEFORE"
+          for d in "${dirs[@]}"; do
+            [ -z "$d" ] || test -d "$LIVE/$d"
+          done
           printf 'marker=%s\noldfp=%s\ndbfp=%s\nenvfp=%s\n' "$marker" "$oldfp" "$dbfp" "$envfp"
           REMOTE
           )"
@@ -217,6 +221,7 @@ jobs:
             "old_erp_fingerprint_after": "${{ steps.after.outputs.oldfp }}",
             "env_fingerprint_before": "${{ steps.before.outputs.envfp }}",
             "env_fingerprint_after": "${{ steps.after.outputs.envfp }}",
+            "runtime_dirs_preserved": "${{ steps.before.outputs.runtime_dirs }}",
             "migrations_run": false
           }
           EOF
@@ -231,7 +236,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Cleanup SSH material
+      - name: Cleanup temporary SSH material
         if: always()
         shell: bash
         env:
@@ -239,7 +244,8 @@ jobs:
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
-          rm -f "$HOME/.ssh/erpv2_controlled_deploy_key" /tmp/P21_readonly_db_fingerprint.php 2>/dev/null || true
-          if [ -n "${SSH_HOST:-}" ] && [ -n "${SSH_PORT:-}" ] && [ -n "${SSH_USER:-}" ] && [ -f "$HOME/.ssh/known_hosts" ]; then
-            ssh -p "$SSH_PORT" -i "$HOME/.ssh/erpv2_controlled_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '/tmp/P21_readonly_db_fingerprint_${GITHUB_RUN_ID}.php'" 2>/dev/null || true
+          if [ -f "$HOME/.ssh/erpv2_controlled_deploy_key" ]; then
+            ssh -p "$SSH_PORT" -i "$HOME/.ssh/erpv2_controlled_deploy_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+              "rm -f '/tmp/P21_readonly_db_fingerprint_${GITHUB_RUN_ID}.php'" 2>/dev/null || true
           fi
+          rm -f "$HOME/.ssh/erpv2_controlled_deploy_key" /tmp/P21_readonly_db_fingerprint.php 2>/dev/null || true
