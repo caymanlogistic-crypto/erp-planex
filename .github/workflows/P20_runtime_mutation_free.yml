@@ -1,4 +1,4 @@
-name: P20 runtime acceptance
+name: P20 mutation-free runtime acceptance
 
 on:
   pull_request:
@@ -10,6 +10,7 @@ permissions:
   contents: read
 
 env:
+  P19_SHA: f42a37539da13d50af1fddefe528a82dba022dbe
   P20_SHA: b96c085a254a885da26f8f5ca342b3781aea12ad
   EXPECTED_OLD_ERP_FP: c6a6522dacbe0c919ba5d22f4cf0501426a6ce31bc8ac091405537076e9a42da
   EXPECTED_DB_FP: cca07e25969163877994635a6a99209e84cd26fc9eb0d793f638a0c6d9106d0a
@@ -26,18 +27,20 @@ jobs:
         with:
           ref: chatgpt/p20-execution-isolated-20260807
           fetch-depth: 0
-      - name: Prepare helpers and syntax gate
+      - name: Prepare helpers and exact P20 fixture test
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$OUT"
-          git fetch --quiet origin chatgpt/p19-uiux-safe-runtime-review-20260806 p11-audit-v2
+          git fetch --quiet origin chatgpt/p19-uiux-safe-runtime-review-20260806 chatgpt/p20-finance-operation-history-fix-20260807-impl p11-audit-v2
+          test "$(git rev-parse origin/chatgpt/p20-finance-operation-history-fix-20260807-impl)" = "$P20_SHA"
           git show origin/chatgpt/p19-uiux-safe-runtime-review-20260806:.github/p19/P19_readonly_db_fingerprint.php > /tmp/P20_db_fp.php
           cp .github/p20/P20_tenant_fingerprint.php /tmp/P20_tenant_fp.php
-          cp .github/p20/P20_history_fixture.php /tmp/P20_history_fixture.php
-          node --check .github/p20/P20_runtime.js
+          node --check .github/p20/P20_runtime_mutation_free.js
           php -l /tmp/P20_tenant_fp.php
-          php -l /tmp/P20_history_fixture.php
+          git worktree add --detach /tmp/P20_impl "$P20_SHA" >/dev/null
+          php /tmp/P20_impl/tests/p20_finance_operation_history_regression_test.php | tee "$OUT/P20_EXISTING_HISTORY_INTEGRATION_FIXTURE.txt"
+          grep -Fq 'P20_FINANCE_HISTORY_REGRESSION=PASS' "$OUT/P20_EXISTING_HISTORY_INTEGRATION_FIXTURE.txt"
       - name: Configure SSH
         env:
           PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
@@ -49,7 +52,7 @@ jobs:
           printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/P20_runtime_key"
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/P20_runtime_key" "$HOME/.ssh/known_hosts"
-      - name: Upload helpers and verify pre-runtime invariants
+      - name: Upload read-only helpers and verify pre-runtime invariants
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
@@ -57,7 +60,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in db_fp tenant_fp history_fixture; do scp -P "$SSH_PORT" -i "$HOME/.ssh/P20_runtime_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "/tmp/P20_${f}.php" "$SSH_USER@$SSH_HOST:/tmp/P20_${f}_${GITHUB_RUN_ID}.php"; done
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P20_runtime_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P20_db_fp.php "$SSH_USER@$SSH_HOST:/tmp/P20_db_fp_${GITHUB_RUN_ID}.php"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/P20_runtime_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes /tmp/P20_tenant_fp.php "$SSH_USER@$SSH_HOST:/tmp/P20_tenant_fp_${GITHUB_RUN_ID}.php"
           ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_runtime_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' P20_SHA='$P20_SHA' EXPECTED_OLD_ERP_FP='$EXPECTED_OLD_ERP_FP' EXPECTED_DB_FP='$EXPECTED_DB_FP' EXPECTED_TENANT_FP='$EXPECTED_TENANT_FP' TEST_TENANT_ID='$TEST_TENANT_ID' bash -se" > "$OUT/P20_RUNTIME_PRE_GUARDS.txt" <<'REMOTE'
           set -euo pipefail
           ROOT=/home/s/spugovxsim/planexp; LIVE="$ROOT/public_html/erpv2"
@@ -66,8 +70,9 @@ jobs:
           dbfp="$(php "/tmp/P20_db_fp_${GITHUB_RUN_ID}.php")"
           PHPBIN=''; for c in php83 php8.3 /usr/local/bin/php83 /usr/bin/php83 /usr/bin/php8.3; do if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then PHPBIN="$c"; break; fi; done; test -n "$PHPBIN"
           tenantfp="$(P20_ROOT="$LIVE" P20_COMPANY_ID="$TEST_TENANT_ID" "$PHPBIN" "/tmp/P20_tenant_fp_${GITHUB_RUN_ID}.php")"
-          test "$marker" = "$P20_SHA"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"; test "$tenantfp" = "$EXPECTED_TENANT_FP"
-          printf 'DEPLOYED_SHA=%s\nOLD_ERP_FP=%s\nDB_FP=%s\nTEST_TENANT_FP=%s\n' "$marker" "$oldfp" "$dbfp" "$tenantfp"
+          login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          test "$marker" = "$P20_SHA"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"; test "$tenantfp" = "$EXPECTED_TENANT_FP"; test "$login" = 200
+          printf 'DEPLOYED_SHA=%s\nOLD_ERP_FP=%s\nDB_FP=%s\nTEST_TENANT_FP=%s\nERPV2_LOGIN_HTTP=%s\n' "$marker" "$oldfp" "$dbfp" "$tenantfp" "$login"
           REMOTE
       - name: Resolve OWNER and LOGIST credentials
         env:
@@ -93,27 +98,6 @@ jobs:
           PY
           printf 'P20_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
           rm -rf "$tmpdir"
-      - name: Create temporary test-tenant history fixture
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_runtime_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' TEST_TENANT_ID='$TEST_TENANT_ID' bash -se" > "$OUT/P20_HISTORY_FIXTURE_CREATE.json" <<'REMOTE'
-          set -euo pipefail
-          ROOT=/home/s/spugovxsim/planexp; LIVE="$ROOT/public_html/erpv2"
-          PHPBIN=''; for c in php83 php8.3 /usr/local/bin/php83 /usr/bin/php83 /usr/bin/php8.3; do if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then PHPBIN="$c"; break; fi; done; test -n "$PHPBIN"
-          P20_ROOT="$LIVE" P20_COMPANY_ID="$TEST_TENANT_ID" P20_RUN_ID="$GITHUB_RUN_ID" P20_MODE=create "$PHPBIN" "/tmp/P20_history_fixture_${GITHUB_RUN_ID}.php"
-          REMOTE
-          python - <<'PY'
-          import json
-          d=json.load(open('P20_runtime_output/P20_HISTORY_FIXTURE_CREATE.json'))
-          assert d['company_id']==25 and d['history_before']==0 and d['inserted_count']==30
-          assert str(d['operation']['source'])=='BANK_STATEMENT'
-          print('TEST_TENANT_CONFIRMED='+str(d['company_name']))
-          PY
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -123,30 +107,14 @@ jobs:
           set -euo pipefail
           npm install --no-save playwright@1.54.2 >/dev/null
           npx playwright install --with-deps chromium >/dev/null
-      - name: Execute P20 OWNER LOGIST history and P19 regression runtime
+      - name: Execute mutation-free OWNER LOGIST history and P19 runtime
         env:
           P20_OUT: ${{ env.OUT }}
           P20_DEPLOYED_SHA: ${{ env.P20_SHA }}
         shell: bash
         run: |
           set -euo pipefail
-          node .github/p20/P20_runtime.js | tee "$OUT/P20_RUNTIME_CONSOLE.txt"
-      - name: Cleanup temporary test-tenant history fixture
-        if: always()
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/P20_runtime_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' TEST_TENANT_ID='$TEST_TENANT_ID' bash -se" > "$OUT/P20_HISTORY_FIXTURE_CLEANUP.json" <<'REMOTE'
-          set -euo pipefail
-          ROOT=/home/s/spugovxsim/planexp; LIVE="$ROOT/public_html/erpv2"
-          PHPBIN=''; for c in php83 php8.3 /usr/local/bin/php83 /usr/bin/php83 /usr/bin/php8.3; do if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then PHPBIN="$c"; break; fi; done; test -n "$PHPBIN"
-          P20_ROOT="$LIVE" P20_COMPANY_ID="$TEST_TENANT_ID" P20_RUN_ID="$GITHUB_RUN_ID" P20_MODE=cleanup "$PHPBIN" "/tmp/P20_history_fixture_${GITHUB_RUN_ID}.php"
-          REMOTE
-          cat "$OUT/P20_HISTORY_FIXTURE_CLEANUP.json"
+          node .github/p20/P20_runtime_mutation_free.js | tee "$OUT/P20_RUNTIME_CONSOLE.txt"
       - name: Post-runtime DB old ERP tenant guards
         if: always()
         env:
@@ -162,14 +130,15 @@ jobs:
           marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
           oldfp="$(cd "$ROOT/public_html/erp"&&find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null|sort|sha256sum|awk '{print $1}')"
           dbfp="$(php "/tmp/P20_db_fp_${GITHUB_RUN_ID}.php")"
-          PHPBIN=''; for c in php83 php8.3 /usr/local/bin/php83 /usr/bin/php83 /usr/bin/php8.3; do if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then PHPBIN="$c"; break; fi; done
+          PHPBIN=''; for c in php83 php8.3 /usr/local/bin/php83 /usr/bin/php83 /usr/bin/php8.3; do if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then PHPBIN="$c"; break; fi; done; test -n "$PHPBIN"
           tenantfp="$(P20_ROOT="$LIVE" P20_COMPANY_ID="$TEST_TENANT_ID" "$PHPBIN" "/tmp/P20_tenant_fp_${GITHUB_RUN_ID}.php")"
           login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
           test "$marker" = "$P20_SHA"; test "$oldfp" = "$EXPECTED_OLD_ERP_FP"; test "$dbfp" = "$EXPECTED_DB_FP"; test "$tenantfp" = "$EXPECTED_TENANT_FP"; test "$login" = 200
-          printf '{"status":"PASS","server_marker":"%s","production_db_changed":false,"old_erp_changed":false,"test_tenant_restored":true,"test_tenant_fingerprint":"%s","erpv2_login_http":%s}\n' "$marker" "$tenantfp" "$login"
-          rm -f "/tmp/P20_db_fp_${GITHUB_RUN_ID}.php" "/tmp/P20_tenant_fp_${GITHUB_RUN_ID}.php" "/tmp/P20_history_fixture_${GITHUB_RUN_ID}.php"
+          printf '{"status":"PASS","server_marker":"%s","production_db_before_after":"IDENTICAL","production_db_changed":false,"old_erp_before_after":"IDENTICAL","old_erp_changed":false,"test_tenant_before_after":"IDENTICAL","test_tenant_fingerprint":"%s","erpv2_login_http":%s}\n' "$marker" "$tenantfp" "$login"
+          rm -f "/tmp/P20_db_fp_${GITHUB_RUN_ID}.php" "/tmp/P20_tenant_fp_${GITHUB_RUN_ID}.php"
           REMOTE
       - name: Final runtime decision
+        if: success()
         shell: bash
         run: |
           set -euo pipefail
@@ -177,18 +146,17 @@ jobs:
           import json,pathlib,os
           out=pathlib.Path(os.environ['OUT'])
           d=json.load(open(out/'P20_RUNTIME_SUMMARY.json'))
-          cleanup=json.load(open(out/'P20_HISTORY_FIXTURE_CLEANUP.json'))
-          guards=json.load(open(out/'P20_10_DB_OLD_ERP_GUARDS.json'))
-          assert d['status']=='PASS'
-          assert cleanup['deleted']==30
-          assert guards['status']=='PASS' and guards['test_tenant_restored'] is True
-          (out/'P20_11_ROLLBACK_EVIDENCE.json').write_text(json.dumps({'rollback_available':True,'rollback_sha':'f42a37539da13d50af1fddefe528a82dba022dbe','backup_path':'/home/s/spugovxsim/planexp/deploy_backups/P20_31170956029_f42a37539da13d50af1fddefe528a82dba022dbe','rollback_executed':False},indent=2),encoding='utf-8')
-          (out/'P20_RUNTIME_DECISION.json').write_text(json.dumps({'status':'PASS','owner_history_ui':'PASS','logist_finance_access':'PASS','p19_regression':'PASS','database_changed':False,'old_erp_changed':False,'temporary_test_fixture_cleaned':True},indent=2),encoding='utf-8')
+          g=json.load(open(out/'P20_10_DB_OLD_ERP_GUARDS.json'))
+          assert d['status']=='PASS' and g['status']=='PASS'
+          rollback={'rollback_available':True,'rollback_sha':os.environ['P19_SHA'],'backup_path':'/home/s/spugovxsim/planexp/deploy_backups/P20_31170956029_f42a37539da13d50af1fddefe528a82dba022dbe','rollback_executed':False}
+          (out/'P20_11_ROLLBACK_EVIDENCE.json').write_text(json.dumps(rollback,ensure_ascii=False,indent=2),encoding='utf-8')
+          decision={'status':'PASS','live_history_500_fixed':True,'existing_history_integration_fixture':'PASS','live_empty_history':'PASS','live_not_found':'PASS','live_tenant_isolation':'PASS','owner_history_ui':'PASS','long_history_dom_only_scroll_probe':'PASS','logist_finance_access':'PASS','p19_regression':'PASS','database_changed':False,'old_erp_changed':False,'production_company_changed':False}
+          (out/'P20_RUNTIME_DECISION.json').write_text(json.dumps(decision,ensure_ascii=False,indent=2),encoding='utf-8')
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: P20_runtime_acceptance_${{ github.run_id }}
+          name: P20_runtime_mutation_free_${{ github.run_id }}
           path: ${{ env.OUT }}/
           if-no-files-found: error
           retention-days: 30
@@ -196,4 +164,5 @@ jobs:
         shell: bash
         run: |
           printf 'P20_CREDENTIALS_B64=\n' >> "$GITHUB_ENV"
-          rm -f "$HOME/.ssh/P20_runtime_key" /tmp/P20_db_fp.php /tmp/P20_tenant_fp.php /tmp/P20_history_fixture.php 2>/dev/null || true
+          git worktree remove --force /tmp/P20_impl 2>/dev/null || true
+          rm -f "$HOME/.ssh/P20_runtime_key" /tmp/P20_db_fp.php /tmp/P20_tenant_fp.php 2>/dev/null || true
