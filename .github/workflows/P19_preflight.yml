@@ -112,20 +112,55 @@ jobs:
           test -x "$DEPLOY/P07_deploy_erpv2.sh" && p07=YES
           oldfp="$(cd "$OLD_ERP" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
           erpv2fp="$(cd "$ERPV2" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          phpver="$(php -r 'echo PHP_VERSION;' 2>/dev/null || echo UNAVAILABLE)"
           dbfp=UNAVAILABLE
-          if command -v php >/dev/null 2>&1 && php -m | grep -qi pdo_mysql; then
+          if command -v php >/dev/null 2>&1 && php -m 2>/dev/null | grep -qi pdo_mysql; then
             cat > /tmp/p19_db_fp.php <<'PHP'
           <?php
-          function envf($p){$o=[];foreach(@file($p, FILE_IGNORE_NEW_LINES)?:[] as $l){$l=trim($l);if($l===''||$l[0]==='#'||!str_contains($l,'='))continue;[$k,$v]=explode('=',$l,2);$o[trim($k)]=trim($v," \t\n\r\0\x0B\"'");}return $o;}
-          $e=envf('/home/s/spugovxsim/planexp/public_html/erpv2/.env');
-          try{$pdo=new PDO('mysql:host='.($e['DB_HOST']??'127.0.0.1').';port='.($e['DB_PORT']??'3306').';dbname='.($e['DB_DATABASE']??'erp_planex').';charset=utf8mb4',$e['DB_USERNAME']??'root',$e['DB_PASSWORD']??'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$t=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);sort($t);$p=[];foreach($t as $x){$r=$pdo->query('CHECKSUM TABLE `'.str_replace('`','``',$x).'`')->fetch(PDO::FETCH_NUM);$p[]=$x.':'.($r[1]??'NULL');}echo hash('sha256',implode('|',$p));}catch(Throwable $x){echo 'UNAVAILABLE_'.substr(hash('sha256',$x->getMessage()),0,12);}
+          function envf($path) {
+              $out = array();
+              $lines = @file($path, FILE_IGNORE_NEW_LINES);
+              if ($lines === false) return $out;
+              foreach ($lines as $line) {
+                  $line = trim($line);
+                  if ($line === '' || substr($line, 0, 1) === '#' || strpos($line, '=') === false) continue;
+                  $parts = explode('=', $line, 2);
+                  $out[trim($parts[0])] = trim($parts[1], " \t\n\r\0\x0B\"'");
+              }
+              return $out;
+          }
+          $e = envf('/home/s/spugovxsim/planexp/public_html/erpv2/.env');
+          $host = isset($e['DB_HOST']) ? $e['DB_HOST'] : '127.0.0.1';
+          $port = isset($e['DB_PORT']) ? $e['DB_PORT'] : '3306';
+          $db = isset($e['DB_DATABASE']) ? $e['DB_DATABASE'] : 'erp_planex';
+          $user = isset($e['DB_USERNAME']) ? $e['DB_USERNAME'] : 'root';
+          $pass = isset($e['DB_PASSWORD']) ? $e['DB_PASSWORD'] : '';
+          try {
+              $pdo = new PDO('mysql:host='.$host.';port='.$port.';dbname='.$db.';charset=utf8mb4', $user, $pass, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+              $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+              sort($tables);
+              $fingerprint = array();
+              foreach ($tables as $table) {
+                  $escaped = str_replace('`', '``', $table);
+                  $row = $pdo->query('CHECKSUM TABLE `'.$escaped.'`')->fetch(PDO::FETCH_NUM);
+                  $fingerprint[] = $table.':'.(isset($row[1]) ? $row[1] : 'NULL');
+              }
+              echo hash('sha256', implode('|', $fingerprint));
+          } catch (Exception $ex) {
+              exit(2);
+          }
           PHP
-            dbfp="$(php /tmp/p19_db_fp.php)"
+            dbfp="$(php /tmp/p19_db_fp.php 2>/dev/null || true)"
             rm -f /tmp/p19_db_fp.php
+            if ! printf '%s' "$dbfp" | grep -Eq '^[0-9a-f]{64}$'; then dbfp=UNAVAILABLE; fi
           fi
-          printf 'CURRENT_DEPLOYED_SHA=%s\nP07_DEPLOY_AVAILABLE=%s\nOLD_ERP_FINGERPRINT=%s\nERPV2_FINGERPRINT=%s\nDB_FINGERPRINT=%s\n' "$marker" "$p07" "$oldfp" "$erpv2fp" "$dbfp"
+          printf 'CURRENT_DEPLOYED_SHA=%s\nP07_DEPLOY_AVAILABLE=%s\nOLD_ERP_FINGERPRINT=%s\nERPV2_FINGERPRINT=%s\nDB_FINGERPRINT=%s\nSERVER_PHP_VERSION=%s\n' "$marker" "$p07" "$oldfp" "$erpv2fp" "$dbfp" "$phpver"
           REMOTE
           grep -F 'P07_DEPLOY_AVAILABLE=YES' P19_preflight_output/P19_SERVER_STATE.txt
+          grep -Eq '^CURRENT_DEPLOYED_SHA=[0-9a-f]{40}$' P19_preflight_output/P19_SERVER_STATE.txt
+          grep -Eq '^OLD_ERP_FINGERPRINT=[0-9a-f]{64}$' P19_preflight_output/P19_SERVER_STATE.txt
+          grep -Eq '^ERPV2_FINGERPRINT=[0-9a-f]{64}$' P19_preflight_output/P19_SERVER_STATE.txt
+          grep -Eq '^DB_FINGERPRINT=[0-9a-f]{64}$' P19_preflight_output/P19_SERVER_STATE.txt
 
       - name: HTTP availability
         shell: bash
