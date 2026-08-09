@@ -1,0 +1,171 @@
+name: P23 Crew Two Drivers Controlled Deploy
+
+on:
+  push:
+    branches: [chatgpt/p23-crew-two-drivers-20260809]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpv2-p23-crew-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ startsWith(github.event.head_commit.message, 'P23: finalize') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: PHP lint and regression gate
+        run: |
+          set -euo pipefail
+          php -l app/Http/Controllers/Company/RouteExecutorController.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/create_form_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/create_submit_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/index_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/view_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/edit_form_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/edit_submit_v2.php
+          php -l app/View/partials/company_route_executor_create_form_v2.php
+          php -l app/View/pages/company_route_executor_edit_v2.php
+          php -l scripts/p23_migrate_crew_secondary_driver.php
+          php tests/p23_crew_two_drivers_regression_test.php
+
+      - name: Build exact source artifact
+        id: source
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          artifact="p23_erpv2_${sha}.tar.gz"
+          git archive --format=tar --output=p23_source.tar "$sha" -- app bootstrap config database public scripts tests
+          gzip -n p23_source.tar
+          mv p23_source.tar.gz "$artifact"
+          sha256="$(sha256sum "$artifact" | awk '{print $1}')"
+          printf 'sha=%s\nartifact=%s\nsha256=%s\n' "$sha" "$artifact" "$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p23_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p23_key" "$HOME/.ssh/known_hosts"
+
+      - name: Snapshot server and create application backup
+        id: before
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          OLD="$ROOT/public_html/erp"
+          DEPLOY="$ROOT/deploy"
+          BACKUPS="$ROOT/deploy_backups"
+          test -x "$DEPLOY/P07_deploy_erpv2.sh"
+          current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup="$BACKUPS/P23_${ts}_${current}"
+          mkdir -p "$backup"
+          tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
+          test -s "$backup/erpv2_current.tar.gz"
+          printf 'current=%s\noldfp=%s\nbackup=%s\n' "$current" "$oldfp" "$backup"
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          while IFS='=' read -r k v; do case "$k" in current|oldfp|backup) printf '%s=%s\n' "$k" "$v" >> "$GITHUB_OUTPUT";; esac; done <<< "$out"
+
+      - name: Upload source artifact
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.source.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:/tmp/$ARTIFACT"
+
+      - name: Apply crew schema migration before application deploy
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.source.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "ARTIFACT='$ARTIFACT' bash -se" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          TMP="/tmp/p23_${GITHUB_RUN_ID}"
+          mkdir -p "$TMP"
+          tar -xzf "/tmp/$ARTIFACT" -C "$TMP"
+          cp "$LIVE/.env" "$TMP/.env"
+          php "$TMP/scripts/p23_migrate_crew_secondary_driver.php" --apply | tee "$TMP/p23_migration_result.json"
+          rm -f "$TMP/.env" "/tmp/$ARTIFACT"
+          REMOTE
+
+      - name: Deploy exact source through P07 engine
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          ARTIFACT: ${{ steps.source.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.source.outputs.sha256 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P23_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt")"
+          test "$marker" = "$SOURCE_SHA"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Verify production and old ERP preservation
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          oldfp="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p23_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          http="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          test "$marker" = "$SOURCE_SHA"
+          test "$oldfp" = "$OLD_FP_BEFORE"
+          test "$http" = 200
+          printf 'P23_DEPLOY_PASS source=%s marker=%s login_http=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "$marker" "$http"
+
+      - name: Write and upload evidence
+        if: always()
+        run: |
+          mkdir -p p23_result
+          printf 'SOURCE_SHA=%s\nPREVIOUS_SERVER_SHA=%s\nBACKUP=%s\n' "${{ steps.source.outputs.sha }}" "${{ steps.before.outputs.current }}" "${{ steps.before.outputs.backup }}" > p23_result/P23_DEPLOY_SUMMARY.txt
+          cp "${{ steps.source.outputs.artifact }}" p23_result/ 2>/dev/null || true
+          cp "${{ steps.source.outputs.artifact }}" /tmp/ 2>/dev/null || true
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P23_crew_two_drivers_${{ steps.source.outputs.sha }}
+          path: p23_result/
+          retention-days: 30
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f "$HOME/.ssh/p23_key"
