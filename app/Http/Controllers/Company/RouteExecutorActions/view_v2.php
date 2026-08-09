@@ -1,0 +1,12 @@
+<?php
+requireRole(['company_owner','senior_logist','logist']);
+$crewId=(int)$crewId;$pageTitle='Исполнитель рейса';$pageContext='Исполнители рейса › Компания';$entityNotFound=false;$accessDenied=null;$companyId=(int)(getSessionCompanyId()??0);
+try{$pdo=$db->connection();$s=$pdo->prepare('SELECT * FROM companies WHERE id=?');$s->execute([$companyId]);$company=$s->fetch(PDO::FETCH_ASSOC);if(!$company)throw new RuntimeException('Компания не найдена');if($company['status']==='active'){
+$localPdo=(new \App\Core\Database(companyDatabaseConfig($config,$company)))->connection();
+$s=$localPdo->prepare("SELECT c.*,ct.id contractor_id,ct.name contractor_name,ct.inn contractor_inn,d1.id driver_id,d1.full_name driver_name,d1.phone driver_phone,d2.id secondary_driver_id,d2.full_name secondary_driver_name,d2.phone secondary_driver_phone,dvb.id driver_vehicle_block_id,dvb.vehicle_set_id,vs.set_type,vu1.plate_number primary_plate,vu1.brand primary_brand,vu1.model primary_model,vu2.plate_number secondary_plate,vu2.brand secondary_brand,vu2.model secondary_model,u.full_name created_by_name FROM crews c JOIN contractors ct ON c.contractor_id=ct.id JOIN driver_vehicle_blocks dvb ON c.driver_vehicle_block_id=dvb.id JOIN drivers d1 ON dvb.driver_id=d1.id LEFT JOIN drivers d2 ON c.secondary_driver_id=d2.id JOIN vehicle_sets vs ON dvb.vehicle_set_id=vs.id LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id=vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id=vu2.id LEFT JOIN users u ON c.created_by_user_id=u.id WHERE c.id=?");$s->execute([$crewId]);$crew=$s->fetch(PDO::FETCH_ASSOC);if(!$crew)$entityNotFound=true;
+if($crew&&($_SESSION['role_code']??'')==='logist'&&!hasRouteExecutorAccess($localPdo,$crew,(int)$_SESSION['user_id'],'view'))$accessDenied='У вас нет доступа к этой записи.';
+if($crew&&!$accessDenied&& !empty($crew['secondary_driver_id'])){$crew['driver_name']=$crew['driver_name'].' + '.$crew['secondary_driver_name'];$crew['driver_phone']=$crew['driver_phone'].' + '.$crew['secondary_driver_phone'];}
+$pageTitle=($crew&&!$accessDenied)?'Исполнитель рейса #'.$crew['id']:'Исполнитель рейса';$dbError=null;
+}else{$crew=null;$dbError=null;}
+}catch(Throwable $e){$company=$company??null;$crew=null;$dbError='Не удалось подключиться к базе данных компании.';}
+ob_start();require base_path('app/View/pages/company_route_executor_view.php');$content=ob_get_clean();require base_path('app/View/layouts/main.php');
