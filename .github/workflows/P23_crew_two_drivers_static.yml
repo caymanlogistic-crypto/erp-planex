@@ -1,0 +1,29 @@
+name: P23 Crew Two Drivers Static Gate
+
+on:
+  push:
+    branches: [chatgpt/p23-crew-two-drivers-20260809]
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP lint
+        run: |
+          set -euo pipefail
+          php -v
+          php -l app/Http/Controllers/Company/RouteExecutorController.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/create_form_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/create_submit_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/index_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/view_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/edit_form_v2.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/edit_submit_v2.php
+          php -l app/View/partials/company_route_executor_create_form_v2.php
+          php -l app/View/pages/company_route_executor_edit_v2.php
+      - name: P23 regression test
+        run: php tests/p23_crew_two_drivers_regression_test.php
