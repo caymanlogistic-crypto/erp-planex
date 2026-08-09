@@ -1,0 +1,1 @@
+P23 finalization trigger: crew supports one or two simultaneous drivers on one vehicle. Deploy only through P23 Crew Two Drivers Controlled Deploy after static gate.
