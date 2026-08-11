@@ -53,6 +53,7 @@ require_once base_path('app/Support/crypto_helper.php');
 require_once base_path('app/Support/company_database.php');
 require_once base_path('app/Support/http_runtime.php');
 require_once base_path('app/Support/legal_entity_document_upload.php');
+require_once base_path('app/Support/runtime_ui_hotfixes.php');
 
 require_once base_path('app/View/components/alert.php');
 require_once base_path('app/View/components/button.php');
