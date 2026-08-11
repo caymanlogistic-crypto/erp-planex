@@ -1,284 +1,120 @@
 <?php
 
-    requireRole(['company_owner', 'senior_logist', 'logist']);
-    $pageTitle = 'Создать исполнителя рейса';
-    $pageContext = 'Исполнители рейса › Компания';
+requireRole(['company_owner', 'senior_logist', 'logist']);
+require_once base_path('app/Support/crew_driver_helpers.php');
+$pageTitle = 'Создать исполнителя рейса';
+$pageContext = 'Исполнители рейса › Компания';
+$companyId = (int)(getSessionCompanyId() ?? 0);
+$errors = [];
+$old = $_POST;
+$formError = null;
+$success = false;
+$createdExecutor = null;
+$blockingNotices = [];
+$contractors = [];
+$drivers = [];
+$vehicleSets = [];
+$company = null;
 
-    $companyId = (int)(getSessionCompanyId() ?? 0);
-    $errors = [];
-    $old = $_POST;
-    $formError = null;
-    $success = false;
-    $createdExecutor = null;
-    $blockingNotices = [];
-    $contractors = [];
-    $drivers = [];
-    $vehicleSets = [];
-
-    if ($companyId <= 0) {
-        $company = null;
-        $formError = 'Компания не найдена';
-        ob_start(); require base_path('app/View/pages/company_route_executors_create.php');
-        $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-        return;
-    }
-
-    try {
-        $pdo = $db->connection();
-        $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
-        $stmt->execute([$companyId]);
-        $company = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$company) {
-            $company = null;
-            $formError = 'Компания не найдена';
-            ob_start(); require base_path('app/View/pages/company_route_executors_create.php');
-            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $pageContext = 'Исполнители рейса › Компания: ' . $company['name'];
-
-        if ($company['status'] !== 'active') {
-            $formError = 'Создание исполнителя рейса недоступно';
-            ob_start(); require base_path('app/View/pages/company_route_executors_create.php');
-            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        $localDbConfig = companyDatabaseConfig($config, $company);
-        $localDb = new \App\Core\Database($localDbConfig);
-        $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
-
-        try {
-            $localPdo->query("SELECT 1 FROM crews LIMIT 1")->fetch();
-        } catch (\Exception $e) {
-            $migrationSql = file_get_contents(base_path('database/migrations-local/006_create_company_crews.sql'));
-            $localPdo->exec($migrationSql);
-        }
-
-        try {
-            $localPdo->query("SELECT 1 FROM driver_vehicle_blocks LIMIT 1")->fetch();
-        } catch (\Exception $e) {
-            $migrationSql = file_get_contents(base_path('database/migrations-local/018_create_driver_vehicle_blocks.sql'));
-            $localPdo->exec($migrationSql);
-        }
-
-        $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
-        $userId = (int)$_SESSION['user_id'];
-        $userRole = $_SESSION['role_code'];
-
-        // Reload dropdowns for re-render
-        if ($isLogist) {
-            $cStmt = $localPdo->prepare("SELECT id, name, inn FROM contractors WHERE deleted_at IS NULL AND status = 'active' AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'contractor' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY name");
-            $cStmt->execute([$userId, $userId]);
-            $contractors = $cStmt->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            $contractors = $localPdo->query("SELECT id, name, inn FROM contractors WHERE deleted_at IS NULL AND status = 'active' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        if ($isLogist) {
-            $dStmt = $localPdo->prepare("SELECT id, full_name, phone FROM drivers WHERE deleted_at IS NULL AND status = 'active' AND (created_by_user_id = ? OR id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'driver' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY full_name");
-            $dStmt->execute([$userId, $userId]);
-            $drivers = $dStmt->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            $drivers = $localPdo->query("SELECT id, full_name, phone FROM drivers WHERE deleted_at IS NULL AND status = 'active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        if ($isLogist) {
-            $vsStmt = $localPdo->prepare("SELECT vs.id, vs.set_type, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.deleted_at IS NULL AND vs.status = 'active' AND (vs.created_by_user_id = ? OR vs.id IN (SELECT entity_id FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL)) ORDER BY vs.set_type");
-            $vsStmt->execute([$userId, $userId]);
-            $vehicleSets = $vsStmt->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            $vehicleSets = $localPdo->query("SELECT vs.id, vs.set_type, vu1.plate_number AS primary_plate, vu2.plate_number AS secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id = vu2.id WHERE vs.deleted_at IS NULL AND vs.status = 'active' ORDER BY vs.set_type")->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        $blockingNotices = [];
-        if (empty($contractors)) {
-            $blockingNotices[] = ['message' => 'Сначала создайте подрядчика.', 'link' => '/company/contractors/create', 'action' => 'Создать подрядчика'];
-        }
-        if (empty($drivers)) {
-            $blockingNotices[] = ['message' => 'Сначала создайте водителя.', 'link' => '/company/drivers', 'action' => 'Создать водителя'];
-        }
-        if (empty($vehicleSets)) {
-            $blockingNotices[] = ['message' => 'Сначала создайте транспортный комплект.', 'link' => '/company/vehicle-sets', 'action' => 'Создать ТС'];
-        }
-
-        $contractorId = trim($_POST['contractor_id'] ?? '');
-        $driverId = trim($_POST['driver_id'] ?? '');
-        $vehicleSetId = trim($_POST['vehicle_set_id'] ?? '');
-        $comments = trim($_POST['comments'] ?? '');
-
-        // Validation
-        if ($contractorId === '') {
-            $errors['contractor_id'] = 'Обязательное поле';
-        }
-        if ($driverId === '') {
-            $errors['driver_id'] = 'Обязательное поле';
-        }
-        if ($vehicleSetId === '') {
-            $errors['vehicle_set_id'] = 'Обязательное поле';
-        }
-
-        // Backend access validation for logist
-        if (empty($errors) && $isLogist) {
-            // Check contractor access
-            $cCheck = $localPdo->prepare("SELECT created_by_user_id FROM contractors WHERE id = ? AND deleted_at IS NULL AND status = 'active'");
-            $cCheck->execute([(int)$contractorId]);
-            $cOwner = $cCheck->fetchColumn();
-            if ($cOwner === false) {
-                $errors['contractor_id'] = 'Подрядчик не найден или неактивен.';
-            } elseif ((int)$cOwner !== $userId) {
-                $cGrant = $localPdo->prepare("SELECT COUNT(*) FROM entity_access_grants WHERE entity_type = 'contractor' AND entity_id = ? AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL");
-                $cGrant->execute([(int)$contractorId, $userId]);
-                if ($cGrant->fetchColumn() == 0) {
-                    $errors['contractor_id'] = 'Подрядчик недоступен.';
-                }
-            }
-
-            // Check driver access
-            $dCheck = $localPdo->prepare("SELECT created_by_user_id FROM drivers WHERE id = ? AND deleted_at IS NULL AND status = 'active'");
-            $dCheck->execute([(int)$driverId]);
-            $dOwner = $dCheck->fetchColumn();
-            if ($dOwner === false) {
-                $errors['driver_id'] = 'Водитель не найден или неактивен.';
-            } elseif ((int)$dOwner !== $userId) {
-                $dGrant = $localPdo->prepare("SELECT COUNT(*) FROM entity_access_grants WHERE entity_type = 'driver' AND entity_id = ? AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL");
-                $dGrant->execute([(int)$driverId, $userId]);
-                if ($dGrant->fetchColumn() == 0) {
-                    $errors['driver_id'] = 'Водитель недоступен.';
-                }
-            }
-
-            // Check vehicle_set access
-            $vsCheck = $localPdo->prepare("SELECT created_by_user_id FROM vehicle_sets WHERE id = ? AND deleted_at IS NULL AND status = 'active'");
-            $vsCheck->execute([(int)$vehicleSetId]);
-            $vsOwner = $vsCheck->fetchColumn();
-            if ($vsOwner === false) {
-                $errors['vehicle_set_id'] = 'Транспортный комплект не найден или неактивен.';
-            } elseif ((int)$vsOwner !== $userId) {
-                $vsGrant = $localPdo->prepare("SELECT COUNT(*) FROM entity_access_grants WHERE entity_type = 'vehicle_set' AND entity_id = ? AND granted_to_user_id = ? AND access_level IN ('view','edit') AND revoked_at IS NULL");
-                $vsGrant->execute([(int)$vehicleSetId, $userId]);
-                if ($vsGrant->fetchColumn() == 0) {
-                    $errors['vehicle_set_id'] = 'Транспортный комплект недоступен.';
-                }
-            }
-        }
-
-        if (!empty($errors)) {
-            ob_start(); require base_path('app/View/pages/company_route_executors_create.php');
-            $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-            return;
-        }
-
-        // --- Core logic: find or create driver_vehicle_block, then create crew ---
-        $localPdo->beginTransaction();
-        try {
-            // The real DB schema: driver_vehicle_blocks has driver_id + vehicle_set_id.
-            // crews still stores legacy driver_id + vehicle_id, where vehicle_id is the primary vehicle unit.
-            $vehicleUnitStmt = $localPdo->prepare("SELECT primary_vehicle_unit_id FROM vehicle_sets WHERE id = ? AND deleted_at IS NULL AND status = 'active' LIMIT 1");
-            $vehicleUnitStmt->execute([(int)$vehicleSetId]);
-            $vehicleUnitId = (int)$vehicleUnitStmt->fetchColumn();
-
-            if ($vehicleUnitId <= 0) {
-                $localPdo->rollBack();
-                $errors['vehicle_set_id'] = 'У выбранного транспортного комплекта не найдена основная транспортная единица.';
-                ob_start(); require base_path('app/View/pages/company_route_executors_create.php');
-                $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-                return;
-            }
-
-            // 1. Find existing driver_vehicle_block
-            $dvbStmt = $localPdo->prepare("SELECT id FROM driver_vehicle_blocks WHERE driver_id = ? AND vehicle_set_id = ? LIMIT 1");
-            $dvbStmt->execute([(int)$driverId, (int)$vehicleSetId]);
-            $dvbId = $dvbStmt->fetchColumn();
-
-            if (!$dvbId) {
-                // Create new driver_vehicle_block according to the current schema.
-                $dvbInsert = $localPdo->prepare(
-                    "INSERT INTO driver_vehicle_blocks (driver_id, vehicle_set_id, status, created_by_user_id, created_by_role)
-                     VALUES (:driver_id, :vehicle_set_id, 'active', :uid, :role)"
-                );
-                $dvbInsert->execute([
-                    ':driver_id' => (int)$driverId,
-                    ':vehicle_set_id' => (int)$vehicleSetId,
-                    ':uid' => $userId,
-                    ':role' => $userRole,
-                ]);
-                $dvbId = (int)$localPdo->lastInsertId();
-            }
-
-            // 2. Check duplicate crew
-            $dupStmt = $localPdo->prepare("SELECT COUNT(*) FROM crews WHERE contractor_id = ? AND driver_vehicle_block_id = ?");
-            $dupStmt->execute([(int)$contractorId, $dvbId]);
-            if ($dupStmt->fetchColumn() > 0) {
-                $localPdo->rollBack();
-                $errors['vehicle_set_id'] = 'Такой исполнитель рейса уже существует (подрядчик + водитель + ТС).';
-                ob_start(); require base_path('app/View/pages/company_route_executors_create.php');
-                $content = ob_get_clean(); require base_path('app/View/layouts/main.php');
-                return;
-            }
-
-            // 3. Create crew. Keep legacy driver_id and vehicle_id filled for older company DBs.
-            $insert = $localPdo->prepare(
-                'INSERT INTO crews (contractor_id, vehicle_id, driver_id, driver_vehicle_block_id, status, comments, created_by_user_id, created_by_role)
-                 VALUES (:contractor_id, :vehicle_id, :driver_id, :driver_vehicle_block_id, :status, :comments, :uid, :role)'
-            );
-            $insert->execute([
-                ':contractor_id' => (int)$contractorId,
-                ':vehicle_id' => $vehicleUnitId,
-                ':driver_id' => (int)$driverId,
-                ':driver_vehicle_block_id' => $dvbId,
-                ':status' => 'active',
-                ':comments' => $comments !== '' ? $comments : null,
-                ':uid' => $userId,
-                ':role' => $userRole,
-            ]);
-
-            $newId = (int)$localPdo->lastInsertId();
-            $localPdo->commit();
-
-            // Fetch created names for success display
-            $ctrName = $localPdo->prepare("SELECT name FROM contractors WHERE id = ?");
-            $ctrName->execute([(int)$contractorId]);
-            $drvName = $localPdo->prepare("SELECT full_name FROM drivers WHERE id = ?");
-            $drvName->execute([(int)$driverId]);
-            $pltStmt = $localPdo->prepare("SELECT vu1.plate_number FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id = vu1.id WHERE vs.id = ?");
-            $pltStmt->execute([(int)$vehicleSetId]);
-
-            $createdExecutor = [
-                'id' => $newId,
-                'contractor_name' => $ctrName->fetchColumn() ?: '',
-                'driver_name' => $drvName->fetchColumn() ?: '',
-                'plate_number' => $pltStmt->fetchColumn() ?: '—',
-            ];
-            $success = true;
-        } catch (\Exception $e) {
-            $localPdo->rollBack();
-            $formError = 'Ошибка создания исполнителя рейса: ' . $e->getMessage();
-        }
-    } catch (\Exception $e) {
-        $company = $company ?? null;
-        $formError = 'Ошибка создания исполнителя рейса: ' . $e->getMessage();
-    }
-
+$render = static function () use (&$company,&$success,&$errors,&$old,&$formError,&$createdExecutor,&$blockingNotices,&$contractors,&$drivers,&$vehicleSets,$config): void {
     $renderMode = ($_POST['_is_modal'] ?? '') === '1' ? 'modal' : 'page';
-
     if ($renderMode === 'modal') {
         header('Content-Type: text/html; charset=utf-8');
-        if ($success) {
-            echo '<div data-route-executor-create-success="1"></div>';
-            exit;
-        }
+        if ($success) { echo '<div data-route-executor-create-success="1"></div>'; return; }
         $routeExecutorCreateFormMode = 'modal';
         $routeExecutorFormId = 'route-executor-create-form';
         $routeExecutorFormAction = app_url('/company/route-executors/create');
         require base_path('app/View/partials/company_route_executor_create_form.php');
-        exit;
+        return;
     }
-
     ob_start();
     require base_path('app/View/pages/company_route_executors_create.php');
     $content = ob_get_clean();
     require base_path('app/View/layouts/main.php');
+};
+
+try {
+    if ($companyId <= 0) throw new RuntimeException('Компания не найдена.');
+    $pdo = $db->connection();
+    $stmt = $pdo->prepare('SELECT * FROM companies WHERE id = ?');
+    $stmt->execute([$companyId]);
+    $company = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$company) throw new RuntimeException('Компания не найдена.');
+    if (($company['status'] ?? '') !== 'active') throw new RuntimeException('Создание исполнителя рейса недоступно для неактивной компании.');
+    $pageContext = 'Исполнители рейса › Компания: ' . $company['name'];
+
+    $localPdo = (new \App\Core\Database(companyDatabaseConfig($config, $company)))->connection();
+    $isLogist = ($_SESSION['role_code'] ?? '') === 'logist';
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+    $userRole = (string)($_SESSION['role_code'] ?? '');
+
+    if ($isLogist) {
+        $s=$localPdo->prepare("SELECT id,name,inn FROM contractors WHERE deleted_at IS NULL AND status='active' AND (created_by_user_id=? OR id IN(SELECT entity_id FROM entity_access_grants WHERE entity_type='contractor' AND granted_to_user_id=? AND access_level IN('view','edit') AND revoked_at IS NULL)) ORDER BY name"); $s->execute([$userId,$userId]); $contractors=$s->fetchAll(PDO::FETCH_ASSOC);
+        $s=$localPdo->prepare("SELECT id,full_name,phone FROM drivers WHERE deleted_at IS NULL AND status='active' AND (created_by_user_id=? OR id IN(SELECT entity_id FROM entity_access_grants WHERE entity_type='driver' AND granted_to_user_id=? AND access_level IN('view','edit') AND revoked_at IS NULL)) ORDER BY full_name"); $s->execute([$userId,$userId]); $drivers=$s->fetchAll(PDO::FETCH_ASSOC);
+        $s=$localPdo->prepare("SELECT vs.id,vs.set_type,vu1.plate_number primary_plate,vu2.plate_number secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id=vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id=vu2.id WHERE vs.deleted_at IS NULL AND vs.status='active' AND (vs.created_by_user_id=? OR vs.id IN(SELECT entity_id FROM entity_access_grants WHERE entity_type='vehicle_set' AND granted_to_user_id=? AND access_level IN('view','edit') AND revoked_at IS NULL)) ORDER BY vs.set_type"); $s->execute([$userId,$userId]); $vehicleSets=$s->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $contractors=$localPdo->query("SELECT id,name,inn FROM contractors WHERE deleted_at IS NULL AND status='active' ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+        $drivers=$localPdo->query("SELECT id,full_name,phone FROM drivers WHERE deleted_at IS NULL AND status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+        $vehicleSets=$localPdo->query("SELECT vs.id,vs.set_type,vu1.plate_number primary_plate,vu2.plate_number secondary_plate FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id=vu1.id LEFT JOIN vehicle_units vu2 ON vs.secondary_vehicle_unit_id=vu2.id WHERE vs.deleted_at IS NULL AND vs.status='active' ORDER BY vs.set_type")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    $contractorId=(int)($_POST['contractor_id']??0);
+    $vehicleSetId=(int)($_POST['vehicle_set_id']??0);
+    $rawDriverIds=is_array($_POST['driver_ids']??null)?$_POST['driver_ids']:[];
+    $driverIds=normalizeCrewDriverIds($rawDriverIds);
+    $old['driver_ids']=$rawDriverIds ?: [''];
+    $comments=trim((string)($_POST['comments']??''));
+
+    if($contractorId<=0)$errors['contractor_id']='Выберите подрядчика.';
+    if(!$driverIds)$errors['driver_ids']='Выберите хотя бы одного водителя.';
+    if(count($driverIds)!==count(array_filter(array_map('intval',$rawDriverIds))))$errors['driver_ids']='Один и тот же водитель не может быть добавлен в экипаж дважды.';
+    if($vehicleSetId<=0)$errors['vehicle_set_id']='Выберите транспортный комплект.';
+
+    $checkDriverAccess = static function(PDO $pdo,int $driverId,bool $isLogist,int $userId): bool {
+        $s=$pdo->prepare("SELECT created_by_user_id FROM drivers WHERE id=? AND deleted_at IS NULL AND status='active'");$s->execute([$driverId]);$owner=$s->fetchColumn();
+        if($owner===false)return false; if(!$isLogist||(int)$owner===$userId)return true;
+        $g=$pdo->prepare("SELECT COUNT(*) FROM entity_access_grants WHERE entity_type='driver' AND entity_id=? AND granted_to_user_id=? AND access_level IN('view','edit') AND revoked_at IS NULL");$g->execute([$driverId,$userId]);return (int)$g->fetchColumn()>0;
+    };
+    foreach($driverIds as $driverId){ if(!$checkDriverAccess($localPdo,$driverId,$isLogist,$userId)){ $errors['driver_ids']='Один из выбранных водителей недоступен или неактивен.'; break; } }
+
+    if(!$errors){
+        $s=$localPdo->prepare("SELECT primary_vehicle_unit_id FROM vehicle_sets WHERE id=? AND deleted_at IS NULL AND status='active'");$s->execute([$vehicleSetId]);$vehicleUnitId=(int)$s->fetchColumn();
+        if($vehicleUnitId<=0)$errors['vehicle_set_id']='У выбранного транспортного комплекта не найдена основная транспортная единица.';
+    }
+    if($isLogist&&!$errors){
+        $s=$localPdo->prepare("SELECT created_by_user_id FROM contractors WHERE id=? AND deleted_at IS NULL AND status='active'");$s->execute([$contractorId]);$owner=$s->fetchColumn();
+        if($owner===false)$errors['contractor_id']='Подрядчик не найден или неактивен.';
+        elseif((int)$owner!==$userId){$g=$localPdo->prepare("SELECT COUNT(*) FROM entity_access_grants WHERE entity_type='contractor' AND entity_id=? AND granted_to_user_id=? AND access_level IN('view','edit') AND revoked_at IS NULL");$g->execute([$contractorId,$userId]);if((int)$g->fetchColumn()===0)$errors['contractor_id']='Подрядчик недоступен.';}
+        $s=$localPdo->prepare("SELECT created_by_user_id FROM vehicle_sets WHERE id=? AND deleted_at IS NULL AND status='active'");$s->execute([$vehicleSetId]);$owner=$s->fetchColumn();
+        if($owner===false)$errors['vehicle_set_id']='Транспортный комплект не найден или неактивен.';
+        elseif((int)$owner!==$userId){$g=$localPdo->prepare("SELECT COUNT(*) FROM entity_access_grants WHERE entity_type='vehicle_set' AND entity_id=? AND granted_to_user_id=? AND access_level IN('view','edit') AND revoked_at IS NULL");$g->execute([$vehicleSetId,$userId]);if((int)$g->fetchColumn()===0)$errors['vehicle_set_id']='Транспортный комплект недоступен.';}
+    }
+
+    if(!$errors){
+        $tableExists=(int)$localPdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='crew_drivers'")->fetchColumn();
+        if(!$tableExists)throw new RuntimeException('Структура экипажей ещё не обновлена. Повторите попытку после завершения обновления системы.');
+        $primaryDriverId=$driverIds[0];
+        $localPdo->beginTransaction();
+        try{
+            $s=$localPdo->prepare('SELECT id FROM driver_vehicle_blocks WHERE driver_id=? AND vehicle_set_id=? LIMIT 1');$s->execute([$primaryDriverId,$vehicleSetId]);$dvbId=(int)$s->fetchColumn();
+            if(!$dvbId){$i=$localPdo->prepare("INSERT INTO driver_vehicle_blocks(driver_id,vehicle_set_id,status,created_by_user_id,created_by_role) VALUES(?,?, 'active',?,?)");$i->execute([$primaryDriverId,$vehicleSetId,$userId,$userRole]);$dvbId=(int)$localPdo->lastInsertId();}
+            $dup=$localPdo->prepare('SELECT COUNT(*) FROM crews WHERE contractor_id=? AND driver_vehicle_block_id=?');$dup->execute([$contractorId,$dvbId]);
+            if((int)$dup->fetchColumn()>0)throw new RuntimeException('Такой исполнитель рейса уже существует для выбранного подрядчика, первого водителя и ТС.');
+            $i=$localPdo->prepare("INSERT INTO crews(contractor_id,vehicle_id,driver_id,driver_vehicle_block_id,status,comments,created_by_user_id,created_by_role) VALUES(?,?,?,?, 'active',?,?,?)");
+            $i->execute([$contractorId,$vehicleUnitId,$primaryDriverId,$dvbId,$comments!==''?$comments:null,$userId,$userRole]);
+            $crewId=(int)$localPdo->lastInsertId();
+            syncCrewDrivers($localPdo,$crewId,$driverIds);
+            $localPdo->commit();
+
+            $s=$localPdo->prepare('SELECT name FROM contractors WHERE id=?');$s->execute([$contractorId]);$contractorName=(string)$s->fetchColumn();
+            $placeholders=implode(',',array_fill(0,count($driverIds),'?'));$s=$localPdo->prepare("SELECT id,full_name FROM drivers WHERE id IN ($placeholders)");$s->execute($driverIds);$nameMap=[];foreach($s->fetchAll(PDO::FETCH_ASSOC) as $row)$nameMap[(int)$row['id']]=$row['full_name'];$names=[];foreach($driverIds as $id)$names[]=$nameMap[$id]??('#'.$id);
+            $s=$localPdo->prepare("SELECT vu1.plate_number FROM vehicle_sets vs LEFT JOIN vehicle_units vu1 ON vs.primary_vehicle_unit_id=vu1.id WHERE vs.id=?");$s->execute([$vehicleSetId]);
+            $createdExecutor=['id'=>$crewId,'contractor_name'=>$contractorName,'driver_name'=>implode(' + ',$names),'plate_number'=>(string)($s->fetchColumn()?:'—')];
+            $success=true;
+        }catch(Throwable $e){if($localPdo->inTransaction())$localPdo->rollBack();throw $e;}
+    }
+} catch (Throwable $e) {
+    $formError = 'Не удалось создать исполнителя рейса: ' . $e->getMessage();
+}
+
+$render();
