@@ -37,15 +37,86 @@
         if (matchedValue) carrier.value = matchedValue;
     }
 
+    function formatAmount(input) {
+        var digits = String(input.value || '').replace(/\D/g, '');
+        input.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+
+    function applyCreateLayout(form) {
+        var modal = form.closest('#linear-trip-create-modal');
+        if (!modal || form.dataset.p30LayoutReady === '1') return;
+
+        var routeType = form.querySelector('[data-linear-trip-route-type]');
+        var date = form.querySelector('[name="planned_loading_date"]');
+        var client = form.querySelector('[name="client_id"]');
+        var executor = form.querySelector('[name="route_executor_id"]');
+        if (!routeType || !date || !client || !executor) return;
+
+        form.dataset.p30LayoutReady = '1';
+        var routeTypeField = routeType.closest('.field');
+        if (routeTypeField) {
+            routeTypeField.classList.add('is-hidden');
+            routeTypeField.hidden = true;
+        }
+        if (!routeType.value) routeType.value = 'linear';
+
+        var dateField = date.closest('.field');
+        var clientField = client.closest('.field');
+        var executorField = executor.closest('.field');
+        var originalRow = routeType.closest('.linear-trip-row--compact');
+        if (dateField && clientField && executorField && originalRow) {
+            var primaryRow = document.createElement('div');
+            primaryRow.className = 'field-row field-row-group linear-trip-primary-row';
+            originalRow.parentNode.insertBefore(primaryRow, originalRow);
+            primaryRow.appendChild(dateField);
+            primaryRow.appendChild(clientField);
+            primaryRow.appendChild(executorField);
+
+            var toggle = document.createElement('label');
+            toggle.className = 'linear-trip-agency-toggle';
+            toggle.innerHTML = '<input type="checkbox" data-linear-trip-agency-toggle> <span>Агентский договор</span>';
+            primaryRow.parentNode.insertBefore(toggle, primaryRow.nextSibling);
+        }
+
+        var checkbox = form.querySelector('[data-linear-trip-agency-toggle]');
+        if (checkbox) {
+            checkbox.checked = routeType.value === 'agency';
+            var applyAgency = function () {
+                var agency = checkbox.checked;
+                routeType.value = agency ? 'agency' : 'linear';
+                routeType.dispatchEvent(new Event('change', {bubbles:true}));
+                form.querySelectorAll('.is-agency-only').forEach(function (el) {
+                    el.classList.toggle('is-hidden', !agency);
+                });
+            };
+            checkbox.addEventListener('change', applyAgency);
+            applyAgency();
+        }
+
+        form.querySelectorAll('input[name$="[amount]"]').forEach(function (input) {
+            if (input.dataset.p30Money === '1') return;
+            input.dataset.p30Money = '1';
+            formatAmount(input);
+            input.addEventListener('input', function () { formatAmount(input); });
+        });
+    }
+
     function initializeForm(form) {
         if (!(form instanceof HTMLFormElement) || !form.matches('[data-linear-trip-form]')) return;
         deriveCarrierValue(form);
+        applyCreateLayout(form);
     }
 
     function scan(root) {
         if (!root || !root.querySelectorAll) return;
         if (root.matches && root.matches('form[data-linear-trip-form]')) initializeForm(root);
         root.querySelectorAll('form[data-linear-trip-form]').forEach(initializeForm);
+        root.querySelectorAll('input[name$="[amount]"]').forEach(function (input) {
+            if (!input.closest('#linear-trip-create-modal') || input.dataset.p30Money === '1') return;
+            input.dataset.p30Money = '1';
+            formatAmount(input);
+            input.addEventListener('input', function () { formatAmount(input); });
+        });
     }
 
     document.addEventListener('change', function (event) {
@@ -59,6 +130,12 @@
         var form = event.target;
         if (form instanceof HTMLFormElement && form.matches('[data-linear-trip-form]')) {
             deriveCarrierValue(form);
+            var routeType = form.querySelector('[data-linear-trip-route-type]');
+            var checkbox = form.querySelector('[data-linear-trip-agency-toggle]');
+            if (routeType && checkbox) routeType.value = checkbox.checked ? 'agency' : 'linear';
+            form.querySelectorAll('input[name$="[amount]"]').forEach(function (input) {
+                input.value = String(input.value || '').replace(/\s/g, '');
+            });
         }
     }, true);
 
@@ -73,10 +150,10 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             scan(document);
-            observer.observe(document.body, {childList: true, subtree: true});
-        }, {once: true});
+            observer.observe(document.body, {childList:true, subtree:true});
+        }, {once:true});
     } else {
         scan(document);
-        observer.observe(document.body, {childList: true, subtree: true});
+        observer.observe(document.body, {childList:true, subtree:true});
     }
 })();
