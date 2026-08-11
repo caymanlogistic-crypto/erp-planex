@@ -1,10 +1,11 @@
-/* P30/P32 — Linear trip create UX. Scoped to the trip modal; no global ERP overrides. */
+/* P30/P32/P33 — Linear trip create UX. Scoped to the trip modal; no global ERP overrides. */
 #linear-trip-create-modal .driver-create-modal{width:min(1100px,calc(100vw - 48px));max-height:calc(100vh - 36px)}
 #linear-trip-create-modal .modal-body{padding:0;overflow:auto}
 #linear-trip-create-modal .linear-trip-panel{margin:0}
 #linear-trip-create-modal .linear-trip-layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;align-items:stretch;max-width:none;min-height:0}
 #linear-trip-create-modal .linear-trip-layout-main{min-width:0;padding:12px 14px 14px;gap:0}
-#linear-trip-create-modal .linear-trip-layout-docs{min-width:0;padding:12px 14px 14px;border-left:1px solid var(--line);background:var(--surface-inspector)}
+/* Right document column intentionally inherits the exact driver form visual. */
+#linear-trip-create-modal .linear-trip-layout-docs{min-width:0}
 #linear-trip-create-modal .section-title{margin:0 0 6px}
 #linear-trip-create-modal .linear-trip-layout-main>.section-title:not(:first-child){margin-top:10px;padding-top:9px;border-top:1px solid var(--line-hair)}
 #linear-trip-create-modal .field-row-group{margin-bottom:6px}
@@ -19,7 +20,9 @@
 #linear-trip-create-modal .linear-trip-row--compact>.field{flex:0 0 280px;min-width:0}
 #linear-trip-create-modal .linear-trip-row--compact>.field:has([name="planned_unloading_date"]),#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_loading_date"]),#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_unloading_date"]){flex-basis:148px}
 #linear-trip-create-modal .linear-trip-row--compact>.field:has([name="carrier_contractor_id"]){flex-basis:300px}
-#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="cargo_type_name"]){flex-basis:255px}
+/* User-requested hidden fields: both label and control disappear from create popup. */
+#linear-trip-create-modal .field:has([name="cargo_type_name"]),
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[condition_comment]"]){display:none!important}
 #linear-trip-create-modal .linear-trip-textarea{min-height:54px;height:54px;resize:vertical}
 #linear-trip-create-modal .linear-trip-payment-card{padding:0;margin:0 0 9px;border:0!important;background:transparent!important;box-shadow:none!important}
 #linear-trip-create-modal .linear-trip-payment-card--nested{margin-top:6px}
@@ -35,15 +38,10 @@
 #linear-trip-create-modal .linear-trip-payment-row>[data-days-count-wrapper]{flex-basis:94px}
 #linear-trip-create-modal .linear-trip-payment-row>[data-days-kind-wrapper]{flex-basis:68px}
 #linear-trip-create-modal .linear-trip-payment-row>[data-specific-date-wrapper]{flex-basis:146px}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[condition_comment]"]){flex-basis:270px}
-
-/* Money control follows ERP date-control language: value + separated right suffix cell. */
 #linear-trip-create-modal .linear-trip-money-shell{display:flex;height:28px;border:1px solid var(--line-soft);border-radius:2px;background:var(--surface-field);overflow:hidden}
 #linear-trip-create-modal .linear-trip-money-shell:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,71,24,.1)}
 #linear-trip-create-modal .linear-trip-money-shell input[name$="[amount]"]{width:100%;height:26px;min-width:0;border:0!important;box-shadow:none!important;outline:0!important;padding:0 7px;text-align:right;font-variant-numeric:tabular-nums;background:transparent}
 #linear-trip-create-modal .linear-trip-money-suffix{flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center;border-left:1px solid var(--line-hair);background:var(--surface-muted);color:var(--text-faint);font-size:11px;font-weight:700;user-select:none}
-
-/* Days is one compact stepper: minus | value | plus. */
 #linear-trip-create-modal .linear-trip-days-stepper{display:grid;grid-template-columns:27px 38px 27px;height:28px;border:1px solid var(--line-soft);border-radius:2px;background:var(--surface-field);overflow:hidden}
 #linear-trip-create-modal .linear-trip-days-stepper:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,71,24,.1)}
 #linear-trip-create-modal .linear-trip-days-stepper button{height:26px;padding:0;border:0;background:var(--surface-muted);color:var(--text-main);font-size:14px;line-height:26px}
@@ -54,9 +52,10 @@
 #linear-trip-create-modal [data-days-kind-wrapper] .field-input{padding-left:7px;padding-right:20px;text-align:left}
 #linear-trip-create-modal .linear-trip-row-remove{flex:0 0 28px;width:28px;height:28px;margin-top:19px;font-size:17px}
 #linear-trip-create-modal .linear-trip-principals-section{margin-top:6px}
-#linear-trip-create-modal .linear-trip-layout-docs .section-title{margin-bottom:6px}
-#linear-trip-create-modal .linear-trip-layout-docs .document-upload-row,#linear-trip-create-modal .linear-trip-layout-docs .document-file-row{min-height:38px}
-#linear-trip-create-modal .linear-trip-layout-docs .file-list{gap:4px}
+/* Force exact same document-row geometry as the driver form. */
+#linear-trip-create-modal .linear-trip-layout-docs .file-list{margin-top:0;gap:8px}
+#linear-trip-create-modal .linear-trip-layout-docs .document-file-row{display:grid;grid-template-columns:38px minmax(0,1fr) 108px 30px;column-gap:10px;align-items:center;min-height:48px}
+#linear-trip-create-modal .linear-trip-layout-docs .file-action-btn{width:108px;justify-content:center}
 #linear-trip-create-modal .modal-foot{min-height:48px;padding:7px 12px}
 [data-linear-trip-form] .linear-trip-layout-main{min-width:0}
 [data-linear-trip-form] .linear-trip-row--compact{gap:6px 8px}
