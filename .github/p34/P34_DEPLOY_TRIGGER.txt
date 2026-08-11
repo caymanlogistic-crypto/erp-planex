@@ -1,0 +1,1 @@
+Deploy P34: keep additional payment delete button in the same payment row and make Client / Route executor searchable by typing while preserving native select values for backend submission.
