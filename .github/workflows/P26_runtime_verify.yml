@@ -1,0 +1,167 @@
+name: P26 Runtime Verify
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    if: ${{ github.event.issue.number == 24 && github.event.comment.body == 'P26_VERIFY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p26-runtime-migration-guard-20260811
+          fetch-depth: 1
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p26v_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p26v_key" "$HOME/.ssh/known_hosts"
+
+      - name: Verify deployed marker and server files
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          expected="$(git rev-parse HEAD)"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26v_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$expected"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26v_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'test -f /home/s/spugovxsim/planexp/public_html/erpv2/app/Support/runtime_migration_policy.php && test -f /home/s/spugovxsim/planexp/public_html/erpv2/public/assets/js/driver-phone-optional.js'
+          echo "P26_SERVER_MARKER_PASS sha=$marker"
+
+      - name: Load browser credentials
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p26v_cred_key"
+            chmod 600 "$HOME/.ssh/p26v_cred_key"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p26v_cred_key" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/p26v_cred_key"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P26V_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Runtime regression across available company credentials
+        run: |
+          cat > p26_verify.js <<'JS'
+          const { chromium } = require('playwright');
+          const creds = JSON.parse(Buffer.from(process.env.P26V_CREDENTIALS_B64,'base64').toString('utf8'));
+          async function login(page, cred) {
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(cred.username);
+            await page.locator('input[type="password"]').first().fill(cred.password);
+            await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+            return !/\/login(?:[/?#]|$)/i.test(page.url());
+          }
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            let driverPass=false, vehiclePass=false, used=[];
+            let errors=[];
+            for(let i=0;i<creds.length && !(driverPass&&vehiclePass);i++){
+              const ctx=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+              const page=await ctx.newPage();
+              try{
+                if(!await login(page,creds[i])) { await ctx.close(); continue; }
+                if(!driverPass){
+                  const nav=await page.goto('https://plan-ex.ru/erpv2/company/drivers',{waitUntil:'domcontentloaded',timeout:30000});
+                  if(nav && nav.status()<500 && !/\/login(?:[/?#]|$)/i.test(page.url())){
+                    const btn=page.getByRole('button',{name:/Добавить нового водителя/i}).first();
+                    if(await btn.count() && await btn.isVisible().catch(()=>false)){
+                      await btn.click();
+                      const form=page.locator('#driver-create-modal #driver-create-form').first();
+                      await form.waitFor({state:'visible',timeout:10000});
+                      const phone=form.locator('input[name="phone"]');
+                      await phone.fill(''); await phone.focus(); await form.locator('input[name="full_name"]').focus(); await page.waitForTimeout(120);
+                      const field=phone.locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," field ")][1]');
+                      const cls=(await field.getAttribute('class')||'');
+                      const msg=(await field.locator('.field-msg').innerText().catch(()=>''));
+                      if(cls.includes('is-error') || /Укажите телефон/i.test(msg)) throw new Error('blank phone still shows mandatory error on blur');
+                      driverPass=true; used.push('driver:'+i);
+                    }
+                  }
+                }
+                if(!vehiclePass){
+                  const nav=await page.goto('https://plan-ex.ru/erpv2/company/vehicles/create',{waitUntil:'domcontentloaded',timeout:30000});
+                  if(nav && nav.status()<500 && !/\/login(?:[/?#]|$)/i.test(page.url())){
+                    const form=page.locator('form').filter({has:page.locator('input[name="plate_number"]')}).first();
+                    if(await form.count()){
+                      await form.evaluate(f=>{ f.noValidate=true; });
+                      const rp=page.waitForResponse(r=>r.url().includes('/company/vehicles/create')&&r.request().method()==='POST',{timeout:15000});
+                      await form.evaluate(f=>f.requestSubmit());
+                      const r=await rp; const body=await r.text();
+                      if(r.status()>=500) throw new Error('vehicle POST returned '+r.status());
+                      if(/checksum mismatch|027_vehicle_unit_document_types|Local migration failed/i.test(body)) throw new Error('migration checksum blocker remains in vehicle CRUD');
+                      if(!/Обязательное поле|Укажите|Выберите/i.test(body)) throw new Error('normal vehicle validation response missing');
+                      vehiclePass=true; used.push('vehicle:'+i);
+                    }
+                  }
+                }
+              }catch(e){ errors.push('cred['+i+']: '+String(e.message||e)); }
+              await ctx.close();
+            }
+            await browser.close();
+            console.log('P26_DRIVER_OPTIONAL_PHONE='+(driverPass?'PASS':'FAIL'));
+            console.log('P26_VEHICLE_MIGRATION_GUARD='+(vehiclePass?'PASS':'FAIL'));
+            console.log('P26_USED='+used.join(','));
+            if(!driverPass||!vehiclePass){console.error(errors.join('\n'));process.exit(1);}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node p26_verify.js
+
+      - name: Final server guards
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26v_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          http="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          test "$marker" = "$(git rev-parse HEAD)"
+          test "$http" = 200
+          echo "P26_FINAL_VERIFY_PASS sha=$marker login=$http"
+
+      - name: Comment result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:24,body:`P26_VERIFY=${{ job.status }} run=${context.runId} sha=${{ github.sha }}`});
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p26v_key"
