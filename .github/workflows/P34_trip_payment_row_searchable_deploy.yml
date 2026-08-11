@@ -1,0 +1,148 @@
+name: P34 Trip Payment Row Searchable Controlled Deploy
+
+on:
+  push:
+    branches:
+      - chatgpt/p33-trip-hide-fields-driver-docs-20260811
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpv2-p34-trip-payment-row-searchable
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: "${{ startsWith(github.event.head_commit.message, 'P34: deploy payment row and searchable selects') }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify isolated P34 diff and syntax
+        run: |
+          set -euo pipefail
+          BASE=330aa5a6fedfcc8edc3e4719db55dca9f764dc9a
+          git diff --name-only "$BASE"...HEAD | sort > /tmp/changed.txt
+          cat /tmp/changed.txt
+          allowed='public/assets/css/linear-trip-form-ux.css
+          public/assets/js/linear-trip-executor-carrier.js
+          .github/workflows/P34_trip_payment_row_searchable_deploy.yml
+          .github/p34/P34_DEPLOY_TRIGGER.txt'
+          while IFS= read -r f; do
+            printf '%s\n' "$allowed" | grep -Fxq "$f" || { echo "Unexpected changed file: $f"; exit 1; }
+          done < /tmp/changed.txt
+          node --check public/assets/js/linear-trip-executor-carrier.js
+          grep -Fq 'flex-wrap:nowrap' public/assets/css/linear-trip-form-ux.css
+          grep -Fq 'linear-trip-searchable-menu' public/assets/css/linear-trip-form-ux.css
+          grep -Fq 'decorateSearchableSelect' public/assets/js/linear-trip-executor-carrier.js
+          grep -Fq "Начните вводить заказчика" public/assets/js/linear-trip-executor-carrier.js
+          grep -Fq "Начните вводить исполнителя рейса" public/assets/js/linear-trip-executor-carrier.js
+          test -s scripts/preflight.php
+          test -s tools/architecture_guard.php
+
+      - name: Build exact source artifact
+        id: source
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          artifact="p34_erpv2_${sha}.tar.gz"
+          git archive --format=tar "$sha" -- app bootstrap config database public scripts tests tools | gzip -n > "$artifact"
+          sha256="$(sha256sum "$artifact" | awk '{print $1}')"
+          printf 'sha=%s\nartifact=%s\nsha256=%s\n' "$sha" "$artifact" "$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p34_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p34_key" "$HOME/.ssh/known_hosts"
+
+      - name: Guard production and create backup
+        id: before
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p34_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          OLD="$ROOT/public_html/erp"
+          DEPLOY="$ROOT/deploy"
+          BACKUPS="$ROOT/deploy_backups"
+          current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
+          test "$current" = "330aa5a6fedfcc8edc3e4719db55dca9f764dc9a"
+          oldsum="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum)"
+          oldfp="${oldsum%% *}"
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup="$BACKUPS/P34_${ts}_${current}"
+          mkdir -p "$backup"
+          tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
+          test -s "$backup/erpv2_current.tar.gz"
+          printf 'current=%s\noldfp=%s\nbackup=%s\n' "$current" "$oldfp" "$backup"
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          while IFS='=' read -r k v; do case "$k" in current|oldfp|backup) printf '%s=%s\n' "$k" "$v" >> "$GITHUB_OUTPUT";; esac; done <<< "$out"
+
+      - name: Deploy exact artifact through P07
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          ARTIFACT: ${{ steps.source.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.source.outputs.sha256 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P34_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p34_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p34_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p34_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SOURCE_SHA"
+
+      - name: Verify live P34 assets and old ERP preservation
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          css="$(curl -fsSL -o /tmp/p34.css -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/css/linear-trip-form-ux.css)"
+          js="$(curl -fsSL -o /tmp/p34.js -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/js/linear-trip-executor-carrier.js)"
+          test "$login" = 200
+          test "$css" = 200
+          test "$js" = 200
+          grep -Fq 'flex-wrap:nowrap' /tmp/p34.css
+          grep -Fq 'linear-trip-searchable-menu' /tmp/p34.css
+          grep -Fq 'decorateSearchableSelect' /tmp/p34.js
+          state="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p34_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldsum="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum)"
+          oldfp="${oldsum%% *}"
+          printf 'marker=%s\noldfp=%s\n' "$marker" "$oldfp"
+          REMOTE
+          )"
+          marker="$(printf '%s\n' "$state" | sed -n 's/^marker=//p')"
+          oldfp="$(printf '%s\n' "$state" | sed -n 's/^oldfp=//p')"
+          test "$marker" = "$SOURCE_SHA"
+          test "$oldfp" = "$OLD_FP_BEFORE"
+          printf 'P34_DEPLOY_PASS sha=%s login=%s css=%s js=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "$login" "$css" "$js"
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f "$HOME/.ssh/p34_key"
