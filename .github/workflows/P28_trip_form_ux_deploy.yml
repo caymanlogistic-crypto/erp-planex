@@ -1,0 +1,132 @@
+name: P28 Trip Form UX Controlled Deploy
+
+on:
+  push:
+    branches: [chatgpt/p28-trip-form-ux-livebase-20260811]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpv2-p28-trip-form-ux
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ startsWith(github.event.head_commit.message, 'P28: deploy trip form UX') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify exact isolated diff contract
+        run: |
+          set -euo pipefail
+          git diff --name-only 3e0f955e0c4ecad39400debfc0fa59538120f296...HEAD | sort > /tmp/changed.txt
+          cat /tmp/changed.txt
+          allowed='app/View/pages/company_linear_trips.php
+public/assets/css/linear-trip-form-ux.css
+.github/workflows/P28_trip_form_ux_deploy.yml
+.github/p28/P28_DEPLOY_TRIGGER.txt'
+          while IFS= read -r f; do
+            printf '%s\n' "$allowed" | grep -Fxq "$f" || { echo "Unexpected changed file: $f"; exit 1; }
+          done < /tmp/changed.txt
+          php -l app/View/pages/company_linear_trips.php
+          test -s public/assets/css/linear-trip-form-ux.css
+          grep -q "linear-trip-form-ux.css" app/View/pages/company_linear_trips.php
+          ! grep -q "applyLocalMigrations" app/View/pages/company_linear_trips.php
+
+      - name: Build exact source artifact
+        id: source
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          artifact="p28_erpv2_${sha}.tar.gz"
+          git archive --format=tar --output=p28_source.tar "$sha" -- app bootstrap config database public
+          gzip -n p28_source.tar
+          mv p28_source.tar.gz "$artifact"
+          sha256="$(sha256sum "$artifact" | awk '{print $1}')"
+          printf 'sha=%s\nartifact=%s\nsha256=%s\n' "$sha" "$artifact" "$sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p28_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p28_key" "$HOME/.ssh/known_hosts"
+
+      - name: Guard current server and create backup
+        id: before
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          OLD="$ROOT/public_html/erp"
+          DEPLOY="$ROOT/deploy"
+          BACKUPS="$ROOT/deploy_backups"
+          current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
+          test "$current" = "3e0f955e0c4ecad39400debfc0fa59538120f296"
+          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup="$BACKUPS/P28_${ts}_${current}"
+          mkdir -p "$backup"
+          tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
+          test -s "$backup/erpv2_current.tar.gz"
+          printf 'current=%s\noldfp=%s\nbackup=%s\n' "$current" "$oldfp" "$backup"
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          while IFS='=' read -r k v; do case "$k" in current|oldfp|backup) printf '%s=%s\n' "$k" "$v" >> "$GITHUB_OUTPUT";; esac; done <<< "$out"
+
+      - name: Upload exact artifact and deploy via P07
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          ARTIFACT: ${{ steps.source.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.source.outputs.sha256 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P28_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SOURCE_SHA"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Verify live CSS, HTTP and old ERP preservation
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          oldfp="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          css="$(curl -fsSL -o /tmp/p28.css -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/css/linear-trip-form-ux.css)"
+          test "$marker" = "$SOURCE_SHA"
+          test "$oldfp" = "$OLD_FP_BEFORE"
+          test "$login" = 200
+          test "$css" = 200
+          grep -q "width: min(1180px" /tmp/p28.css
+          printf 'P28_DEPLOY_PASS sha=%s login=%s css=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "$login" "$css"
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f "$HOME/.ssh/p28_key"
