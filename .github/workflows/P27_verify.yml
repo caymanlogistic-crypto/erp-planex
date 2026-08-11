@@ -1,0 +1,124 @@
+name: P27 Verify Multi Driver Crew
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  verify:
+    if: ${{ github.event.issue.pull_request && github.event.issue.number == 25 && github.event.comment.body == 'P27_VERIFY' && github.event.comment.user.login == 'caymanlogistic-crypto' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p27-multi-driver-crews-20260811
+          fetch-depth: 1
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p27v_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p27v_key" "$HOME/.ssh/known_hosts"
+
+      - name: Verify server marker and schema
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          expected="$(git rev-parse HEAD)"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p27v_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$expected"
+          http="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          test "$http" = 200
+          echo "P27_SERVER_MARKER_PASS sha=$marker login=$http"
+
+      - name: Load browser credentials
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p27v_cred_key"
+            chmod 600 "$HOME/.ssh/p27v_cred_key"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p27v_cred_key" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/p27v_cred_key"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P27V_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Browser verify create crew UI
+        run: |
+          cat > p27_verify.js <<'JS'
+          const { chromium } = require('playwright');
+          const creds=JSON.parse(Buffer.from(process.env.P27V_CREDENTIALS_B64,'base64').toString('utf8'));
+          async function login(page,c){
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(c.username);
+            await page.locator('input[type="password"]').first().fill(c.password);
+            await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+            return !/\/login(?:[/?#]|$)/i.test(page.url());
+          }
+          (async()=>{
+            const browser=await chromium.launch({headless:true}); let pass=false, errors=[];
+            for(let i=0;i<creds.length&&!pass;i++){
+              const ctx=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+              const page=await ctx.newPage();
+              try{
+                if(!await login(page,creds[i])){await ctx.close();continue;}
+                const nav=await page.goto('https://plan-ex.ru/erpv2/company/route-executors/create',{waitUntil:'domcontentloaded',timeout:30000});
+                if(!nav||nav.status()>=500||/\/login(?:[/?#]|$)/i.test(page.url())){await ctx.close();continue;}
+                const form=page.locator('[data-crew-driver-form]').first(); if(!(await form.count())){await ctx.close();continue;}
+                const one=await form.locator('select[name="driver_ids[]"]').count(); if(one!==1)throw new Error('default rows '+one);
+                const add=form.getByRole('button',{name:/Добавить водителя/i});
+                await add.click(); await add.click();
+                const three=await form.locator('select[name="driver_ids[]"]').count(); if(three!==3)throw new Error('rows after add '+three);
+                if(await form.locator('select[name="vehicle_set_id"]').count()!==1)throw new Error('vehicle selector count changed');
+                const rows=await form.locator('[data-crew-driver-row]').count(); if(rows!==3)throw new Error('visual rows '+rows);
+                console.log('P27_MULTI_DRIVER_UI=PASS rows='+rows+' credential_index='+i); pass=true;
+              }catch(e){errors.push('cred['+i+']: '+String(e.message||e));}
+              await ctx.close();
+            }
+            await browser.close(); if(!pass){console.error(errors.join('\n'));process.exit(1);}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node p27_verify.js
+
+      - name: Comment result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:25,body:`P27_VERIFY=${{ job.status }} run=${context.runId} sha=${context.sha}`});
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p27v_key"
