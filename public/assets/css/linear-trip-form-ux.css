@@ -86,5 +86,29 @@
 [data-linear-trip-form] .linear-trip-layout-docs .file-action-btn{width:108px;justify-content:center}
 #linear-trip-create-modal .modal-foot{min-height:48px;padding:7px 12px}
 
-@media(max-width:900px){[data-linear-trip-form] .linear-trip-layout{grid-template-columns:1fr}[data-linear-trip-form] .linear-trip-layout-docs{border-left:0;border-top:1px solid var(--line)}[data-linear-trip-form] .linear-trip-primary-row{grid-template-columns:148px minmax(0,1fr)}}
-@media(max-width:680px){#linear-trip-create-modal .driver-create-modal{width:calc(100vw - 16px)}[data-linear-trip-form] .linear-trip-primary-row,[data-linear-trip-form] .linear-trip-row--compact,[data-linear-trip-form] .linear-trip-payment-row{display:grid;grid-template-columns:1fr}[data-linear-trip-form] .linear-trip-row--compact>.field,[data-linear-trip-form] .linear-trip-payment-row>.field,[data-linear-trip-form] .linear-trip-payment-row>[data-days-count-wrapper],[data-linear-trip-form] .linear-trip-payment-row>[data-days-kind-wrapper],[data-linear-trip-form] .linear-trip-payment-row>[data-specific-date-wrapper]{width:100%;flex-basis:auto}[data-linear-trip-form] .linear-trip-row-remove{margin-top:0}}
+/* P37: edit shows exactly the same visible fields as create. Values stay present in hidden controls and are preserved on save. */
+#linear-trip-edit-form .field:has([name="planned_unloading_date"]),
+#linear-trip-edit-form .field:has([name="carrier_contractor_id"]),
+#linear-trip-edit-form .field:has([name="actual_loading_date"]),
+#linear-trip-edit-form .field:has([name="actual_unloading_date"]){display:none!important}
+
+/* P37: compact view modal, aligned with the 720/380 form geometry. */
+#linear-trip-create-modal .driver-modal-layout{grid-template-columns:minmax(0,1fr) 380px}
+#linear-trip-create-modal .driver-modal-main{padding:12px 14px 14px;min-width:0}
+#linear-trip-create-modal .driver-modal-docs{padding:12px 14px;min-width:0}
+#linear-trip-create-modal .driver-view-name{margin:0 0 8px;font-size:16px}
+#linear-trip-create-modal .driver-view-card{padding:0;border:0;background:transparent;box-shadow:none}
+#linear-trip-create-modal .driver-view-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}
+#linear-trip-create-modal .driver-view-row{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:start;min-height:34px;padding:7px 0;border-bottom:1px solid var(--line-hair)}
+#linear-trip-create-modal .driver-view-row-wide{grid-column:1/-1}
+#linear-trip-create-modal .driver-view-cell-label{padding-right:8px;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--text-faint)}
+#linear-trip-create-modal .driver-view-cell-value{min-width:0;font-size:11px;line-height:1.35;color:var(--text-main)}
+#linear-trip-create-modal .driver-view-inline-row{display:grid;grid-template-columns:102px minmax(0,1fr);gap:8px;align-items:center;min-height:24px;padding:2px 0}
+#linear-trip-create-modal .driver-view-inline-label{font-size:9px;color:var(--text-faint)}
+#linear-trip-create-modal .driver-view-row-wide>.driver-view-cell-value{min-width:0}
+#linear-trip-create-modal .driver-view-comments{white-space:pre-wrap}
+#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item{display:grid;grid-template-columns:38px minmax(0,1fr) 108px 30px;column-gap:10px;align-items:center;min-height:48px}
+#linear-trip-create-modal .driver-modal-docs .file-action-btn{width:108px;justify-content:center}
+
+@media(max-width:900px){[data-linear-trip-form] .linear-trip-layout{grid-template-columns:1fr}[data-linear-trip-form] .linear-trip-layout-docs{border-left:0;border-top:1px solid var(--line)}[data-linear-trip-form] .linear-trip-primary-row{grid-template-columns:148px minmax(0,1fr)}#linear-trip-create-modal .driver-modal-layout{grid-template-columns:1fr}#linear-trip-create-modal .driver-view-grid{grid-template-columns:1fr}}
+@media(max-width:680px){#linear-trip-create-modal .driver-create-modal{width:calc(100vw - 16px)}[data-linear-trip-form] .linear-trip-primary-row,[data-linear-trip-form] .linear-trip-row--compact,[data-linear-trip-form] .linear-trip-payment-row{display:grid;grid-template-columns:1fr}[data-linear-trip-form] .linear-trip-row--compact>.field,[data-linear-trip-form] .linear-trip-payment-row>.field,[data-linear-trip-form] .linear-trip-payment-row>[data-days-count-wrapper],[data-linear-trip-form] .linear-trip-payment-row>[data-days-kind-wrapper],[data-linear-trip-form] .linear-trip-payment-row>[data-specific-date-wrapper]{width:100%;flex-basis:auto}[data-linear-trip-form] .linear-trip-row-remove{margin-top:0}#linear-trip-create-modal .driver-view-row{grid-template-columns:95px minmax(0,1fr)}}
