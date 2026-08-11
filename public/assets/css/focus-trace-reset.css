@@ -1,0 +1,27 @@
+/* P31 — remove click/focus trace from action controls system-wide. */
+button:focus,
+button:focus-visible,
+.btn:focus,
+.btn:focus-visible,
+[role="button"]:focus,
+[role="button"]:focus-visible,
+input[type="checkbox"]:focus,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus,
+input[type="radio"]:focus-visible,
+label:has(input[type="checkbox"]:focus),
+label:has(input[type="checkbox"]:focus-visible),
+label:has(input[type="radio"]:focus),
+label:has(input[type="radio"]:focus-visible) {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Do not leave a browser-native active/focus ring after mouse interaction. */
+button::-moz-focus-inner,
+input[type="button"]::-moz-focus-inner,
+input[type="submit"]::-moz-focus-inner,
+input[type="reset"]::-moz-focus-inner {
+    border: 0 !important;
+}
