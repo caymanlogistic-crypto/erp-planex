@@ -1,1 +1,1 @@
-Deploy isolated trip-form UX patch after fixing workflow YAML gate. Runtime deploy is guarded by backup, exact SHA marker verification, HTTP/CSS checks, and old /erp fingerprint preservation.
+Deploy isolated trip-form UX patch after fixing workflow YAML and shallow-checkout diff gates. Runtime deploy remains guarded by backup, exact SHA marker verification, HTTP/CSS checks, and old /erp fingerprint preservation.
