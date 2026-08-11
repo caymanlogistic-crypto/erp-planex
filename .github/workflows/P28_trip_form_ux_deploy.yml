@@ -2,7 +2,8 @@ name: P28 Trip Form UX Controlled Deploy
 
 on:
   push:
-    branches: [chatgpt/p28-trip-form-ux-livebase-20260811]
+    branches:
+      - chatgpt/p28-trip-form-ux-livebase-20260811
 
 permissions:
   contents: read
@@ -13,7 +14,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ startsWith(github.event.head_commit.message, 'P28: deploy trip form UX') }}
+    if: "${{ startsWith(github.event.head_commit.message, 'P28: deploy trip form UX') }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -27,11 +28,11 @@ jobs:
           git diff --name-only 3e0f955e0c4ecad39400debfc0fa59538120f296...HEAD | sort > /tmp/changed.txt
           cat /tmp/changed.txt
           allowed='app/View/pages/company_linear_trips.php
-public/assets/css/linear-trip-form-ux.css
-.github/workflows/P28_trip_form_ux_deploy.yml
-.github/p28/P28_DEPLOY_TRIGGER.txt'
+          public/assets/css/linear-trip-form-ux.css
+          .github/workflows/P28_trip_form_ux_deploy.yml
+          .github/p28/P28_DEPLOY_TRIGGER.txt'
           while IFS= read -r f; do
-            printf '%s\n' "$allowed" | grep -Fxq "$f" || { echo "Unexpected changed file: $f"; exit 1; }
+            printf '%s\n' "$allowed" | sed 's/^[[:space:]]*//' | grep -Fxq "$f" || { echo "Unexpected changed file: $f"; exit 1; }
           done < /tmp/changed.txt
           php -l app/View/pages/company_linear_trips.php
           test -s public/assets/css/linear-trip-form-ux.css
@@ -61,7 +62,7 @@ public/assets/css/linear-trip-form-ux.css
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/p28_key" "$HOME/.ssh/known_hosts"
 
-      - name: Guard current server and create backup
+      - name: Read current server state and create backup
         id: before
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
@@ -77,7 +78,9 @@ public/assets/css/linear-trip-form-ux.css
           DEPLOY="$ROOT/deploy"
           BACKUPS="$ROOT/deploy_backups"
           current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
-          test "$current" = "3e0f955e0c4ecad39400debfc0fa59538120f296"
+          test -n "$current"
+          test -d "$LIVE"
+          test -x "$DEPLOY/P07_deploy_erpv2.sh"
           oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
           ts="$(date -u +%Y%m%dT%H%M%SZ)"
           backup="$BACKUPS/P28_${ts}_${current}"
@@ -88,7 +91,9 @@ public/assets/css/linear-trip-form-ux.css
           REMOTE
           )"
           printf '%s\n' "$out"
-          while IFS='=' read -r k v; do case "$k" in current|oldfp|backup) printf '%s=%s\n' "$k" "$v" >> "$GITHUB_OUTPUT";; esac; done <<< "$out"
+          while IFS='=' read -r k v; do
+            case "$k" in current|oldfp|backup) printf '%s=%s\n' "$k" "$v" >> "$GITHUB_OUTPUT";; esac
+          done <<< "$out"
 
       - name: Upload exact artifact and deploy via P07
         env:
@@ -125,7 +130,7 @@ public/assets/css/linear-trip-form-ux.css
           test "$login" = 200
           test "$css" = 200
           grep -q "width: min(1180px" /tmp/p28.css
-          printf 'P28_DEPLOY_PASS sha=%s login=%s css=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "$login" "$css"
+          printf 'P28_DEPLOY_PASS sha=%s previous=%s login=%s css=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "${{ steps.before.outputs.current }}" "$login" "$css"
 
       - name: Cleanup SSH
         if: always()
