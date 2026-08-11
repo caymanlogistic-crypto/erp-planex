@@ -1,4 +1,4 @@
-name: P29 Trip Form Density Controlled Deploy
+name: P30 Trip Form Layout Controlled Deploy
 
 on:
   push:
@@ -9,12 +9,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: erpv2-p29-trip-form-density
+  group: erpv2-p30-trip-form-layout
   cancel-in-progress: false
 
 jobs:
   deploy:
-    if: "${{ startsWith(github.event.head_commit.message, 'P29: deploy compact trip form') }}"
+    if: "${{ startsWith(github.event.head_commit.message, 'P30: deploy trip form layout') }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -22,23 +22,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify isolated visual-only diff
+      - name: Verify isolated P30 diff
         run: |
           set -euo pipefail
-          BASE=f82b081faeeb1bf60b89117c5182a9b5854dd0c4
+          BASE=07e1c2e5a78408041f27b3e6d3f0486ab6340659
           git cat-file -e "$BASE^{commit}"
           git diff --name-only "$BASE"...HEAD | sort > /tmp/changed.txt
           cat /tmp/changed.txt
           allowed='public/assets/css/linear-trip-form-ux.css
-          .github/workflows/P29_trip_form_density_deploy.yml
-          .github/p29/P29_DEPLOY_TRIGGER.txt'
+          public/assets/js/linear-trip-executor-carrier.js
+          .github/workflows/P29_trip_form_density_deploy.yml'
           while IFS= read -r f; do
             printf '%s\n' "$allowed" | sed 's/^[[:space:]]*//' | grep -Fxq "$f" || { echo "Unexpected changed file: $f"; exit 1; }
           done < /tmp/changed.txt
           test -s public/assets/css/linear-trip-form-ux.css
-          grep -q 'flex-basis: 128px' public/assets/css/linear-trip-form-ux.css
+          test -s public/assets/js/linear-trip-executor-carrier.js
+          grep -q 'width: min(1100px' public/assets/css/linear-trip-form-ux.css
+          grep -q 'grid-template-columns: minmax(0, 1fr) 380px' public/assets/css/linear-trip-form-ux.css
           grep -q 'content: "₽"' public/assets/css/linear-trip-form-ux.css
-          grep -q 'planned_loading_date' public/assets/css/linear-trip-form-ux.css
+          grep -q 'right: 8px' public/assets/css/linear-trip-form-ux.css
+          grep -q 'data-linear-trip-agency-toggle' public/assets/js/linear-trip-executor-carrier.js
+          grep -q "routeType.value = agency ? 'agency' : 'linear'" public/assets/js/linear-trip-executor-carrier.js
+          grep -q 'planned_loading_date' public/assets/js/linear-trip-executor-carrier.js
+          grep -q 'route_executor_id' public/assets/js/linear-trip-executor-carrier.js
           test -s scripts/preflight.php
           test -s tools/architecture_guard.php
 
@@ -47,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           sha="$(git rev-parse HEAD)"
-          artifact="p29_erpv2_${sha}.tar.gz"
+          artifact="p30_erpv2_${sha}.tar.gz"
           git archive --format=tar "$sha" -- app bootstrap config database public scripts tests tools | gzip -n > "$artifact"
           sha256="$(sha256sum "$artifact" | awk '{print $1}')"
           printf 'sha=%s\nartifact=%s\nsha256=%s\n' "$sha" "$artifact" "$sha256" >> "$GITHUB_OUTPUT"
@@ -59,11 +65,11 @@ jobs:
         run: |
           set -euo pipefail
           install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p29_key"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p30_key"
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/p29_key" "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p30_key" "$HOME/.ssh/known_hosts"
 
-      - name: Guard current production and create backup
+      - name: Guard production and create backup
         id: before
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
@@ -71,7 +77,7 @@ jobs:
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
-          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p29_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p30_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
           ROOT=/home/s/spugovxsim/planexp
           LIVE="$ROOT/public_html/erpv2"
@@ -79,11 +85,11 @@ jobs:
           DEPLOY="$ROOT/deploy"
           BACKUPS="$ROOT/deploy_backups"
           current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
-          test "$current" = "f82b081faeeb1bf60b89117c5182a9b5854dd0c4"
+          test "$current" = "07e1c2e5a78408041f27b3e6d3f0486ab6340659"
           oldsum="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum)"
           oldfp="${oldsum%% *}"
           ts="$(date -u +%Y%m%dT%H%M%SZ)"
-          backup="$BACKUPS/P29_${ts}_${current}"
+          backup="$BACKUPS/P30_${ts}_${current}"
           mkdir -p "$backup"
           tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
           test -s "$backup/erpv2_current.tar.gz"
@@ -103,14 +109,14 @@ jobs:
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
-          remote="/home/s/spugovxsim/planexp/deploy/P29_artifact_${SOURCE_SHA}.tar.gz"
-          scp -P "$SSH_PORT" -i "$HOME/.ssh/p29_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p29_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
-          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p29_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          remote="/home/s/spugovxsim/planexp/deploy/P30_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p30_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p30_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p30_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
           test "$marker" = "$SOURCE_SHA"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p29_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p30_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
 
-      - name: Verify live CSS HTTP and old ERP preservation
+      - name: Verify live assets and old ERP preservation
         env:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
           OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
@@ -119,7 +125,7 @@ jobs:
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
-          state="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p29_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          state="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p30_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
           ROOT=/home/s/spugovxsim/planexp
           marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
@@ -131,16 +137,19 @@ jobs:
           marker="$(printf '%s\n' "$state" | sed -n 's/^marker=//p')"
           oldfp="$(printf '%s\n' "$state" | sed -n 's/^oldfp=//p')"
           login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
-          css="$(curl -fsSL -o /tmp/p29.css -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/css/linear-trip-form-ux.css)"
+          css="$(curl -fsSL -o /tmp/p30.css -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/css/linear-trip-form-ux.css)"
+          js="$(curl -fsSL -o /tmp/p30.js -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/js/linear-trip-executor-carrier.js)"
           test "$marker" = "$SOURCE_SHA"
           test "$oldfp" = "$OLD_FP_BEFORE"
           test "$login" = 200
           test "$css" = 200
-          grep -q 'flex-basis: 128px' /tmp/p29.css
-          grep -q 'content: "₽"' /tmp/p29.css
-          grep -q 'flex-basis: 148px' /tmp/p29.css
-          printf 'P29_DEPLOY_PASS sha=%s previous=%s login=%s css=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "${{ steps.before.outputs.current }}" "$login" "$css"
+          test "$js" = 200
+          grep -q 'width: min(1100px' /tmp/p30.css
+          grep -q 'grid-template-columns: minmax(0, 1fr) 380px' /tmp/p30.css
+          grep -q 'content: "₽"' /tmp/p30.css
+          grep -q 'data-linear-trip-agency-toggle' /tmp/p30.js
+          printf 'P30_DEPLOY_PASS sha=%s previous=%s login=%s css=%s js=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "${{ steps.before.outputs.current }}" "$login" "$css" "$js"
 
       - name: Cleanup SSH
         if: always()
-        run: rm -f "$HOME/.ssh/p29_key"
+        run: rm -f "$HOME/.ssh/p30_key"
