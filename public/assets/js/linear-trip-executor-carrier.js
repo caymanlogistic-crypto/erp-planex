@@ -42,6 +42,15 @@
         });
     }
 
+    function hideEditOnlyFields(form) {
+        if (!isEditForm(form)) return;
+        ['planned_unloading_date', 'carrier_contractor_id', 'actual_loading_date', 'actual_unloading_date'].forEach(function (name) {
+            var control = form.querySelector('[name="' + name + '"]');
+            var field = control ? control.closest('.field') : null;
+            if (field) { field.classList.add('is-hidden'); field.hidden = true; }
+        });
+    }
+
     function collapseEmptyRows(form) {
         form.querySelectorAll('.linear-trip-row--compact').forEach(function (row) {
             var visible = Array.prototype.some.call(row.children, function (child) {
@@ -162,6 +171,26 @@
         var daysKind = row.querySelector('select[name$="[days_kind]"]'); if (daysKind) normalizeDaysKind(daysKind, allowDefaults);
     }
 
+    function decorateTripView(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        scope.querySelectorAll('.driver-modal-body .driver-view-card').forEach(function (card) {
+            if (card.dataset.p37ViewReady === '1') return;
+            card.dataset.p37ViewReady = '1';
+            var layout = card.closest('.driver-modal-layout');
+            var body = card.closest('.driver-modal-body');
+            if (layout) layout.classList.add('is-linear-trip-view-layout');
+            if (body) body.classList.add('is-linear-trip-view');
+            card.querySelectorAll('.driver-view-row').forEach(function (row) {
+                var label = row.querySelector('.driver-view-cell-label');
+                var text = normalizeLabel(label ? label.textContent : '');
+                if (text === 'Оплаты заказчика' || text === 'Оплаты перевозчика') row.style.display = 'none';
+                if (text === 'Финансы рейса') row.classList.add('is-trip-view-finance', 'driver-view-row-wide');
+                if (text === 'Комментарий') row.classList.add('is-trip-view-comment', 'driver-view-row-wide');
+                if (text === 'Принципалы' || text === 'Оплаты принципала') row.classList.add('driver-view-row-wide');
+            });
+        });
+    }
+
     function applyUnifiedLayout(form) {
         if (form.dataset.p35LayoutReady === '1') return;
         var editMode = isEditForm(form);
@@ -173,6 +202,7 @@
         if (!routeType || !date || !client || !executor) return;
         form.dataset.p35LayoutReady = '1';
         ensureHiddenDefaults(form, allowDefaults);
+        hideEditOnlyFields(form);
         var routeTypeField = routeType.closest('.field');
         if (routeTypeField) { routeTypeField.classList.add('is-hidden'); routeTypeField.hidden = true; }
         if (allowDefaults && !routeType.value) routeType.value = 'linear';
@@ -200,11 +230,13 @@
                 routeType.value = agency ? 'agency' : 'linear';
                 routeType.dispatchEvent(new Event('change', {bubbles:true}));
                 form.querySelectorAll('.is-agency-only').forEach(function (el) { el.classList.toggle('is-hidden', !agency); });
+                hideEditOnlyFields(form);
                 collapseEmptyRows(form);
             };
             checkbox.addEventListener('change', applyAgency);
             form.querySelectorAll('.is-agency-only').forEach(function (el) { el.classList.toggle('is-hidden', !checkbox.checked); });
         }
+        hideEditOnlyFields(form);
         collapseEmptyRows(form);
         form.querySelectorAll('[data-payment-row]').forEach(function (row) { decoratePaymentRow(row, allowDefaults); });
     }
@@ -214,8 +246,10 @@
         var editMode = isEditForm(form);
         if (!editMode) deriveCarrierValue(form);
         ensureHiddenDefaults(form, !editMode);
+        hideEditOnlyFields(form);
         applyUnifiedLayout(form);
         form.querySelectorAll('[data-payment-row]').forEach(function (row) { decoratePaymentRow(row, !editMode); });
+        hideEditOnlyFields(form);
         collapseEmptyRows(form);
     }
 
@@ -231,12 +265,13 @@
             var form = row.closest('form[data-linear-trip-form]');
             decoratePaymentRow(row, !isEditForm(form));
         });
+        decorateTripView(root);
     }
 
     document.addEventListener('change', function (event) {
         var target = event.target;
         if (target instanceof HTMLSelectElement && target.name === 'route_executor_id') {
-            var form = target.closest('form[data-linear-trip-form]'); if (form) { deriveCarrierValue(form); collapseEmptyRows(form); } return;
+            var form = target.closest('form[data-linear-trip-form]'); if (form) { deriveCarrierValue(form); hideEditOnlyFields(form); collapseEmptyRows(form); } return;
         }
         if (target instanceof HTMLSelectElement && target.matches('[data-condition-type]')) {
             var row = target.closest('[data-payment-row]'); if (!row) return;
