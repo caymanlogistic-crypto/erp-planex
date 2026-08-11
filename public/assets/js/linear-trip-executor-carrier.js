@@ -90,6 +90,83 @@
         input.addEventListener('blur', function () { var current = parseInt(input.value, 10); if (!Number.isFinite(current) || current < 1) input.value = '3'; });
     }
 
+    function decorateSearchableSelect(select, placeholder) {
+        if (!select || select.dataset.p34Searchable === '1') return;
+        select.dataset.p34Searchable = '1';
+
+        var shell = document.createElement('div');
+        shell.className = 'linear-trip-searchable';
+        select.parentNode.insertBefore(shell, select);
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'field-input linear-trip-searchable-input';
+        input.placeholder = placeholder;
+        input.autocomplete = 'off';
+        input.setAttribute('aria-autocomplete', 'list');
+
+        var dropdown = document.createElement('div');
+        dropdown.className = 'linear-trip-searchable-menu is-hidden';
+
+        shell.appendChild(input);
+        shell.appendChild(dropdown);
+        shell.appendChild(select);
+        select.classList.add('linear-trip-searchable-native');
+        select.tabIndex = -1;
+        select.setAttribute('aria-hidden', 'true');
+
+        var selectedOption = select.options[select.selectedIndex] || null;
+        if (selectedOption && selectedOption.value) input.value = normalizeLabel(selectedOption.textContent);
+
+        function render(query) {
+            var needle = normalizeLabel(query).toLowerCase();
+            dropdown.innerHTML = '';
+            var found = 0;
+            Array.prototype.forEach.call(select.options, function (option) {
+                if (!option.value) return;
+                var label = normalizeLabel(option.textContent);
+                if (needle && label.toLowerCase().indexOf(needle) === -1) return;
+                var item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'linear-trip-searchable-option';
+                item.textContent = label;
+                item.dataset.value = option.value;
+                item.addEventListener('mousedown', function (event) { event.preventDefault(); });
+                item.addEventListener('click', function () {
+                    select.value = option.value;
+                    input.value = label;
+                    dropdown.classList.add('is-hidden');
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                dropdown.appendChild(item);
+                found += 1;
+            });
+            if (found === 0) {
+                var empty = document.createElement('div');
+                empty.className = 'linear-trip-searchable-empty';
+                empty.textContent = 'Ничего не найдено';
+                dropdown.appendChild(empty);
+            }
+            dropdown.classList.remove('is-hidden');
+        }
+
+        input.addEventListener('focus', function () { render(input.value); });
+        input.addEventListener('input', function () {
+            select.value = '';
+            render(input.value);
+        });
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') dropdown.classList.add('is-hidden');
+        });
+        input.addEventListener('blur', function () {
+            window.setTimeout(function () {
+                dropdown.classList.add('is-hidden');
+                var selected = select.options[select.selectedIndex] || null;
+                if (selected && selected.value) input.value = normalizeLabel(selected.textContent);
+            }, 120);
+        });
+    }
+
     function decoratePaymentRow(row) {
         if (!row || !(row instanceof Element)) return;
         var amount = row.querySelector('input[name$="[amount]"]'); if (amount) decorateAmount(amount);
@@ -124,6 +201,10 @@
             toggle.innerHTML = '<input type="checkbox" data-linear-trip-agency-toggle> <span>Агентский договор</span>';
             primaryRow.parentNode.insertBefore(toggle, primaryRow.nextSibling);
         }
+
+        decorateSearchableSelect(client, 'Начните вводить заказчика');
+        decorateSearchableSelect(executor, 'Начните вводить исполнителя рейса');
+
         var checkbox = form.querySelector('[data-linear-trip-agency-toggle]');
         if (checkbox) {
             checkbox.checked = routeType.value === 'agency';
