@@ -34,7 +34,9 @@ final class ContractorService
         $localDbConfig = companyDatabaseConfig($this->config, $company);
         $localDb = new Database($localDbConfig);
         $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
+        // Runtime CRUD must not execute the full local migration chain.
+        // A historical checksum mismatch in migration 027 can otherwise block
+        // unrelated contractor creation. Keep only narrow table guards below.
         $this->ensureContractorTables($localPdo);
         return $localPdo;
     }
