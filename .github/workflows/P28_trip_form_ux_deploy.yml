@@ -39,6 +39,8 @@ jobs:
           test -s public/assets/css/linear-trip-form-ux.css
           grep -q "linear-trip-form-ux.css" app/View/pages/company_linear_trips.php
           ! grep -q "applyLocalMigrations" app/View/pages/company_linear_trips.php
+          test -s scripts/preflight.php
+          test -s tools/architecture_guard.php
 
       - name: Build exact source artifact
         id: source
@@ -46,9 +48,7 @@ jobs:
           set -euo pipefail
           sha="$(git rev-parse HEAD)"
           artifact="p28_erpv2_${sha}.tar.gz"
-          git archive --format=tar --output=p28_source.tar "$sha" -- app bootstrap config database public
-          gzip -n p28_source.tar
-          mv p28_source.tar.gz "$artifact"
+          git archive --format=tar "$sha" -- app bootstrap config database public scripts tests tools | gzip -n > "$artifact"
           sha256="$(sha256sum "$artifact" | awk '{print $1}')"
           printf 'sha=%s\nartifact=%s\nsha256=%s\n' "$sha" "$artifact" "$sha256" >> "$GITHUB_OUTPUT"
 
