@@ -5,6 +5,10 @@
         return String(value || '').replace(/\s+/g, ' ').trim();
     }
 
+    function isEditForm(form) {
+        return !!(form && (form.id === 'linear-trip-edit-form' || /\/modal-edit(?:$|\?)/.test(String(form.action || ''))));
+    }
+
     function deriveCarrierValue(form) {
         var executor = form.querySelector('select[name="route_executor_id"]');
         var carrier = form.querySelector('select[name="carrier_contractor_id"]');
@@ -25,12 +29,12 @@
         if (matchedValue) carrier.value = matchedValue;
     }
 
-    function ensureHiddenDefaults(form) {
+    function ensureHiddenDefaults(form, allowDefaults) {
         var cargo = form.querySelector('input[name="cargo_type_name"]');
         if (cargo) {
             var cargoField = cargo.closest('.field');
             if (cargoField) { cargoField.classList.add('is-hidden'); cargoField.hidden = true; }
-            if (!String(cargo.value || '').trim()) cargo.value = 'Не указан';
+            if (allowDefaults && !String(cargo.value || '').trim()) cargo.value = 'Не указан';
         }
         form.querySelectorAll('input[name$="[condition_comment]"]').forEach(function (input) {
             var field = input.closest('.field');
@@ -72,21 +76,23 @@
         }
     }
 
-    function normalizeDaysKind(select) {
+    function normalizeDaysKind(select, allowDefaults) {
         if (!select) return;
         Array.prototype.forEach.call(select.options, function (option) {
             if (option.value === 'working') option.textContent = 'БД';
             if (option.value === 'calendar') option.textContent = 'РД';
         });
-        var empty = select.querySelector('option[value=""]');
-        if (empty) empty.remove();
-        if (!select.value) select.value = 'working';
+        if (allowDefaults) {
+            var empty = select.querySelector('option[value=""]');
+            if (empty) empty.remove();
+            if (!select.value) select.value = 'working';
+        }
     }
 
-    function decorateDaysInput(input) {
+    function decorateDaysInput(input, allowDefaults) {
         if (!input || input.dataset.p32Days === '1') return;
         input.dataset.p32Days = '1';
-        if (!input.value) input.value = '3';
+        if (allowDefaults && !input.value) input.value = '3';
         var shell = document.createElement('div');
         shell.className = 'linear-trip-days-stepper';
         input.parentNode.insertBefore(shell, input);
@@ -105,7 +111,9 @@
         }
         minus.addEventListener('click', function () { setValue(-1); });
         plus.addEventListener('click', function () { setValue(1); });
-        input.addEventListener('blur', function () { var current = parseInt(input.value, 10); if (!Number.isFinite(current) || current < 1) input.value = '3'; });
+        if (allowDefaults) {
+            input.addEventListener('blur', function () { var current = parseInt(input.value, 10); if (!Number.isFinite(current) || current < 1) input.value = '3'; });
+        }
     }
 
     function decorateSearchableSelect(select, placeholder) {
@@ -147,25 +155,27 @@
         input.addEventListener('blur', function () { window.setTimeout(function () { dropdown.classList.add('is-hidden'); var selected = select.options[select.selectedIndex] || null; if (selected && selected.value) input.value = normalizeLabel(selected.textContent); }, 120); });
     }
 
-    function decoratePaymentRow(row) {
+    function decoratePaymentRow(row, allowDefaults) {
         if (!row || !(row instanceof Element)) return;
         var amount = row.querySelector('input[name$="[amount]"]'); if (amount) decorateAmount(amount);
-        var daysInput = row.querySelector('input[name$="[days_count]"]'); if (daysInput) decorateDaysInput(daysInput);
-        var daysKind = row.querySelector('select[name$="[days_kind]"]'); if (daysKind) normalizeDaysKind(daysKind);
+        var daysInput = row.querySelector('input[name$="[days_count]"]'); if (daysInput) decorateDaysInput(daysInput, allowDefaults);
+        var daysKind = row.querySelector('select[name$="[days_kind]"]'); if (daysKind) normalizeDaysKind(daysKind, allowDefaults);
     }
 
     function applyUnifiedLayout(form) {
         if (form.dataset.p35LayoutReady === '1') return;
+        var editMode = isEditForm(form);
+        var allowDefaults = !editMode;
         var routeType = form.querySelector('[data-linear-trip-route-type]');
         var date = form.querySelector('[name="planned_loading_date"]');
         var client = form.querySelector('[name="client_id"]');
         var executor = form.querySelector('[name="route_executor_id"]');
         if (!routeType || !date || !client || !executor) return;
         form.dataset.p35LayoutReady = '1';
-        ensureHiddenDefaults(form);
+        ensureHiddenDefaults(form, allowDefaults);
         var routeTypeField = routeType.closest('.field');
         if (routeTypeField) { routeTypeField.classList.add('is-hidden'); routeTypeField.hidden = true; }
-        if (!routeType.value) routeType.value = 'linear';
+        if (allowDefaults && !routeType.value) routeType.value = 'linear';
         var dateField = date.closest('.field');
         var clientField = client.closest('.field');
         var executorField = executor.closest('.field');
@@ -192,23 +202,35 @@
                 form.querySelectorAll('.is-agency-only').forEach(function (el) { el.classList.toggle('is-hidden', !agency); });
                 collapseEmptyRows(form);
             };
-            checkbox.addEventListener('change', applyAgency); applyAgency();
+            checkbox.addEventListener('change', applyAgency);
+            form.querySelectorAll('.is-agency-only').forEach(function (el) { el.classList.toggle('is-hidden', !checkbox.checked); });
         }
         collapseEmptyRows(form);
-        form.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow);
+        form.querySelectorAll('[data-payment-row]').forEach(function (row) { decoratePaymentRow(row, allowDefaults); });
     }
 
     function initializeForm(form) {
         if (!(form instanceof HTMLFormElement) || !form.matches('[data-linear-trip-form]')) return;
-        deriveCarrierValue(form); ensureHiddenDefaults(form); applyUnifiedLayout(form); form.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow); collapseEmptyRows(form);
+        var editMode = isEditForm(form);
+        if (!editMode) deriveCarrierValue(form);
+        ensureHiddenDefaults(form, !editMode);
+        applyUnifiedLayout(form);
+        form.querySelectorAll('[data-payment-row]').forEach(function (row) { decoratePaymentRow(row, !editMode); });
+        collapseEmptyRows(form);
     }
 
     function scan(root) {
         if (!root || !root.querySelectorAll) return;
         if (root.matches && root.matches('form[data-linear-trip-form]')) initializeForm(root);
         root.querySelectorAll('form[data-linear-trip-form]').forEach(initializeForm);
-        if (root.matches && root.matches('[data-payment-row]')) decoratePaymentRow(root);
-        root.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow);
+        if (root.matches && root.matches('[data-payment-row]')) {
+            var form = root.closest('form[data-linear-trip-form]');
+            decoratePaymentRow(root, !isEditForm(form));
+        }
+        root.querySelectorAll('[data-payment-row]').forEach(function (row) {
+            var form = row.closest('form[data-linear-trip-form]');
+            decoratePaymentRow(row, !isEditForm(form));
+        });
     }
 
     document.addEventListener('change', function (event) {
@@ -219,7 +241,8 @@
         if (target instanceof HTMLSelectElement && target.matches('[data-condition-type]')) {
             var row = target.closest('[data-payment-row]'); if (!row) return;
             window.setTimeout(function () {
-                decoratePaymentRow(row);
+                var form = row.closest('form[data-linear-trip-form]');
+                decoratePaymentRow(row, !isEditForm(form));
                 var daysField = row.querySelector('[data-days-count-wrapper]');
                 if (daysField && !daysField.classList.contains('is-hidden')) {
                     var daysInput = daysField.querySelector('input[name$="[days_count]"]'); if (daysInput && !daysInput.value) daysInput.value = '3';
@@ -232,7 +255,9 @@
     document.addEventListener('submit', function (event) {
         var form = event.target;
         if (form instanceof HTMLFormElement && form.matches('[data-linear-trip-form]')) {
-            deriveCarrierValue(form); ensureHiddenDefaults(form);
+            var editMode = isEditForm(form);
+            if (!editMode) deriveCarrierValue(form);
+            ensureHiddenDefaults(form, !editMode);
             var routeType = form.querySelector('[data-linear-trip-route-type]');
             var checkbox = form.querySelector('[data-linear-trip-agency-toggle]');
             if (routeType && checkbox) routeType.value = checkbox.checked ? 'agency' : 'linear';
