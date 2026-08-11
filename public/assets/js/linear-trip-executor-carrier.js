@@ -27,7 +27,25 @@
 
     function ensureHiddenDefaults(form) {
         var cargo = form.querySelector('input[name="cargo_type_name"]');
-        if (cargo && !String(cargo.value || '').trim()) cargo.value = 'Не указан';
+        if (cargo) {
+            var cargoField = cargo.closest('.field');
+            if (cargoField) { cargoField.classList.add('is-hidden'); cargoField.hidden = true; }
+            if (!String(cargo.value || '').trim()) cargo.value = 'Не указан';
+        }
+        form.querySelectorAll('input[name$="[condition_comment]"]').forEach(function (input) {
+            var field = input.closest('.field');
+            if (field) { field.classList.add('is-hidden'); field.hidden = true; }
+        });
+    }
+
+    function collapseEmptyRows(form) {
+        form.querySelectorAll('.linear-trip-row--compact').forEach(function (row) {
+            var visible = Array.prototype.some.call(row.children, function (child) {
+                if (!(child instanceof HTMLElement) || !child.classList.contains('field')) return false;
+                return !child.hidden && !child.classList.contains('is-hidden') && window.getComputedStyle(child).display !== 'none';
+            });
+            row.classList.toggle('is-layout-empty', !visible);
+        });
     }
 
     function formatAmount(input) {
@@ -93,31 +111,17 @@
     function decorateSearchableSelect(select, placeholder) {
         if (!select || select.dataset.p34Searchable === '1') return;
         select.dataset.p34Searchable = '1';
-
         var shell = document.createElement('div');
         shell.className = 'linear-trip-searchable';
         select.parentNode.insertBefore(shell, select);
-
         var input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'field-input linear-trip-searchable-input';
-        input.placeholder = placeholder;
-        input.autocomplete = 'off';
-        input.setAttribute('aria-autocomplete', 'list');
-
+        input.type = 'text'; input.className = 'field-input linear-trip-searchable-input'; input.placeholder = placeholder; input.autocomplete = 'off'; input.setAttribute('aria-autocomplete', 'list');
         var dropdown = document.createElement('div');
         dropdown.className = 'linear-trip-searchable-menu is-hidden';
-
-        shell.appendChild(input);
-        shell.appendChild(dropdown);
-        shell.appendChild(select);
-        select.classList.add('linear-trip-searchable-native');
-        select.tabIndex = -1;
-        select.setAttribute('aria-hidden', 'true');
-
+        shell.appendChild(input); shell.appendChild(dropdown); shell.appendChild(select);
+        select.classList.add('linear-trip-searchable-native'); select.tabIndex = -1; select.setAttribute('aria-hidden', 'true');
         var selectedOption = select.options[select.selectedIndex] || null;
         if (selectedOption && selectedOption.value) input.value = normalizeLabel(selectedOption.textContent);
-
         function render(query) {
             var needle = normalizeLabel(query).toLowerCase();
             dropdown.innerHTML = '';
@@ -127,44 +131,20 @@
                 var label = normalizeLabel(option.textContent);
                 if (needle && label.toLowerCase().indexOf(needle) === -1) return;
                 var item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'linear-trip-searchable-option';
-                item.textContent = label;
-                item.dataset.value = option.value;
+                item.type = 'button'; item.className = 'linear-trip-searchable-option'; item.textContent = label;
                 item.addEventListener('mousedown', function (event) { event.preventDefault(); });
                 item.addEventListener('click', function () {
-                    select.value = option.value;
-                    input.value = label;
-                    dropdown.classList.add('is-hidden');
-                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    select.value = option.value; input.value = label; dropdown.classList.add('is-hidden'); select.dispatchEvent(new Event('change', { bubbles: true }));
                 });
-                dropdown.appendChild(item);
-                found += 1;
+                dropdown.appendChild(item); found += 1;
             });
-            if (found === 0) {
-                var empty = document.createElement('div');
-                empty.className = 'linear-trip-searchable-empty';
-                empty.textContent = 'Ничего не найдено';
-                dropdown.appendChild(empty);
-            }
+            if (found === 0) { var empty = document.createElement('div'); empty.className = 'linear-trip-searchable-empty'; empty.textContent = 'Ничего не найдено'; dropdown.appendChild(empty); }
             dropdown.classList.remove('is-hidden');
         }
-
         input.addEventListener('focus', function () { render(input.value); });
-        input.addEventListener('input', function () {
-            select.value = '';
-            render(input.value);
-        });
-        input.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') dropdown.classList.add('is-hidden');
-        });
-        input.addEventListener('blur', function () {
-            window.setTimeout(function () {
-                dropdown.classList.add('is-hidden');
-                var selected = select.options[select.selectedIndex] || null;
-                if (selected && selected.value) input.value = normalizeLabel(selected.textContent);
-            }, 120);
-        });
+        input.addEventListener('input', function () { select.value = ''; render(input.value); });
+        input.addEventListener('keydown', function (event) { if (event.key === 'Escape') dropdown.classList.add('is-hidden'); });
+        input.addEventListener('blur', function () { window.setTimeout(function () { dropdown.classList.add('is-hidden'); var selected = select.options[select.selectedIndex] || null; if (selected && selected.value) input.value = normalizeLabel(selected.textContent); }, 120); });
     }
 
     function decoratePaymentRow(row) {
@@ -174,15 +154,14 @@
         var daysKind = row.querySelector('select[name$="[days_kind]"]'); if (daysKind) normalizeDaysKind(daysKind);
     }
 
-    function applyCreateLayout(form) {
-        var modal = form.closest('#linear-trip-create-modal');
-        if (!modal || form.dataset.p30LayoutReady === '1') return;
+    function applyUnifiedLayout(form) {
+        if (form.dataset.p35LayoutReady === '1') return;
         var routeType = form.querySelector('[data-linear-trip-route-type]');
         var date = form.querySelector('[name="planned_loading_date"]');
         var client = form.querySelector('[name="client_id"]');
         var executor = form.querySelector('[name="route_executor_id"]');
         if (!routeType || !date || !client || !executor) return;
-        form.dataset.p30LayoutReady = '1';
+        form.dataset.p35LayoutReady = '1';
         ensureHiddenDefaults(form);
         var routeTypeField = routeType.closest('.field');
         if (routeTypeField) { routeTypeField.classList.add('is-hidden'); routeTypeField.hidden = true; }
@@ -201,10 +180,8 @@
             toggle.innerHTML = '<input type="checkbox" data-linear-trip-agency-toggle> <span>Агентский договор</span>';
             primaryRow.parentNode.insertBefore(toggle, primaryRow.nextSibling);
         }
-
         decorateSearchableSelect(client, 'Начните вводить заказчика');
         decorateSearchableSelect(executor, 'Начните вводить исполнителя рейса');
-
         var checkbox = form.querySelector('[data-linear-trip-agency-toggle]');
         if (checkbox) {
             checkbox.checked = routeType.value === 'agency';
@@ -213,15 +190,17 @@
                 routeType.value = agency ? 'agency' : 'linear';
                 routeType.dispatchEvent(new Event('change', {bubbles:true}));
                 form.querySelectorAll('.is-agency-only').forEach(function (el) { el.classList.toggle('is-hidden', !agency); });
+                collapseEmptyRows(form);
             };
             checkbox.addEventListener('change', applyAgency); applyAgency();
         }
+        collapseEmptyRows(form);
         form.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow);
     }
 
     function initializeForm(form) {
         if (!(form instanceof HTMLFormElement) || !form.matches('[data-linear-trip-form]')) return;
-        deriveCarrierValue(form); ensureHiddenDefaults(form); applyCreateLayout(form); form.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow);
+        deriveCarrierValue(form); ensureHiddenDefaults(form); applyUnifiedLayout(form); form.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow); collapseEmptyRows(form);
     }
 
     function scan(root) {
@@ -235,7 +214,7 @@
     document.addEventListener('change', function (event) {
         var target = event.target;
         if (target instanceof HTMLSelectElement && target.name === 'route_executor_id') {
-            var form = target.closest('form[data-linear-trip-form]'); if (form) deriveCarrierValue(form); return;
+            var form = target.closest('form[data-linear-trip-form]'); if (form) { deriveCarrierValue(form); collapseEmptyRows(form); } return;
         }
         if (target instanceof HTMLSelectElement && target.matches('[data-condition-type]')) {
             var row = target.closest('[data-payment-row]'); if (!row) return;
