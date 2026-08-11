@@ -37,14 +37,14 @@ jobs:
           done < /tmp/changed.txt
           test -s public/assets/css/linear-trip-form-ux.css
           test -s public/assets/js/linear-trip-executor-carrier.js
-          grep -q 'width: min(1100px' public/assets/css/linear-trip-form-ux.css
-          grep -q 'grid-template-columns: minmax(0, 1fr) 380px' public/assets/css/linear-trip-form-ux.css
-          grep -q 'content: "₽"' public/assets/css/linear-trip-form-ux.css
-          grep -q 'right: 8px' public/assets/css/linear-trip-form-ux.css
-          grep -q 'data-linear-trip-agency-toggle' public/assets/js/linear-trip-executor-carrier.js
-          grep -q "routeType.value = agency ? 'agency' : 'linear'" public/assets/js/linear-trip-executor-carrier.js
-          grep -q 'planned_loading_date' public/assets/js/linear-trip-executor-carrier.js
-          grep -q 'route_executor_id' public/assets/js/linear-trip-executor-carrier.js
+          grep -Fq 'width:min(1100px' public/assets/css/linear-trip-form-ux.css
+          grep -Fq 'grid-template-columns:minmax(0,1fr) 380px' public/assets/css/linear-trip-form-ux.css
+          grep -Fq 'content:"₽"' public/assets/css/linear-trip-form-ux.css
+          grep -Fq 'right:8px' public/assets/css/linear-trip-form-ux.css
+          grep -Fq 'data-linear-trip-agency-toggle' public/assets/js/linear-trip-executor-carrier.js
+          grep -Fq "routeType.value = agency ? 'agency' : 'linear'" public/assets/js/linear-trip-executor-carrier.js
+          grep -Fq 'planned_loading_date' public/assets/js/linear-trip-executor-carrier.js
+          grep -Fq 'route_executor_id' public/assets/js/linear-trip-executor-carrier.js
           test -s scripts/preflight.php
           test -s tools/architecture_guard.php
 
@@ -144,10 +144,10 @@ jobs:
           test "$login" = 200
           test "$css" = 200
           test "$js" = 200
-          grep -q 'width: min(1100px' /tmp/p30.css
-          grep -q 'grid-template-columns: minmax(0, 1fr) 380px' /tmp/p30.css
-          grep -q 'content: "₽"' /tmp/p30.css
-          grep -q 'data-linear-trip-agency-toggle' /tmp/p30.js
+          grep -Fq 'width:min(1100px' /tmp/p30.css
+          grep -Fq 'grid-template-columns:minmax(0,1fr) 380px' /tmp/p30.css
+          grep -Fq 'content:"₽"' /tmp/p30.css
+          grep -Fq 'data-linear-trip-agency-toggle' /tmp/p30.js
           printf 'P30_DEPLOY_PASS sha=%s previous=%s login=%s css=%s js=%s old_erp_unchanged=true\n' "$SOURCE_SHA" "${{ steps.before.outputs.current }}" "$login" "$css" "$js"
 
       - name: Cleanup SSH
