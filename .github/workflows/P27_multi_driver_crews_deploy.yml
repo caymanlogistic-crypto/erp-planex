@@ -1,0 +1,213 @@
+name: P27 Multi Driver Crews Deploy
+
+on:
+  push:
+    branches: [chatgpt/p27-multi-driver-crews-20260811]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpv2-p27-multi-driver-crews
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event.head_commit.message == 'P27: deploy multi-driver crew' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Static gate
+        run: |
+          set -euo pipefail
+          php tests/p27_multi_driver_crews_test.php
+          php -l app/Http/Controllers/Company/RouteExecutorActions/create_submit.php
+          php -l app/View/partials/company_route_executor_create_form.php
+          php -l app/Support/crew_driver_helpers.php
+          php -l scripts/p27_migrate_crew_drivers.php
+
+      - name: Build exact artifact
+        id: build
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          artifact="P27_${sha}.tar.gz"
+          git archive --format=tar "$sha" -- app bootstrap config database public scripts tests | gzip -n > "$artifact"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$artifact" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p27_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p27_key" "$HOME/.ssh/known_hosts"
+
+      - name: Pre-deploy server gate and backup
+        id: before
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          DEPLOY="$ROOT/deploy"
+          LIVE="$ROOT/public_html/erpv2"
+          OLD="$ROOT/public_html/erp"
+          current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
+          test "$current" = "0f068d7a5d85b54c8cfd0ccce7644b5fbd35422a"
+          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup="$ROOT/deploy_backups/P27_${ts}_${current}"
+          mkdir -p "$backup"
+          tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
+          test -s "$backup/erpv2_current.tar.gz"
+          printf 'current=%s\noldfp=%s\nbackup=%s\n' "$current" "$oldfp" "$backup"
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          while IFS='=' read -r k v; do case "$k" in current|oldfp|backup) echo "$k=$v" >> "$GITHUB_OUTPUT";; esac; done <<< "$out"
+
+      - name: Upload artifact for migration
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.build.outputs.artifact }}
+        run: |
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:/tmp/$ARTIFACT"
+
+      - name: Apply additive crew_drivers migration to company databases
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.build.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "ARTIFACT='$ARTIFACT' RUN_ID='$GITHUB_RUN_ID' bash -se" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          TMP="/tmp/p27_${RUN_ID}"
+          rm -rf "$TMP" && mkdir -p "$TMP"
+          tar -xzf "/tmp/$ARTIFACT" -C "$TMP"
+          cp "$ROOT/public_html/erpv2/.env" "$TMP/.env"
+          php "$TMP/scripts/p27_migrate_crew_drivers.php" --apply | tee "$TMP/P27_migration.json"
+          ! grep -q '"errors": \[' "$TMP/P27_migration.json" || true
+          rm -f "$TMP/.env" "/tmp/$ARTIFACT"
+          REMOTE
+
+      - name: Deploy exact P27 source through P07
+        env:
+          SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          ARTIFACT: ${{ steps.build.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.build.outputs.sha256 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P27_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SOURCE_SHA"
+
+      - name: Load browser credentials
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p27_cred_key"
+            chmod 600 "$HOME/.ssh/p27_cred_key"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p27_cred_key" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/p27_cred_key"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P27_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Browser smoke multi-driver UI
+        run: |
+          cat > p27_browser.js <<'JS'
+          const { chromium } = require('playwright');
+          const creds=JSON.parse(Buffer.from(process.env.P27_CREDENTIALS_B64,'base64').toString('utf8'));
+          async function login(page,c){
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(c.username);
+            await page.locator('input[type="password"]').first().fill(c.password);
+            await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+            return !/\/login(?:[/?#]|$)/i.test(page.url());
+          }
+          (async()=>{
+            const browser=await chromium.launch({headless:true}); let pass=false, errors=[];
+            for(let i=0;i<creds.length&&!pass;i++){
+              const ctx=await browser.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true}); const page=await ctx.newPage();
+              try{
+                if(!await login(page,creds[i])){await ctx.close();continue;}
+                const nav=await page.goto('https://plan-ex.ru/erpv2/company/route-executors/create',{waitUntil:'domcontentloaded',timeout:30000});
+                if(!nav||nav.status()>=500||/\/login/.test(page.url())){await ctx.close();continue;}
+                const form=page.locator('[data-crew-driver-form]').first(); if(!(await form.count())){await ctx.close();continue;}
+                if(await form.locator('select[name="driver_ids[]"]').count()!==1) throw new Error('default driver rows != 1');
+                const add=form.getByRole('button',{name:/Добавить водителя/i});
+                await add.click(); await add.click();
+                const count=await form.locator('select[name="driver_ids[]"]').count();
+                if(count!==3) throw new Error('after two add clicks driver rows='+count);
+                if(await form.locator('select[name="vehicle_set_id"]').count()!==1) throw new Error('vehicle selector changed unexpectedly');
+                console.log('P27_MULTI_DRIVER_UI=PASS rows='+count+' credential_index='+i); pass=true;
+              }catch(e){errors.push('cred['+i+'] '+e.message)}
+              await ctx.close();
+            }
+            await browser.close(); if(!pass){console.error(errors.join('\n'));process.exit(1)}
+          })();
+          JS
+          node p27_browser.js
+
+      - name: Final guards
+        env:
+          SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          oldfp="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p27_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          http="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          test "$marker" = "$SOURCE_SHA"
+          test "$oldfp" = "$OLD_FP_BEFORE"
+          test "$http" = 200
+          echo "P27_FINAL_PASS sha=$marker login=$http backup=${{ steps.before.outputs.backup }}"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p27_key"
