@@ -1,0 +1,47 @@
+name: P25 Verify Driver Fix
+
+on:
+  push:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    if: ${{ startsWith(github.event.head_commit.message, 'P25 VERIFY DRIVER FIX') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify live deployment
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p25_verify_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p25_verify_key" "$HOME/.ssh/known_hosts"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_verify_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          echo "marker=$marker"
+          test "$marker" = "d209ba86cfd64ee9d3fbeb2beb0438eac1984960"
+          live_handler="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_verify_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/public_html/erpv2/app/Support/driver_create_handler.php')"
+          live_form="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_verify_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/public_html/erpv2/app/View/partials/company_driver_create_form.php')"
+          ! printf '%s' "$live_handler" | grep -F 'applyLocalMigrations($localPdo);'
+          printf '%s' "$live_handler" | grep -Fq 'Укажите ФИО полностью: фамилия, имя и отчество'
+          printf '%s' "$live_handler" | grep -Fq 'Телефон должен содержать 10 или 11 цифр'
+          ! printf '%s' "$live_form" | grep -F 'Телефон <span class="req">*</span>'
+          curl -fsSL --max-time 30 https://plan-ex.ru/erpv2/login >/dev/null
+          echo 'P25_LIVE_VERIFY=PASS'
+      - name: Report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 23 --repo caymanlogistic-crypto/erp-planex --body "P25_LIVE_VERIFY=${{ job.status }} run=${{ github.run_id }}"
