@@ -100,7 +100,17 @@ jobs:
           rm -rf "$TMP" && mkdir -p "$TMP"
           tar -xzf "/tmp/$ARTIFACT" -C "$TMP"
           cp "$ROOT/public_html/erpv2/.env" "$TMP/.env"
-          php "$TMP/scripts/p27_migrate_crew_drivers.php" --apply
+          PHP_BIN=""
+          for candidate in /opt/php8.5/bin/php /opt/php8.4/bin/php /opt/php8.3/bin/php /opt/php8.2/bin/php /usr/bin/php8.5 /usr/bin/php8.4 /usr/bin/php8.3 /usr/bin/php8.2 /usr/local/bin/php /usr/bin/php; do
+            if [ -x "$candidate" ]; then
+              version_id="$($candidate -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+              if [ -n "$version_id" ] && [ "$version_id" -ge 70400 ] 2>/dev/null; then PHP_BIN="$candidate"; break; fi
+            fi
+          done
+          test -n "$PHP_BIN"
+          echo "P27_SERVER_PHP=$($PHP_BIN -r 'echo PHP_VERSION;')"
+          "$PHP_BIN" -l "$TMP/scripts/p27_migrate_crew_drivers.php"
+          "$PHP_BIN" "$TMP/scripts/p27_migrate_crew_drivers.php" --apply
           rm -f "$TMP/.env" "/tmp/$ARTIFACT"
           REMOTE
 
