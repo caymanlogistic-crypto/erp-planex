@@ -36,8 +36,8 @@ jobs:
             printf '%s\n' "$allowed" | grep -Fxq "$f" || { echo "Unexpected changed file: $f"; exit 1; }
           done < /tmp/changed.txt
           node --check public/assets/js/linear-trip-executor-carrier.js
-          grep -Fq 'planned_unloading_date' public/assets/css/linear-trip-form-ux.css
-          grep -Fq 'is-linear-trip-view-layout' public/assets/css/linear-trip-form-ux.css
+          grep -Fq '#linear-trip-edit-form .field:has([name="planned_unloading_date"])' public/assets/css/linear-trip-form-ux.css
+          grep -Fq '#linear-trip-create-modal .driver-view-grid' public/assets/css/linear-trip-form-ux.css
           grep -Fq 'function hideEditOnlyFields' public/assets/js/linear-trip-executor-carrier.js
           grep -Fq 'function decorateTripView' public/assets/js/linear-trip-executor-carrier.js
           test -s scripts/preflight.php
@@ -125,8 +125,8 @@ jobs:
           test "$login" = 200
           test "$css" = 200
           test "$js" = 200
-          grep -Fq 'planned_unloading_date' /tmp/p37.css
-          grep -Fq 'is-linear-trip-view-layout' /tmp/p37.css
+          grep -Fq '#linear-trip-edit-form .field:has([name="planned_unloading_date"])' /tmp/p37.css
+          grep -Fq '#linear-trip-create-modal .driver-view-grid' /tmp/p37.css
           grep -Fq 'function hideEditOnlyFields' /tmp/p37.js
           grep -Fq 'function decorateTripView' /tmp/p37.js
           state="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p37_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
