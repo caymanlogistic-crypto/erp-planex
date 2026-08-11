@@ -51,7 +51,7 @@ jobs:
           npm install --no-save playwright@1.54.2
           npx playwright install --with-deps chromium
 
-      - name: Runtime contractor POST regression
+      - name: Runtime contractor modal POST regression
         run: |
           cat > p24_runtime.js <<'JS'
           const { chromium } = require('playwright');
@@ -67,15 +67,24 @@ jobs:
             await page.locator('input[type="password"]').first().fill(cred.password);
             await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
             if (/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('login failed');
-            await page.goto('https://plan-ex.ru/erpv2/company/contractors/create',{waitUntil:'domcontentloaded',timeout:30000});
-            const form=page.locator('form').filter({has:page.locator('input[name="inn"]')}).first();
-            if(!(await form.count())) throw new Error('contractor form missing');
-            await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),form.evaluate(f=>f.submit())]);
-            await page.waitForTimeout(500);
-            const text=await page.locator('body').innerText();
+            await page.goto('https://plan-ex.ru/erpv2/company/contractors',{waitUntil:'domcontentloaded',timeout:30000});
+            const createButton=page.getByRole('button',{name:'Создать перевозчика',exact:true}).first();
+            if(!(await createButton.count())) throw new Error('create contractor button missing');
+            await createButton.click();
+            const modal=page.locator('#le-contractor-modal');
+            await modal.waitFor({state:'visible',timeout:10000});
+            const form=modal.locator('form').filter({has:modal.locator('input[name="inn"]')}).first();
+            await form.waitFor({state:'attached',timeout:10000});
+            await form.evaluate(f=>{ f.noValidate=true; });
+            const responsePromise=page.waitForResponse(r=>r.url().includes('/company/contractors/create') && r.request().method()==='POST',{timeout:15000});
+            await form.evaluate(f=>f.requestSubmit());
+            const response=await responsePromise;
+            await page.waitForTimeout(700);
+            const text=await modal.innerText();
             if(/checksum mismatch|027_vehicle_unit_document_types|Local migration failed/i.test(text)) throw new Error('checksum blocker persists');
-            if(!/ИНН|Обязательное поле|Укажите/i.test(text)) throw new Error('validation response missing');
-            console.log('P24_RUNTIME_CONTRACTOR_POST=PASS');
+            if(response.status()>=500) throw new Error('contractor POST returned '+response.status());
+            if(!/ИНН|Обязательное поле|Укажите/i.test(text)) throw new Error('normal validation response missing');
+            console.log('P24_RUNTIME_CONTRACTOR_MODAL_POST=PASS status='+response.status());
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
@@ -86,4 +95,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh pr comment 23 --repo caymanlogistic-crypto/erp-planex --body "P24_RUNTIME_RECHECK=${{ job.status }}"
+          gh pr comment 23 --repo caymanlogistic-crypto/erp-planex --body "P24_RUNTIME_RECHECK=${{ job.status }} run=${{ github.run_id }}"
