@@ -1,4 +1,4 @@
-/* P30/P32/P33 — Linear trip create UX. Scoped to the trip modal; no global ERP overrides. */
+/* P30/P32/P33/P34 — Linear trip create UX. Scoped to the trip modal; no global ERP overrides. */
 #linear-trip-create-modal .driver-create-modal{width:min(1100px,calc(100vw - 48px));max-height:calc(100vh - 36px)}
 #linear-trip-create-modal .modal-body{padding:0;overflow:auto}
 #linear-trip-create-modal .linear-trip-panel{margin:0}
@@ -29,15 +29,16 @@
 #linear-trip-create-modal .linear-trip-principal-card{padding:0;margin-top:7px;border:0!important;background:transparent!important;box-shadow:none!important}
 #linear-trip-create-modal .linear-trip-block-head{margin-bottom:5px;align-items:center}
 #linear-trip-create-modal .linear-trip-payment-rows,#linear-trip-create-modal .linear-trip-principal-cards{gap:5px}
-#linear-trip-create-modal .linear-trip-payment-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:5px 6px}
+/* P34: payment delete control must stay in the same line as the payment fields. */
+#linear-trip-create-modal .linear-trip-payment-row{display:flex;flex-wrap:nowrap;align-items:flex-start;gap:5px}
 #linear-trip-create-modal .linear-trip-payment-row>.field{flex:0 0 auto;min-width:0}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[amount]"]){flex-basis:108px;position:relative}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[payment_method]"]){flex-basis:116px}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[vat_rate]"]){flex-basis:96px}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[condition_type]"]){flex-basis:168px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[amount]"]){flex-basis:104px;position:relative}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[payment_method]"]){flex-basis:112px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[vat_rate]"]){flex-basis:90px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[condition_type]"]){flex-basis:156px}
 #linear-trip-create-modal .linear-trip-payment-row>[data-days-count-wrapper]{flex-basis:94px}
 #linear-trip-create-modal .linear-trip-payment-row>[data-days-kind-wrapper]{flex-basis:68px}
-#linear-trip-create-modal .linear-trip-payment-row>[data-specific-date-wrapper]{flex-basis:146px}
+#linear-trip-create-modal .linear-trip-payment-row>[data-specific-date-wrapper]{flex-basis:138px}
 #linear-trip-create-modal .linear-trip-money-shell{display:flex;height:28px;border:1px solid var(--line-soft);border-radius:2px;background:var(--surface-field);overflow:hidden}
 #linear-trip-create-modal .linear-trip-money-shell:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,71,24,.1)}
 #linear-trip-create-modal .linear-trip-money-shell input[name$="[amount]"]{width:100%;height:26px;min-width:0;border:0!important;box-shadow:none!important;outline:0!important;padding:0 7px;text-align:right;font-variant-numeric:tabular-nums;background:transparent}
@@ -50,7 +51,7 @@
 #linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]{width:38px;height:26px;border:0!important;box-shadow:none!important;outline:0!important;padding:0;text-align:center;background:transparent;-moz-appearance:textfield}
 #linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]::-webkit-outer-spin-button,#linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 #linear-trip-create-modal [data-days-kind-wrapper] .field-input{padding-left:7px;padding-right:20px;text-align:left}
-#linear-trip-create-modal .linear-trip-row-remove{flex:0 0 28px;width:28px;height:28px;margin-top:19px;font-size:17px}
+#linear-trip-create-modal .linear-trip-row-remove{flex:0 0 24px;width:24px;height:28px;margin-top:19px;font-size:17px}
 #linear-trip-create-modal .linear-trip-principals-section{margin-top:6px}
 /* Force exact same document-row geometry as the driver form. */
 #linear-trip-create-modal .linear-trip-layout-docs .file-list{margin-top:0;gap:8px}
