@@ -82,7 +82,8 @@ jobs:
           test -n "$current"
           test -d "$LIVE"
           test -x "$DEPLOY/P07_deploy_erpv2.sh"
-          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          oldsum="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum)"
+          oldfp="${oldsum%% *}"
           ts="$(date -u +%Y%m%dT%H%M%SZ)"
           backup="$BACKUPS/P28_${ts}_${current}"
           mkdir -p "$backup"
@@ -122,8 +123,17 @@ jobs:
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
-          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
-          oldfp="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          state="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldsum="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum)"
+          oldfp="${oldsum%% *}"
+          printf 'marker=%s\noldfp=%s\n' "$marker" "$oldfp"
+          REMOTE
+          )"
+          marker="$(printf '%s\n' "$state" | sed -n 's/^marker=//p')"
+          oldfp="$(printf '%s\n' "$state" | sed -n 's/^oldfp=//p')"
           login="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
           css="$(curl -fsSL -o /tmp/p28.css -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/assets/css/linear-trip-form-ux.css)"
           test "$marker" = "$SOURCE_SHA"
