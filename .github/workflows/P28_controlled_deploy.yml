@@ -31,7 +31,7 @@ jobs:
           php -l app/View/pages/company_linear_trips.php
           test -f public/assets/css/linear-trip-form-ux.css
           git diff --exit-code 8e0fbeb20f6d2cfaaadd436847bb210a9e50b7f4..HEAD -- app/View/layouts/main.php
-          changed="$(git diff --name-only 8e0fbeb20f6d2cfaaadd436847bb210a9e50b7f4..HEAD | grep -v '^\.github/workflows/P28_controlled_deploy.yml$' | sort)"
+          changed="$(git diff --name-only 8e0fbeb20f6d2cfaaadd436847bb210a9e50b7f4..HEAD | grep -v '^\.github/workflows/P28_controlled_deploy.yml$' | grep -v '^\.github/p28/P28_TRIGGER.txt$' | sort)"
           expected=$'app/View/pages/company_linear_trips.php\npublic/assets/css/linear-trip-form-ux.css'
           test "$changed" = "$expected"
           additions="$(git diff --numstat 8e0fbeb20f6d2cfaaadd436847bb210a9e50b7f4..HEAD -- app/View/pages/company_linear_trips.php | awk '{print $1}')"
