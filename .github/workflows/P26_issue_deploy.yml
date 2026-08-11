@@ -1,0 +1,185 @@
+name: P26 Execute Systemic Runtime Fix
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: erpv2-p26-issue-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-verify:
+    if: ${{ github.event.issue.number == 24 && github.event.comment.body == 'P26_DEPLOY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p26-runtime-migration-guard-20260811
+          fetch-depth: 1
+
+      - name: Static regression gate
+        run: |
+          set -euo pipefail
+          php -l app/Support/runtime_migration_policy.php
+          php -l app/Support/runtime_ui_hotfixes.php
+          php -l app/Support/entrypoint_dependencies.php
+          php tests/p26_runtime_migration_guard_test.php
+          node --check public/assets/js/driver-phone-optional.js
+
+      - name: Build exact application artifact
+        id: build
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          artifact="p26_erpv2_${sha}.tar.gz"
+          git archive --format=tar --output=p26_source.tar "$sha" -- app bootstrap config database public scripts tools tests
+          gzip -n p26_source.tar
+          mv p26_source.tar.gz "$artifact"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$artifact" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p26_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p26_key" "$HOME/.ssh/known_hosts"
+
+      - name: Snapshot and backup
+        id: before
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          DEPLOY="$ROOT/deploy"
+          LIVE="$ROOT/public_html/erpv2"
+          OLD="$ROOT/public_html/erp"
+          current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup="$ROOT/deploy_backups/P26_${ts}_${current}"
+          mkdir -p "$backup"
+          tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
+          test -s "$backup/erpv2_current.tar.gz"
+          printf 'current=%s\noldfp=%s\nbackup=%s\n' "$current" "$oldfp" "$backup"
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          while IFS='=' read -r k v; do case "$k" in current|oldfp|backup) echo "$k=$v" >> "$GITHUB_OUTPUT";; esac; done <<< "$out"
+
+      - name: Deploy exact SHA through P07
+        env:
+          SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          ARTIFACT: ${{ steps.build.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.build.outputs.sha256 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P26_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p26_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SOURCE_SHA"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Load browser credentials
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p26_cred_key"
+            chmod 600 "$HOME/.ssh/p26_cred_key"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p26_cred_key" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/p26_cred_key"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P26_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Browser regression
+        run: |
+          cat > p26_runtime.js <<'JS'
+          const { chromium } = require('playwright');
+          const creds=JSON.parse(Buffer.from(process.env.P26_CREDENTIALS_B64,'base64').toString('utf8'));
+          const candidates=creds.filter(c=>['company_owner','senior_logist','logist'].includes(c.role));
+          (async()=>{
+            const browser=await chromium.launch({headless:true}); let ok=false,last='';
+            for(const cred of candidates){const ctx=await browser.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});const page=await ctx.newPage();try{
+              await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded',timeout:30000});
+              await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(cred.username);
+              await page.locator('input[type="password"]').first().fill(cred.password);
+              await page.locator('button[type="submit"],input[type="submit"]').first().click(); await page.waitForLoadState('domcontentloaded').catch(()=>{});
+              if(/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('login failed');
+              await page.goto('https://plan-ex.ru/erpv2/company/drivers',{waitUntil:'domcontentloaded',timeout:30000});
+              const btn=page.getByRole('button',{name:/Добавить нового водителя/i}).first(); if(await btn.count()){await btn.click();const form=page.locator('#driver-create-modal #driver-create-form').first();await form.waitFor({state:'visible',timeout:10000});const phone=form.locator('input[name="phone"]');await phone.fill('');await phone.focus();await form.locator('input[name="full_name"]').focus();await page.waitForTimeout(100);const field=phone.locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," field ")][1]');if((await field.getAttribute('class')||'').includes('is-error')) throw new Error('blank phone error on blur');await form.locator('input[name="full_name"]').fill('Тест');await form.evaluate(f=>f.requestSubmit());await page.waitForTimeout(300);const txt=await page.locator('#driver-create-modal').innerText();if(/Укажите телефон/i.test(txt)) throw new Error('blank phone error on submit');}
+              await page.goto('https://plan-ex.ru/erpv2/company/vehicles/create',{waitUntil:'domcontentloaded',timeout:30000});
+              const vf=page.locator('form').filter({has:page.locator('input[name="plate_number"]')}).first();if(!(await vf.count()))throw new Error('vehicle form missing');const rp=page.waitForResponse(r=>r.url().includes('/company/vehicles/create')&&r.request().method()==='POST',{timeout:15000});await vf.evaluate(f=>f.requestSubmit());const r=await rp;const body=await r.text();if(r.status()>=500)throw new Error('vehicle POST '+r.status());if(/checksum mismatch|Local migration failed/i.test(body))throw new Error('migration blocker remains');if(!/Обязательное поле|Укажите тип транспортной единицы/i.test(body))throw new Error('vehicle validation missing');
+              console.log('P26_BROWSER_PASS role='+cred.role);ok=true;await ctx.close();break;
+            }catch(e){last=String(e.stack||e);await ctx.close();}}
+            await browser.close();if(!ok)throw new Error(last||'no working credentials');
+          })();
+          JS
+          node p26_runtime.js
+
+      - name: Final guards
+        env:
+          SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          oldfp="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p26_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          http="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          test "$marker" = "$SOURCE_SHA"; test "$oldfp" = "$OLD_FP_BEFORE"; test "$http" = 200
+          echo "P26_DEPLOY_PASS sha=$SOURCE_SHA login=$http old_erp_unchanged=true"
+
+      - name: Comment result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status='${{ job.status }}';
+            const sha='${{ steps.build.outputs.sha }}';
+            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:24,body:`P26_DEPLOY=${status} run=${context.runId} sha=${sha}`});
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p26_key"
