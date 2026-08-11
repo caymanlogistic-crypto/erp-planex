@@ -1,0 +1,42 @@
+name: P28 Read Only Server Probe
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+jobs:
+  probe:
+    if: ${{ github.event.issue.pull_request && github.event.issue.number == 26 && github.event.comment.body == 'P28_PROBE' && github.event.comment.user.login == 'caymanlogistic-crypto' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p28_probe_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p28_probe_key" "$HOME/.ssh/known_hosts"
+      - name: Read current ERPv2 marker
+        id: probe
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          current="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p28_probe_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          http="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          printf 'current=%s\nhttp=%s\n' "$current" "$http" >> "$GITHUB_OUTPUT"
+      - name: Comment probe result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:26,body:`P28_PROBE current=${{ steps.probe.outputs.current }} login=${{ steps.probe.outputs.http }} run=${context.runId}`});
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p28_probe_key"
