@@ -1,0 +1,102 @@
+name: P25 Execute Driver Fix
+
+on:
+  push:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: write
+
+jobs:
+  execute:
+    if: ${{ startsWith(github.event.head_commit.message, 'P25 EXECUTE DRIVER FIX') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch driver create
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          handler = Path('app/Support/driver_create_handler.php')
+          s = handler.read_text()
+          s = s.replace('            applyLocalMigrations($localPdo);\n', '')
+          s = s.replace('                applyLocalMigrations($localPdo);\n', '')
+          repl = {
+            "$errors['full_name'] = 'ФИО: 3 слова';": "$errors['full_name'] = 'Укажите ФИО полностью: фамилия, имя и отчество';",
+            "$errors['phone'] = 'Неверный формат';": "$errors['phone'] = 'Телефон должен содержать 10 или 11 цифр, например +7 900 000-00-00';",
+            "$errors['license_number'] = 'Нужно 10 цифр';": "$errors['license_number'] = 'Номер водительского удостоверения должен содержать 10 цифр';",
+            "$errors['license_issue_date'] = 'Неверная дата';": "$errors['license_issue_date'] = 'Укажите корректную дату выдачи ВУ в формате ДД.ММ.ГГГГ';",
+            "$errors['passport_number'] = 'Нужно 10 цифр';": "$errors['passport_number'] = 'Серия и номер паспорта должны содержать 10 цифр';",
+            "$errors['passport_department_code'] = 'Формат 000-000';": "$errors['passport_department_code'] = 'Код подразделения должен состоять из 6 цифр в формате 000-000';",
+            "$errors['passport_issue_date'] = 'Неверная дата';": "$errors['passport_issue_date'] = 'Укажите корректную дату выдачи паспорта в формате ДД.ММ.ГГГГ';",
+            "$errors['snils'] = 'Нужно 11 цифр';": "$errors['snils'] = 'СНИЛС должен содержать 11 цифр';",
+            "$errors['email'] = 'Неверный email';": "$errors['email'] = 'Укажите корректный email, например driver@example.ru';",
+          }
+          for a,b in repl.items():
+            if a in s: s=s.replace(a,b)
+          generic = "$formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';"
+          s = s.replace(generic, "$formError = 'Не удалось сохранить водителя из-за технической ошибки. Если рядом с полями нет подсказки, ошибка не связана с заполнением формы — сообщите администратору.';")
+          handler.write_text(s)
+
+          service = Path('app/Service/DriverService.php')
+          ds = service.read_text().replace('        applyLocalMigrations($localPdo);\n', '')
+          service.write_text(ds)
+
+          form = Path('app/View/partials/company_driver_create_form.php')
+          f = form.read_text().replace('<label class="field-label">Телефон <span class="req">*</span></label>', '<label class="field-label">Телефон</label>')
+          form.write_text(f)
+          PY
+
+      - name: Validate and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/Support/driver_create_handler.php
+          php -l app/Service/DriverService.php
+          php -l app/View/partials/company_driver_create_form.php
+          php tests/p25_driver_create_regression_test.php
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/Support/driver_create_handler.php app/Service/DriverService.php app/View/partials/company_driver_create_form.php
+          git commit -m 'P25: fix driver create validation and migration blocker'
+          git push origin HEAD:chatgpt/production-stabilization-20260802
+          echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Build artifact
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=tar --output=p25.tar "$SOURCE_SHA" -- app bootstrap config database public scripts tools tests
+          gzip -n p25.tar
+          echo "sha256=$(sha256sum p25.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH and deploy
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT_SHA: ${{ steps.build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p25_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p25_key" "$HOME/.ssh/known_hosts"
+          remote="/home/s/spugovxsim/planexp/deploy/P25_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p25_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes p25.tar.gz "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SOURCE_SHA"
+          curl -fsSL --max-time 30 https://plan-ex.ru/erpv2/login >/dev/null
+          echo "P25_DEPLOYED_SHA=$SOURCE_SHA"
