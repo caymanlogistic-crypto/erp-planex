@@ -1,0 +1,241 @@
+name: P25 Driver Create Fix
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  fix-deploy-verify:
+    if: ${{ github.event.issue.number == 23 && github.event.comment.body == 'P25_DRIVER_FIX' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/production-stabilization-20260802
+          fetch-depth: 0
+
+      - name: Apply driver creation fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          handler = Path('app/Support/driver_create_handler.php')
+          s = handler.read_text()
+          s = s.replace('            applyLocalMigrations($localPdo);\n', '')
+          s = s.replace('                applyLocalMigrations($localPdo);\n', '')
+          replacements = {
+              "$errors['full_name'] = 'ФИО: 3 слова';": "$errors['full_name'] = 'Укажите ФИО полностью: фамилия, имя и отчество';",
+              "$errors['phone'] = 'Неверный формат';": "$errors['phone'] = 'Телефон должен содержать 10 или 11 цифр, например +7 900 000-00-00';",
+              "$errors['license_number'] = 'Нужно 10 цифр';": "$errors['license_number'] = 'Номер водительского удостоверения должен содержать 10 цифр';",
+              "$errors['license_issue_date'] = 'Неверная дата';": "$errors['license_issue_date'] = 'Укажите корректную дату выдачи ВУ в формате ДД.ММ.ГГГГ';",
+              "$errors['passport_number'] = 'Нужно 10 цифр';": "$errors['passport_number'] = 'Серия и номер паспорта должны содержать 10 цифр';",
+              "$errors['passport_department_code'] = 'Формат 000-000';": "$errors['passport_department_code'] = 'Код подразделения должен состоять из 6 цифр в формате 000-000';",
+              "$errors['passport_issue_date'] = 'Неверная дата';": "$errors['passport_issue_date'] = 'Укажите корректную дату выдачи паспорта в формате ДД.ММ.ГГГГ';",
+              "$errors['snils'] = 'Нужно 11 цифр';": "$errors['snils'] = 'СНИЛС должен содержать 11 цифр';",
+              "$errors['email'] = 'Неверный email';": "$errors['email'] = 'Укажите корректный email, например driver@example.ru';",
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'missing expected validation string: {old}')
+              s = s.replace(old, new)
+
+          old_catches = """        } catch (\\PDOException $e) {
+            $company = $company ?? null;
+            $formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';
+        } catch (\\Exception $e) {
+            $company = $company ?? null;
+            $formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';
+        }
+"""
+          new_catches = """        } catch (\\PDOException $e) {
+            $company = $company ?? null;
+            $message = $e->getMessage();
+            if (stripos($message, 'checksum mismatch') !== false || stripos($message, 'Local migration failed') !== false) {
+                $formError = 'Техническая ошибка базы данных: конфликт версии структуры. Данные формы не являются причиной ошибки.';
+            } elseif (stripos($message, '23000') !== false || stripos($message, 'Duplicate entry') !== false) {
+                $formError = 'Не удалось сохранить водителя: запись с такими уникальными данными уже существует.';
+            } elseif (stripos($message, '42S02') !== false || stripos($message, '42S22') !== false) {
+                $formError = 'Не удалось сохранить водителя: структура базы данных не соответствует текущей версии ERP.';
+            } else {
+                $formError = 'Не удалось сохранить водителя из-за ошибки базы данных. Поля формы проверены; повторите попытку. Если ошибка останется — сообщите администратору.';
+            }
+        } catch (\\Exception $e) {
+            $company = $company ?? null;
+            $formError = 'Не удалось сохранить водителя из-за технической ошибки ERP. Проверьте сообщения рядом с полями; если их нет — повторите попытку и сообщите администратору.';
+        }
+"""
+          if old_catches not in s:
+              raise SystemExit('expected generic catch block not found')
+          s = s.replace(old_catches, new_catches)
+          handler.write_text(s)
+
+          service = Path('app/Service/DriverService.php')
+          ds = service.read_text()
+          ds = ds.replace('        applyLocalMigrations($localPdo);\n', '')
+          service.write_text(ds)
+
+          form = Path('app/View/partials/company_driver_create_form.php')
+          f = form.read_text()
+          old = '<label class="field-label">Телефон <span class="req">*</span></label>'
+          new = '<label class="field-label">Телефон</label>'
+          if old not in f:
+              raise SystemExit('required phone label not found')
+          form.write_text(f.replace(old, new))
+          PY
+
+      - name: Static regression gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/Support/driver_create_handler.php
+          php -l app/Service/DriverService.php
+          php -l app/View/partials/company_driver_create_form.php
+          php tests/p25_driver_create_regression_test.php
+          ! grep -F 'applyLocalMigrations($localPdo);' app/Support/driver_create_handler.php
+          ! grep -A12 -F 'function getLocalPdo' app/Service/DriverService.php | grep -F 'applyLocalMigrations'
+
+      - name: Commit fix to production stabilization branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/Support/driver_create_handler.php app/Service/DriverService.php app/View/partials/company_driver_create_form.php tests/p25_driver_create_regression_test.php
+          git commit -m 'P25: make driver phone optional and expose clear errors'
+          git push origin HEAD:chatgpt/production-stabilization-20260802
+          echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Build exact application artifact
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$SOURCE_SHA"
+          artifact="p25_erpv2_${sha}.tar.gz"
+          git archive --format=tar --output=p25_source.tar "$sha" -- app bootstrap config database public scripts tools tests
+          gzip -n p25_source.tar
+          mv p25_source.tar.gz "$artifact"
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$artifact" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p25_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p25_key" "$HOME/.ssh/known_hosts"
+
+      - name: Backup and deploy exact SHA through P07
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          ARTIFACT: ${{ steps.build.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P25_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p25_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SOURCE_SHA"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p25_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Load browser credentials
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+          mkdir -p .github/p11
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p25_cred_key"
+            chmod 600 "$HOME/.ssh/p25_cred_key"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p25_cred_key" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/p25_cred_key"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P25_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Browser runtime verification
+        shell: bash
+        run: |
+          cat > p25_runtime.js <<'JS'
+          const { chromium } = require('playwright');
+          const creds = JSON.parse(Buffer.from(process.env.P25_CREDENTIALS_B64,'base64').toString('utf8'));
+          const candidates = creds.filter(c => ['company_owner','senior_logist','logist'].includes(c.role));
+          (async()=>{
+            const browser = await chromium.launch({headless:true});
+            let verified = false;
+            for (const cred of candidates) {
+              const context = await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+              const page = await context.newPage();
+              await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded',timeout:30000});
+              await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(cred.username);
+              await page.locator('input[type="password"]').first().fill(cred.password);
+              await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+              if (/\/login(?:[/?#]|$)/i.test(page.url())) { await context.close(); continue; }
+              await page.goto('https://plan-ex.ru/erpv2/company/drivers',{waitUntil:'domcontentloaded',timeout:30000});
+              const btn = page.getByRole('button',{name:/Добавить нового водителя/i}).first();
+              if (!(await btn.count())) { await context.close(); continue; }
+              await btn.click();
+              const modal = page.locator('#driver-create-modal, .modal-overlay.is-open').last();
+              await modal.waitFor({state:'visible',timeout:10000});
+              const phoneLabel = modal.locator('label').filter({hasText:/^Телефон/}).first();
+              const labelText = (await phoneLabel.innerText()).trim();
+              if (labelText.includes('*')) throw new Error('phone still marked required');
+              const form = modal.locator('form').first();
+              await form.locator('input[name="full_name"]').fill('Тест');
+              const responsePromise = page.waitForResponse(r=>r.url().includes('/company/drivers/modal-create') && r.request().method()==='POST',{timeout:15000});
+              await form.evaluate(f=>f.requestSubmit());
+              const response = await responsePromise;
+              await page.waitForTimeout(500);
+              const text = await modal.innerText();
+              if (response.status() >= 500) throw new Error('driver POST returned '+response.status());
+              if (!/Укажите ФИО полностью: фамилия, имя и отчество/i.test(text)) throw new Error('clear FIO validation missing');
+              if (/checksum mismatch|Local migration failed|027_vehicle_unit_document_types/i.test(text)) throw new Error('migration blocker persists');
+              verified = true;
+              await context.close();
+              break;
+            }
+            await browser.close();
+            if (!verified) throw new Error('no credential with driver-create access');
+            console.log('P25_DRIVER_CREATE_RUNTIME=PASS');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node p25_runtime.js
+
+      - name: Report result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment 23 --repo caymanlogistic-crypto/erp-planex --body "P25_DRIVER_FIX=${{ job.status }} run=${{ github.run_id }} sha=${SOURCE_SHA:-not_committed}"
