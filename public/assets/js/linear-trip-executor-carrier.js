@@ -42,6 +42,87 @@
         input.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     }
 
+    function decorateAmount(input) {
+        if (!input || input.dataset.p32Money === '1') return;
+        input.dataset.p32Money = '1';
+        input.removeAttribute('placeholder');
+        formatAmount(input);
+        input.addEventListener('input', function () { formatAmount(input); });
+
+        if (!input.parentElement || !input.parentElement.classList.contains('linear-trip-money-shell')) {
+            var shell = document.createElement('div');
+            shell.className = 'linear-trip-money-shell';
+            input.parentNode.insertBefore(shell, input);
+            shell.appendChild(input);
+            var suffix = document.createElement('span');
+            suffix.className = 'linear-trip-money-suffix';
+            suffix.textContent = '₽';
+            suffix.setAttribute('aria-hidden', 'true');
+            shell.appendChild(suffix);
+        }
+    }
+
+    function normalizeDaysKind(select) {
+        if (!select) return;
+        Array.prototype.forEach.call(select.options, function (option) {
+            if (option.value === 'working') option.textContent = 'БД';
+            if (option.value === 'calendar') option.textContent = 'РД';
+        });
+        var empty = select.querySelector('option[value=""]');
+        if (empty) empty.remove();
+        if (!select.value) select.value = 'working';
+    }
+
+    function decorateDaysInput(input) {
+        if (!input || input.dataset.p32Days === '1') return;
+        input.dataset.p32Days = '1';
+        if (!input.value) input.value = '3';
+
+        var shell = document.createElement('div');
+        shell.className = 'linear-trip-days-stepper';
+        input.parentNode.insertBefore(shell, input);
+
+        var minus = document.createElement('button');
+        minus.type = 'button';
+        minus.textContent = '−';
+        minus.setAttribute('aria-label', 'Уменьшить количество дней');
+        shell.appendChild(minus);
+        shell.appendChild(input);
+
+        var plus = document.createElement('button');
+        plus.type = 'button';
+        plus.textContent = '+';
+        plus.setAttribute('aria-label', 'Увеличить количество дней');
+        shell.appendChild(plus);
+
+        function setValue(delta) {
+            var current = parseInt(input.value, 10);
+            if (!Number.isFinite(current) || current < 1) current = 3;
+            current = Math.max(1, current + delta);
+            input.value = String(current);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        minus.addEventListener('click', function () { setValue(-1); });
+        plus.addEventListener('click', function () { setValue(1); });
+        input.addEventListener('blur', function () {
+            var current = parseInt(input.value, 10);
+            if (!Number.isFinite(current) || current < 1) input.value = '3';
+        });
+    }
+
+    function decoratePaymentRow(row) {
+        if (!row || !(row instanceof Element)) return;
+        var amount = row.querySelector('input[name$="[amount]"]');
+        if (amount) decorateAmount(amount);
+
+        var daysInput = row.querySelector('input[name$="[days_count]"]');
+        if (daysInput) decorateDaysInput(daysInput);
+
+        var daysKind = row.querySelector('select[name$="[days_kind]"]');
+        if (daysKind) normalizeDaysKind(daysKind);
+    }
+
     function applyCreateLayout(form) {
         var modal = form.closest('#linear-trip-create-modal');
         if (!modal || form.dataset.p30LayoutReady === '1') return;
@@ -93,37 +174,46 @@
             applyAgency();
         }
 
-        form.querySelectorAll('input[name$="[amount]"]').forEach(function (input) {
-            if (input.dataset.p30Money === '1') return;
-            input.dataset.p30Money = '1';
-            formatAmount(input);
-            input.addEventListener('input', function () { formatAmount(input); });
-        });
+        form.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow);
     }
 
     function initializeForm(form) {
         if (!(form instanceof HTMLFormElement) || !form.matches('[data-linear-trip-form]')) return;
         deriveCarrierValue(form);
         applyCreateLayout(form);
+        form.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow);
     }
 
     function scan(root) {
         if (!root || !root.querySelectorAll) return;
         if (root.matches && root.matches('form[data-linear-trip-form]')) initializeForm(root);
         root.querySelectorAll('form[data-linear-trip-form]').forEach(initializeForm);
-        root.querySelectorAll('input[name$="[amount]"]').forEach(function (input) {
-            if (!input.closest('#linear-trip-create-modal') || input.dataset.p30Money === '1') return;
-            input.dataset.p30Money = '1';
-            formatAmount(input);
-            input.addEventListener('input', function () { formatAmount(input); });
-        });
+        if (root.matches && root.matches('[data-payment-row]')) decoratePaymentRow(root);
+        root.querySelectorAll('[data-payment-row]').forEach(decoratePaymentRow);
     }
 
     document.addEventListener('change', function (event) {
         var target = event.target;
-        if (!(target instanceof HTMLSelectElement) || target.name !== 'route_executor_id') return;
-        var form = target.closest('form[data-linear-trip-form]');
-        if (form) deriveCarrierValue(form);
+        if (target instanceof HTMLSelectElement && target.name === 'route_executor_id') {
+            var form = target.closest('form[data-linear-trip-form]');
+            if (form) deriveCarrierValue(form);
+            return;
+        }
+
+        if (target instanceof HTMLSelectElement && target.matches('[data-condition-type]')) {
+            var row = target.closest('[data-payment-row]');
+            if (!row) return;
+            window.setTimeout(function () {
+                decoratePaymentRow(row);
+                var daysField = row.querySelector('[data-days-count-wrapper]');
+                if (daysField && !daysField.classList.contains('is-hidden')) {
+                    var daysInput = daysField.querySelector('input[name$="[days_count]"]');
+                    if (daysInput && !daysInput.value) daysInput.value = '3';
+                    var kind = row.querySelector('select[name$="[days_kind]"]');
+                    if (kind && !kind.value) kind.value = 'working';
+                }
+            }, 0);
+        }
     }, true);
 
     document.addEventListener('submit', function (event) {
