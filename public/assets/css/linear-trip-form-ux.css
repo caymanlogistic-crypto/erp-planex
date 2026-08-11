@@ -52,6 +52,16 @@
 #linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]::-webkit-outer-spin-button,#linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 #linear-trip-create-modal [data-days-kind-wrapper] .field-input{padding-left:7px;padding-right:20px;text-align:left}
 #linear-trip-create-modal .linear-trip-row-remove{flex:0 0 24px;width:24px;height:28px;margin-top:19px;font-size:17px}
+/* Searchable client/executor selector keeps native select for backend, but lets user type/filter. */
+#linear-trip-create-modal .linear-trip-searchable{position:relative;width:100%}
+#linear-trip-create-modal .linear-trip-searchable-native{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}
+#linear-trip-create-modal .linear-trip-searchable-input{width:100%;padding-right:24px}
+#linear-trip-create-modal .linear-trip-searchable:after{content:"⌄";position:absolute;right:8px;top:5px;color:var(--text-faint);pointer-events:none;font-size:12px}
+#linear-trip-create-modal .linear-trip-searchable-menu{position:absolute;z-index:1200;left:0;right:0;top:calc(100% + 2px);max-height:220px;overflow:auto;background:var(--surface-strong);border:1px solid var(--line-soft);box-shadow:0 8px 20px rgba(0,0,0,.14)}
+#linear-trip-create-modal .linear-trip-searchable-menu.is-hidden{display:none}
+#linear-trip-create-modal .linear-trip-searchable-option{display:block;width:100%;min-height:28px;padding:5px 8px;border:0;border-bottom:1px solid var(--line-hair);background:var(--surface-strong);text-align:left;color:var(--text-main);font-size:11px;white-space:normal}
+#linear-trip-create-modal .linear-trip-searchable-option:hover{background:var(--surface-muted)}
+#linear-trip-create-modal .linear-trip-searchable-empty{padding:7px 8px;color:var(--text-faint);font-size:11px}
 #linear-trip-create-modal .linear-trip-principals-section{margin-top:6px}
 /* Force exact same document-row geometry as the driver form. */
 #linear-trip-create-modal .linear-trip-layout-docs .file-list{margin-top:0;gap:8px}
