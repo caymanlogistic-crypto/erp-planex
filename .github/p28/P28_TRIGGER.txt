@@ -1,0 +1,3 @@
+P28 controlled deployment trigger.
+Target: ERPv2 only.
+Base guard: 8e0fbeb20f6d2cfaaadd436847bb210a9e50b7f4
