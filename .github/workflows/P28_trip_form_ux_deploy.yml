@@ -20,11 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Verify exact isolated diff contract
         run: |
           set -euo pipefail
+          git cat-file -e 3e0f955e0c4ecad39400debfc0fa59538120f296^{commit}
           git diff --name-only 3e0f955e0c4ecad39400debfc0fa59538120f296...HEAD | sort > /tmp/changed.txt
           cat /tmp/changed.txt
           allowed='app/View/pages/company_linear_trips.php
