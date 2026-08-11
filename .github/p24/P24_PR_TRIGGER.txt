@@ -1,0 +1,1 @@
+Trigger PR workflow after P24 control-plane workflow became available on base.
