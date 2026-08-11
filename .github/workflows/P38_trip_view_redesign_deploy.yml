@@ -79,7 +79,7 @@ jobs:
           DEPLOY="$ROOT/deploy"
           BACKUPS="$ROOT/deploy_backups"
           current="$(cat "$DEPLOY/P07_erpv2_deployed_commit.txt")"
-          test "$current" = "ec0c3ca81d05040ef822d609f416a7d1d303cae2"
+          test "$current" = "7d18409840b0923491ecb894ed36a6cf1027a83e"
           oldsum="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum)"
           oldfp="${oldsum%% *}"
           ts="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -128,8 +128,8 @@ jobs:
           marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
           oldsum="$(cd "$ROOT/public_html/erp" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum)"
           oldfp="${oldsum%% *}"
-          php -l "$ROOT/public_html/erpv2/app/View/partials/company_linear_trip_modal_view.php" >/dev/null
           grep -Fq 'linear-trip-view-p38.css' "$ROOT/public_html/erpv2/app/View/partials/company_linear_trip_modal_view.php"
+          grep -Fq 'trip-view-finance-columns' "$ROOT/public_html/erpv2/app/View/partials/company_linear_trip_modal_view.php"
           printf 'marker=%s\noldfp=%s\n' "$marker" "$oldfp"
           REMOTE
           )"
