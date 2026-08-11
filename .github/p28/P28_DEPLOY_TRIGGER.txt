@@ -1,1 +1,1 @@
-Deploy isolated trip-form UX patch after fixing YAML, full-history diff, and P07 artifact support-file requirements. Backup, marker, live CSS/HTTP, and old /erp guards remain mandatory.
+Final P28 deploy trigger after fixing workflow YAML, full-history diff, P07 support-file artifact contents, and final verification shell quoting.
