@@ -1,0 +1,114 @@
+/* P28 — Linear trip create/edit UX. Presentation only; no business logic. */
+#linear-trip-create-modal .driver-create-modal {
+  width: min(1180px, calc(100vw - 48px));
+  max-height: calc(100vh - 40px);
+}
+#linear-trip-create-modal .modal-body {
+  padding: 0;
+  overflow: auto;
+}
+#linear-trip-create-modal .linear-trip-panel { margin: 0; }
+#linear-trip-create-modal .linear-trip-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: stretch;
+  max-width: none;
+  min-height: 0;
+}
+#linear-trip-create-modal .linear-trip-layout-main {
+  min-width: 0;
+  padding: 16px 18px 18px;
+  gap: 0;
+}
+#linear-trip-create-modal .linear-trip-layout-docs {
+  min-width: 0;
+  padding: 16px 14px 18px;
+  border-left: 1px solid var(--line);
+  background: var(--surface-inspector);
+}
+#linear-trip-create-modal .section-title {
+  margin: 0 0 8px;
+}
+#linear-trip-create-modal .linear-trip-layout-main > .section-title:not(:first-child) {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-hair);
+}
+#linear-trip-create-modal .field-row-group {
+  margin-bottom: 8px;
+}
+#linear-trip-create-modal .linear-trip-row--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 10px;
+}
+#linear-trip-create-modal .field-label {
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+#linear-trip-create-modal .field-msg:empty { display: none; }
+#linear-trip-create-modal .field-msg:not(:empty) { margin-top: 3px; }
+#linear-trip-create-modal .linear-trip-textarea {
+  min-height: 62px;
+  height: 62px;
+  resize: vertical;
+}
+#linear-trip-create-modal .linear-trip-payment-card,
+#linear-trip-create-modal .linear-trip-principal-card {
+  padding: 9px 10px 10px;
+  margin-top: 7px;
+}
+#linear-trip-create-modal .linear-trip-block-head {
+  margin-bottom: 7px;
+  align-items: center;
+}
+#linear-trip-create-modal .linear-trip-payment-rows,
+#linear-trip-create-modal .linear-trip-principal-cards { gap: 7px; }
+#linear-trip-create-modal .linear-trip-payment-row {
+  grid-template-columns: minmax(112px,1.05fr) minmax(118px,.95fr) minmax(96px,.72fr) minmax(145px,1.15fr) 30px;
+  gap: 6px;
+  align-items: start;
+}
+#linear-trip-create-modal .linear-trip-payment-row [data-days-count-wrapper],
+#linear-trip-create-modal .linear-trip-payment-row [data-days-kind-wrapper],
+#linear-trip-create-modal .linear-trip-payment-row [data-specific-date-wrapper] {
+  grid-column: auto;
+}
+#linear-trip-create-modal .linear-trip-payment-row .field:has(input[name$="[condition_comment]"]) {
+  grid-column: 1 / -2;
+}
+#linear-trip-create-modal .linear-trip-row-remove {
+  width: 28px;
+  height: 28px;
+  margin-top: 20px;
+  font-size: 17px;
+}
+#linear-trip-create-modal .linear-trip-principals-section { margin-top: 8px; }
+#linear-trip-create-modal .linear-trip-layout-docs .section-title { margin-bottom: 7px; }
+#linear-trip-create-modal .linear-trip-layout-docs .document-upload-row,
+#linear-trip-create-modal .linear-trip-layout-docs .document-file-row { min-height: 40px; }
+#linear-trip-create-modal .linear-trip-layout-docs .file-list { gap: 5px; }
+#linear-trip-create-modal .modal-foot {
+  min-height: 52px;
+  padding: 9px 14px;
+}
+
+/* Edit form shares the same visual density without changing its modal shell. */
+[data-linear-trip-form] .linear-trip-layout-main { min-width: 0; }
+[data-linear-trip-form] .linear-trip-row--compact { gap: 7px 10px; }
+
+@media (max-width: 1180px) {
+  #linear-trip-create-modal .driver-create-modal { width: min(1040px, calc(100vw - 32px)); }
+  #linear-trip-create-modal .linear-trip-layout { grid-template-columns: minmax(0,1fr) 280px; }
+  #linear-trip-create-modal .linear-trip-payment-row { grid-template-columns: repeat(2,minmax(0,1fr)) 30px; }
+}
+@media (max-width: 900px) {
+  #linear-trip-create-modal .linear-trip-layout { grid-template-columns: 1fr; }
+  #linear-trip-create-modal .linear-trip-layout-docs { border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 680px) {
+  #linear-trip-create-modal .driver-create-modal { width: calc(100vw - 16px); }
+  #linear-trip-create-modal .linear-trip-row--compact,
+  #linear-trip-create-modal .linear-trip-payment-row { grid-template-columns: 1fr; }
+  #linear-trip-create-modal .linear-trip-payment-row .field:has(input[name$="[condition_comment]"]) { grid-column: auto; }
+  #linear-trip-create-modal .linear-trip-row-remove { margin-top: 0; }
+}
