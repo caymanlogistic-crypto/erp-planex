@@ -10,241 +10,206 @@ $executorPlates = trim((string) ($route['executor_primary_plate'] ?? ''));
 if (!empty($route['executor_secondary_plate'])) {
     $executorPlates .= ' + ' . $route['executor_secondary_plate'];
 }
+
+$routeStatusMap = [
+    'active' => 'Активен',
+    'completed' => 'Завершён',
+    'cancelled' => 'Отменён',
+    'draft' => 'Черновик',
+];
+$routeStatusRaw = (string) ($route['status'] ?? 'active');
+$routeStatusLabel = $routeStatusMap[$routeStatusRaw] ?? $routeStatusRaw;
+
 $documentTitles = [
     'customer_document' => 'Договор/заявка с заказчиком',
     'carrier_document' => 'Договор/заявка с перевозчиком',
     'principal_document' => 'Договор/заявка с принципалом',
 ];
-$paymentLabel = static function (array $payment): string {
-    $paymentMethod = LinearRouteService::paymentMethodLabel($payment['payment_method'] ?? null);
-    $vatLabel = LinearRouteService::vatRateLabel(isset($payment['vat_rate']) ? (string) $payment['vat_rate'] : null);
-    $parts = [
-        LinearRouteService::formatAmount($payment['amount'] ?? null),
-        $paymentMethod . ' / ' . $vatLabel,
-        (string) ($payment['payment_due_type'] ?? '—'),
-    ];
-    if (!empty($payment['payment_due_days'])) {
-        $parts[] = (int) $payment['payment_due_days'] . ' ' . (($payment['payment_due_days_kind'] ?? '') === 'calendar' ? 'календарных дней' : 'рабочих дней');
+
+$paymentTotal = static function (array $payments): float {
+    $total = 0.0;
+    foreach ($payments as $payment) {
+        $total += (float) ($payment['amount'] ?? 0);
     }
-
-    return implode(' · ', array_filter($parts, static fn(string $part): bool => trim($part) !== ''));
+    return $total;
 };
-$financeSectionRendered = false;
+
+$customerPayments = $route['payments']['customer'] ?? [];
+$carrierPayments = $route['payments']['carrier'] ?? [];
+$customerTotal = $paymentTotal($customerPayments);
+$carrierTotal = $paymentTotal($carrierPayments);
+$margin = $customerTotal - $carrierTotal;
+
+$paymentDueLabel = static function (array $payment): string {
+    $dueType = trim((string) ($payment['payment_due_type'] ?? ''));
+    $parts = [];
+    if ($dueType !== '') {
+        $parts[] = $dueType;
+    }
+    if (!empty($payment['payment_due_days'])) {
+        $parts[] = (int) $payment['payment_due_days'] . ' ' . (($payment['payment_due_days_kind'] ?? '') === 'calendar' ? 'РД' : 'БД');
+    }
+    if (!empty($payment['calculated_due_date'])) {
+        $ts = strtotime((string) $payment['calculated_due_date']);
+        if ($ts !== false) {
+            $parts[] = date('d.m.Y', $ts);
+        }
+    }
+    return $parts !== [] ? implode(' · ', $parts) : '—';
+};
+
+$renderPayment = static function (array $payment) use ($paymentDueLabel): void {
+    $methodLabel = LinearRouteService::paymentMethodLabel($payment['payment_method'] ?? null);
+    $vatLabel = LinearRouteService::vatRateLabel(isset($payment['vat_rate']) ? (string) $payment['vat_rate'] : null);
+    $status = $payment['payment_status'] ?? 'unpaid';
+    ?>
+    <div class="trip-view-payment">
+      <div class="trip-view-payment-main">
+        <strong class="trip-view-payment-amount"><?= e(LinearRouteService::formatAmount($payment['amount'] ?? null)) ?> ₽</strong>
+        <span class="trip-view-payment-meta"><?= e($methodLabel) ?> · <?= e($vatLabel) ?></span>
+      </div>
+      <div class="trip-view-payment-side">
+        <span class="<?= e(LinearRouteService::paymentStatusBadgeClass($status)) ?>"><?= e(LinearRouteService::paymentStatusLabel($status)) ?></span>
+        <span class="trip-view-payment-due"><?= e($paymentDueLabel($payment)) ?></span>
+      </div>
+    </div>
+    <?php
+};
 ?>
-<div class="modal-body driver-modal-body">
-  <div class="driver-modal-layout">
-    <div class="driver-modal-main">
-      <h3 class="driver-view-name"><?= e($routeTitle) ?></h3>
+<div class="modal-body driver-modal-body trip-view-modal-body">
+  <div class="driver-modal-layout trip-view-layout">
+    <div class="driver-modal-main trip-view-main">
+      <div class="trip-view-header">
+        <div>
+          <h3 class="driver-view-name trip-view-title"><?= e($routeTitle) ?></h3>
+          <div class="trip-view-type"><?= e(LinearRouteService::routeTypeLabel((string) ($route['route_type'] ?? ''))) ?></div>
+        </div>
+        <span class="trip-view-route-status"><?= e($routeStatusLabel) ?></span>
+      </div>
 
-      <div class="driver-view-card">
-        <div class="driver-view-grid">
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Тип рейса</div>
-            <div class="driver-view-cell driver-view-cell-value"><?= e(LinearRouteService::routeTypeLabel((string) ($route['route_type'] ?? ''))) ?></div>
+      <section class="trip-view-section trip-view-section-main">
+        <div class="trip-view-section-title">Основное</div>
+        <div class="trip-view-summary-grid">
+          <div class="trip-view-summary-item trip-view-summary-item-wide">
+            <span class="trip-view-label">Заказчик</span>
+            <strong><?= e((string) ($route['client_name'] ?? $na)) ?></strong>
           </div>
 
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Статус</div>
-            <div class="driver-view-cell driver-view-cell-value"><?= e((string) ($route['status'] ?? 'active')) ?></div>
+          <div class="trip-view-summary-item trip-view-summary-item-wide">
+            <span class="trip-view-label">Исполнитель рейса</span>
+            <strong><?= $executorName !== '' ? e($executorName) : e($na) ?></strong>
+            <?php if ($executorPlates !== ''): ?>
+            <span class="trip-view-hint"><?= e($executorPlates) ?></span>
+            <?php endif; ?>
           </div>
 
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Заказчик</div>
-            <div class="driver-view-cell driver-view-cell-value"><?= e((string) ($route['client_name'] ?? $na)) ?></div>
-          </div>
-
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Перевозчик</div>
-            <div class="driver-view-cell driver-view-cell-value"><?= e((string) ($route['carrier_name'] ?? $na)) ?></div>
+          <div class="trip-view-summary-item">
+            <span class="trip-view-label">Плановая дата загрузки</span>
+            <strong><?= e(ui_date($route['planned_loading_date'] ?? null)) ?></strong>
           </div>
 
           <?php if (($route['route_type'] ?? '') === LinearRouteService::ROUTE_TYPE_AGENCY): ?>
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Принципалы</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <?php foreach (($route['principal_items'] ?? []) as $principal): ?>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Юрлицо</div>
-                <div><?= e((string) ($principal['display_name'] ?? $na)) ?></div>
-              </div>
-              <?php endforeach; ?>
-            </div>
+          <div class="trip-view-summary-item">
+            <span class="trip-view-label">Агентский договор</span>
+            <strong>Да</strong>
           </div>
           <?php endif; ?>
+        </div>
 
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Исполнитель рейса</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <?= $executorName !== '' ? e($executorName) : '<span class="is-na">' . e($na) . '</span>' ?>
-              <?php if ($executorPlates !== ''): ?>
-              <div class="driver-view-hint"><?= e($executorPlates) ?></div>
+        <?php if (($route['route_type'] ?? '') === LinearRouteService::ROUTE_TYPE_AGENCY && !empty($route['principal_items'])): ?>
+        <div class="trip-view-principals">
+          <span class="trip-view-label">Принципалы</span>
+          <div class="trip-view-principal-list">
+            <?php foreach (($route['principal_items'] ?? []) as $principal): ?>
+            <span><?= e((string) ($principal['display_name'] ?? $na)) ?></span>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+      </section>
+
+      <?php if ($isFinanceRealm): ?>
+      <section class="trip-view-section trip-view-section-finance">
+        <div class="trip-view-section-title">Финансовые условия</div>
+
+        <div class="trip-view-finance-columns">
+          <div class="trip-view-finance-column">
+            <div class="trip-view-finance-head">
+              <span>Заказчик</span>
+              <strong><?= e(LinearRouteService::formatAmount($customerTotal)) ?> ₽</strong>
+            </div>
+            <div class="trip-view-payment-list">
+              <?php if ($customerPayments !== []): ?>
+                <?php foreach ($customerPayments as $payment): ?>
+                  <?php $renderPayment($payment); ?>
+                <?php endforeach; ?>
+              <?php else: ?>
+              <div class="trip-view-empty">Оплаты не заданы</div>
               <?php endif; ?>
             </div>
           </div>
 
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Тип груза</div>
-            <div class="driver-view-cell driver-view-cell-value"><?= e((string) ($route['cargo_type_name'] ?? $na)) ?></div>
-          </div>
-
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Плановые даты</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Загрузка</div>
-                <div><?= e(ui_date($route['planned_loading_date'] ?? null)) ?></div>
-              </div>
-              <?php if (LinearRouteService::shouldShowPlannedUnloading($route['planned_loading_date'] ?? null, $route['planned_unloading_date'] ?? null)): ?>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Выгрузка</div>
-                <div><?= e(ui_date($route['planned_unloading_date'] ?? null)) ?></div>
-              </div>
+          <div class="trip-view-finance-column">
+            <div class="trip-view-finance-head">
+              <span>Перевозчик</span>
+              <strong><?= e(LinearRouteService::formatAmount($carrierTotal)) ?> ₽</strong>
+            </div>
+            <div class="trip-view-payment-list">
+              <?php if ($carrierPayments !== []): ?>
+                <?php foreach ($carrierPayments as $payment): ?>
+                  <?php $renderPayment($payment); ?>
+                <?php endforeach; ?>
+              <?php else: ?>
+              <div class="trip-view-empty">Оплаты не заданы</div>
               <?php endif; ?>
             </div>
           </div>
+        </div>
 
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Фактические даты</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Загрузка</div>
-                <div><?= e(ui_date($route['actual_loading_date'] ?? null)) ?></div>
-              </div>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Выгрузка</div>
-                <div><?= e(ui_date($route['actual_unloading_date'] ?? null)) ?></div>
-              </div>
-            </div>
-          </div>
-
-          <?php if ($isFinanceRealm): ?>
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Оплаты заказчика</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <?php foreach (($route['payments']['customer'] ?? []) as $payment): ?>
-              <div class="driver-view-inline-row">
-                <div><?= e($paymentLabel($payment)) ?></div>
-              </div>
-              <?php endforeach; ?>
-            </div>
-          </div>
-
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Оплаты перевозчика</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <?php foreach (($route['payments']['carrier'] ?? []) as $payment): ?>
-              <div class="driver-view-inline-row">
-                <div><?= e($paymentLabel($payment)) ?></div>
-              </div>
-              <?php endforeach; ?>
-            </div>
-          </div>
-
+        <?php if (($route['route_type'] ?? '') === LinearRouteService::ROUTE_TYPE_AGENCY): ?>
           <?php foreach (($route['principal_items'] ?? []) as $principal): ?>
             <?php $principalPayments = $route['payments']['principals'][(int) ($principal['id'] ?? 0)] ?? []; ?>
-          <div class="driver-view-row">
-            <div class="driver-view-cell driver-view-cell-label">Оплаты принципала</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label"><?= e((string) ($principal['display_name'] ?? $na)) ?></div>
-                <div></div>
-              </div>
+            <?php if ($principalPayments === []) continue; ?>
+          <div class="trip-view-principal-finance">
+            <div class="trip-view-finance-head">
+              <span>Принципал · <?= e((string) ($principal['display_name'] ?? $na)) ?></span>
+              <strong><?= e(LinearRouteService::formatAmount($paymentTotal($principalPayments))) ?> ₽</strong>
+            </div>
+            <div class="trip-view-payment-list trip-view-payment-list-principal">
               <?php foreach ($principalPayments as $payment): ?>
-              <div class="driver-view-inline-row">
-                <div><?= e($paymentLabel($payment)) ?></div>
-              </div>
+                <?php $renderPayment($payment); ?>
               <?php endforeach; ?>
             </div>
           </div>
           <?php endforeach; ?>
+        <?php endif; ?>
 
-          <?php
-          $allFinancePayments = array_merge(
-              $route['payments']['customer'] ?? [],
-              $route['payments']['carrier'] ?? [],
-              ...array_map(static fn(array $p): array => $p, array_values($route['payments']['principals'] ?? []))
-          );
-          $paymentDetailLines = static function (array $payment): void {
-              $methodLabel = LinearRouteService::paymentMethodLabel($payment['payment_method'] ?? null);
-              $vatLabel = LinearRouteService::vatRateLabel(isset($payment['vat_rate']) ? (string) $payment['vat_rate'] : null);
-              $dueType = (string) ($payment['payment_due_type'] ?? '—');
-              $dueDate = $payment['calculated_due_date'] ?? null;
-              $dueDateStr = $dueDate !== null ? date('d.m.Y', strtotime($dueDate)) : '—';
-              $dueDaysStr = '';
-              if (!empty($payment['payment_due_days'])) {
-                  $dueDaysStr = (int) $payment['payment_due_days'] . ' ' . ((string) ($payment['payment_due_days_kind'] ?? '') === 'calendar' ? 'кал.' : 'раб.');
-              }
-              ?>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Статус</div>
-                <div>
-                  <span class="<?= e(LinearRouteService::paymentStatusBadgeClass($payment['payment_status'] ?? 'unpaid')) ?>"><?= e(LinearRouteService::paymentStatusLabel($payment['payment_status'] ?? 'unpaid')) ?></span>
-                </div>
-              </div>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Сумма</div>
-                <div><?= e(LinearRouteService::formatAmount($payment['amount'] ?? null)) ?></div>
-              </div>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Оплата / НДС</div>
-                <div><?= e($methodLabel) ?> / <?= e($vatLabel) ?></div>
-              </div>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Срок</div>
-                <div><?= e($dueType) ?><?= $dueDaysStr !== '' ? ' · ' . e($dueDaysStr) : '' ?></div>
-              </div>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Расч. дата</div>
-                <div><?= e($dueDateStr) ?></div>
-              </div>
-              <?php
-          };
-          ?>
-          <?php if (!empty($allFinancePayments)): ?>
-          <?php $financeSectionRendered = true; ?>
-          <div class="driver-view-row driver-view-row-wide">
-            <div class="driver-view-cell driver-view-cell-label">Финансы рейса</div>
-            <div class="driver-view-cell driver-view-cell-value">
-              <?php foreach (($route['payments']['customer'] ?? []) as $payment): ?>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Заказчик</div>
-                <div></div>
-              </div>
-              <?php $paymentDetailLines($payment); ?>
-              <?php endforeach; ?>
-              <?php foreach (($route['payments']['carrier'] ?? []) as $payment): ?>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Перевозчик</div>
-                <div></div>
-              </div>
-              <?php $paymentDetailLines($payment); ?>
-              <?php endforeach; ?>
-              <?php foreach (($route['principal_items'] ?? []) as $principal): ?>
-                <?php $principalPayments = $route['payments']['principals'][(int) ($principal['id'] ?? 0)] ?? []; ?>
-                <?php foreach ($principalPayments as $payment): ?>
-              <div class="driver-view-inline-row">
-                <div class="driver-view-inline-label">Принципал</div>
-                <div></div>
-              </div>
-              <?php $paymentDetailLines($payment); ?>
-                <?php endforeach; ?>
-              <?php endforeach; ?>
-            </div>
+        <div class="trip-view-totals">
+          <div>
+            <span>Заказчик</span>
+            <strong><?= e(LinearRouteService::formatAmount($customerTotal)) ?> ₽</strong>
           </div>
-          <?php endif; ?>
-          <?php endif; ?>
-
-          <?php if (!empty($route['comments'])): ?>
-          <div class="driver-view-row driver-view-row-wide">
-            <div class="driver-view-cell driver-view-cell-label">Комментарий</div>
-            <div class="driver-view-cell driver-view-cell-value driver-view-comments"><?= e($route['comments']) ?></div>
+          <div>
+            <span>Перевозчик</span>
+            <strong><?= e(LinearRouteService::formatAmount($carrierTotal)) ?> ₽</strong>
           </div>
-          <?php endif; ?>
+          <div class="trip-view-margin <?= $margin < 0 ? 'is-negative' : '' ?>">
+            <span>Маржа</span>
+            <strong><?= e(LinearRouteService::formatAmount($margin)) ?> ₽</strong>
+          </div>
         </div>
-      </div>
+      </section>
+      <?php endif; ?>
+
+      <?php if (!empty($route['comments'])): ?>
+      <section class="trip-view-section trip-view-section-comment">
+        <div class="trip-view-section-title">Комментарий</div>
+        <div class="trip-view-comment-text"><?= nl2br(e((string) $route['comments'])) ?></div>
+      </section>
+      <?php endif; ?>
     </div>
 
-    <div class="driver-modal-docs">
+    <div class="driver-modal-docs trip-view-docs">
       <div class="section-title driver-docs-heading">Документы</div>
       <div class="file-list">
         <?php foreach ($documentTitles as $docKey => $docTitle): ?>
