@@ -76,6 +76,7 @@ $renderPayment = static function (array $payment) use ($paymentDueLabel): void {
     <?php
 };
 ?>
+<link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-view-p38.css') ?>">
 <div class="modal-body driver-modal-body trip-view-modal-body">
   <div class="driver-modal-layout trip-view-layout">
     <div class="driver-modal-main trip-view-main">
@@ -223,14 +224,8 @@ $renderPayment = static function (array $payment) use ($paymentDueLabel): void {
             <div class="file-name"><?= e($docTitle) ?></div>
             <div class="file-meta"><?= e($document['original_name'] ?? $document['stored_name'] ?? 'Файл') ?></div>
           </div>
-          <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window">
-            <span>Просмотр</span>
-          </a>
-          <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M8 2.5V9.5M8 9.5L5.5 7M8 9.5L10.5 7M3 12.5H13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </a>
+          <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window"><span>Просмотр</span></a>
+          <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5V9.5M8 9.5L5.5 7M8 9.5L10.5 7M3 12.5H13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </div>
             <?php endforeach; ?>
         <?php endforeach; ?>
@@ -239,18 +234,9 @@ $renderPayment = static function (array $payment) use ($paymentDueLabel): void {
             <?php $badge = DocumentService::detectDocumentBadge($document['original_name'] ?? $document['stored_name'] ?? null, $document['mime_type'] ?? null); ?>
         <div class="file-item file-item-predef document-file-row has-file has-existing-file driver-doc-view-item">
           <div class="file-type-badge <?= e($badge['badge_class']) ?>"><?= e($badge['badge_text']) ?></div>
-          <div class="file-info">
-            <div class="file-name"><?= e($document['document_type'] ?? $document['type_name'] ?? 'Документ') ?></div>
-            <div class="file-meta"><?= e($document['original_name'] ?? $document['stored_name'] ?? 'Файл') ?></div>
-          </div>
-          <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window">
-            <span>Просмотр</span>
-          </a>
-          <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M8 2.5V9.5M8 9.5L5.5 7M8 9.5L10.5 7M3 12.5H13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </a>
+          <div class="file-info"><div class="file-name"><?= e($document['document_type'] ?? $document['type_name'] ?? 'Документ') ?></div><div class="file-meta"><?= e($document['original_name'] ?? $document['stored_name'] ?? 'Файл') ?></div></div>
+          <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window"><span>Просмотр</span></a>
+          <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5V9.5M8 9.5L5.5 7M8 9.5L10.5 7M3 12.5H13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </div>
         <?php endforeach; ?>
 
@@ -264,14 +250,10 @@ $renderPayment = static function (array $payment) use ($paymentDueLabel): void {
 
 <div class="modal-foot is-spaced">
   <div class="modal-foot-actions">
-    <?php if ($canDelete): ?>
-    <button type="button" class="btn btn-ghost" data-linear-trip-delete-btn>Удалить</button>
-    <?php endif; ?>
+    <?php if ($canDelete): ?><button type="button" class="btn btn-ghost" data-linear-trip-delete-btn>Удалить</button><?php endif; ?>
   </div>
   <div class="modal-foot-actions">
     <button type="button" class="btn btn-ghost" data-linear-trip-view-close-btn>Закрыть</button>
-    <?php if ($canEdit): ?>
-    <button type="button" class="btn btn-primary" data-linear-trip-edit-btn>Редактировать</button>
-    <?php endif; ?>
+    <?php if ($canEdit): ?><button type="button" class="btn btn-primary" data-linear-trip-edit-btn>Редактировать</button><?php endif; ?>
   </div>
 </div>
