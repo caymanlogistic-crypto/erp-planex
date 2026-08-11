@@ -87,15 +87,13 @@ if (!function_exists('handleCompanyDriverCreate')) {
             $localDbConfig = companyDatabaseConfig($config, $company);
             $localDb = new \App\Core\Database($localDbConfig);
             $localPdo = $localDb->connection();
-            applyLocalMigrations($localPdo);
 
             try {
                 $localPdo->query("SELECT 1 FROM drivers LIMIT 1")->fetch();
             } catch (\Exception $e) {
                 $migrationSql = file_get_contents(base_path('database/migrations-local/004_create_company_drivers.sql'));
                 $localPdo->exec($migrationSql);
-                applyLocalMigrations($localPdo);
-            }
+                }
 
             try {
                 $localPdo->query("SELECT 1 FROM document_types LIMIT 1")->fetch();
@@ -244,31 +242,31 @@ if (!function_exists('handleCompanyDriverCreate')) {
             $old['email'] = $email;
 
             if ($fullName === null || $fullName === false) {
-                $errors['full_name'] = 'ФИО: 3 слова';
+                $errors['full_name'] = 'Укажите ФИО полностью: фамилия, имя и отчество';
             }
             if ($phoneRaw !== '' && $phone === null) {
-                $errors['phone'] = 'Неверный формат';
+                $errors['phone'] = 'Телефон должен содержать 10 или 11 цифр, например +7 900 000-00-00';
             }
             if ($licenseNumberRaw !== '' && $licenseNumber === null) {
-                $errors['license_number'] = 'Нужно 10 цифр';
+                $errors['license_number'] = 'Номер водительского удостоверения должен содержать 10 цифр';
             }
             if ($licenseIssueDateRaw !== '' && $licenseIssueDate === false) {
-                $errors['license_issue_date'] = 'Неверная дата';
+                $errors['license_issue_date'] = 'Укажите корректную дату выдачи ВУ в формате ДД.ММ.ГГГГ';
             }
             if ($passportNumberRaw !== '' && $passportNumber === null) {
-                $errors['passport_number'] = 'Нужно 10 цифр';
+                $errors['passport_number'] = 'Серия и номер паспорта должны содержать 10 цифр';
             }
             if ($passportDepartmentCodeRaw !== '' && $passportDepartmentCode === null) {
-                $errors['passport_department_code'] = 'Формат 000-000';
+                $errors['passport_department_code'] = 'Код подразделения должен состоять из 6 цифр в формате 000-000';
             }
             if ($passportIssueDateRaw !== '' && $passportIssueDate === false) {
-                $errors['passport_issue_date'] = 'Неверная дата';
+                $errors['passport_issue_date'] = 'Укажите корректную дату выдачи паспорта в формате ДД.ММ.ГГГГ';
             }
             if ($snilsRaw !== '' && $snils === null) {
-                $errors['snils'] = 'Нужно 11 цифр';
+                $errors['snils'] = 'СНИЛС должен содержать 11 цифр';
             }
             if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors['email'] = 'Неверный email';
+                $errors['email'] = 'Укажите корректный email, например driver@example.ru';
             }
 
             if (!empty($errors)) {
@@ -540,10 +538,10 @@ if (!function_exists('handleCompanyDriverCreate')) {
             $success = true;
         } catch (\PDOException $e) {
             $company = $company ?? null;
-            $formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';
+            $formError = 'Не удалось сохранить водителя из-за технической ошибки. Если рядом с полями нет подсказки, ошибка не связана с заполнением формы — сообщите администратору.';
         } catch (\Exception $e) {
             $company = $company ?? null;
-            $formError = 'Ошибка создания водителя. Проверьте заполнение формы и попробуйте ещё раз.';
+            $formError = 'Не удалось сохранить водителя из-за технической ошибки. Если рядом с полями нет подсказки, ошибка не связана с заполнением формы — сообщите администратору.';
         }
 
         $renderResponse();

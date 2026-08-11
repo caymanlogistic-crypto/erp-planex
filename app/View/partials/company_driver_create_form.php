@@ -55,7 +55,7 @@ $driverFormClass = $driverFormClass ?? 'panel';
                 <div class="driver-contact-stack">
                     <div class="driver-contact-main-row">
                         <div class="field field-w-phone<?= !empty($errors['phone']) ? ' is-error' : '' ?>">
-                            <label class="field-label">Телефон <span class="req">*</span></label>
+                            <label class="field-label">Телефон</label>
                             <input type="text" name="phone" class="field-input"
                                    placeholder="+7 900 000-00-00"
                                    value="<?= e($old['phone'] ?? '') ?>">

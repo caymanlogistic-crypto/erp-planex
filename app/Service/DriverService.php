@@ -32,7 +32,6 @@ final class DriverService
         $localDbConfig = companyDatabaseConfig($this->config, $company);
         $localDb = new Database($localDbConfig);
         $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
         $this->ensureDriverTables($localPdo);
         return $localPdo;
     }
