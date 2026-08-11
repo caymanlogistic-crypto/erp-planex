@@ -1,4 +1,4 @@
-/* P30 — Linear trip create UX. Scoped to the trip modal; no global ERP overrides. */
+/* P30/P32 — Linear trip create UX. Scoped to the trip modal; no global ERP overrides. */
 #linear-trip-create-modal .driver-create-modal{width:min(1100px,calc(100vw - 48px));max-height:calc(100vh - 36px)}
 #linear-trip-create-modal .modal-body{padding:0;overflow:auto}
 #linear-trip-create-modal .linear-trip-panel{margin:0}
@@ -11,24 +11,16 @@
 #linear-trip-create-modal .field-label{margin-bottom:3px;line-height:1.2}
 #linear-trip-create-modal .field-msg:empty{display:none}
 #linear-trip-create-modal .field-msg:not(:empty){margin-top:2px}
-
-/* Primary create row: date + customer + route executor on one line. */
 #linear-trip-create-modal .linear-trip-primary-row{display:grid;grid-template-columns:148px minmax(185px,1fr) minmax(285px,1.55fr);gap:8px;align-items:start;margin-bottom:5px}
 #linear-trip-create-modal .linear-trip-primary-row>.field{min-width:0}
 #linear-trip-create-modal .linear-trip-agency-toggle{display:inline-flex;align-items:center;gap:7px;min-height:24px;margin:0 0 7px;font-size:11px;font-weight:600;color:var(--text-main);cursor:pointer}
 #linear-trip-create-modal .linear-trip-agency-toggle input{width:14px;height:14px;margin:0;accent-color:var(--accent)}
-
-/* Remaining main fields stay compact. */
 #linear-trip-create-modal .linear-trip-row--compact{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 8px}
 #linear-trip-create-modal .linear-trip-row--compact>.field{flex:0 0 280px;min-width:0}
-#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="planned_unloading_date"]),
-#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_loading_date"]),
-#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_unloading_date"]){flex-basis:148px}
+#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="planned_unloading_date"]),#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_loading_date"]),#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_unloading_date"]){flex-basis:148px}
 #linear-trip-create-modal .linear-trip-row--compact>.field:has([name="carrier_contractor_id"]){flex-basis:300px}
 #linear-trip-create-modal .linear-trip-row--compact>.field:has([name="cargo_type_name"]){flex-basis:255px}
 #linear-trip-create-modal .linear-trip-textarea{min-height:54px;height:54px;resize:vertical}
-
-/* Financial conditions are a plain section, like Основное: no nested cards/extra boxes. */
 #linear-trip-create-modal .linear-trip-payment-card{padding:0;margin:0 0 9px;border:0!important;background:transparent!important;box-shadow:none!important}
 #linear-trip-create-modal .linear-trip-payment-card--nested{margin-top:6px}
 #linear-trip-create-modal .linear-trip-principal-card{padding:0;margin-top:7px;border:0!important;background:transparent!important;box-shadow:none!important}
@@ -36,25 +28,36 @@
 #linear-trip-create-modal .linear-trip-payment-rows,#linear-trip-create-modal .linear-trip-principal-cards{gap:5px}
 #linear-trip-create-modal .linear-trip-payment-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:5px 6px}
 #linear-trip-create-modal .linear-trip-payment-row>.field{flex:0 0 auto;min-width:0}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[amount]"]){flex-basis:128px;position:relative}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[payment_method]"]){flex-basis:138px}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[vat_rate]"]){flex-basis:104px}
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[condition_type]"]){flex-basis:170px}
-#linear-trip-create-modal .linear-trip-payment-row>[data-days-count-wrapper]{flex-basis:58px}
-#linear-trip-create-modal .linear-trip-payment-row>[data-days-kind-wrapper]{flex-basis:132px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[amount]"]){flex-basis:108px;position:relative}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[payment_method]"]){flex-basis:116px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[vat_rate]"]){flex-basis:96px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[condition_type]"]){flex-basis:168px}
+#linear-trip-create-modal .linear-trip-payment-row>[data-days-count-wrapper]{flex-basis:94px}
+#linear-trip-create-modal .linear-trip-payment-row>[data-days-kind-wrapper]{flex-basis:68px}
 #linear-trip-create-modal .linear-trip-payment-row>[data-specific-date-wrapper]{flex-basis:146px}
 #linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[condition_comment]"]){flex-basis:270px}
 
-/* Money input: 1 233 567, left aligned, ruble suffix inside the control on the right. */
-#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[amount]"])::after{content:"₽";position:absolute;right:8px;top:26px;height:26px;display:flex;align-items:center;color:var(--text-muted);font-size:11px;font-weight:700;pointer-events:none}
-#linear-trip-create-modal .linear-trip-payment-row input[name$="[amount]"]{padding-left:8px;padding-right:24px;text-align:left;font-variant-numeric:tabular-nums}
+/* Money control follows ERP date-control language: value + separated right suffix cell. */
+#linear-trip-create-modal .linear-trip-money-shell{display:flex;height:28px;border:1px solid var(--line-soft);border-radius:2px;background:var(--surface-field);overflow:hidden}
+#linear-trip-create-modal .linear-trip-money-shell:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,71,24,.1)}
+#linear-trip-create-modal .linear-trip-money-shell input[name$="[amount]"]{width:100%;height:26px;min-width:0;border:0!important;box-shadow:none!important;outline:0!important;padding:0 7px;text-align:right;font-variant-numeric:tabular-nums;background:transparent}
+#linear-trip-create-modal .linear-trip-money-suffix{flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center;border-left:1px solid var(--line-hair);background:var(--surface-muted);color:var(--text-faint);font-size:11px;font-weight:700;user-select:none}
+
+/* Days is one compact stepper: minus | value | plus. */
+#linear-trip-create-modal .linear-trip-days-stepper{display:grid;grid-template-columns:27px 38px 27px;height:28px;border:1px solid var(--line-soft);border-radius:2px;background:var(--surface-field);overflow:hidden}
+#linear-trip-create-modal .linear-trip-days-stepper:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,71,24,.1)}
+#linear-trip-create-modal .linear-trip-days-stepper button{height:26px;padding:0;border:0;background:var(--surface-muted);color:var(--text-main);font-size:14px;line-height:26px}
+#linear-trip-create-modal .linear-trip-days-stepper button:first-child{border-right:1px solid var(--line-hair)}
+#linear-trip-create-modal .linear-trip-days-stepper button:last-child{border-left:1px solid var(--line-hair)}
+#linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]{width:38px;height:26px;border:0!important;box-shadow:none!important;outline:0!important;padding:0;text-align:center;background:transparent;-moz-appearance:textfield}
+#linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]::-webkit-outer-spin-button,#linear-trip-create-modal .linear-trip-days-stepper input[name$="[days_count]"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#linear-trip-create-modal [data-days-kind-wrapper] .field-input{padding-left:7px;padding-right:20px;text-align:left}
 #linear-trip-create-modal .linear-trip-row-remove{flex:0 0 28px;width:28px;height:28px;margin-top:19px;font-size:17px}
 #linear-trip-create-modal .linear-trip-principals-section{margin-top:6px}
 #linear-trip-create-modal .linear-trip-layout-docs .section-title{margin-bottom:6px}
 #linear-trip-create-modal .linear-trip-layout-docs .document-upload-row,#linear-trip-create-modal .linear-trip-layout-docs .document-file-row{min-height:38px}
 #linear-trip-create-modal .linear-trip-layout-docs .file-list{gap:4px}
 #linear-trip-create-modal .modal-foot{min-height:48px;padding:7px 12px}
-
 [data-linear-trip-form] .linear-trip-layout-main{min-width:0}
 [data-linear-trip-form] .linear-trip-row--compact{gap:6px 8px}
 @media(max-width:900px){#linear-trip-create-modal .linear-trip-layout{grid-template-columns:1fr}#linear-trip-create-modal .linear-trip-layout-docs{border-left:0;border-top:1px solid var(--line)}#linear-trip-create-modal .linear-trip-primary-row{grid-template-columns:148px minmax(0,1fr)}}
