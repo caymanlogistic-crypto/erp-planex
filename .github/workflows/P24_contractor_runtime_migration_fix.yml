@@ -1,0 +1,184 @@
+name: P24 Contractor Runtime Migration Fix
+
+on:
+  push:
+    branches: [chatgpt/p24-contractor-migration-fix-20260811]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpv2-p24-contractor-fix
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-verify:
+    if: ${{ startsWith(github.event.head_commit.message, 'P24 DEPLOY') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Static regression gate
+        run: |
+          set -euo pipefail
+          php -l app/Service/ContractorService.php
+          php tests/p24_contractor_runtime_migration_regression_test.php
+          ! grep -A12 -F 'function getLocalPdo' app/Service/ContractorService.php | grep -F 'applyLocalMigrations'
+
+      - name: Build exact application artifact
+        id: build
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          artifact="p24_erpv2_${sha}.tar.gz"
+          git archive --format=tar --output=p24_source.tar "$sha" -- app bootstrap config database public scripts tools tests
+          gzip -n p24_source.tar
+          mv p24_source.tar.gz "$artifact"
+          printf 'sha=%s\nartifact=%s\nsha256=%s\n' "$sha" "$artifact" "$(sha256sum "$artifact" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p24_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p24_key" "$HOME/.ssh/known_hosts"
+
+      - name: Backup current ERPV2 and fingerprint old ERP
+        id: before
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p24_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          OLD="$ROOT/public_html/erp"
+          current="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          oldfp="$(cd "$OLD" && find app bootstrap config database public -type f -printf '%P %s %T@\n' 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+          ts="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup="$ROOT/deploy_backups/P24_${ts}_${current}"
+          mkdir -p "$backup"
+          tar -C "$LIVE" -czf "$backup/erpv2_current.tar.gz" .
+          test -s "$backup/erpv2_current.tar.gz"
+          printf 'current=%s\noldfp=%s\nbackup=%s\n' "$current" "$oldfp" "$backup"
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          while IFS='=' read -r k v; do case "$k" in current|oldfp|backup) printf '%s=%s\n' "$k" "$v" >> "$GITHUB_OUTPUT";; esac; done <<< "$out"
+
+      - name: Deploy exact SHA through P07
+        env:
+          SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          ARTIFACT: ${{ steps.build.outputs.artifact }}
+          ARTIFACT_SHA: ${{ steps.build.outputs.sha256 }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          remote="/home/s/spugovxsim/planexp/deploy/P24_artifact_${SOURCE_SHA}.tar.gz"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p24_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$ARTIFACT" "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p24_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "/home/s/spugovxsim/planexp/deploy/P07_deploy_erpv2.sh '$remote' '$ARTIFACT_SHA' '$SOURCE_SHA'"
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p24_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SOURCE_SHA"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p24_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+
+      - name: Verify old ERP unchanged and public login alive
+        env:
+          SOURCE_SHA: ${{ steps.build.outputs.sha }}
+          OLD_FP_BEFORE: ${{ steps.before.outputs.oldfp }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p24_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          oldfp="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p24_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cd /home/s/spugovxsim/planexp/public_html/erp && find app bootstrap config database public -type f -printf "%P %s %T@\n" 2>/dev/null | sort | sha256sum | awk '\''{print $1}'\''')"
+          test "$marker" = "$SOURCE_SHA"
+          test "$oldfp" = "$OLD_FP_BEFORE"
+          test "$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)" = 200
+
+      - name: Prepare browser credentials
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+          mkdir -p .github/p11
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p24_cred_key"
+            chmod 600 "$HOME/.ssh/p24_cred_key"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p24_cred_key" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/p24_cred_key"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P24_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Runtime regression - contractor POST must not execute migration 027
+        run: |
+          cat > /tmp/p24_runtime.js <<'JS'
+          const { chromium } = require('playwright');
+          const creds = JSON.parse(Buffer.from(process.env.P24_CREDENTIALS_B64,'base64').toString('utf8'));
+          const cred = creds.find(c => c.role === 'company_owner') || creds.find(c => c.role === 'senior_logist') || creds[0];
+          if (!cred) throw new Error('No runtime credential');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+            const page=await context.newPage();
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(cred.username);
+            await page.locator('input[type="password"]').first().fill(cred.password);
+            await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+            if (/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('Login failed');
+            await page.goto('https://plan-ex.ru/erpv2/company/contractors/create',{waitUntil:'domcontentloaded'});
+            const form=page.locator('form').filter({has:page.locator('input[name="inn"]')}).first();
+            if (!(await form.count())) throw new Error('Contractor form not found');
+            await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),form.evaluate(f=>f.submit())]);
+            await page.waitForTimeout(500);
+            const text=await page.locator('body').innerText();
+            if (/checksum mismatch|027_vehicle_unit_document_types|Local migration failed/i.test(text)) throw new Error('Runtime migration checksum error still present');
+            if (!/ИНН|Обязательное поле|Укажите/i.test(text)) throw new Error('Expected validation response not observed');
+            console.log('P24_RUNTIME_CONTRACTOR_POST=PASS');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/p24_runtime.js
+
+      - name: Evidence
+        if: always()
+        run: |
+          mkdir -p p24_result
+          printf 'SOURCE_SHA=%s\nPREVIOUS_SERVER_SHA=%s\nBACKUP=%s\n' "${{ steps.build.outputs.sha }}" "${{ steps.before.outputs.current }}" "${{ steps.before.outputs.backup }}" > p24_result/P24_SUMMARY.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P24_contractor_fix_${{ steps.build.outputs.sha }}
+          path: p24_result/
+          retention-days: 30
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p24_key" /tmp/p24_runtime.js
