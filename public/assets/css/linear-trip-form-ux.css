@@ -1,164 +1,61 @@
-/* P29 — Linear trip create/edit UX density. Presentation only; no business logic. */
-#linear-trip-create-modal .driver-create-modal {
-  width: min(1120px, calc(100vw - 48px));
-  max-height: calc(100vh - 36px);
-}
-#linear-trip-create-modal .modal-body {
-  padding: 0;
-  overflow: auto;
-}
-#linear-trip-create-modal .linear-trip-panel { margin: 0; }
-#linear-trip-create-modal .linear-trip-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 286px;
-  align-items: stretch;
-  max-width: none;
-  min-height: 0;
-}
-#linear-trip-create-modal .linear-trip-layout-main {
-  min-width: 0;
-  padding: 12px 14px 14px;
-  gap: 0;
-}
-#linear-trip-create-modal .linear-trip-layout-docs {
-  min-width: 0;
-  padding: 12px 12px 14px;
-  border-left: 1px solid var(--line);
-  background: var(--surface-inspector);
-}
-#linear-trip-create-modal .section-title {
-  margin: 0 0 6px;
-}
-#linear-trip-create-modal .linear-trip-layout-main > .section-title:not(:first-child) {
-  margin-top: 10px;
-  padding-top: 9px;
-  border-top: 1px solid var(--line-hair);
-}
-#linear-trip-create-modal .field-row-group {
-  margin-bottom: 6px;
-}
+/* P30 — Linear trip create UX. Scoped to the trip modal; no global ERP overrides. */
+#linear-trip-create-modal .driver-create-modal{width:min(1100px,calc(100vw - 48px));max-height:calc(100vh - 36px)}
+#linear-trip-create-modal .modal-body{padding:0;overflow:auto}
+#linear-trip-create-modal .linear-trip-panel{margin:0}
+#linear-trip-create-modal .linear-trip-layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;align-items:stretch;max-width:none;min-height:0}
+#linear-trip-create-modal .linear-trip-layout-main{min-width:0;padding:12px 14px 14px;gap:0}
+#linear-trip-create-modal .linear-trip-layout-docs{min-width:0;padding:12px 14px 14px;border-left:1px solid var(--line);background:var(--surface-inspector)}
+#linear-trip-create-modal .section-title{margin:0 0 6px}
+#linear-trip-create-modal .linear-trip-layout-main>.section-title:not(:first-child){margin-top:10px;padding-top:9px;border-top:1px solid var(--line-hair)}
+#linear-trip-create-modal .field-row-group{margin-bottom:6px}
+#linear-trip-create-modal .field-label{margin-bottom:3px;line-height:1.2}
+#linear-trip-create-modal .field-msg:empty{display:none}
+#linear-trip-create-modal .field-msg:not(:empty){margin-top:2px}
 
-/* Main form: do not stretch short values just because the modal is wide. */
-#linear-trip-create-modal .linear-trip-row--compact {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 6px 8px;
-}
-#linear-trip-create-modal .linear-trip-row--compact > .field {
-  flex: 0 0 280px;
-  min-width: 0;
-}
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="route_type"]) { flex-basis: 260px; }
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="planned_loading_date"]),
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="planned_unloading_date"]),
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="actual_loading_date"]),
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="actual_unloading_date"]) { flex-basis: 148px; }
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="client_id"]),
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="carrier_contractor_id"]) { flex-basis: 300px; }
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="route_executor_id"]) { flex-basis: 360px; }
-#linear-trip-create-modal .linear-trip-row--compact > .field:has([name="cargo_type_name"]) { flex-basis: 255px; }
+/* Primary create row: date + customer + route executor on one line. */
+#linear-trip-create-modal .linear-trip-primary-row{display:grid;grid-template-columns:148px minmax(185px,1fr) minmax(285px,1.55fr);gap:8px;align-items:start;margin-bottom:5px}
+#linear-trip-create-modal .linear-trip-primary-row>.field{min-width:0}
+#linear-trip-create-modal .linear-trip-agency-toggle{display:inline-flex;align-items:center;gap:7px;min-height:24px;margin:0 0 7px;font-size:11px;font-weight:600;color:var(--text-main);cursor:pointer}
+#linear-trip-create-modal .linear-trip-agency-toggle input{width:14px;height:14px;margin:0;accent-color:var(--accent)}
 
-#linear-trip-create-modal .field-label {
-  margin-bottom: 3px;
-  line-height: 1.2;
-}
-#linear-trip-create-modal .field-msg:empty { display: none; }
-#linear-trip-create-modal .field-msg:not(:empty) { margin-top: 2px; }
-#linear-trip-create-modal .linear-trip-textarea {
-  min-height: 54px;
-  height: 54px;
-  resize: vertical;
-}
+/* Remaining main fields stay compact. */
+#linear-trip-create-modal .linear-trip-row--compact{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 8px}
+#linear-trip-create-modal .linear-trip-row--compact>.field{flex:0 0 280px;min-width:0}
+#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="planned_unloading_date"]),
+#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_loading_date"]),
+#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="actual_unloading_date"]){flex-basis:148px}
+#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="carrier_contractor_id"]){flex-basis:300px}
+#linear-trip-create-modal .linear-trip-row--compact>.field:has([name="cargo_type_name"]){flex-basis:255px}
+#linear-trip-create-modal .linear-trip-textarea{min-height:54px;height:54px;resize:vertical}
 
-#linear-trip-create-modal .linear-trip-payment-card,
-#linear-trip-create-modal .linear-trip-principal-card {
-  padding: 7px 8px 8px;
-  margin-top: 5px;
-}
-#linear-trip-create-modal .linear-trip-block-head {
-  margin-bottom: 5px;
-  align-items: center;
-}
-#linear-trip-create-modal .linear-trip-payment-rows,
-#linear-trip-create-modal .linear-trip-principal-cards { gap: 5px; }
+/* Financial conditions are a plain section, like Основное: no nested cards/extra boxes. */
+#linear-trip-create-modal .linear-trip-payment-card{padding:0;margin:0 0 9px;border:0!important;background:transparent!important;box-shadow:none!important}
+#linear-trip-create-modal .linear-trip-payment-card--nested{margin-top:6px}
+#linear-trip-create-modal .linear-trip-principal-card{padding:0;margin-top:7px;border:0!important;background:transparent!important;box-shadow:none!important}
+#linear-trip-create-modal .linear-trip-block-head{margin-bottom:5px;align-items:center}
+#linear-trip-create-modal .linear-trip-payment-rows,#linear-trip-create-modal .linear-trip-principal-cards{gap:5px}
+#linear-trip-create-modal .linear-trip-payment-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:5px 6px}
+#linear-trip-create-modal .linear-trip-payment-row>.field{flex:0 0 auto;min-width:0}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[amount]"]){flex-basis:128px;position:relative}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[payment_method]"]){flex-basis:138px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[vat_rate]"]){flex-basis:104px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(select[name$="[condition_type]"]){flex-basis:170px}
+#linear-trip-create-modal .linear-trip-payment-row>[data-days-count-wrapper]{flex-basis:58px}
+#linear-trip-create-modal .linear-trip-payment-row>[data-days-kind-wrapper]{flex-basis:132px}
+#linear-trip-create-modal .linear-trip-payment-row>[data-specific-date-wrapper]{flex-basis:146px}
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[condition_comment]"]){flex-basis:270px}
 
-/* Financial rows: every control is sized for its data, not for free canvas width. */
-#linear-trip-create-modal .linear-trip-payment-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 5px 6px;
-}
-#linear-trip-create-modal .linear-trip-payment-row > .field {
-  flex: 0 0 auto;
-  min-width: 0;
-}
-#linear-trip-create-modal .linear-trip-payment-row > .field:has(input[name$="[amount]"]) { flex-basis: 128px; position: relative; }
-#linear-trip-create-modal .linear-trip-payment-row > .field:has(select[name$="[payment_method]"]) { flex-basis: 138px; }
-#linear-trip-create-modal .linear-trip-payment-row > .field:has(select[name$="[vat_rate]"]) { flex-basis: 104px; }
-#linear-trip-create-modal .linear-trip-payment-row > .field:has(select[name$="[condition_type]"]) { flex-basis: 170px; }
-#linear-trip-create-modal .linear-trip-payment-row > [data-days-count-wrapper] { flex-basis: 58px; }
-#linear-trip-create-modal .linear-trip-payment-row > [data-days-kind-wrapper] { flex-basis: 132px; }
-#linear-trip-create-modal .linear-trip-payment-row > [data-specific-date-wrapper] { flex-basis: 146px; }
-#linear-trip-create-modal .linear-trip-payment-row > .field:has(input[name$="[condition_comment]"]) { flex-basis: 270px; }
+/* Money input: 1 233 567, left aligned, ruble suffix inside the control on the right. */
+#linear-trip-create-modal .linear-trip-payment-row>.field:has(input[name$="[amount]"])::after{content:"₽";position:absolute;right:8px;top:26px;height:26px;display:flex;align-items:center;color:var(--text-muted);font-size:11px;font-weight:700;pointer-events:none}
+#linear-trip-create-modal .linear-trip-payment-row input[name$="[amount]"]{padding-left:8px;padding-right:24px;text-align:left;font-variant-numeric:tabular-nums}
+#linear-trip-create-modal .linear-trip-row-remove{flex:0 0 28px;width:28px;height:28px;margin-top:19px;font-size:17px}
+#linear-trip-create-modal .linear-trip-principals-section{margin-top:6px}
+#linear-trip-create-modal .linear-trip-layout-docs .section-title{margin-bottom:6px}
+#linear-trip-create-modal .linear-trip-layout-docs .document-upload-row,#linear-trip-create-modal .linear-trip-layout-docs .document-file-row{min-height:38px}
+#linear-trip-create-modal .linear-trip-layout-docs .file-list{gap:4px}
+#linear-trip-create-modal .modal-foot{min-height:48px;padding:7px 12px}
 
-/* SumMix-style money field from the reference: compact amount + ruble prefix. */
-#linear-trip-create-modal .linear-trip-payment-row > .field:has(input[name$="[amount]"])::after {
-  content: "₽";
-  position: absolute;
-  left: 8px;
-  top: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  pointer-events: none;
-}
-#linear-trip-create-modal .linear-trip-payment-row input[name$="[amount]"] {
-  padding-left: 22px;
-  font-variant-numeric: tabular-nums;
-}
-
-#linear-trip-create-modal .linear-trip-row-remove {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  margin-top: 19px;
-  font-size: 17px;
-}
-#linear-trip-create-modal .linear-trip-principals-section { margin-top: 6px; }
-#linear-trip-create-modal .linear-trip-layout-docs .section-title { margin-bottom: 6px; }
-#linear-trip-create-modal .linear-trip-layout-docs .document-upload-row,
-#linear-trip-create-modal .linear-trip-layout-docs .document-file-row { min-height: 38px; }
-#linear-trip-create-modal .linear-trip-layout-docs .file-list { gap: 4px; }
-#linear-trip-create-modal .modal-foot {
-  min-height: 48px;
-  padding: 7px 12px;
-}
-
-/* Edit form receives the same density without changing its business form. */
-[data-linear-trip-form] .linear-trip-layout-main { min-width: 0; }
-[data-linear-trip-form] .linear-trip-row--compact { gap: 6px 8px; }
-
-@media (max-width: 1180px) {
-  #linear-trip-create-modal .driver-create-modal { width: min(1040px, calc(100vw - 28px)); }
-  #linear-trip-create-modal .linear-trip-layout { grid-template-columns: minmax(0,1fr) 270px; }
-}
-@media (max-width: 900px) {
-  #linear-trip-create-modal .linear-trip-layout { grid-template-columns: 1fr; }
-  #linear-trip-create-modal .linear-trip-layout-docs { border-left: 0; border-top: 1px solid var(--line); }
-}
-@media (max-width: 680px) {
-  #linear-trip-create-modal .driver-create-modal { width: calc(100vw - 16px); }
-  #linear-trip-create-modal .linear-trip-row--compact,
-  #linear-trip-create-modal .linear-trip-payment-row { display: grid; grid-template-columns: 1fr; }
-  #linear-trip-create-modal .linear-trip-row--compact > .field,
-  #linear-trip-create-modal .linear-trip-payment-row > .field,
-  #linear-trip-create-modal .linear-trip-payment-row > [data-days-count-wrapper],
-  #linear-trip-create-modal .linear-trip-payment-row > [data-days-kind-wrapper],
-  #linear-trip-create-modal .linear-trip-payment-row > [data-specific-date-wrapper] { width: 100%; flex-basis: auto; }
-  #linear-trip-create-modal .linear-trip-row-remove { margin-top: 0; }
-}
+[data-linear-trip-form] .linear-trip-layout-main{min-width:0}
+[data-linear-trip-form] .linear-trip-row--compact{gap:6px 8px}
+@media(max-width:900px){#linear-trip-create-modal .linear-trip-layout{grid-template-columns:1fr}#linear-trip-create-modal .linear-trip-layout-docs{border-left:0;border-top:1px solid var(--line)}#linear-trip-create-modal .linear-trip-primary-row{grid-template-columns:148px minmax(0,1fr)}}
+@media(max-width:680px){#linear-trip-create-modal .driver-create-modal{width:calc(100vw - 16px)}#linear-trip-create-modal .linear-trip-primary-row,#linear-trip-create-modal .linear-trip-row--compact,#linear-trip-create-modal .linear-trip-payment-row{display:grid;grid-template-columns:1fr}#linear-trip-create-modal .linear-trip-row--compact>.field,#linear-trip-create-modal .linear-trip-payment-row>.field,#linear-trip-create-modal .linear-trip-payment-row>[data-days-count-wrapper],#linear-trip-create-modal .linear-trip-payment-row>[data-days-kind-wrapper],#linear-trip-create-modal .linear-trip-payment-row>[data-specific-date-wrapper]{width:100%;flex-basis:auto}#linear-trip-create-modal .linear-trip-row-remove{margin-top:0}}
