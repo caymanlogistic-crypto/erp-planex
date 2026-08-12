@@ -91,3 +91,36 @@
 .registry-empty {
     color: #817d75;
 }
+
+/* In payment groups the headings belong to the first row only. Additional
+   payments stay aligned with the first row without repeating four labels. */
+[data-linear-trip-form] .linear-trip-payment-rows > .linear-trip-payment-row:not(:first-child) > .field:nth-child(-n + 4) > .field-label {
+    display: none;
+}
+
+/* Cash does not carry VAT in the route-payment model. Keep the select present
+   for form submission, but present a neutral dash instead of a VAT choice. */
+[data-linear-trip-form] .linear-trip-payment-row:has(select[name$="[payment_method]"] option[value="cash"]:checked) > .field:nth-child(3) {
+    position: relative;
+}
+
+[data-linear-trip-form] .linear-trip-payment-row:has(select[name$="[payment_method]"] option[value="cash"]:checked) > .field:nth-child(3) select[name$="[vat_rate]"] {
+    visibility: hidden;
+}
+
+[data-linear-trip-form] .linear-trip-payment-row:has(select[name$="[payment_method]"] option[value="cash"]:checked) > .field:nth-child(3)::after {
+    content: "—";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border: 1px solid #cfc8bd;
+    background: #fff;
+    color: #211d19;
+    box-sizing: border-box;
+    pointer-events: none;
+}
