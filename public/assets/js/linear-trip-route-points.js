@@ -304,3 +304,79 @@
     init();
   }
 })();
+
+(function () {
+  'use strict';
+
+  function syncPaymentRow(row, index) {
+    if (!row) return;
+
+    var fields = row.querySelectorAll(':scope > .field');
+    for (var i = 0; i < Math.min(4, fields.length); i++) {
+      var label = fields[i].querySelector(':scope > .field-label');
+      if (label) label.style.visibility = index === 0 ? '' : 'hidden';
+    }
+
+    var methodSelect = row.querySelector('select[name$="[payment_method]"]');
+    var vatSelect = row.querySelector('select[name$="[vat_rate]"]');
+    if (!methodSelect || !vatSelect) return;
+
+    var emptyOption = vatSelect.querySelector('option[value=""]');
+    if (emptyOption && !emptyOption.dataset.normalLabel) {
+      emptyOption.dataset.normalLabel = emptyOption.textContent || 'Без НДС';
+    }
+
+    var isCash = methodSelect.value === 'cash';
+    if (isCash) {
+      vatSelect.value = '';
+      vatSelect.disabled = true;
+      if (emptyOption) emptyOption.textContent = '—';
+    } else {
+      vatSelect.disabled = false;
+      if (emptyOption) emptyOption.textContent = emptyOption.dataset.normalLabel || 'Без НДС';
+    }
+  }
+
+  function syncPaymentContainer(container) {
+    if (!container) return;
+    Array.prototype.forEach.call(container.querySelectorAll(':scope > [data-payment-row]'), function (row, index) {
+      syncPaymentRow(row, index);
+    });
+  }
+
+  function syncAll(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll('[data-payment-container], [data-principal-payment-container]').forEach(syncPaymentContainer);
+    if (scope.matches && (scope.matches('[data-payment-container]') || scope.matches('[data-principal-payment-container]'))) {
+      syncPaymentContainer(scope);
+    }
+  }
+
+  function init() {
+    syncAll(document);
+
+    document.addEventListener('change', function (event) {
+      if (!event.target.matches('select[name$="[payment_method]"]')) return;
+      var row = event.target.closest('[data-payment-row]');
+      if (row) syncPaymentRow(row, Array.prototype.indexOf.call(row.parentNode.querySelectorAll(':scope > [data-payment-row]'), row));
+    });
+
+    document.addEventListener('click', function () {
+      window.setTimeout(function () { syncAll(document); }, 0);
+    });
+
+    new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1) syncAll(node);
+        });
+      });
+    }).observe(document.body, {childList: true, subtree: true});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, {once: true});
+  } else {
+    init();
+  }
+})();
