@@ -4,17 +4,20 @@
 
 ## Статус
 
-`REPOSITORY_STABILIZED_HANDOFF_READY`
+`REPOSITORY_STABILIZED_AUTO_DEPLOY_ACTIVE`
 
-Параллельные агенты остановлены. Каноническая/default ветка — `chatgpt/production-stabilization-20260802`. Репозиторий приведён к однопоточному безопасному режиму и готов к дальнейшей разработке от текущего HEAD.
+Параллельные агенты остановлены. Каноническая/default ветка — `chatgpt/production-stabilization-20260802`. Репозиторий работает в однопоточном режиме: один агент вносит изменения в каноническую ветку, после каждого push сначала проходит canonical CI, и только его успешное завершение запускает единственный production deploy workflow.
 
 ## Что завершено
 
 - Последняя функциональная линия P39/P40 сохранена в канонической ветке.
 - Предыдущее состояние default branch сохранено в `backup/pre-stabilization-default-20260812` как recovery evidence.
-- Временные/автоматические P24–P40 production-deploy/reconcile workflows удалены.
+- Временные P24–P40 production-deploy/reconcile workflows удалены.
 - В `.github/workflows` оставлены только `ci.yml` и единственный production-capable `erpv2_controlled_deploy.yml`.
-- Production deploy разрешён только вручную через `workflow_dispatch`, exact SHA и `confirm_deploy=DEPLOY_ERPV2`.
+- Автодеплой восстановлен безопасно: `push` в canonical branch -> `ERP PLANEX CI` -> только при `SUCCESS` и только если исходный event был `push` запускается `ERPv2 Controlled Deploy` через `workflow_run`.
+- Ручной exact-SHA deploy через `workflow_dispatch` сохранён как аварийный/операционный fallback и по-прежнему требует `confirm_deploy=DEPLOY_ERPV2`.
+- Automatic deploy использует точный `head_sha` зелёного CI, detached checkout, artifact SHA256, server backup, P07 deploy engine, marker equality, HTTP `/erpv2/login`=200, DB fingerprint guard, old `/erp` fingerprint guard, `.env` fingerprint guard и сохранение runtime directories.
+- Standard deploy не запускает миграции автоматически. Изменения схемы требуют отдельной явной миграционной операции.
 - Local migration numbering нормализован: crew drivers = `057_create_crew_drivers.sql`, linear route points = `058_create_linear_route_points.sql`; старые journal names `029`/`052` обрабатываются отдельным reconciliation script.
 - Управляющие MD приведены к каноническому состоянию; исторические отчёты классифицированы через `docs/ai/DOCUMENTATION_INDEX.md` и не считаются текущими инструкциями.
 - Четыре исторических WARNING `architecture_guard.php` по Company dynamic table expressions проверены по data-flow. Это закрытые literal whitelist/static-map источники, а не request-derived identifiers.
@@ -22,30 +25,33 @@
 - Добавлен fail-closed `tools/dynamic_table_safety_audit.py`: он разрешает только пять проверенных dynamic-identifier sites, проверяет их закрытые maps и падает при появлении нового site или request-derived identifier.
 - Canonical CI дополнен Python syntax + dynamic identifier safety audit.
 
-## Последний подтверждённый gate
+## Последний подтверждённый gate и deploy
 
-Финальный canonical CI run `31586894872` на SHA `99903d638b82b6cbb1c2706aae5630251f1df01e` — `SUCCESS`.
+Canonical CI run `31595645852` на SHA `e387b2d206c84295392ec13c6630a11acf9502e5` — `SUCCESS`.
 
-PASS:
+После него автоматически запустился `ERPv2 Controlled Deploy` run `31595690419` / job `94110512307` — `SUCCESS`.
 
-- PHP syntax;
-- Python syntax;
-- migration numbering;
-- migration normalization regression;
-- dynamic identifier safety audit;
-- architecture guard;
-- JavaScript syntax;
-- control-plane guard;
-- canonical P21 control-plane policy.
+Подтверждено:
 
-На финальном gate central migrations = 11, local migrations = 57, duplicate numbers = 0. Control plane = 2 workflow files, из них deploy-capable = 1, automatic production deploy = 0.
+- exact source SHA = `e387b2d206c84295392ec13c6630a11acf9502e5`;
+- deploy mode = `automatic_after_green_ci`;
+- backup создан до deploy;
+- artifact собран строго из source SHA;
+- P07 deploy engine завершился успешно;
+- deployed marker равен source SHA;
+- `/erpv2/login` = HTTP 200;
+- DB fingerprint до/после одинаковый;
+- старый `/erp` до/после одинаковый;
+- `.env` до/после одинаковый;
+- runtime directories сохранены;
+- migrations_run = false.
 
 ## Production state
 
-Последний подтверждённый production runtime до repository-normalization — линия P39 с migration-checksum reconciliation. Текущий canonical HEAD идёт впереди production в основном за счёт control-plane cleanup, документации, переименования migration files и reconciliation tooling. При сравнении с подтверждённым production baseline `844c15de2455d6f45f4d136a2fcbb80dad98e984` нет новых изменений пользовательского PHP/JS/CSS runtime; основная разница относится к GitHub Actions, документации, migration filenames и обслуживающим scripts/tools.
+Production теперь синхронизируется с каждым успешным push в canonical branch автоматически, но только после зелёного canonical CI. Если CI падает, deploy не запускается. Если deploy/post-deploy guard падает, run становится красным и нельзя считать соответствующий SHA production-ready.
 
-Новый `erpv2_controlled_deploy.yml` после нормализации ещё не запускался. Поэтому canonical HEAD нельзя объявлять deployed только по состоянию GitHub. Это намеренное fail-closed состояние: production не меняется ради формального совпадения SHA.
+Последняя пользовательская доработка перед включением автодеплоя: в таблице `Банк -> Банковские счета` добавлен отдельный столбец `ИНН` сразу после `Контрагент`; значение берётся из существующего `counterparty_inn`, без изменения БД/импорта.
 
 ## Следующая задача
 
-Стабилизационный проход закрыт. Следующая работа должна быть только новой явно поставленной функциональной/исправительной задачей. Перед изменениями агент читает `HANDOFF_FOR_NEW_AGENT.md`, проверяет текущий HEAD и сохраняет существующий single-deploy control plane.
+Продолжать разработку только в `chatgpt/production-stabilization-20260802`. Не создавать дополнительные deploy workflows и параллельные deployment branches. После каждого изменения агент обязан дождаться сначала зелёного CI, затем успешного auto-deploy и post-deploy verification, прежде чем писать пользователю, что изменение готово к тестированию.
