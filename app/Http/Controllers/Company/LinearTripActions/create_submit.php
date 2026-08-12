@@ -35,7 +35,20 @@ $routePoints = \App\Service\LinearRoutePointService::normalizeSubmitted($_POST);
 
 $isFinanceRealm = ($sessionUser['role_code'] ?? '') === 'company_owner';
 
-$parsePaymentRows = static function (array $rows, string $scopeLabel, string $scopeKey, array &$validationErrors): array {
+$legacyDueType = static function (string $conditionType): string {
+    return match ($conditionType) {
+        \App\Service\DateCalculationService::CONDITION_PREPAYMENT => 'Предоплата на загрузке',
+        \App\Service\DateCalculationService::CONDITION_START_DAY => 'После загрузки',
+        \App\Service\DateCalculationService::CONDITION_AFTER_START => 'После загрузки',
+        \App\Service\DateCalculationService::CONDITION_END_DAY => 'До выгрузки',
+        \App\Service\DateCalculationService::CONDITION_AFTER_END,
+        \App\Service\DateCalculationService::CONDITION_AFTER_DOCUMENTS => 'После выгрузки',
+        \App\Service\DateCalculationService::CONDITION_SPECIFIC_DATE => 'После загрузки',
+        default => 'После загрузки',
+    };
+};
+
+$parsePaymentRows = static function (array $rows, string $scopeLabel, string $scopeKey, array &$validationErrors) use ($legacyDueType): array {
     $result = [];
 
     foreach (array_values($rows) as $index => $row) {
@@ -67,12 +80,17 @@ $parsePaymentRows = static function (array $rows, string $scopeLabel, string $sc
         }
 
         $vatRate = null;
-        if ($vatRateRaw !== '' && $vatRateRaw !== null) {
+        if ($paymentMethod !== 'cash' && $vatRateRaw !== '') {
             if (in_array($vatRateRaw, ['0', '5', '7', '20', '22'], true)) {
                 $vatRate = $vatRateRaw;
             } else {
                 $validationErrors[$scopeKey . '.' . $index . '.vat_rate'] = 'Выберите ставку НДС для блока «' . $scopeLabel . '».';
             }
+        }
+
+        // Cash never carries VAT. Ignore a stale/tampered VAT value server-side as well.
+        if ($paymentMethod === 'cash') {
+            $vatRate = null;
         }
 
         $paymentType = LinearRouteService::legacyPaymentTypeFromMethodAndVat(
@@ -118,6 +136,12 @@ $parsePaymentRows = static function (array $rows, string $scopeLabel, string $sc
             'days_kind' => $daysKind,
             'specific_due_date' => $specificDueDate,
             'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
+            // The legacy compatibility table is still synchronized on create.
+            // Always provide a non-null legacy due type/kind so old tenant schemas
+            // cannot abort an otherwise valid modern payment transaction.
+            'payment_due_type' => $legacyDueType($conditionType),
+            'payment_due_days' => $daysCount,
+            'payment_due_days_kind' => $daysKind ?? 'calendar',
         ];
     }
 
@@ -461,7 +485,7 @@ try {
     $insertRoute->execute([
         ':route_type' => $routeType,
         ':client_id' => $clientId,
-        ':carrier_contractor_id' => $carrierId,
+        ':carrier_id' => $carrierId,
         ':route_executor_id' => $routeExecutorId,
         ':cargo_type_id' => $cargoTypeId,
         ':planned_loading_date' => $plannedLoadingDate,
