@@ -4,54 +4,86 @@
 
 ## Статус
 
-`REPOSITORY_STABILIZED_AUTO_DEPLOY_ACTIVE`
+`DUAL_OPERATION_ROUTE_POINTS_PRODUCTION_READY`
 
 Параллельные агенты остановлены. Каноническая/default ветка — `chatgpt/production-stabilization-20260802`. Репозиторий работает в однопоточном режиме: один агент вносит изменения в каноническую ветку, после каждого push сначала проходит canonical CI, и только его успешное завершение запускает единственный production deploy workflow.
 
-## Что завершено
+## Текущая завершённая доработка
 
-- Последняя функциональная линия P39/P40 сохранена в канонической ветке.
-- Предыдущее состояние default branch сохранено в `backup/pre-stabilization-default-20260812` как recovery evidence.
-- Временные P24–P40 production-deploy/reconcile workflows удалены.
-- В `.github/workflows` оставлены только `ci.yml` и единственный production-capable `erpv2_controlled_deploy.yml`.
-- Автодеплой восстановлен безопасно: `push` в canonical branch -> `ERP PLANEX CI` -> только при `SUCCESS` и только если исходный event был `push` запускается `ERPv2 Controlled Deploy` через `workflow_run`.
-- Ручной exact-SHA deploy через `workflow_dispatch` сохранён как аварийный/операционный fallback и по-прежнему требует `confirm_deploy=DEPLOY_ERPV2`.
-- Automatic deploy использует точный `head_sha` зелёного CI, detached checkout, artifact SHA256, server backup, P07 deploy engine, marker equality, HTTP `/erpv2/login`=200, DB fingerprint guard, old `/erp` fingerprint guard, `.env` fingerprint guard и сохранение runtime directories.
-- Standard deploy не запускает миграции автоматически. Изменения схемы требуют отдельной явной миграционной операции.
-- Local migration numbering нормализован: crew drivers = `057_create_crew_drivers.sql`, linear route points = `058_create_linear_route_points.sql`; старые journal names `029`/`052` обрабатываются отдельным reconciliation script.
-- Управляющие MD приведены к каноническому состоянию; исторические отчёты классифицированы через `docs/ai/DOCUMENTATION_INDEX.md` и не считаются текущими инструкциями.
-- Четыре исторических WARNING `architecture_guard.php` по Company dynamic table expressions проверены по data-flow. Это закрытые literal whitelist/static-map источники, а не request-derived identifiers.
-- Дополнительно проверен пятый аналогичный Superadmin site `ManagementActions/entity_list.php`.
-- Добавлен fail-closed `tools/dynamic_table_safety_audit.py`: он разрешает только пять проверенных dynamic-identifier sites, проверяет их закрытые maps и падает при появлении нового site или request-derived identifier.
-- Canonical CI дополнен Python syntax + dynamic identifier safety audit.
+Линейные рейсы переведены с двух независимых блоков `Загрузка` / `Выгрузка` на единый логический блок `Загрузка / выгрузка`.
 
-## Последний подтверждённый gate и deploy
+Пользовательский контракт:
 
-Canonical CI run `31595645852` на SHA `e387b2d206c84295392ec13c6630a11acf9502e5` — `SUCCESS`.
+- при создании нового рейса по умолчанию показываются две полноширинные точки;
+- у первой по умолчанию активна операция `Загрузка`;
+- у второй по умолчанию активна операция `Выгрузка`;
+- у каждой точки справа встроены два независимых suffix-toggle: `Загрузка` и `Выгрузка`;
+- допустимы три состояния точки: только загрузка, только выгрузка, одновременно загрузка + выгрузка;
+- `+ Добавить точку` добавляет новую строку без выбранной операции, пользователь фиксирует нужный тип;
+- заполненную точку нельзя сохранить без выбранной операции;
+- в рейсе должна существовать как минимум одна операция загрузки и одна операция выгрузки;
+- создание и редактирование используют одну модель данных;
+- существующие рейсы с прежними раздельными точками остаются совместимыми;
+- в просмотре рейса точки объединяются в одну строку `Загрузка / выгрузка` и рядом с каждым адресом показываются компактные метки операций.
 
-После него автоматически запустился `ERPv2 Controlled Deploy` run `31595690419` / job `94110512307` — `SUCCESS`.
+## Поддержка БД
 
-Подтверждено:
+Новая миграция не потребовалась. Существующая таблица `linear_route_points`, созданная `058_create_linear_route_points.sql`, уже поддерживает требуемую модель:
 
-- exact source SHA = `e387b2d206c84295392ec13c6630a11acf9502e5`;
-- deploy mode = `automatic_after_green_ci`;
-- backup создан до deploy;
-- artifact собран строго из source SHA;
-- P07 deploy engine завершился успешно;
-- deployed marker равен source SHA;
-- `/erpv2/login` = HTTP 200;
-- DB fingerprint до/после одинаковый;
-- старый `/erp` до/после одинаковый;
-- `.env` до/после одинаковый;
-- runtime directories сохранены;
-- migrations_run = false.
+- `point_type` хранит `loading` или `unloading`;
+- `sort_order` задаёт общий порядок логических точек;
+- для точки с двумя операциями сохраняются две физические строки с одинаковыми `linear_route_id`, `sort_order` и `address_text`: одна `loading`, одна `unloading`;
+- уникального ограничения, запрещающего такую пару, нет;
+- `LinearRoutePointService::fetch()` собирает такую пару обратно в одну логическую точку с двумя флагами;
+- `LinearRoutePointService::store()` сохраняет логическую точку атомарно в рамках уже существующей транзакции рейса.
 
-## Production state
+Таким образом схема production БД функционал поддерживает без ALTER/CREATE и без запуска миграций в стандартном deploy.
 
-Production теперь синхронизируется с каждым успешным push в canonical branch автоматически, но только после зелёного canonical CI. Если CI падает, deploy не запускается. Если deploy/post-deploy guard падает, run становится красным и нельзя считать соответствующий SHA production-ready.
+## Совместимость формы
 
-Последняя пользовательская доработка перед включением автодеплоя: в таблице `Банк -> Банковские счета` добавлен отдельный столбец `ИНН` сразу после `Контрагент`; значение берётся из существующего `counterparty_inn`, без изменения БД/импорта.
+Каноническая модель POST:
+
+- `route_points[points][N][address]`
+- `route_points[points][N][loading]`
+- `route_points[points][N][unloading]`
+
+Для совместимости с существующим PHP partial браузер одновременно формирует выровненные скрытые legacy-проекции `route_points[loading][]` / `route_points[unloading][]`. Это нужно только для корректного восстановления формы после server-side validation redirect; сервис сохраняет новую логическую модель и поддерживает старый формат как fallback.
+
+## Регрессионная защита
+
+Добавлен `tests/linear_route_point_dual_operation_test.php` и включён в canonical CI. Тест проверяет:
+
+- только загрузку;
+- только выгрузку;
+- загрузку + выгрузку в одной точке;
+- сохранение глобального порядка;
+- legacy compatibility projection;
+- ошибки точки без операции и операции без адреса;
+- наличие минимум одной загрузки и одной выгрузки;
+- статическую совместимость текущей схемы `058_create_linear_route_points.sql` с двумя физическими operation rows.
+
+## Последний подтверждённый gate и deploy функционального SHA
+
+Functional SHA: `6341d7f9fd7d095203d58a3297d44014ba5c0766`.
+
+Canonical CI run `31598355896` — `SUCCESS`.
+
+После зелёного CI автоматически запустился `ERPv2 Controlled Deploy`:
+
+- run: `31598400792`
+- job: `94119454092`
+- result: `SUCCESS`
+
+Подтверждены exact-SHA checkout, backup, P07 deploy, marker equality, `/erpv2/login` HTTP 200, неизменность DB fingerprint, старого `/erp`, `.env` и сохранение runtime directories.
+
+## Control plane
+
+- В `.github/workflows` остаются только `ci.yml` и единственный production-capable `erpv2_controlled_deploy.yml`.
+- Автодеплой: `push` в canonical branch -> `ERP PLANEX CI` -> только при `SUCCESS` и только для исходного `push` запускается `ERPv2 Controlled Deploy` через `workflow_run`.
+- Ручной exact-SHA deploy через `workflow_dispatch` сохранён как fallback и требует `confirm_deploy=DEPLOY_ERPV2`.
+- Standard deploy не запускает миграции автоматически.
+- Старый `/erp` запрещено изменять.
 
 ## Следующая задача
 
-Продолжать разработку только в `chatgpt/production-stabilization-20260802`. Не создавать дополнительные deploy workflows и параллельные deployment branches. После каждого изменения агент обязан дождаться сначала зелёного CI, затем успешного auto-deploy и post-deploy verification, прежде чем писать пользователю, что изменение готово к тестированию.
+Доработка `Загрузка / выгрузка` завершена. Перед следующей функциональной задачей агент работает только от текущего HEAD canonical branch, не создаёт дополнительные deploy workflows/ветки и после каждого изменения ждёт зелёный CI + успешный auto-deploy + релевантную runtime-проверку прежде чем сообщать пользователю о готовности.
