@@ -24,6 +24,8 @@ Legacy `/erp` является отдельным старым контуром 
 
 После нормализации controlled deploy ещё не запускался. Поэтому `REPOSITORY_STABILIZED` не означает, что текущий canonical HEAD уже опубликован в production. Production deployment подтверждается только отдельным successful controlled-deploy run и post-deploy evidence.
 
+Последний подтверждённый production baseline перед repository-only cleanup: `844c15de2455d6f45f4d136a2fcbb80dad98e984` (P39 migration-checksum reconciliation line). Сравнение этого baseline с нормализованным repository HEAD не показывает новых пользовательских PHP/JS/CSS runtime changes: различия относятся к GitHub control plane, документации, migration filenames и обслуживающим scripts/tools.
+
 ## CI / engineering gates
 
 Canonical CI проверяет:
@@ -38,7 +40,7 @@ Canonical CI проверяет:
 - отсутствие лишних production-mutating workflows;
 - P21 control-plane policy.
 
-Последний подтверждённый code/control-plane gate: run `31586574444`, SHA `11ccb7d085f054f21d2accf82f96e5c233110b12`, `SUCCESS`. На нём central migrations = 11, local migrations = 57, duplicates = 0; workflows = 2, deploy-capable = 1, automatic production deploys = 0.
+Финальный подтверждённый stabilization gate: run `31586894872`, SHA `99903d638b82b6cbb1c2706aae5630251f1df01e`, `SUCCESS`. На нём central migrations = 11, local migrations = 57, duplicates = 0; workflows = 2, deploy-capable = 1, automatic production deploys = 0.
 
 ## Dynamic SQL identifier safety
 
@@ -88,7 +90,7 @@ ERP PLANEX — desktop-first industrial ERP. Минимальная production d
 
 Часть старых action bridges и legacy route files остаётся transitional architecture. Они не являются текущими blockers и не должны рефакториться ради косметической чистки. Такой рефакторинг допускается только отдельной задачей с runtime regression.
 
-Четыре architecture-guard WARNING теперь являются контролируемыми heuristic warnings с отдельным fail-closed CI audit, а не неразобранным риском.
+Четыре architecture-guard WARNING являются контролируемыми heuristic warnings с отдельным fail-closed CI audit, а не неразобранным риском.
 
 ## Source of truth для следующего агента
 
