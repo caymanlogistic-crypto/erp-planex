@@ -152,6 +152,7 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
                     <th>Дата</th>
                     <th>Счёт</th>
                     <th class="col-cparty-narrow">Контрагент</th>
+                    <th class="col-mono">ИНН</th>
                     <th class="col-purpose-wide">Назначение</th>
                     <th class="col-tight">Дебет</th>
                     <th class="col-tight">Кредит</th>
@@ -174,6 +175,7 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
                     <td class="col-mono"><?= $fmtDate($tx['operation_date'] ?? '') ?></td>
                     <td class="col-mono"><?= e($tx['account_number'] ?? '—') ?></td>
                     <td class="col-cparty-narrow" title="<?= e($tx['counterparty_name'] ?? '') ?>"><?= e($tx['counterparty_name'] ?: '—') ?></td>
+                    <td class="col-mono"><?= e($tx['counterparty_inn'] ?: '—') ?></td>
                     <td class="col-purpose-wide" title="<?= e($tx['purpose'] ?? '') ?>"><?= e($tx['purpose'] ?: '—') ?></td>
                     <td class="col-mono text-danger col-tight<?= $fmtMoney($tx['debit_amount']) !== null ? '' : ' is-dash' ?>"><?= $fmtMoney($tx['debit_amount']) ?? '—' ?></td>
                     <td class="col-mono text-success col-tight<?= $fmtMoney($tx['credit_amount']) !== null ? '' : ' is-dash' ?>"><?= $fmtMoney($tx['credit_amount']) ?? '—' ?></td>
