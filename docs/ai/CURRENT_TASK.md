@@ -18,13 +18,13 @@
 - Local migration numbering нормализован: crew drivers = `057_create_crew_drivers.sql`, linear route points = `058_create_linear_route_points.sql`; старые journal names `029`/`052` обрабатываются отдельным reconciliation script.
 - Управляющие MD приведены к каноническому состоянию; исторические отчёты классифицированы через `docs/ai/DOCUMENTATION_INDEX.md` и не считаются текущими инструкциями.
 - Четыре исторических WARNING `architecture_guard.php` по Company dynamic table expressions проверены по data-flow. Это закрытые literal whitelist/static-map источники, а не request-derived identifiers.
-- Дополнительно проверен пятый аналогичный Superadmin site `ManagementActions/entity_list.php`, который уже имел отдельный whitelist guard в `architecture_guard.php`.
+- Дополнительно проверен пятый аналогичный Superadmin site `ManagementActions/entity_list.php`.
 - Добавлен fail-closed `tools/dynamic_table_safety_audit.py`: он разрешает только пять проверенных dynamic-identifier sites, проверяет их закрытые maps и падает при появлении нового site или request-derived identifier.
 - Canonical CI дополнен Python syntax + dynamic identifier safety audit.
 
 ## Последний подтверждённый gate
 
-Canonical CI run `31586574444` на SHA `11ccb7d085f054f21d2accf82f96e5c233110b12` — `SUCCESS`.
+Финальный canonical CI run `31586894872` на SHA `99903d638b82b6cbb1c2706aae5630251f1df01e` — `SUCCESS`.
 
 PASS:
 
@@ -38,13 +38,13 @@ PASS:
 - control-plane guard;
 - canonical P21 control-plane policy.
 
-На этом gate central migrations = 11, local migrations = 57, duplicate numbers = 0. Control plane = 2 workflow files, из них deploy-capable = 1, automatic production deploy = 0.
+На финальном gate central migrations = 11, local migrations = 57, duplicate numbers = 0. Control plane = 2 workflow files, из них deploy-capable = 1, automatic production deploy = 0.
 
 ## Production state
 
-Репозиторий стабилизирован независимо от deployment state. Новый `erpv2_controlled_deploy.yml` после нормализации ещё не запускался, поэтому текущий canonical HEAD нельзя объявлять deployed только по состоянию GitHub.
+Последний подтверждённый production runtime до repository-normalization — линия P39 с migration-checksum reconciliation. Текущий canonical HEAD идёт впереди production в основном за счёт control-plane cleanup, документации, переименования migration files и reconciliation tooling. При сравнении с подтверждённым production baseline `844c15de2455d6f45f4d136a2fcbb80dad98e984` нет новых изменений пользовательского PHP/JS/CSS runtime; основная разница относится к GitHub Actions, документации, migration filenames и обслуживающим scripts/tools.
 
-Это намеренное fail-closed состояние: production не меняется ради синхронизации SHA. Когда реально потребуется публикация новой версии, она выполняется только exact-SHA controlled workflow с backup/post-deploy guards и отдельной runtime-проверкой `/erpv2` и неизменности legacy `/erp`.
+Новый `erpv2_controlled_deploy.yml` после нормализации ещё не запускался. Поэтому canonical HEAD нельзя объявлять deployed только по состоянию GitHub. Это намеренное fail-closed состояние: production не меняется ради формального совпадения SHA.
 
 ## Следующая задача
 
