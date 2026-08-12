@@ -88,7 +88,6 @@ $parsePaymentRows = static function (array $rows, string $scopeLabel, string $sc
             }
         }
 
-        // Cash never carries VAT. Ignore a stale/tampered VAT value server-side as well.
         if ($paymentMethod === 'cash') {
             $vatRate = null;
         }
@@ -136,9 +135,6 @@ $parsePaymentRows = static function (array $rows, string $scopeLabel, string $sc
             'days_kind' => $daysKind,
             'specific_due_date' => $specificDueDate,
             'condition_comment' => $conditionComment !== '' ? $conditionComment : null,
-            // The legacy compatibility table is still synchronized on create.
-            // Always provide a non-null legacy due type/kind so old tenant schemas
-            // cannot abort an otherwise valid modern payment transaction.
             'payment_due_type' => $legacyDueType($conditionType),
             'payment_due_days' => $daysCount,
             'payment_due_days_kind' => $daysKind ?? 'calendar',
@@ -485,7 +481,7 @@ try {
     $insertRoute->execute([
         ':route_type' => $routeType,
         ':client_id' => $clientId,
-        ':carrier_id' => $carrierId,
+        ':carrier_contractor_id' => $carrierId,
         ':route_executor_id' => $routeExecutorId,
         ':cargo_type_id' => $cargoTypeId,
         ':planned_loading_date' => $plannedLoadingDate,
