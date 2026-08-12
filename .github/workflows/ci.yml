@@ -27,6 +27,12 @@ jobs:
             | xargs -0 -r -n1 php -l >/tmp/php-lint.log
           cat /tmp/php-lint.log
 
+      - name: Python syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/*.py
+
       - name: Migration numbering
         shell: bash
         run: |
@@ -61,6 +67,12 @@ jobs:
           test ! -f database/migrations-local/052_create_linear_route_points.sql
           grep -q "029_create_crew_drivers.sql.*057_create_crew_drivers.sql" scripts/p40_reconcile_migration_names.php
           grep -q "052_create_linear_route_points.sql.*058_create_linear_route_points.sql" scripts/p40_reconcile_migration_names.php
+
+      - name: Dynamic identifier safety audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/dynamic_table_safety_audit.py
 
       - name: Architecture guard
         shell: bash
