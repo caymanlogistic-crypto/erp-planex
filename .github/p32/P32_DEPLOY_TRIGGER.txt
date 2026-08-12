@@ -1,3 +1,0 @@
-P32 controlled deploy trigger.
-Expected previous production SHA: 0297cf89a29b58466c536c48cd09888fbc86ac9b
-Scope: linear-trip finance amount control, compact payment method, days stepper, abbreviated day kind labels.

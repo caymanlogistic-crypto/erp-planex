@@ -1,3 +1,0 @@
-P35 controlled deploy trigger.
-Baseline production: 62371dc7ec8356c4f0868993631f4994023b31f6
-Changes: collapse empty create/edit rows, remove requested separator lines, apply one visual system to create/edit linear trip forms and driver-style document rows.
