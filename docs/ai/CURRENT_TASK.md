@@ -4,30 +4,48 @@
 
 ## Статус
 
-`STABILIZATION_AND_HANDOFF_FINALIZATION`
+`REPOSITORY_STABILIZED_HANDOFF_READY`
 
-Параллельные агенты остановлены. Работа ведётся только от канонической/default ветки `chatgpt/production-stabilization-20260802`.
+Параллельные агенты остановлены. Каноническая/default ветка — `chatgpt/production-stabilization-20260802`. Репозиторий приведён к однопоточному безопасному режиму и готов к дальнейшей разработке от текущего HEAD.
 
-## Что уже нормализовано
+## Что завершено
 
-- Последняя функциональная линия P39/P40 перенесена в каноническую ветку.
-- Предыдущее состояние default branch сохранено в `backup/pre-stabilization-default-20260812`.
-- Временные/автоматические P24–P40 production-deploy workflows удалены.
-- Production control plane сокращён до одного ручного workflow: `.github/workflows/erpv2_controlled_deploy.yml`.
-- Добавлен read-only CI `.github/workflows/ci.yml`.
-- Локальные migration numbers нормализованы: crew drivers = `057`, linear route points = `058`.
-- Добавлен безопасный migration journal reconciliation для старых имён `029`/`052`.
-- README, AGENTS и основной handoff переведены на каноническое состояние.
-- Последний подтверждённый CI до текущего documentation pass: run `31583989951`, все шаги PASS на SHA `0321efa32dfcd8908670f3f37e78dbd15f887628`.
+- Последняя функциональная линия P39/P40 сохранена в канонической ветке.
+- Предыдущее состояние default branch сохранено в `backup/pre-stabilization-default-20260812` как recovery evidence.
+- Временные/автоматические P24–P40 production-deploy/reconcile workflows удалены.
+- В `.github/workflows` оставлены только `ci.yml` и единственный production-capable `erpv2_controlled_deploy.yml`.
+- Production deploy разрешён только вручную через `workflow_dispatch`, exact SHA и `confirm_deploy=DEPLOY_ERPV2`.
+- Local migration numbering нормализован: crew drivers = `057_create_crew_drivers.sql`, linear route points = `058_create_linear_route_points.sql`; старые journal names `029`/`052` обрабатываются отдельным reconciliation script.
+- Управляющие MD приведены к каноническому состоянию; исторические отчёты классифицированы через `docs/ai/DOCUMENTATION_INDEX.md` и не считаются текущими инструкциями.
+- Четыре исторических WARNING `architecture_guard.php` по Company dynamic table expressions проверены по data-flow. Это закрытые literal whitelist/static-map источники, а не request-derived identifiers.
+- Дополнительно проверен пятый аналогичный Superadmin site `ManagementActions/entity_list.php`, который уже имел отдельный whitelist guard в `architecture_guard.php`.
+- Добавлен fail-closed `tools/dynamic_table_safety_audit.py`: он разрешает только пять проверенных dynamic-identifier sites, проверяет их закрытые maps и падает при появлении нового site или request-derived identifier.
+- Canonical CI дополнен Python syntax + dynamic identifier safety audit.
 
-## Что требуется завершить в текущем проходе
+## Последний подтверждённый gate
 
-1. Актуализировать текущие управляющие MD и классифицировать все остальные MD как CURRENT или HISTORICAL в едином `DOCUMENTATION_INDEX.md`.
-2. Не переписывать исторические evidence-отчёты задним числом; они должны оставаться доказательствами своих этапов.
-3. Проверить четыре warning-кандидата `architecture_guard.php`; исправлять production code только если это реальный риск, а не безопасный whitelist/dynamic-table false positive.
-4. После последнего documentation/code commit дождаться нового зелёного canonical CI.
-5. Не выполнять production deploy только ради синхронизации SHA. Deployment допускается лишь через controlled workflow после явной необходимости; repository stabilization и production runtime — разные состояния.
+Canonical CI run `31586574444` на SHA `11ccb7d085f054f21d2accf82f96e5c233110b12` — `SUCCESS`.
 
-## Gate завершения
+PASS:
 
-Репозиторий можно передавать следующему агенту, когда текущие управляющие документы согласованы между собой, migration numbering уникальна, control-plane audit показывает ровно один deploy-capable workflow, canonical CI зелёный, а handoff содержит точный финальный HEAD и известные ограничения.
+- PHP syntax;
+- Python syntax;
+- migration numbering;
+- migration normalization regression;
+- dynamic identifier safety audit;
+- architecture guard;
+- JavaScript syntax;
+- control-plane guard;
+- canonical P21 control-plane policy.
+
+На этом gate central migrations = 11, local migrations = 57, duplicate numbers = 0. Control plane = 2 workflow files, из них deploy-capable = 1, automatic production deploy = 0.
+
+## Production state
+
+Репозиторий стабилизирован независимо от deployment state. Новый `erpv2_controlled_deploy.yml` после нормализации ещё не запускался, поэтому текущий canonical HEAD нельзя объявлять deployed только по состоянию GitHub.
+
+Это намеренное fail-closed состояние: production не меняется ради синхронизации SHA. Когда реально потребуется публикация новой версии, она выполняется только exact-SHA controlled workflow с backup/post-deploy guards и отдельной runtime-проверкой `/erpv2` и неизменности legacy `/erp`.
+
+## Следующая задача
+
+Стабилизационный проход закрыт. Следующая работа должна быть только новой явно поставленной функциональной/исправительной задачей. Перед изменениями агент читает `HANDOFF_FOR_NEW_AGENT.md`, проверяет текущий HEAD и сохраняет существующий single-deploy control plane.
