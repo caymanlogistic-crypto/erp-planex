@@ -182,8 +182,8 @@ $paymentDetail = static function (array $payment) use ($paymentAmountCents, $for
                                 <?php if (!empty($route['registry_points'])): ?>
                                     <?php foreach ($route['registry_points'] as $point): ?>
                                         <span class="registry-route-line">
-                                            <?php if (!empty($point['is_loading'])): ?><span class="registry-route-tag">[Загрузка]</span><?php endif; ?>
-                                            <?php if (!empty($point['is_unloading'])): ?><span class="registry-route-tag">[Выгрузка]</span><?php endif; ?>
+                                            <?php if (!empty($point['is_loading'])): ?><span class="registry-route-tag">↘</span><?php endif; ?>
+                                            <?php if (!empty($point['is_unloading'])): ?><span class="registry-route-tag">↗</span><?php endif; ?>
                                             <?= e($point['address_text'] ?? '—') ?>
                                         </span>
                                     <?php endforeach; ?>
