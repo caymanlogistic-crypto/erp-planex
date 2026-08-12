@@ -24,6 +24,7 @@ final class LinearTripController
     public function createSubmit(): void
     {
         $this->normalizeSubmittedExecutorCarrier();
+        $this->normalizeOptionalCargo();
 
         $config = $this->config;
         $db = $this->db;
@@ -50,6 +51,7 @@ final class LinearTripController
     public function modalEditSubmit(string $id): void
     {
         $this->normalizeSubmittedExecutorCarrier();
+        $this->normalizeOptionalCargo();
 
         $config = $this->config;
         $db = $this->db;
@@ -96,5 +98,18 @@ final class LinearTripController
             $sessionUser,
             $_POST
         );
+    }
+
+    /**
+     * Cargo is intentionally hidden in the current linear-trip UX, while the
+     * legacy schema still requires a cargo_type_id. Keep that compatibility
+     * constraint internal: an omitted cargo is represented by the neutral
+     * display value "—", which the registry already renders as a dash.
+     */
+    private function normalizeOptionalCargo(): void
+    {
+        if (trim((string) ($_POST['cargo_type_name'] ?? '')) === '') {
+            $_POST['cargo_type_name'] = '—';
+        }
     }
 }
