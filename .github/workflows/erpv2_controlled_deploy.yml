@@ -11,6 +11,10 @@ on:
         description: 'Type DEPLOY_ERPV2 to authorize the deploy'
         required: true
         type: string
+  workflow_run:
+    workflows: ["ERP PLANEX CI"]
+    types: [completed]
+    branches: [chatgpt/production-stabilization-20260802]
 
 permissions:
   contents: read
@@ -26,7 +30,14 @@ env:
 
 jobs:
   deploy:
-    if: ${{ inputs.confirm_deploy == 'DEPLOY_ERPV2' }}
+    if: >-
+      ${{
+        (github.event_name == 'workflow_dispatch' && inputs.confirm_deploy == 'DEPLOY_ERPV2') ||
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'push' &&
+         github.event.workflow_run.head_branch == 'chatgpt/production-stabilization-20260802')
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -42,23 +53,33 @@ jobs:
           cp .github/p21/P21_readonly_db_fingerprint.php /tmp/P21_readonly_db_fingerprint.php
           php -l /tmp/P21_readonly_db_fingerprint.php >/dev/null
 
-      - name: Validate explicit source SHA and checkout exact commit
+      - name: Resolve and validate exact source SHA
         id: source
         shell: bash
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          CONFIRM_DEPLOY: ${{ inputs.confirm_deploy }}
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_SOURCE_SHA: ${{ inputs.source_sha }}
+          AUTO_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          MANUAL_CONFIRM: ${{ inputs.confirm_deploy }}
         run: |
           set -euo pipefail
+          if [ "$EVENT_NAME" = 'workflow_run' ]; then
+            SOURCE_SHA="$AUTO_SOURCE_SHA"
+            CONFIRM_DEPLOY='DEPLOY_ERPV2'
+            DEPLOY_MODE='automatic_after_green_ci'
+          else
+            SOURCE_SHA="$MANUAL_SOURCE_SHA"
+            CONFIRM_DEPLOY="$MANUAL_CONFIRM"
+            DEPLOY_MODE='manual_exact_sha'
+          fi
           test "$CONFIRM_DEPLOY" = 'DEPLOY_ERPV2'
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           git fetch --no-tags --depth=1 origin "$SOURCE_SHA"
           git cat-file -e "${SOURCE_SHA}^{commit}"
           git checkout --detach "$SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          printf 'SOURCE_SHA=%s\n' "$SOURCE_SHA"
-          printf 'TARGET=%s\n' "$TARGET"
-          printf 'source_sha=%s\n' "$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          printf 'SOURCE_SHA=%s\nTARGET=%s\nDEPLOY_MODE=%s\n' "$SOURCE_SHA" "$TARGET" "$DEPLOY_MODE"
+          printf 'source_sha=%s\ndeploy_mode=%s\n' "$SOURCE_SHA" "$DEPLOY_MODE" >> "$GITHUB_OUTPUT"
 
       - name: Build artifact strictly from source SHA
         id: artifact
@@ -202,12 +223,14 @@ jobs:
         shell: bash
         env:
           SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+          DEPLOY_MODE: ${{ steps.source.outputs.deploy_mode }}
         run: |
           set -euo pipefail
           mkdir -p "$RESULT_DIR"
           cat > "$RESULT_DIR/ERPV2_CONTROLLED_DEPLOY.json" <<EOF
           {
             "workflow": "ERPv2 Controlled Deploy",
+            "deploy_mode": "$DEPLOY_MODE",
             "source_sha": "$SOURCE_SHA",
             "target": "/erpv2",
             "previous_server_sha": "${{ steps.before.outputs.current }}",
@@ -231,7 +254,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: erpv2_controlled_deploy_${{ inputs.source_sha }}
+          name: erpv2_controlled_deploy_${{ steps.source.outputs.source_sha }}
           path: ${{ env.RESULT_DIR }}/
           if-no-files-found: error
           retention-days: 30
