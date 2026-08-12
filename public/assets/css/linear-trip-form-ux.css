@@ -31,15 +31,19 @@
 [data-linear-trip-form] .linear-trip-payment-card--nested{margin-top:6px}
 [data-linear-trip-form] .linear-trip-principal-card{padding:0;margin-top:7px;border:0!important;background:transparent!important;box-shadow:none!important}
 [data-linear-trip-form] .linear-trip-block-head{margin-bottom:5px;align-items:center}
-[data-linear-trip-form] .linear-trip-payment-rows,[data-linear-trip-form] .linear-trip-principal-cards{gap:5px}
+[data-linear-trip-form] .linear-trip-payment-rows,[data-linear-trip-form] .linear-trip-principal-cards{gap:1px}
+
+/* Keep one header row only; extra payment rows should be visually packed. */
+[data-linear-trip-form] .linear-trip-payment-row:not(:first-child) .field-label{display:none!important}
+[data-linear-trip-form] .linear-trip-payment-row:not(:first-child) .linear-trip-row-remove{margin-top:0}
 
 /* Requested separators: under “Основное” and under the customer finance heading. */
 [data-linear-trip-form] .linear-trip-layout-main>.section-title:first-of-type{padding-bottom:6px;border-bottom:1px solid var(--line-hair)!important}
 [data-linear-trip-form] .linear-trip-payment-card:has([data-payment-container="customer_payments"])>.linear-trip-block-head{padding-bottom:6px;border-bottom:1px solid var(--line-hair)}
 
 /* Payment delete control stays in the same line as the payment fields. */
-[data-linear-trip-form] .linear-trip-payment-row{display:flex;flex-wrap:nowrap;align-items:flex-start;gap:5px}
-[data-linear-trip-form] .linear-trip-payment-row>.field{flex:0 0 auto;min-width:0}
+[data-linear-trip-form] .linear-trip-payment-row{display:flex;flex-wrap:nowrap;align-items:flex-start;gap:5px;margin:0}
+[data-linear-trip-form] .linear-trip-payment-row>.field{flex:0 0 auto;min-width:0;margin-bottom:0}
 [data-linear-trip-form] .linear-trip-payment-row>.field:has(input[name$="[amount]"]){flex-basis:104px;position:relative}
 [data-linear-trip-form] .linear-trip-payment-row>.field:has(select[name$="[payment_method]"]){flex-basis:112px}
 [data-linear-trip-form] .linear-trip-payment-row>.field:has(select[name$="[vat_rate]"]){flex-basis:90px}
