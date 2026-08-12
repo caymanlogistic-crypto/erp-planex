@@ -31,7 +31,8 @@
 [data-linear-trip-form] .linear-trip-payment-card--nested{margin-top:6px}
 [data-linear-trip-form] .linear-trip-principal-card{padding:0;margin-top:7px;border:0!important;background:transparent!important;box-shadow:none!important}
 [data-linear-trip-form] .linear-trip-block-head{margin-bottom:5px;align-items:center}
-[data-linear-trip-form] .linear-trip-payment-rows,[data-linear-trip-form] .linear-trip-principal-cards{gap:1px}
+[data-linear-trip-form] .linear-trip-payment-rows{gap:4px}
+[data-linear-trip-form] .linear-trip-principal-cards{gap:1px}
 
 /* Keep one header row only; extra payment rows should be visually packed. */
 [data-linear-trip-form] .linear-trip-payment-row:not(:first-child) .field-label{display:none!important}
