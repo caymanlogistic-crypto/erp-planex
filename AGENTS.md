@@ -1,258 +1,73 @@
-# ERP PLANEX — агентская схема
+# ERP PLANEX — правила работы агентов
 
-## Актуализация 2026-06-26 — Исполнители рейса / Транспорт
+Актуально на 2026-08-12. Этот файл является текущим операционным контрактом для разработки. Исторические E7–P40 документы сохраняются как evidence и не переопределяют эти правила.
 
-Статус: подготовлен пакет исправлений `ERP_ROUTE_EXECUTORS_VEHICLE_SETS_FIXED_STRUCTURE_v4_SCHEMA_REAL.zip`; перед финальной фиксацией владелец должен применить файлы, проверить runtime и затем закоммитить результат.
+## Начало работы
 
-Что обязательно учитывать дальше:
+Перед любым изменением агент обязан прочитать:
 
-- `/company/route-executors` должен быть доступен `company_owner`, `senior_logist`, `logist`. Для `logist` пустой список — это не «Нет доступа», а нормальное пустое состояние с действием `Создать исполнителя рейса`.
-- `Исполнитель рейса` — пользовательская сущность `Подрядчик + водитель + ТС`; технически создаются/используются `driver_vehicle_blocks` + `crews`.
-- Реальная локальная схема БД: таблицы сущностей находятся в `erp_company_{id}`, а не в центральной `erp_planex`.
-- `driver_vehicle_blocks` НЕ имеет поля `vehicle_id`. Запрещено писать `vehicle_id` в `driver_vehicle_blocks`.
-- `driver_vehicle_blocks` хранит: `driver_id`, `vehicle_set_id`, `status`, `comments`, `created_by_user_id`, `created_by_role`, `updated_by_user_id`, `updated_by_role`.
-- `crews` всё ещё имеет legacy-поля `vehicle_id` и `driver_id`; при создании исполнителя рейса `crews.vehicle_id` нужно заполнять значением `vehicle_sets.primary_vehicle_unit_id`, а `crews.driver_id` — выбранным водителем.
-- Для `logist` выбор contractor/driver/vehicle_set и видимость списков должны фильтроваться по `created_by_user_id` + активным grants. Активный grant: `revoked_at IS NULL` и `access_level IN ('view','edit')`.
-- На `/company/vehicle-sets` модалка создания транспорта должна быть в DOM всегда, включая пустой список, иначе кнопка `Добавить новый транспорт` визуально есть, но не работает.
-- Если возникает ошибка схемы БД, сначала запускать `db_schema_route_executor.php` и сверять реальные `DESCRIBE/SHOW CREATE TABLE`, не угадывать поля.
+1. `README.md`.
+2. `docs/ai/HANDOFF_FOR_NEW_AGENT.md`.
+3. `docs/ai/PROJECT_STATE.md`.
+4. `docs/ai/CURRENT_TASK.md`.
+5. `docs/ai/DECISIONS.md`.
+6. Для UI — `docs/ui/DESIGN_STANDARD.md` и master-reference ERP PLANEX.
 
-## Главный принцип
+## Каноническая ветка
 
-Документация должна помогать разработке, а не заменять разработку.
+Каноническая/default ветка: `chatgpt/production-stabilization-20260802`.
 
-## Рабочая схема
+Нельзя продолжать разработку из старых Pxx-веток, исторических deploy-веток или recovery-ветки. Перед работой всегда сверять текущий HEAD канонической ветки и состояние GitHub Actions.
 
-```text
-1. Владелец + ChatGPT проектируют решение.
-2. KILO erp-architect переводит решение в техническую задачу.
-3. KILO erp-coder реализует функционал.
-4. KILO erp-coder тестирует функционал.
-5. KILO erp-coder применяет дизайн-базу через erp-ui.css.
-6. KILO erp-architect принимает результат у кодера.
-7. Внешний ChatGPT "Главный дизайнер" подключается для дизайн-полировки.
-8. KILO erp-coder внедряет дизайнерские правки точечно.
-```
+Recovery evidence: `backup/pre-stabilization-default-20260812`. Она нужна только для аварийного сравнения/восстановления и не является источником deployment.
 
-Кодер не получает задачи напрямую от владельца/ChatGPT, кроме аварийных случаев. Основной поток: erp-architect ставит задачу erp-coder и принимает результат. Если владелец случайно передал задачу кодеру напрямую, результат всё равно обязательно возвращается erp-architect на приёмку.
+## Production control plane
 
-## KILO-агенты
+Production runtime: `/erpv2`. Legacy `/erp` запрещено менять.
 
-Постоянно используются только:
+Единственный production-capable workflow: `.github/workflows/erpv2_controlled_deploy.yml`.
 
-```text
-.kilo/agents/erp-architect.md
-.kilo/agents/erp-coder.md
-```
+Он должен оставаться только `workflow_dispatch`, принимать точный 40-символьный SHA и требовать `confirm_deploy=DEPLOY_ERPV2`. Автоматические production deploy по `push`, `pull_request`, `schedule`, `workflow_run`, issue/event запрещены.
 
-## Главный дизайнер
+`.github/workflows/ci.yml` — единственный автоматический CI workflow. Он read-only относительно production и выполняет lint, migration numbering, architecture guard, JavaScript syntax и control-plane policy audit.
 
-Главный дизайнер — это НЕ KILO-агент.
+## База данных и миграции
 
-Это отдельный ChatGPT-чат, которому передаются промт, файлы и архивы для дизайн-аудита, подготовки CSS-системы и UI-полировки.
+ERP многотенантная: центральная БД хранит глобальные/управляющие данные, операционные данные компаний находятся в `erp_company_{id}`.
 
-## CODEX-дизайнер
+Любое изменение схемы — только миграцией. Нельзя вручную ALTER/CREATE production-схему из контроллера, временного скрипта или deploy workflow без отдельной migration/reconciliation процедуры.
 
-CODEX-дизайнер — это также НЕ KILO-агент, а внешний инструмент/чат, который выполняет точечные дизайн-правки.
+Номера локальных миграций уникальны. После нормализации используются:
 
-CODEX-дизайнер обязан сам проверять свои изменения после правок:
-- `php -l` по изменённым view-файлам;
-- `git diff --check`;
-- отсутствие inline-style кроме `display:none`;
-- отсутствие случайных цветов/стилей;
-- сохранность `input name` / `form action` / `method` / `routes`;
-- подключение CSS;
-- визуальная целостность страниц.
+- `057_create_crew_drivers.sql`;
+- `058_create_linear_route_points.sql`.
 
-CODEX-дизайнер не должен менять функциональную логику.
-Если найден функциональный баг — фиксирует его в отчёте, а исправление идёт через архитектора и кодера.
+Исторические journal names `029_create_crew_drivers.sql` и `052_create_linear_route_points.sql` должны обрабатываться через `scripts/p40_reconcile_migration_names.php`; нельзя слепо повторно выполнять их DDL.
 
-## Дизайн-система
+## Защищённые доменные решения
 
-Главный CSS:
+`Исполнитель рейса` — пользовательская сущность `Подрядчик + водитель + ТС`, технически реализованная через `driver_vehicle_blocks` и `crews`.
 
-```text
-public/assets/css/erp-ui.css
-```
+`driver_vehicle_blocks` использует `vehicle_set_id`; поля `vehicle_id` в этой таблице быть не должно. Legacy `crews.vehicle_id` при необходимости соответствует `vehicle_sets.primary_vehicle_unit_id`.
 
-Текстовый стандарт:
+Finance доступен только `company_owner`.
 
-```text
-docs/ui/DESIGN_STANDARD.md
-```
+Документы хранятся в `storage/companies/{company_id}/documents/...`; storage нельзя очищать как временный каталог.
 
-Кодер обязан использовать эти файлы и не придумывать второй UI-kit.
+## UI
 
-## QA
+ERP PLANEX — desktop-first, minimum production desktop width 1440px, industrial density, строгие borders, малые радиусы и коричнево-медная визуальная система. Реестры — table-first. Запрещено самовольно заменять интерфейс на generic SaaS, Bootstrap/AdminLTE dashboard или card lists.
 
-Отдельный QA-агент исключён из постоянной цепочки.
+## Проверка изменений
 
-Проверка встроена в обязанности:
+Перед утверждением изменения обязательны focused tests по затронутому модулю, PHP lint, JavaScript syntax при изменении JS, architecture guard, отсутствие дублей migration numbers и зелёный `.github/workflows/ci.yml`.
 
-- архитектор проверяет соответствие задаче;
-- кодер запускает доступные runtime/checks;
-- Главный дизайнер проверяет только дизайн-код;
-- финальное решение принимает владелец с ChatGPT.
+После schema change дополнительно проверяются fresh-schema и upgrade path. После production deploy проверяются exact server marker, `/erpv2/login`, сохранность `.env`/runtime directories, old `/erp` fingerprint и ожидаемое состояние migration journal всех активных tenants.
 
-## Основные MD
+Для UI/runtime audit используется Chromium/Playwright: 1920×1080, deviceScaleFactor 1, `ru-RU`, `Europe/Moscow`, headless=true, с проверкой console/page/request/http failures.
 
-```text
-docs/ai/PROJECT_STATE.md
-docs/ai/AGENT_RULES.md
-docs/ai/CURRENT_TASK.md
-docs/ai/DECISIONS.md
-docs/ai/HANDOFF_FOR_NEW_CHAT.md
-docs/ui/DESIGN_STANDARD.md
-```
+## Работа с документацией
 
-## Запрет
+Текущими источниками правды являются `README.md`, этот файл, `docs/ai/HANDOFF_FOR_NEW_AGENT.md`, `PROJECT_STATE.md`, `CURRENT_TASK.md`, `DECISIONS.md`, `DOCUMENTATION_INDEX.md` и `docs/ui/DESIGN_STANDARD.md`.
 
-Нельзя создавать новые управляющие MD без прямого решения владельца + ChatGPT.
-
-## Storage: загруженные документы
-
-`storage/companies/*` — рабочие загруженные документы (PDF, изображения и т.д.).
-При очистке проекта/подготовке архива эти директории можно исключать из архива,
-но НЕЛЬЗЯ удалять из рабочей среды, иначе документы в БД станут осиротевшими
-и просмотр/скачивание будут возвращать 404.
-
-
----
-
-## Codex Desktop + DeepSeek/OpenCode — схема супервизор/исполнитель
-
-Статус: добавлено для тестовой и рабочей связки, где Codex Desktop выступает главным контролёром, а DeepSeek через OpenCode — исполнителем точечных задач.
-
-### Роли
-
-```text
-Codex Desktop = supervisor / architect / reviewer
-OpenCode + DeepSeek = implementation worker
-```
-
-Codex Desktop не должен слепо принимать результат DeepSeek. Его задача:
-
-1. понять задачу владельца;
-2. проверить проект и текущий `git status`;
-3. сформулировать короткую техническую задачу для DeepSeek;
-4. сохранить задачу в `tmp/deepseek-task.md`;
-5. запустить DeepSeek через OpenCode;
-6. дождаться завершения работы OpenCode;
-7. проверить `git diff`;
-8. запустить обязательные проверки;
-9. при ошибках — дать DeepSeek корректирующий промт;
-10. принять результат только после проверки.
-
-### Правило экономии контекста и актуальности документации
-
-Codex Desktop не пишет код сам, если задачу можно безопасно перепоручить OpenCode/DeepSeek. Codex отвечает за постановку задачи, контроль diff, проверки, корректирующие промты и финальную приёмку.
-
-После каждой значимой модификации проекта Codex обязан обновить актуальную документацию проекта. Новые важные правила, решения, workflow и ограничения фиксируются в управляющих MD, а не остаются только в чате.
-
-### Команда запуска DeepSeek из Codex
-
-Codex Desktop на Windows может запускать команды через PowerShell, но для ERP PLANEX это нежелательно из-за риска битой кириллицы и некорректного вывода CLI.
-
-Все команды проекта должны запускаться через `cmd.exe /c`.
-
-Базовая команда для запуска DeepSeek:
-
-```text
-cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && opencode run --auto ""Read tmp\deepseek-task.md and implement it. After finishing, report changed files and checks performed."""
-```
-
-Если Codex создаёт или обновляет задачу для DeepSeek, файл задачи должен быть:
-
-```text
-tmp/deepseek-task.md
-```
-
-### Запрещено
-
-Codex Desktop и DeepSeek/OpenCode не должны:
-
-- запускать проектные Git/PHP/runtime-команды напрямую через PowerShell;
-- менять основную шапку;
-- менять шапку контентного блока;
-- менять существующую структуру или поведение меню;
-- переписывать backend/business logic, если задача только визуальная;
-- придумывать несуществующие файлы, маршруты, таблицы или поля;
-- игнорировать текущие правила из `docs/ai/*` и `docs/ui/DESIGN_STANDARD.md`;
-- запускать `php -S` в foreground;
-- запускать `start /B php -S`;
-- принимать mojibake как нормальный текст.
-
-### Обязательная защита кириллицы
-
-Все изменяемые файлы с русским текстом должны сохраняться в UTF-8 без BOM.
-
-Запрещены признаки битой кодировки:
-
-```text
-Рџ
-РЎ
-Ð
-Ñ
-�
-```
-
-Если Codex или DeepSeek видят такие символы в изменённых файлах, результат считается неприемлемым до исправления.
-
-### Обязательные проверки после работы DeepSeek
-
-Codex обязан выполнить:
-
-```text
-cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && git diff --check && git status --short"
-```
-
-Для каждого изменённого PHP-файла:
-
-```text
-cmd.exe /c "cd /d C:\Users\Vladimir\Desktop\PLANEX\SITE\erp && php -l path\to\changed-file.php"
-```
-
-Для визуальных задач Codex дополнительно проверяет:
-
-- не изменены ли topbar/page-head/menu;
-- нет ли случайных inline-style, кроме допустимого `display:none`;
-- не изменены ли `input name`, `form action`, `method`, routes;
-- не добавлены ли случайные цвета/второй UI-kit;
-- используется ли `public/assets/css/erp-ui.css` и существующий дизайн-стандарт.
-
-### Исправляющий цикл
-
-Если после работы DeepSeek есть ошибки, Codex не должен исправлять всё молча сам.
-
-Правильный цикл:
-
-```text
-1. Codex фиксирует конкретные нарушения.
-2. Codex обновляет tmp/deepseek-task.md коротким correction prompt.
-3. Codex снова запускает OpenCode/DeepSeek.
-4. Codex повторяет git/php/runtime/design checks.
-5. Только после этого пишет итоговый отчёт.
-```
-
-### Финальный отчёт Codex
-
-Финальный отчёт Codex должен содержать:
-
-- какие файлы изменены;
-- что сделал DeepSeek;
-- что проверил Codex;
-- результат `git diff --check`;
-- результат `php -l` по изменённым PHP-файлам;
-- подтверждение, что кириллица не сломана;
-- подтверждение, что topbar/page-head/menu не тронуты;
-- статус: `ACCEPTED`, `NEEDS_CORRECTION` или `BLOCKED`.
-
-### Подтверждённые уроки runtime-тестирования
-
-На основе runtime-испытания связки Codex Desktop + OpenCode/DeepSeek подтверждены:
-
-- OpenCode эффективен для: аудит, точечные правки, runtime, DB fixtures, проверки, чистка артефактов.
-- Codex не должен слепо принимать отчёты OpenCode; отчёты сначала показываются владельцу, затем Codex даёт свою интерпретацию.
-- Промты OpenCode: точный scope, запреты, правила команд, матрица приёмки, чистка, формат отчёта.
-- OpenCode запрещено: PowerShell, curl, Unix-only, npm install, package-lock/node_modules, foreground php -S, широкие правки без разрешения.
-- При нарушении правил или фиктивном runtime — correction loop до приёмки.
-- Codex проверяет: git diff, git status, php -l, architecture_guard, git diff --check, mojibake, артефакты, runtime-доказательства.
+Все документы, помеченные в `DOCUMENTATION_INDEX.md` как HISTORICAL, сохраняют исторические факты и не должны использоваться как инструкция по текущему branch/deploy/runtime.
