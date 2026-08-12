@@ -49,6 +49,46 @@ try {
     }
 
     $route = LinearTripRequestNormalizer::normalizeRoutePaymentConditions($route);
+
+    // Amounts are stored as DECIMAL (for example 97500.00). The generic visual formatter
+    // groups digits, so a raw decimal string must first be converted to an edit-safe value.
+    // Otherwise 97500.00 becomes 9 750 000 in the browser. Keep non-zero kopecks intact.
+    $toEditAmount = static function ($value): string {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return '';
+        }
+        $clean = str_replace([' ', ','], ['', '.'], $raw);
+        if (!preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $clean, $m)) {
+            return $raw;
+        }
+        $fraction = $m[2] ?? '';
+        if ($fraction === '' || preg_match('/^0{1,2}$/', $fraction)) {
+            return $m[1];
+        }
+        return $m[1] . ',' . str_pad($fraction, 2, '0');
+    };
+    foreach (['customer', 'carrier'] as $partyRole) {
+        foreach (($route['payments'][$partyRole] ?? []) as &$payment) {
+            if (is_array($payment) && array_key_exists('amount', $payment)) {
+                $payment['amount'] = $toEditAmount($payment['amount']);
+            }
+        }
+        unset($payment);
+    }
+    foreach (($route['payments']['principals'] ?? []) as &$principalPayments) {
+        if (!is_array($principalPayments)) {
+            continue;
+        }
+        foreach ($principalPayments as &$payment) {
+            if (is_array($payment) && array_key_exists('amount', $payment)) {
+                $payment['amount'] = $toEditAmount($payment['amount']);
+            }
+        }
+        unset($payment);
+    }
+    unset($principalPayments);
+
     $termsByRole = LinearRouteService::fetchRouteTerms($localPdo, $routeId);
     $docsByCode = LinearRouteService::fetchRouteDocuments($localPdo, $routeId);
     $clients = LinearRouteService::fetchVisibleClients($localPdo, $sessionUser);
