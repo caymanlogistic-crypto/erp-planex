@@ -7,7 +7,6 @@ import re
 import sys
 from pathlib import Path
 
-AUTO_EVENTS = {"push", "pull_request", "schedule", "workflow_run"}
 DEPLOY_ENGINE_RE = re.compile(r"P07_deploy_erpv2\.sh")
 MIGRATION_COMMAND_RE = re.compile(
     r"(?:php\s+artisan\s+migrate|doctrine:migrations|\bLocalMigrationService\b|\bmigrate\.php\b|\bmysql\b[^\n]*(?:database/migrations|migration))",
@@ -17,6 +16,8 @@ OLD_ERP_WRITE_RE = re.compile(
     r"(?:rsync|cp|mv|install|tar\s+[^\n]*-C)\b[^\n]*(?:public_html/erp)(?:\s|/|$)(?!v2)",
     re.IGNORECASE,
 )
+CANONICAL_BRANCH = "chatgpt/production-stabilization-20260802"
+CI_WORKFLOW_NAME = "ERP PLANEX CI"
 
 
 def _on_block(text: str) -> str:
@@ -62,6 +63,21 @@ def _required_input(text: str, name: str) -> bool:
     return bool(m and re.search(r"(?m)^\s{8,}required:\s*true\s*$", m.group(0)))
 
 
+def _has_guarded_auto_deploy(text: str, events: list[str]) -> bool:
+    if "workflow_run" not in events:
+        return False
+    required_tokens = [
+        f'workflows: ["{CI_WORKFLOW_NAME}"]',
+        "types: [completed]",
+        f"branches: [{CANONICAL_BRANCH}]",
+        "github.event.workflow_run.conclusion == 'success'",
+        "github.event.workflow_run.event == 'push'",
+        f"github.event.workflow_run.head_branch == '{CANONICAL_BRANCH}'",
+        "github.event.workflow_run.head_sha",
+    ]
+    return all(token in text for token in required_tokens)
+
+
 def inspect_workflow(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     events = _events(text)
@@ -69,11 +85,16 @@ def inspect_workflow(path: Path) -> dict:
     issues: list[str] = []
 
     if deploy:
-        auto = sorted(AUTO_EVENTS.intersection(events))
-        if auto:
-            issues.append("deploy-capable workflow has automatic trigger(s): " + ", ".join(auto))
-        if events != ["workflow_dispatch"]:
-            issues.append("deploy-capable workflow must be workflow_dispatch only")
+        allowed_events = {"workflow_dispatch", "workflow_run"}
+        unknown_events = sorted(set(events) - allowed_events)
+        if unknown_events:
+            issues.append("deploy-capable workflow has forbidden trigger(s): " + ", ".join(unknown_events))
+        if "workflow_dispatch" not in events:
+            issues.append("manual workflow_dispatch fallback is required")
+        if "workflow_run" in events and not _has_guarded_auto_deploy(text, events):
+            issues.append("workflow_run auto-deploy is not strictly bound to successful canonical CI push")
+        if "workflow_run" not in events:
+            issues.append("guarded canonical CI auto-deploy trigger is missing")
         if not _required_input(text, "source_sha"):
             issues.append("source_sha input is not required")
         if not _required_input(text, "confirm_deploy"):
@@ -119,6 +140,7 @@ def inspect_workflow(path: Path) -> dict:
         "push_trigger": "push" in events,
         "schedule_trigger": "schedule" in events,
         "workflow_run_trigger": "workflow_run" in events,
+        "guarded_auto_deploy": _has_guarded_auto_deploy(text, events) if deploy else False,
         "deploy_capable": deploy,
         "issues": issues,
         "status": "PASS" if not issues else "FAIL",
@@ -139,6 +161,7 @@ def audit_repository(root: Path) -> dict:
         "pr_deploy_workflows": sum(1 for w in deploy if w["pull_request_trigger"]),
         "scheduled_deploy_workflows": sum(1 for w in deploy if w["schedule_trigger"]),
         "workflow_run_deploy_workflows": sum(1 for w in deploy if w["workflow_run_trigger"]),
+        "guarded_auto_deploy_workflows": sum(1 for w in deploy if w["guarded_auto_deploy"]),
         "workflows": workflows,
     }
     if len(deploy) != 1:
@@ -147,6 +170,9 @@ def audit_repository(root: Path) -> dict:
     elif deploy[0]["file"] != (workflows_dir / "erpv2_controlled_deploy.yml").as_posix():
         result["status"] = "FAIL"
         result["global_issue"] = "the only deploy-capable workflow is not erpv2_controlled_deploy.yml"
+    elif not deploy[0]["guarded_auto_deploy"]:
+        result["status"] = "FAIL"
+        result["global_issue"] = "canonical deploy workflow is missing guarded auto-deploy after green CI"
     return result
 
 
