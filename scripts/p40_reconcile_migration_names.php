@@ -7,8 +7,8 @@ $config = require __DIR__ . '/../bootstrap/app.php';
 require_once base_path('app/Support/entrypoint_dependencies.php');
 
 $renames = [
-    '029_create_crew_drivers.sql' => '057_create_crew_drivers.sql',
-    '052_create_linear_route_points.sql' => '058_create_linear_route_points.sql',
+    '057_create_crew_drivers.sql' => '057_create_crew_drivers.sql',
+    '058_create_linear_route_points.sql' => '058_create_linear_route_points.sql',
 ];
 
 $db = new \App\Core\Database($config['database']);

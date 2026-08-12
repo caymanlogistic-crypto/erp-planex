@@ -6,7 +6,7 @@ loadEnvFileNonOverwriting(dirname(__DIR__) . '/.env');
 $config = require __DIR__ . '/../bootstrap/app.php';
 require_once base_path('app/Support/entrypoint_dependencies.php');
 
-$migrationName = '052_create_linear_route_points.sql';
+$migrationName = '058_create_linear_route_points.sql';
 $migrationPath = base_path('database/migrations-local/' . $migrationName);
 $sql = file_get_contents($migrationPath);
 if ($sql === false || trim($sql) === '') throw new RuntimeException('P39 migration SQL is missing or empty.');

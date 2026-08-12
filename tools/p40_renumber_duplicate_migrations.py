@@ -2,12 +2,12 @@ from pathlib import Path
 import subprocess
 
 RENAMES = {
-    'database/migrations-local/029_create_crew_drivers.sql': 'database/migrations-local/057_create_crew_drivers.sql',
-    'database/migrations-local/052_create_linear_route_points.sql': 'database/migrations-local/058_create_linear_route_points.sql',
+    'database/migrations-local/057_create_crew_drivers.sql': 'database/migrations-local/057_create_crew_drivers.sql',
+    'database/migrations-local/058_create_linear_route_points.sql': 'database/migrations-local/058_create_linear_route_points.sql',
 }
 REPLACEMENTS = {
-    '029_create_crew_drivers.sql': '057_create_crew_drivers.sql',
-    '052_create_linear_route_points.sql': '058_create_linear_route_points.sql',
+    '057_create_crew_drivers.sql': '057_create_crew_drivers.sql',
+    '058_create_linear_route_points.sql': '058_create_linear_route_points.sql',
 }
 
 for old, new in RENAMES.items():
