@@ -1,46 +1,59 @@
 # ERP PLANEX
 
-Production ERP for PLANEX logistics operations.
+Production PHP/MySQL multi-tenant ERP for PLANEX logistics operations.
 
 ## Canonical state — 2026-08-12
 
-Repository status: `STABILIZED / HANDOFF READY`.
+Repository: `caymanlogistic-crypto/erp-planex`.
+Canonical/default branch: `chatgpt/production-stabilization-20260802`.
+Production runtime: `https://plan-ex.ru/erpv2/`.
+Legacy `/erp` is separate and must not be changed.
 
-The repository was normalized after the P26–P40 parallel-agent development period. New work must start from the canonical/default branch `chatgpt/production-stabilization-20260802` and from its current HEAD. The complete handoff is `docs/ai/HANDOFF_FOR_NEW_AGENT.md`.
-
-### Verified stabilization baseline
-
-Canonical CI run `31586574444` on SHA `11ccb7d085f054f21d2accf82f96e5c233110b12` completed successfully after the final control-plane hardening. It passed PHP syntax, Python syntax, migration numbering, migration normalization regression, dynamic SQL identifier safety, architecture guard, JavaScript syntax, control-plane guard and P21 policy audit.
-
-At that gate: central migrations = 11, local migrations = 57, duplicate migration numbers = 0; workflow files = 2, production-capable workflows = 1, automatic production deploy workflows = 0.
-
-### Safety rules
-
-- `/erpv2` is the active ERP runtime. Legacy `/erp` must not be changed.
-- Production deployment is allowed only through `.github/workflows/erpv2_controlled_deploy.yml` and only by explicit `workflow_dispatch` with an exact 40-character SHA and `confirm_deploy=DEPLOY_ERPV2`.
-- Automatic production deploys from `push`, `pull_request`, `schedule`, `workflow_run`, issues or other indirect triggers are prohibited.
-- Do not embed branch names or fixed deployment SHAs in deployment workflows.
-- `.github/workflows/ci.yml` is the canonical non-mutating CI gate. It may run automatically but must never deploy or mutate production data.
-- Database changes must use migrations. Never edit production schema ad hoc.
-- Central DB and tenant DBs are separate. Company operational entities live in `erp_company_{id}`.
-- Local migration numbers must be unique. Current normalized local migrations include `057_create_crew_drivers.sql` and `058_create_linear_route_points.sql`.
-- Finance remains restricted to `company_owner`.
-- UI is desktop-first and follows the ERP PLANEX master reference: industrial density, table-first registries, small radii and the brown/copper visual system. Do not replace it with generic SaaS/AdminLTE/Bootstrap styling.
-
-### Dynamic SQL identifiers
-
-Five intentional legacy dynamic-identifier sites are now protected by `tools/dynamic_table_safety_audit.py`. Four of them remain visible as heuristic WARNINGs in `architecture_guard.php`; they were reviewed as closed literal whitelist/static-map patterns. The fifth Superadmin site has its own entity-map guard. Any new site or change to the approved mappings fails canonical CI until explicitly reviewed.
-
-## Production deployment state
-
-Repository stabilization and production deployment are deliberately separate. The normalized `erpv2_controlled_deploy.yml` has not yet been run, so the current repository HEAD must not be described as deployed merely because CI is green. A production SHA is authoritative only after a successful exact-SHA controlled-deploy run and its post-deploy checks.
-
-## Recovery and history
-
-The previous default-branch state was preserved before normalization in `backup/pre-stabilization-default-20260812`. It is recovery evidence only and must not be used as a deployment source without an explicit owner decision.
-
-Historical P11–P40 reports are evidence snapshots, not the current source of truth. Their old blockers, branches, SHAs, workflows and migration numbers must not override current code and CURRENT documentation.
+Development is serial: one agent, current canonical HEAD, one production path. Historical Pxx branches/reports are evidence only.
 
 ## Start here
 
-Read `docs/ai/HANDOFF_FOR_NEW_AGENT.md`, then `docs/ai/PROJECT_STATE.md`, `docs/ai/CURRENT_TASK.md` and `docs/ai/DOCUMENTATION_INDEX.md` before changing code, schema or GitHub Actions.
+Read in order:
+
+1. `AGENTS.md`
+2. `docs/ai/HANDOFF_FOR_NEW_AGENT.md`
+3. `docs/ai/PROJECT_STATE.md`
+4. `docs/ai/CURRENT_TASK.md`
+5. `docs/ai/FINANCE_HANDOFF.md` for the current accounting/finance work
+6. `docs/ai/DECISIONS.md` and `DOCUMENTATION_INDEX.md`
+7. `docs/ui/DESIGN_STANDARD.md` for UI work
+
+## CI / production deployment
+
+There are two canonical workflows:
+
+- `.github/workflows/ci.yml` — automatic engineering gate;
+- `.github/workflows/erpv2_controlled_deploy.yml` — the only production-capable workflow.
+
+Normal release path:
+
+`push to canonical -> ERP PLANEX CI -> successful push CI -> workflow_run -> ERPv2 Controlled Deploy`.
+
+The deploy resolves the exact green CI `head_sha`, creates a server backup, builds the artifact strictly from that SHA, deploys through the proven P07 engine and verifies server marker, `/erpv2/login`, DB fingerprint, old `/erp`, `.env` and runtime directory preservation. Manual `workflow_dispatch` exact-SHA deployment remains available as fallback and requires `confirm_deploy=DEPLOY_ERPV2`.
+
+Standard deploy does NOT run database migrations.
+
+## Database
+
+Central DB stores global/control data; company operational data lives in `erp_company_{id}`. Schema changes require migrations and explicit controlled migration/reconciliation after deployment. Never mutate production schema ad hoc from web code. Local migration numbers must remain unique; normalized route/crew migrations include `057_create_crew_drivers.sql` and `058_create_linear_route_points.sql`.
+
+## Finance
+
+The next development cycle focuses on the accounting/finance block. Finance remains restricted to `company_owner`; tenant isolation and auditability are mandatory. The module includes bank accounts/statements and XLSX import, cash, invoices/payments/operations, allocations/actions/history, categories/reports/settings and trip-linked finance. See `docs/ai/FINANCE_HANDOFF.md` before changing it.
+
+Money is decimal data. Never parse persisted decimal money by stripping non-digits. UI formatting must not alter values. Do not mutate production financial rows to create test fixtures.
+
+## UI
+
+ERP PLANEX is desktop-first, table-first and compact, with brown/copper accents, strict borders and small radii. Do not replace it with generic Bootstrap/AdminLTE/SaaS styling unless explicitly requested.
+
+## Completion rule
+
+A commit is not READY. Green CI alone is not READY. Ordinary code/UI work is ready only after successful triggered deploy plus focused verification. Schema work additionally requires explicit migration/reconciliation and tenant journal verification.
+
+Recovery evidence: `backup/pre-stabilization-default-20260812`. Do not deploy from it without an explicit recovery decision.
