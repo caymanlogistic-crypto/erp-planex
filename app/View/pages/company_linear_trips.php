@@ -30,8 +30,6 @@ $formatCents = static function (int $cents): string {
 $paymentDetail = static function (array $payment) use ($paymentAmountCents, $formatCents): string {
     $parts = [
         $formatCents($paymentAmountCents($payment['amount'] ?? 0)),
-        LinearRouteService::paymentMethodLabel($payment['payment_method'] ?? null),
-        LinearRouteService::vatRateLabel($payment['vat_rate'] ?? null),
     ];
 
     $condition = LinearRouteService::conditionTypeLabel($payment['condition_type'] ?? null);
@@ -120,8 +118,8 @@ $paymentDetail = static function (array $payment) use ($paymentAmountCents, $for
                 <thead>
                     <tr>
                         <th class="registry-id">ID</th>
-                        <th class="registry-date">Дата загрузки</th>
-                        <th class="registry-date">Дата выгрузки</th>
+                        <th class="registry-date">Начало рейса</th>
+                        <th class="registry-date">Окончание рейса</th>
                         <th class="registry-client">Заказчик</th>
                         <th class="registry-executor">Исполнитель</th>
                         <th class="registry-route">Маршрут</th>
@@ -182,8 +180,8 @@ $paymentDetail = static function (array $payment) use ($paymentAmountCents, $for
                                 <?php if (!empty($route['registry_points'])): ?>
                                     <?php foreach ($route['registry_points'] as $point): ?>
                                         <span class="registry-route-line">
-                                            <?php if (!empty($point['is_loading'])): ?><span class="registry-route-tag">↘</span><?php endif; ?>
-                                            <?php if (!empty($point['is_unloading'])): ?><span class="registry-route-tag">↗</span><?php endif; ?>
+                                            <?php if (!empty($point['is_loading'])): ?><span class="registry-route-tag">↓</span><?php endif; ?>
+                                            <?php if (!empty($point['is_unloading'])): ?><span class="registry-route-tag">↑</span><?php endif; ?>
                                             <?= e($point['address_text'] ?? '—') ?>
                                         </span>
                                     <?php endforeach; ?>
