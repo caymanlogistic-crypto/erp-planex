@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Fail-closed audit for the four intentional dynamic-identifier sites.
+"""Fail-closed audit for the intentional dynamic SQL identifier sites.
 
-The legacy architecture guard flags any SQL identifier interpolation. These four
-sites are retained for compatibility, but their identifier sources must remain
-closed static maps. This audit makes that assumption executable: any new site,
-missing whitelist, changed table set, or request-derived identifier fails CI.
+The legacy architecture guard deliberately uses a broad heuristic and reports
+four Company-action warnings. A fifth Superadmin site is handled by a dedicated
+whitelist check inside architecture_guard.php. This audit covers all five sites
+uniformly and fails if a new dynamic identifier site appears, an approved static
+map changes unexpectedly, or an identifier becomes request-derived.
 """
 from __future__ import annotations
 
@@ -22,7 +23,10 @@ CONTRACTOR_FILES = {
     Path("app/Http/Controllers/Company/ContractorActions/create_full_submit.php"),
     Path("app/Http/Controllers/Company/ContractorActions/add_crew_submit.php"),
 }
-EXPECTED = set(DOCUMENT_FILES) | CONTRACTOR_FILES
+SUPERADMIN_ENTITY_FILE = Path(
+    "app/Http/Controllers/Superadmin/ManagementActions/entity_list.php"
+)
+EXPECTED = set(DOCUMENT_FILES) | CONTRACTOR_FILES | {SUPERADMIN_ENTITY_FILE}
 
 ALLOWED_ENTITY_TABLES = {
     "client": ("clients", "name"),
@@ -34,6 +38,14 @@ ALLOWED_ENTITY_TABLES = {
     "crew": ("crews", "id"),
 }
 
+SUPERADMIN_ENTITY_TABLES = {
+    "client": "clients",
+    "contractor": "contractors",
+    "driver": "drivers",
+    "vehicle_unit": "vehicle_units",
+    "crew": "crews",
+}
+
 REQUIRED_TABLE_MIGRATIONS = {
     "contractors": "database/migrations-local/003_create_company_contractors.sql",
     "drivers": "database/migrations-local/004_create_company_drivers.sql",
@@ -43,7 +55,7 @@ REQUIRED_TABLE_MIGRATIONS = {
     "crews": "database/migrations-local/006_create_company_crews.sql",
 }
 
-# Keep this deliberately aligned with architecture_guard.php's broad heuristic.
+# Keep deliberately aligned with architecture_guard.php's broad heuristic.
 DYNAMIC_FROM = re.compile(r"FROM\s+`?\$[A-Za-z_][A-Za-z0-9_]*`?", re.I)
 
 
@@ -75,7 +87,6 @@ def audit_document_file(rel: Path, map_variable: str) -> None:
     if "$entityType" not in content or "isset(" not in content:
         fail(f"{rel}: entity type is not visibly validated before identifier selection")
 
-    # Every identifier-capable entity must remain a literal entry in the closed map.
     for entity_type, (table, field) in ALLOWED_ENTITY_TABLES.items():
         if f"'{entity_type}'" not in content:
             fail(f"{rel}: missing entity whitelist entry {entity_type}")
@@ -90,7 +101,6 @@ def audit_document_file(rel: Path, map_variable: str) -> None:
         if not any(token in content for token in field_tokens):
             fail(f"{rel}: missing literal display-field mapping {entity_type}->{field}")
 
-    # Dynamic identifiers may not be populated directly from request data.
     forbidden = (
         r"\$(?:entityTable|displayField|df)\s*=\s*\$_(?:GET|POST|REQUEST)",
         r"\$(?:entityTable|displayField|df)\s*=\s*[^;]*\$_(?:GET|POST|REQUEST)",
@@ -99,15 +109,20 @@ def audit_document_file(rel: Path, map_variable: str) -> None:
         if re.search(pattern, content):
             fail(f"{rel}: request-derived SQL identifier detected")
 
-    # upload_form historically interpolated the already-whitelisted entity type in a value
-    # predicate. Require the whitelist check to occur before the first dynamic identifier query.
     validation_pos = min(
-        [p for p in (content.find("isset($entityInfo[$entityType])"), content.find("isset($whitelist[$entityType])")) if p >= 0]
+        [
+            p
+            for p in (
+                content.find("isset($entityInfo[$entityType])"),
+                content.find("isset($whitelist[$entityType])"),
+            )
+            if p >= 0
+        ]
         or [-1]
     )
     query_pos = content.find("FROM `$entityTable`")
     if query_pos < 0:
-        query_pos = content.find("FROM `$entityTable`".replace("`", ""))
+        query_pos = content.find("FROM $entityTable")
     if validation_pos < 0 or (query_pos >= 0 and validation_pos > query_pos):
         fail(f"{rel}: whitelist validation does not precede dynamic identifier use")
 
@@ -129,6 +144,33 @@ def audit_contractor_file(rel: Path) -> None:
         fail(f"{rel}: request-derived table identifier detected")
 
 
+def audit_superadmin_entity_file(rel: Path) -> None:
+    content = text(rel)
+    if "$entityMap" not in content:
+        fail(f"{rel}: entityMap closed whitelist is missing")
+    validation = "!isset($entityMap[$entityType])"
+    if validation not in content:
+        fail(f"{rel}: entityType is not rejected against entityMap")
+    if "$tableName=$meta['table']" not in content and "$tableName = $meta['table']" not in content:
+        fail(f"{rel}: tableName no longer derives from validated entityMap metadata")
+    if 'SELECT * FROM `$tableName` ORDER BY id DESC LIMIT 100' not in content:
+        fail(f"{rel}: expected whitelisted table query changed; review required")
+
+    for entity_type, table in SUPERADMIN_ENTITY_TABLES.items():
+        if f"'{entity_type}'" not in content:
+            fail(f"{rel}: missing superadmin whitelist entry {entity_type}")
+        if f"'table'=>'{table}'" not in content and f"'table' => '{table}'" not in content:
+            fail(f"{rel}: missing literal superadmin table mapping {entity_type}->{table}")
+
+    if re.search(r"\$tableName\s*=\s*[^;]*\$_(?:GET|POST|REQUEST)", content):
+        fail(f"{rel}: request-derived tableName detected")
+
+    validation_pos = content.find(validation)
+    query_pos = content.find('SELECT * FROM `$tableName`')
+    if validation_pos < 0 or query_pos < 0 or validation_pos > query_pos:
+        fail(f"{rel}: whitelist validation does not precede dynamic identifier use")
+
+
 def main() -> int:
     found = scan_dynamic_identifier_sites()
     if found != EXPECTED:
@@ -140,9 +182,10 @@ def main() -> int:
         audit_document_file(rel, map_variable)
     for rel in CONTRACTOR_FILES:
         audit_contractor_file(rel)
+    audit_superadmin_entity_file(SUPERADMIN_ENTITY_FILE)
 
     print("DYNAMIC_TABLE_SAFETY_AUDIT=PASS")
-    print("approved_dynamic_identifier_sites=4")
+    print(f"approved_dynamic_identifier_sites={len(EXPECTED)}")
     for rel in sorted(EXPECTED):
         print(f"approved={rel}")
     return 0
