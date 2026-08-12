@@ -1,0 +1,32 @@
+name: P39 Production Diagnostic
+on:
+  push:
+    branches: [chatgpt/p39-route-points-view-20260812]
+permissions: {contents: read}
+jobs:
+  diag:
+    if: "${{ startsWith(github.event.head_commit.message, 'P39: run production diagnostic') }}"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: SSH
+        env: {PRIVATE_KEY: "${{ secrets.ERPV2_SSH_PRIVATE_KEY }}", KNOWN_HOSTS: "${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}"}
+        run: |
+          install -d -m 700 ~/.ssh; printf '%s\n' "$PRIVATE_KEY" > ~/.ssh/p39; printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; chmod 600 ~/.ssh/p39 ~/.ssh/known_hosts
+      - name: Diagnose
+        env: {SSH_HOST: "${{ secrets.ERPV2_SSH_HOST }}", SSH_PORT: "${{ secrets.ERPV2_SSH_PORT }}", SSH_USER: "${{ secrets.ERPV2_SSH_USER }}"}
+        run: |
+          set -euo pipefail
+          curl -sS -o /tmp/login -w 'HTTP_LOGIN=%{http_code}\n' https://plan-ex.ru/erpv2/login || true
+          head -c 300 /tmp/login || true; echo
+          ssh -p "$SSH_PORT" -i ~/.ssh/p39 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -u
+          ROOT=/home/s/spugovxsim/planexp; LIVE="$ROOT/public_html/erpv2"
+          echo "MARKER=$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt" 2>/dev/null || echo missing)"
+          php8.5 -l "$LIVE/public/index.php" || true
+          php8.5 -l "$LIVE/app/Support/entrypoint_dependencies.php" || true
+          php8.5 -l "$LIVE/app/Service/LinearRoutePointService.php" || true
+          echo '--- error logs ---'
+          tail -n 80 "$LIVE/storage/logs"/*.log 2>/dev/null || true
+          echo '--- server dirs ---'; ls -la "$LIVE" | head
+          REMOTE
