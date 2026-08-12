@@ -6,6 +6,8 @@
    uses the global ERP table style (same as /company/route-executors). */
 .linear-trip-registry td {
     vertical-align: top;
+    padding-top: 6px;
+    padding-bottom: 6px;
 }
 
 .linear-trip-registry th {
