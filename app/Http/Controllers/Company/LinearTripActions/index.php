@@ -146,10 +146,8 @@ if ($companyId > 0) {
                     $vehicleStmt = $localPdo->prepare(
                         "SELECT c.id AS crew_id,
                                 vu1.brand AS primary_brand,
-                                vu1.model AS primary_model,
                                 vu1.plate_number AS primary_plate,
                                 vu2.brand AS secondary_brand,
-                                vu2.model AS secondary_model,
                                 vu2.plate_number AS secondary_plate
                            FROM crews c
                       LEFT JOIN driver_vehicle_blocks dvb ON dvb.id = c.driver_vehicle_block_id
@@ -164,7 +162,6 @@ if ($companyId > 0) {
                         foreach (['primary', 'secondary'] as $prefix) {
                             $vehicleText = trim(implode(' ', array_filter([
                                 trim((string) ($vehicleRow[$prefix . '_brand'] ?? '')),
-                                trim((string) ($vehicleRow[$prefix . '_model'] ?? '')),
                                 trim((string) ($vehicleRow[$prefix . '_plate'] ?? '')),
                             ], static fn(string $value): bool => $value !== '')));
                             if ($vehicleText !== '') {
