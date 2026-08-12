@@ -2,9 +2,14 @@
     min-width: 1480px;
 }
 
-.linear-trip-registry th,
+/* Body cells keep the dense multi-line registry layout. The header intentionally
+   uses the global ERP table style (same as /company/route-executors). */
 .linear-trip-registry td {
     vertical-align: top;
+}
+
+.linear-trip-registry th {
+    vertical-align: middle;
 }
 
 .linear-trip-registry .registry-id {
