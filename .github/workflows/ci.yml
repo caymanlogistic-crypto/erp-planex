@@ -103,3 +103,9 @@ jobs:
           print('deploy-capable workflow violations=', violations)
           raise SystemExit(1 if violations else 0)
           PY
+
+      - name: Canonical P21 control-plane policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/p21_control_plane_audit.py --root .
