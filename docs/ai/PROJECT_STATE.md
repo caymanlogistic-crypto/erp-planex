@@ -1,6 +1,6 @@
 # ERP PLANEX — текущее состояние проекта
 
-Актуально на 2026-08-12. История предыдущих этапов сохранена в отдельных E7–P40 планах/отчётах; этот документ описывает только текущую архитектуру и каноническое состояние.
+Актуально на 2026-08-12. История предыдущих этапов сохранена в отдельных E7–P40 планах/отчётах; этот документ описывает текущее каноническое состояние после финальной нормализации репозитория.
 
 ## Канонический репозиторий
 
@@ -8,7 +8,9 @@ Repository: `caymanlogistic-crypto/erp-planex`.
 
 Default/canonical branch: `chatgpt/production-stabilization-20260802`.
 
-Перед нормализацией прежний default HEAD сохранён в `backup/pre-stabilization-default-20260812` как recovery evidence. Старые Pxx branches не являются источником правды для новой разработки.
+Перед нормализацией прежний default HEAD сохранён в `backup/pre-stabilization-default-20260812` как recovery evidence. Старые Pxx branches и historical reports не являются источником текущего состояния.
+
+Статус repository control plane: `STABILIZED`.
 
 ## Runtime и deployment
 
@@ -16,23 +18,40 @@ Default/canonical branch: `chatgpt/production-stabilization-20260802`.
 
 Legacy `/erp` является отдельным старым контуром и не должен изменяться.
 
-Единственный production-capable workflow: `.github/workflows/erpv2_controlled_deploy.yml`. Он запускается только вручную (`workflow_dispatch`), требует exact source SHA и `confirm_deploy=DEPLOY_ERPV2` и выполняет backup + exact-sha deploy + post-deploy guards.
+Единственный production-capable workflow: `.github/workflows/erpv2_controlled_deploy.yml`. Он запускается только вручную (`workflow_dispatch`), требует exact source SHA и `confirm_deploy=DEPLOY_ERPV2` и выполняет backup + exact-SHA deploy + post-deploy guards.
 
 Автоматические P24–P40 deploy/reconcile/runtime workflows удалены из канонической ветки. Автоматически выполняется только `.github/workflows/ci.yml`, который production не изменяет.
+
+После нормализации controlled deploy ещё не запускался. Поэтому `REPOSITORY_STABILIZED` не означает, что текущий canonical HEAD уже опубликован в production. Production deployment подтверждается только отдельным successful controlled-deploy run и post-deploy evidence.
 
 ## CI / engineering gates
 
 Canonical CI проверяет:
 
 - PHP syntax;
+- Python syntax для `tools/*.py`;
 - уникальность номеров central/local migrations;
 - regression нормализации migration names;
+- fail-closed dynamic SQL identifier safety audit;
 - `tools/architecture_guard.php`;
 - JavaScript syntax;
 - отсутствие лишних production-mutating workflows;
 - P21 control-plane policy.
 
-Подтверждённый зелёный baseline перед текущей документационной актуализацией: run `31583989951`, SHA `0321efa32dfcd8908670f3f37e78dbd15f887628`.
+Последний подтверждённый code/control-plane gate: run `31586574444`, SHA `11ccb7d085f054f21d2accf82f96e5c233110b12`, `SUCCESS`. На нём central migrations = 11, local migrations = 57, duplicates = 0; workflows = 2, deploy-capable = 1, automatic production deploys = 0.
+
+## Dynamic SQL identifier safety
+
+`architecture_guard.php` сохраняет четыре WARNING по потенциально dynamic table expressions в:
+
+- `DocumentActions/upload_form.php`;
+- `DocumentActions/index.php`;
+- `ContractorActions/create_full_submit.php`;
+- `ContractorActions/add_crew_submit.php`.
+
+Они проверены по фактическому data-flow и используют только закрытые literal maps/whitelists. Аналогичный Superadmin site `ManagementActions/entity_list.php` использует `$entityMap` и fail-fast `!isset($entityMap[$entityType])` до выбора таблицы.
+
+Чтобы это не оставалось ручным допущением, создан `tools/dynamic_table_safety_audit.py`. Он fail-closed контролирует все пять известных dynamic-identifier sites, их допустимые table/display-field mappings, порядок whitelist validation и отсутствие request-derived identifiers. Любой новый site или изменение утверждённой map ломает CI и требует отдельного review. Сам `architecture_guard.php` намеренно не ослаблен и продолжает показывать свои четыре heuristic WARNING.
 
 ## Архитектура данных
 
@@ -65,11 +84,11 @@ Finance доступен только роли `company_owner`. Финансов
 
 ERP PLANEX — desktop-first industrial ERP. Минимальная production desktop width — 1440px; основной verification viewport — 1920×1080. Реестры должны использовать плотные таблицы, строгие borders и малые радиусы. Визуальная система — коричнево-медная. Generic SaaS/Bootstrap/AdminLTE/blue-white dashboard и самовольная замена реестров на cards запрещены.
 
-## Known technical debt
+## Remaining technical debt
 
-`architecture_guard.php` проходит без ERROR, но исторически сообщает несколько WARNING по потенциально dynamic table expressions в отдельных Contractor/Document action files. Эти warning не являются доказанными уязвимостями; их нужно оценивать по реальному whitelist/data-flow и не маскировать ослаблением guard.
+Часть старых action bridges и legacy route files остаётся transitional architecture. Они не являются текущими blockers и не должны рефакториться ради косметической чистки. Такой рефакторинг допускается только отдельной задачей с runtime regression.
 
-Часть старых action bridges и legacy route files остаётся transitional architecture. Их рефакторинг допустим только отдельной задачей с runtime regression, а не как косметическая «чистка».
+Четыре architecture-guard WARNING теперь являются контролируемыми heuristic warnings с отдельным fail-closed CI audit, а не неразобранным риском.
 
 ## Source of truth для следующего агента
 
