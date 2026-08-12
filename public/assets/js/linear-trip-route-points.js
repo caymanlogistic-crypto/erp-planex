@@ -33,7 +33,6 @@
   function initForm(form) {
     if (!form || form.dataset.routePointsReady === '1') return;
     form.dataset.routePointsReady = '1';
-
     form.querySelectorAll('[data-route-point-group]').forEach(function (group) {
       normalizeIndexes(group);
       var add = group.querySelector('[data-add-route-point]');
@@ -55,15 +54,25 @@
     });
   }
 
-  function scan(root) {
-    (root || document).querySelectorAll('[data-linear-trip-form]').forEach(initForm);
+  function syncViewTitle(root) {
+    var scope = root || document;
+    var marker = scope.querySelector ? scope.querySelector('[data-trip-view-title]') : null;
+    if (!marker) return;
+    var title = marker.getAttribute('data-trip-view-title') || '';
+    if (!title) return;
+    var modal = marker.closest('.modal') || marker.closest('.modal-overlay');
+    var titleNode = modal ? modal.querySelector('.modal-title') : null;
+    if (titleNode) titleNode.textContent = title;
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { scan(document); });
-  } else {
-    scan(document);
+  function scan(root) {
+    var scope = root || document;
+    if (scope.querySelectorAll) scope.querySelectorAll('[data-linear-trip-form]').forEach(initForm);
+    syncViewTitle(scope);
   }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { scan(document); });
+  else scan(document);
 
   new MutationObserver(function (mutations) {
     mutations.forEach(function (mutation) {
