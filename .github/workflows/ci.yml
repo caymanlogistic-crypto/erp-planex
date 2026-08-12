@@ -82,13 +82,22 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          allowed = Path('.github/workflows/erpv2_controlled_deploy.yml')
+          allowed = {
+              Path('.github/workflows/erpv2_controlled_deploy.yml'),
+              Path('.github/workflows/ci.yml'),
+          }
           violations = []
           for p in Path('.github/workflows').glob('*.y*ml'):
+              if p in allowed:
+                  continue
               text = p.read_text(encoding='utf-8')
-              mutating = any(token in text for token in ['P07_deploy_erpv2.sh', 'public_html/erpv2', 'deploy_backups'])
-              if mutating and p != allowed:
+              mutating = any(token in text for token in [
+                  'P07_deploy_erpv2.sh',
+                  'public_html/erpv2',
+                  'deploy_backups',
+                  'git push origin',
+              ])
+              if mutating:
                   violations.append(str(p))
           print('deploy-capable workflow violations=', violations)
           raise SystemExit(1 if violations else 0)
