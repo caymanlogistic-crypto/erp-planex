@@ -6,17 +6,50 @@ Updated: 2026-08-12
 
 ERP PLANEX is a PHP/MySQL multi-tenant logistics ERP. Production runtime is `https://plan-ex.ru/erpv2/`. The old `/erp` is legacy and must remain untouched.
 
-The stabilization line contains the production functionality accumulated through P39/P40, including multi-driver crews, trip form/view improvements, finance controls, route points and hardened local migration handling.
+Canonical/default branch: `chatgpt/production-stabilization-20260802`.
+
+Repository stabilization status: `HANDOFF_READY`. The parallel P26–P40 work period has been normalized into a single controlled line. The stabilization line contains the production functionality accumulated through P39/P40, including multi-driver crews, trip form/view improvements, finance controls, route points and hardened local migration handling.
+
+The previous default-branch state was preserved as `backup/pre-stabilization-default-20260812` for recovery evidence only.
 
 ## 2. Repository control plane
 
-There must be exactly one production-capable deployment workflow: `.github/workflows/erpv2_controlled_deploy.yml`.
+There are exactly two workflow files in the canonical branch:
 
-It is `workflow_dispatch` only. Deployment requires an exact source SHA and the literal confirmation `DEPLOY_ERPV2`. It builds from the exact commit, creates a server backup, deploys through the proven P07 engine, checks the deployed marker, preserves `.env` and runtime directories, verifies that the old `/erp` and DB fingerprints did not change, and requires `/erpv2/login` HTTP 200.
+- `.github/workflows/ci.yml` — automatic/read-only engineering gate;
+- `.github/workflows/erpv2_controlled_deploy.yml` — the only production-capable workflow.
 
-Temporary P26–P40 push-trigger workflows and trigger files were removed during stabilization. Do not restore them.
+`erpv2_controlled_deploy.yml` is `workflow_dispatch` only. Deployment requires an exact source SHA and the literal confirmation `DEPLOY_ERPV2`. It builds from the exact commit, creates a server backup, deploys through the proven P07 engine, checks the deployed marker, preserves `.env` and runtime directories, verifies that the old `/erp` and DB fingerprints did not change, and requires `/erpv2/login` HTTP 200.
 
-## 3. Database architecture and migrations
+Temporary P24–P40 push-trigger/reconcile/deploy workflows were removed during stabilization. Do not restore them and do not create a second production path.
+
+Important: the normalized controlled-deploy workflow has not yet been executed after stabilization. Therefore repository HEAD and deployed production SHA must not be assumed equal. A deployment claim requires a successful controlled-deploy run plus its post-deploy evidence.
+
+## 3. Canonical CI gate
+
+Current CI checks:
+
+1. PHP syntax;
+2. Python syntax for `tools/*.py`;
+3. central/local migration number uniqueness;
+4. migration-name normalization regression;
+5. fail-closed dynamic SQL identifier safety audit;
+6. architecture guard;
+7. JavaScript syntax;
+8. control-plane guard;
+9. canonical P21 control-plane policy.
+
+Verified code/control-plane baseline: run `31586574444`, SHA `11ccb7d085f054f21d2accf82f96e5c233110b12`, `SUCCESS`. At that gate: central migrations = 11, local migrations = 57, duplicate migration numbers = 0, workflow files = 2, deploy-capable workflows = 1, automatic production deploy workflows = 0.
+
+## 4. Dynamic SQL identifier safety
+
+`architecture_guard.php` deliberately continues to show four heuristic WARNINGs in two Document actions and two Contractor actions. They were reviewed and are based on closed literal maps/static arrays, not direct request-derived table names.
+
+A fifth analogous site exists in `Superadmin/ManagementActions/entity_list.php`; it already has an explicit `$entityMap` whitelist check before table selection and is excluded from the architecture guard's generic warning list.
+
+`tools/dynamic_table_safety_audit.py` now makes all five assumptions executable and fail-closed. It verifies the exact approved site set, literal table/display-field mappings, validation ordering and absence of request-derived identifier assignment. A new dynamic identifier site or changed map must fail CI until explicitly reviewed. Do not silence architecture_guard just to remove warnings.
+
+## 5. Database architecture and migrations
 
 - Central DB stores global/account/control-plane data.
 - Tenant operational data is stored in `erp_company_{id}` databases.
@@ -25,10 +58,10 @@ Temporary P26–P40 push-trigger workflows and trigger files were removed during
 - Historical duplicate local numbers were normalized:
   - `029_create_crew_drivers.sql` -> `057_create_crew_drivers.sql`
   - `052_create_linear_route_points.sql` -> `058_create_linear_route_points.sql`
-- Historical production journal rows may therefore contain old names. Use the reconciliation script before treating them as missing migrations; never blindly re-run CREATE/ALTER statements against production.
+- Historical production journal rows may therefore contain old names. Use `scripts/p40_reconcile_migration_names.php` before treating them as missing migrations; never blindly re-run CREATE/ALTER statements against production.
 - Known checksum reconciliation in `LocalMigrationService` is fail-closed: compatibility must be proven from the actual schema before an historical checksum is accepted.
 
-## 4. Important domain facts
+## 6. Important domain facts
 
 - Route executor is the user-facing combination Contractor + Driver + Vehicle Set and is implemented with `driver_vehicle_blocks` + `crews`.
 - `driver_vehicle_blocks` does not have `vehicle_id`; it uses `vehicle_set_id`.
@@ -36,16 +69,19 @@ Temporary P26–P40 push-trigger workflows and trigger files were removed during
 - Multi-driver crews use the normalized crew-driver migration.
 - Linear trips support route points through `LinearRoutePointService` and `058_create_linear_route_points.sql`.
 - Finance is accessible only to `company_owner`.
+- Persistent uploaded documents live under `storage/companies/{company_id}/...` and must not be treated as disposable build output.
 
-## 5. UI contract
+## 7. UI contract
 
 ERP PLANEX is desktop-first (production minimum desktop width 1440px), industrial-density, table-first for registries, with strict borders and small radii. Preserve the brown/copper brand system. Generic blue-white SaaS dashboards, Bootstrap/AdminLTE restyling and card-list replacements for registries are prohibited unless explicitly requested.
 
-## 6. Production verification discipline
+For browser acceptance use the proven GitHub Actions runtime when needed: Node.js 22, Playwright 1.54.2, Chromium, Ubuntu 24.04, headless, 1920×1080, deviceScaleFactor 1, `ru-RU`, `Europe/Moscow`.
+
+## 8. Production verification discipline
 
 Before claiming PRODUCTION READY after a code change:
 
-1. Run PHP lint/static checks and focused tests for touched modules.
+1. Run canonical CI and focused tests for touched modules.
 2. Check duplicate migration numbers in both migration directories.
 3. If schema changes are involved, verify both fresh-schema and upgrade behavior.
 4. Deploy only exact SHA through the controlled deployment workflow.
@@ -54,12 +90,25 @@ Before claiming PRODUCTION READY after a code change:
 7. Verify old `/erp` fingerprint unchanged.
 8. Verify `.env` and runtime directories preserved.
 9. Verify expected migration journal state in all active tenant DBs.
-10. For UI changes, run Playwright/Chromium at 1920x1080, ru-RU, Europe/Moscow and check console/page/request failures.
+10. For UI changes, run Playwright/Chromium and check console/page/request failures.
 
-## 7. Historical evidence
+Repository CI success alone is not production deployment evidence.
 
-P11–P40 Markdown/JSON reports are historical evidence and may describe states that were later superseded. Do not treat a historical `BLOCKED`, old SHA, old branch name, or temporary workflow as the current product state. This handoff plus the current code and controlled production evidence are authoritative.
+## 9. Documentation priority
 
-## 8. First action for a new agent
+Read in this order:
 
-Read this file, inspect the exact canonical HEAD, inspect `.github/workflows`, check migration numbering, and perform read-only production verification before making changes. Never create another automatic production deploy path.
+1. current code/schema;
+2. `README.md`;
+3. `AGENTS.md`;
+4. this file;
+5. `PROJECT_STATE.md`;
+6. `CURRENT_TASK.md`;
+7. `DOCUMENTATION_INDEX.md`;
+8. `DECISIONS.md` and REFERENCE docs as needed.
+
+P11–P40 Markdown/JSON reports are historical evidence and may describe states later superseded. Do not treat an old `BLOCKED`, SHA, branch name, migration number or temporary workflow as current product state.
+
+## 10. First action for a new agent
+
+Inspect the exact canonical HEAD, inspect the two workflow files, confirm latest CI, check migration numbering and perform read-only production verification if the new task depends on runtime state. Never create another automatic production deploy path and never assume production matches repository HEAD without deployment evidence.
