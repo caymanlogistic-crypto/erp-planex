@@ -26,7 +26,6 @@
       }
     }
 
-    // Brand-new form: always show two full-width rows with the requested defaults.
     if (!points.length) {
       points = [
         {address: '', loading: true, unloading: false},
@@ -40,6 +39,15 @@
     button.classList.toggle('is-active', !!active);
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
     hidden.disabled = !active;
+  }
+
+  function syncLegacyProjection(row) {
+    var address = clean((row.querySelector('[data-route-point-input]') || {}).value);
+    ['loading', 'unloading'].forEach(function (type) {
+      var legacy = row.querySelector('[data-point-legacy="' + type + '"]');
+      var active = !!row.querySelector('[data-point-toggle="' + type + '"].is-active');
+      if (legacy) legacy.value = active ? address : '';
+    });
   }
 
   function createPointRow(point) {
@@ -58,9 +66,14 @@
       '</div>' +
       '<input type="hidden" value="1" data-point-flag="loading">' +
       '<input type="hidden" value="1" data-point-flag="unloading">' +
+      '<input type="hidden" value="" data-point-legacy="loading">' +
+      '<input type="hidden" value="" data-point-legacy="unloading">' +
       '<button type="button" class="linear-trip-route-point-remove" data-remove-route-point aria-label="Удалить точку">×</button>';
 
-    row.querySelector('[data-route-point-input]').value = point.address || '';
+    var addressInput = row.querySelector('[data-route-point-input]');
+    addressInput.value = point.address || '';
+    addressInput.addEventListener('input', function () { syncLegacyProjection(row); });
+
     ['loading', 'unloading'].forEach(function (type) {
       var button = row.querySelector('[data-point-toggle="' + type + '"]');
       var hidden = row.querySelector('[data-point-flag="' + type + '"]');
@@ -68,8 +81,10 @@
       button.addEventListener('click', function () {
         setToggleState(button, hidden, !button.classList.contains('is-active'));
         row.classList.remove('is-operation-error');
+        syncLegacyProjection(row);
       });
     });
+    syncLegacyProjection(row);
     return row;
   }
 
@@ -81,7 +96,10 @@
       ['loading', 'unloading'].forEach(function (type) {
         var hidden = row.querySelector('[data-point-flag="' + type + '"]');
         if (hidden) hidden.name = 'route_points[points][' + index + '][' + type + ']';
+        var legacy = row.querySelector('[data-point-legacy="' + type + '"]');
+        if (legacy) legacy.name = 'route_points[' + type + '][]';
       });
+      syncLegacyProjection(row);
       var number = row.querySelector('[data-route-point-number]');
       if (number) number.textContent = String(index + 1);
       var remove = row.querySelector('[data-remove-route-point]');
@@ -135,6 +153,7 @@
     form.addEventListener('submit', function (event) {
       var invalid = null;
       group.querySelectorAll('[data-route-point-row]').forEach(function (row) {
+        syncLegacyProjection(row);
         var address = clean((row.querySelector('[data-route-point-input]') || {}).value);
         var loading = row.querySelector('[data-point-toggle="loading"].is-active');
         var unloading = row.querySelector('[data-point-toggle="unloading"].is-active');
