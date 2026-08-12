@@ -1,168 +1,90 @@
 # ERP PLANEX — handoff for the next agent
 
-Updated: 2026-08-12
+Updated: 2026-08-12.
 
-## 1. Canonical product state
+## Mission
 
-ERP PLANEX is a PHP/MySQL multi-tenant logistics ERP. Production runtime is `https://plan-ex.ru/erpv2/`. The old `/erp` is legacy and must remain untouched.
+The next development cycle is modification of the accounting/finance block. First perform read-only familiarization; do not refactor, migrate or deploy until the system/finance map is understood and the user gives the first concrete finance task.
 
+## Canonical product state
+
+ERP PLANEX is a PHP/MySQL multi-tenant logistics ERP. Production: `https://plan-ex.ru/erpv2/`. Legacy `/erp` is separate and must remain untouched.
+
+Repository: `caymanlogistic-crypto/erp-planex`.
 Canonical/default branch: `chatgpt/production-stabilization-20260802`.
+Work serially: one agent, current HEAD, one production path. Do not resume old Pxx branches/workflows. Recovery evidence is `backup/pre-stabilization-default-20260812` only.
 
-Repository status: `HANDOFF_READY_AUTO_DEPLOY_ACTIVE`. Parallel P26–P40 work was normalized into one development/deployment line. Work must remain serial: one agent, one canonical branch, one production path.
+Current product includes stabilized contractors/clients/drivers/vehicles, route executors with multi-driver crews, linear trips with combined loading/unloading points, documents and finance/accounting.
 
-The stabilization line contains the accepted product functionality through the current state, including multi-driver crews, trip form/view improvements, finance controls, route points, combined loading/unloading operations and hardened migration handling.
+## Mandatory reading
 
-Recovery evidence for the pre-stabilization default branch is preserved in `backup/pre-stabilization-default-20260812`.
+Read current code/schema first, then `README.md`, `AGENTS.md`, this file, `PROJECT_STATE.md`, `CURRENT_TASK.md`, `FINANCE_HANDOFF.md`, `DECISIONS.md`, `DOCUMENTATION_INDEX.md`; for UI also `docs/ui/DESIGN_STANDARD.md`. Historical E7–P40 reports are evidence only.
 
-## 2. Repository control plane
+## Finance focus
 
-There are exactly two workflow files in the canonical branch:
+Finance is restricted to `company_owner`. Preserve tenant isolation, auditability and fail-closed behavior. Start by mapping current screens/routes/controllers/actions/services/tables/tests for:
 
-- `.github/workflows/ci.yml` — automatic engineering gate on push/PR;
-- `.github/workflows/erpv2_controlled_deploy.yml` — the only production-capable workflow.
+- bank accounts and bank statements;
+- XLSX bank statement parsing/settings/import;
+- cash;
+- invoices/payments/finance operations;
+- allocations, cancel/actions and operation history;
+- cash-flow categories/reports/settings;
+- trip-linked finance.
 
-Normal production path:
+Primary source locations include `app/Http/Controllers/Company/BankFinance*`, `Finance*`, `app/Service/BankFinanceService.php`, `BankStatementSettingsService.php`, `BankStatementXlsxParser.php`, other finance services, finance views/assets/routes, finance migrations/tables/tests and `app/Support/entrypoint_dependencies.php`.
 
-`push to chatgpt/production-stabilization-20260802` -> `ERP PLANEX CI` -> successful push CI -> `workflow_run` -> `ERPv2 Controlled Deploy`.
+Do not assume service autoloading. A previous live finance history 500 was caused by a service missing from `entrypoint_dependencies.php`. Verify the web runtime dependency chain whenever a service is introduced or referenced.
 
-The deploy workflow resolves the exact green CI `head_sha`, validates the 40-character commit, checks it out detached, builds the artifact from exactly that SHA, creates a server backup, deploys through the proven P07 engine, verifies the deployed marker, `/erpv2/login` HTTP 200, DB fingerprint, old `/erp`, `.env` and runtime directory preservation.
+History/action security contract: same-tenant existing/empty operation -> 200; nonexistent/foreign -> 404/no leakage; unauthorized logistics role -> 403.
 
-The same workflow keeps `workflow_dispatch` as a manual exact-SHA fallback. Manual deployment requires the literal confirmation `DEPLOY_ERPV2`.
+Money is decimal numeric data. UI formatting must never change persisted value. Never strip all non-digits from a decimal DB value: `97500.00` must remain 97,500, not 9,750,000. Do not mutate production finance rows to manufacture tests.
 
-Standard application deployment does NOT run database migrations automatically. Schema changes require an explicit migration/reconciliation operation and tenant journal verification.
+## DB rules
 
-Do not restore temporary P24–P40 deploy/reconcile workflows and do not create a second production path.
+Central DB stores global/control data; operational company data lives in `erp_company_{id}`. Any DDL must be a numbered migration. Standard deploy does NOT execute migrations. Schema work requires explicit controlled migration/reconciliation, fresh-schema + upgrade-path checks and migration journal verification for active tenants. Never ALTER/CREATE production schema from a controller or temporary web script.
 
-## 3. Current verified product baseline
+Normalized local migration identities include `057_create_crew_drivers.sql` and `058_create_linear_route_points.sql`; historical aliases require reconciliation, not blind DDL rerun.
 
-Latest completed route-point functional SHA: `6341d7f9fd7d095203d58a3297d44014ba5c0766`.
+## Domain invariants outside finance
 
-Verification:
+Route executor = contractor + driver(s) + vehicle set via `driver_vehicle_blocks`/`crews`; `driver_vehicle_blocks` uses `vehicle_set_id`. Multi-driver crews are supported. Linear route points support loading-only, unloading-only and both operations at one logical point. Persistent documents live under `storage/companies/{company_id}/...`.
 
-- canonical CI run `31598355896` — `SUCCESS`;
-- automatic `ERPv2 Controlled Deploy` run `31598400792`;
-- deploy job `94119454092` — `SUCCESS`.
+Do not break these while changing finance.
 
-The deploy passed exact-SHA resolution, artifact build, SSH isolation, pre-deploy backup, P07 deployment, marker equality, HTTP verification, DB fingerprint equality, old `/erp` fingerprint equality, `.env` equality, runtime directory preservation and evidence upload.
+## UI contract
 
-The canonical CI includes PHP syntax, `linear_route_point_dual_operation_test.php`, Python syntax, migration numbering, migration normalization regression, dynamic SQL identifier safety audit, architecture guard, JavaScript syntax and both control-plane guards.
+Desktop-first, table-first industrial ERP; compact density; strict borders/small radii; brown/copper visual system. Reuse working system patterns instead of inventing generic SaaS/Bootstrap/AdminLTE styling.
 
-Documentation-only commits after a functional change may advance repository/server marker SHA without changing user-facing runtime. Always identify the functional SHA as well as the final deployed marker when investigating a release.
+For material UI/runtime acceptance use GitHub Actions Chromium/Playwright when needed: Ubuntu 24.04, Node 22, Playwright 1.54.2, Chromium headless, 1920x1080; layout-sensitive 1536x864/1366x768; deviceScaleFactor 1, ru-RU, Europe/Moscow. Check console/page/request/unexpected HTTP failures.
 
-## 4. Current linear trip route-point model
+## Production control plane
 
-Linear trips now expose a single UI block `Загрузка / выгрузка` instead of independent loading and unloading columns.
+Exactly two canonical workflows matter:
 
-UI contract:
+- `.github/workflows/ci.yml` — automatic engineering gate;
+- `.github/workflows/erpv2_controlled_deploy.yml` — only production-capable workflow.
 
-- a new route starts with two full-width point rows;
-- row 1 defaults to `Загрузка` active;
-- row 2 defaults to `Выгрузка` active;
-- every row has two independent suffix toggles, `Загрузка` and `Выгрузка`;
-- a point may be loading-only, unloading-only or both;
-- `+ Добавить точку` adds another logical point;
-- a filled address without either operation is invalid;
-- a selected operation without an address is invalid;
-- a route must contain at least one loading operation and one unloading operation;
-- create and edit share the same logical model;
-- view combines points in route order and shows operation tags next to each address.
+Normal path:
 
-Canonical submitted structure:
+`push canonical -> ERP PLANEX CI -> successful push CI -> workflow_run -> ERPv2 Controlled Deploy`.
 
-- `route_points[points][N][address]`
-- `route_points[points][N][loading]`
-- `route_points[points][N][unloading]`
+Controlled deploy resolves exact green `head_sha`, checks out detached, builds artifact from that SHA, creates server backup, deploys through P07 and verifies marker equality, `/erpv2/login` 200, DB fingerprint equality, old `/erp` equality, `.env` equality and runtime directory preservation. It uploads evidence. Manual `workflow_dispatch` exact-SHA fallback remains and requires `DEPLOY_ERPV2`.
 
-`LinearRoutePointService` remains backward-compatible with the previous shape `route_points[loading][]` / `route_points[unloading][]`. The browser also emits aligned hidden legacy projections so server-side validation redirects can repopulate the existing PHP partial without losing combined-operation state.
+Never create a second production workflow/path. A green CI is not production evidence. Completion for code/UI = green CI + successful triggered deploy + focused runtime verification. Completion for schema work additionally = controlled migration/reconciliation + tenant journal verification.
 
-## 5. Route-point DB representation
+## First response expected from the next agent
 
-No new DB migration was necessary for combined operations.
+Before making changes, report:
 
-Existing `database/migrations-local/058_create_linear_route_points.sql` provides:
+1. exact canonical HEAD inspected;
+2. current CI/deploy topology understood;
+3. finance access/security model understood;
+4. map `screen -> route -> controller/action -> service -> tables -> tests`;
+5. finance DB ownership (central vs tenant) for each major area;
+6. import/history/allocation risk points;
+7. current production finance screens checked read-only;
+8. contradictions or technical debt found;
+9. confirmation that no code/DB/deploy was changed during familiarization.
 
-- `linear_route_id`;
-- `point_type ENUM('loading','unloading')`;
-- `sort_order`;
-- `address_text`;
-- no unique constraint preventing two rows for the same logical route point.
-
-A logical point with both operations is stored as two physical active rows sharing the same `linear_route_id`, `sort_order` and `address_text`: one row has `point_type=loading`, the other `point_type=unloading`.
-
-`LinearRoutePointService::store()` writes this representation inside the existing route transaction. `fetch()` groups rows by global order/address and returns one logical point with `loading=true` and `unloading=true`. Existing one-operation rows remain valid without data migration.
-
-Regression protection lives in `tests/linear_route_point_dual_operation_test.php` and is mandatory in canonical CI.
-
-## 6. Database architecture and migration rules
-
-- Central DB stores global/account/control-plane data.
-- Tenant operational data is stored in `erp_company_{id}` databases.
-- Local migrations are executed by `LocalMigrationService`.
-- Migration filenames/numbers are journal identity and must remain unique.
-- Historical duplicate local names were normalized:
-  - `029_create_crew_drivers.sql` -> `057_create_crew_drivers.sql`
-  - `052_create_linear_route_points.sql` -> `058_create_linear_route_points.sql`
-- Historical journal rows may retain the old names. Use `scripts/p40_reconcile_migration_names.php`; never blindly rerun DDL.
-- Known historical checksum reconciliation in `LocalMigrationService` is fail-closed and requires schema compatibility.
-- Normal CRUD must not use a full migration chain as a hidden side effect.
-- Standard auto-deploy does not execute migrations.
-
-## 7. Important domain facts
-
-- Route executor is the user-facing Contractor + Driver(s) + Vehicle Set combination implemented through `driver_vehicle_blocks` + `crews`.
-- `driver_vehicle_blocks` uses `vehicle_set_id`, not `vehicle_id`.
-- Legacy `crews.vehicle_id` is populated from `vehicle_sets.primary_vehicle_unit_id` where required.
-- Multi-driver crews are supported by the normalized crew-driver migration.
-- Linear trip points are handled by `LinearRoutePointService` and `058_create_linear_route_points.sql`.
-- One logical route point may now carry both loading and unloading operations.
-- Finance is accessible only to `company_owner`.
-- Persistent uploaded documents live under `storage/companies/{company_id}/...` and must not be treated as disposable build output.
-
-## 8. Dynamic SQL identifier safety
-
-`architecture_guard.php` deliberately retains heuristic warnings at reviewed Company dynamic-table sites. These sites use closed literal maps/static arrays, not direct request-derived table names.
-
-`tools/dynamic_table_safety_audit.py` makes the approved dynamic identifier set fail-closed. A new site, changed map or request-derived identifier must fail CI until explicitly reviewed. Do not silence architecture warnings merely to make output look clean.
-
-## 9. UI contract
-
-ERP PLANEX is desktop-first with minimum production desktop width 1440px, industrial density, table-first registries, strict borders and small radii. Preserve the brown/copper visual system. Do not replace it with generic Bootstrap/AdminLTE/blue-white SaaS patterns unless explicitly requested.
-
-For browser acceptance use the proven GitHub Actions runtime where needed: Node.js 22, Playwright 1.54.2, Chromium, Ubuntu 24.04, headless, 1920×1080, deviceScaleFactor 1, `ru-RU`, `Europe/Moscow`.
-
-## 10. Production verification discipline
-
-Before telling the user that a change is ready for testing:
-
-1. Work only from the exact current canonical HEAD.
-2. Make the smallest coherent change and do not create a parallel deploy branch/workflow.
-3. Wait for canonical CI on that pushed SHA to finish successfully.
-4. Confirm the triggered deploy originated from that successful push CI.
-5. Wait for deploy `SUCCESS`.
-6. Verify server marker equals the deployed source SHA.
-7. Verify `/erpv2/login` HTTP 200.
-8. Verify old `/erp`, DB and `.env` fingerprints did not change unexpectedly.
-9. Verify runtime directories were preserved.
-10. If schema changes are involved, run the explicit migration/reconciliation procedure and verify all active tenant journals; standard auto-deploy is insufficient.
-11. For material UI work, use the proven Playwright/Chromium runtime where available and check console/page/request failures.
-
-A green CI alone is not production evidence. A pushed commit alone is not production evidence. Completion means green CI + successful triggered deploy + relevant focused verification.
-
-## 11. Documentation priority
-
-Read in this order:
-
-1. current code/schema;
-2. `README.md`;
-3. `AGENTS.md`;
-4. this file;
-5. `PROJECT_STATE.md`;
-6. `CURRENT_TASK.md`;
-7. `DOCUMENTATION_INDEX.md`;
-8. `DECISIONS.md` and reference docs as needed.
-
-P11–P40 reports are historical evidence and may describe superseded SHA values, branches, workflows, blockers or migration names. Do not treat those historical states as current instructions.
-
-## 12. First action for a new agent
-
-Inspect the exact canonical HEAD, the two workflow files, latest CI and latest triggered deploy. Keep the single deployment path. Work serially: change -> push -> green CI -> automatic controlled deploy -> runtime/focused verification -> report ready.
+Then wait for the user's concrete accounting modification.
