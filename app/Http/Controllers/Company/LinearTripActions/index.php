@@ -83,6 +83,108 @@ if ($companyId > 0) {
             $isFinanceRealm = ($sessionUser['role_code'] ?? '') === 'company_owner';
             $routes = LinearRouteService::fetchRoutesForList($localPdo, $sessionUser, $isFinanceRealm);
 
+            if (!empty($routes)) {
+                $routeIds = array_values(array_filter(array_map(
+                    static fn(array $route): int => (int) ($route['id'] ?? 0),
+                    $routes
+                )));
+                $crewIds = array_values(array_unique(array_filter(array_map(
+                    static fn(array $route): int => (int) ($route['route_executor_id'] ?? 0),
+                    $routes
+                ))));
+
+                $pointsByRoute = [];
+                if ($routeIds !== []) {
+                    $placeholders = implode(',', array_fill(0, count($routeIds), '?'));
+                    $pointStmt = $localPdo->prepare(
+                        "SELECT linear_route_id, point_type, sort_order, address_text, id
+                           FROM linear_route_points
+                          WHERE linear_route_id IN ({$placeholders})
+                            AND deleted_at IS NULL
+                          ORDER BY linear_route_id ASC, sort_order ASC, id ASC"
+                    );
+                    $pointStmt->execute($routeIds);
+                    foreach ($pointStmt->fetchAll(PDO::FETCH_ASSOC) as $pointRow) {
+                        $routeId = (int) ($pointRow['linear_route_id'] ?? 0);
+                        $sortOrder = (int) ($pointRow['sort_order'] ?? 0);
+                        $address = trim((string) ($pointRow['address_text'] ?? ''));
+                        $key = $sortOrder . '|' . $address;
+                        if (!isset($pointsByRoute[$routeId][$key])) {
+                            $pointsByRoute[$routeId][$key] = [
+                                'sort_order' => $sortOrder,
+                                'address_text' => $address,
+                                'is_loading' => false,
+                                'is_unloading' => false,
+                            ];
+                        }
+                        if (($pointRow['point_type'] ?? '') === 'loading') {
+                            $pointsByRoute[$routeId][$key]['is_loading'] = true;
+                        }
+                        if (($pointRow['point_type'] ?? '') === 'unloading') {
+                            $pointsByRoute[$routeId][$key]['is_unloading'] = true;
+                        }
+                    }
+                }
+
+                $driverNamesByCrew = [];
+                $vehicleLabelsByCrew = [];
+                if ($crewIds !== []) {
+                    $placeholders = implode(',', array_fill(0, count($crewIds), '?'));
+                    $driverStmt = $localPdo->prepare(
+                        "SELECT cd.crew_id,
+                                GROUP_CONCAT(d.full_name ORDER BY cd.position ASC SEPARATOR ' / ') AS driver_names
+                           FROM crew_drivers cd
+                           JOIN drivers d ON d.id = cd.driver_id
+                          WHERE cd.crew_id IN ({$placeholders})
+                          GROUP BY cd.crew_id"
+                    );
+                    $driverStmt->execute($crewIds);
+                    foreach ($driverStmt->fetchAll(PDO::FETCH_ASSOC) as $driverRow) {
+                        $driverNamesByCrew[(int) $driverRow['crew_id']] = trim((string) ($driverRow['driver_names'] ?? ''));
+                    }
+
+                    $vehicleStmt = $localPdo->prepare(
+                        "SELECT c.id AS crew_id,
+                                vu1.brand AS primary_brand,
+                                vu1.model AS primary_model,
+                                vu1.plate_number AS primary_plate,
+                                vu2.brand AS secondary_brand,
+                                vu2.model AS secondary_model,
+                                vu2.plate_number AS secondary_plate
+                           FROM crews c
+                      LEFT JOIN driver_vehicle_blocks dvb ON dvb.id = c.driver_vehicle_block_id
+                      LEFT JOIN vehicle_sets vs ON vs.id = dvb.vehicle_set_id
+                      LEFT JOIN vehicle_units vu1 ON vu1.id = vs.primary_vehicle_unit_id
+                      LEFT JOIN vehicle_units vu2 ON vu2.id = vs.secondary_vehicle_unit_id
+                          WHERE c.id IN ({$placeholders})"
+                    );
+                    $vehicleStmt->execute($crewIds);
+                    foreach ($vehicleStmt->fetchAll(PDO::FETCH_ASSOC) as $vehicleRow) {
+                        $parts = [];
+                        foreach (['primary', 'secondary'] as $prefix) {
+                            $vehicleText = trim(implode(' ', array_filter([
+                                trim((string) ($vehicleRow[$prefix . '_brand'] ?? '')),
+                                trim((string) ($vehicleRow[$prefix . '_model'] ?? '')),
+                                trim((string) ($vehicleRow[$prefix . '_plate'] ?? '')),
+                            ], static fn(string $value): bool => $value !== '')));
+                            if ($vehicleText !== '') {
+                                $parts[] = $vehicleText;
+                            }
+                        }
+                        $vehicleLabelsByCrew[(int) $vehicleRow['crew_id']] = implode(' + ', $parts);
+                    }
+                }
+
+                foreach ($routes as &$route) {
+                    $routeId = (int) ($route['id'] ?? 0);
+                    $crewId = (int) ($route['route_executor_id'] ?? 0);
+                    $route['registry_points'] = array_values($pointsByRoute[$routeId] ?? []);
+                    $route['registry_driver_names'] = $driverNamesByCrew[$crewId] ?? trim((string) ($route['executor_driver_name'] ?? ''));
+                    $route['registry_vehicle_label'] = $vehicleLabelsByCrew[$crewId] ?? '';
+                }
+                unset($route);
+            }
+
             if (!empty($routes) && $isFinanceRealm) {
                 $routeIds = array_map(static fn(array $r): int => (int) ($r['id'] ?? 0), $routes);
                 $routeInvoiceCounts = [];
