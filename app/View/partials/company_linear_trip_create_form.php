@@ -116,6 +116,12 @@ if ($principalRows === [] && $isAgencyRoute) {
     unset($pr);
 }
 
+$routePointRows = (array) ($old['route_points'] ?? []);
+$routePointRows['loading'] = array_values((array) ($routePointRows['loading'] ?? []));
+$routePointRows['unloading'] = array_values((array) ($routePointRows['unloading'] ?? []));
+if ($routePointRows['loading'] === []) $routePointRows['loading'] = [''];
+if ($routePointRows['unloading'] === []) $routePointRows['unloading'] = [''];
+
 $documentDefinitions = LinearRouteService::routeDocumentDefinitions($currentRouteType ?: LinearRouteService::ROUTE_TYPE_AGENCY);
 
 $vatRateOptions = ['', '0', '5', '7', '20', '22'];
@@ -302,6 +308,28 @@ $renderPaymentRows = static function (string $scopeName, array $rows, string $do
                     </div>
                     <div class="field-msg"><?= e($errorOf('cargo_type_name')) ?></div>
                 </div>
+            </div>
+
+
+            <div class="linear-trip-route-points-wrap">
+                <?php foreach (['loading' => 'Загрузка', 'unloading' => 'Выгрузка'] as $pointType => $pointTitle): ?>
+                <div class="linear-trip-route-point-group" data-route-point-group="<?= e($pointType) ?>">
+                    <div class="linear-trip-route-point-head">
+                        <div class="linear-trip-route-point-title"><?= e($pointTitle) ?> <span class="req">*</span></div>
+                        <button type="button" class="linear-trip-route-point-add" data-add-route-point>+ Добавить</button>
+                    </div>
+                    <div data-route-point-list>
+                        <?php foreach ($routePointRows[$pointType] as $pointIndex => $pointAddress): ?>
+                        <div class="linear-trip-route-point-row" data-route-point-row>
+                            <div class="linear-trip-route-point-index" data-route-point-number><?= $pointIndex + 1 ?></div>
+                            <input type="text" name="route_points[<?= e($pointType) ?>][]" value="<?= e((string) $pointAddress) ?>" class="field-input" data-route-point-input autocomplete="off" placeholder="<?= $pointType === 'loading' ? 'Адрес или место загрузки' : 'Адрес или место выгрузки' ?>">
+                            <button type="button" class="linear-trip-route-point-remove<?= count($routePointRows[$pointType]) === 1 ? ' is-hidden' : '' ?>" data-remove-route-point aria-label="Удалить точку">×</button>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="linear-trip-route-point-msg"><?= e($errorOf('route_points.' . $pointType . '.0')) ?></div>
+                </div>
+                <?php endforeach; ?>
             </div>
 
             <?php if ($showActualDates): ?>

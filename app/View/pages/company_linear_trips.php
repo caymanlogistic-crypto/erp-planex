@@ -191,3 +191,5 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
 <?php endif; ?>
 <link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-form-ux.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-form-ux.css')) ?>">
 <script src="<?= app_url('/assets/js/linear-trip-executor-carrier.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-executor-carrier.js')) ?>"></script>
+<link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-route-points.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-route-points.css')) ?>">
+<script src="<?= app_url('/assets/js/linear-trip-route-points.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-route-points.js')) ?>"></script>

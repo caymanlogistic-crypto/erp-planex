@@ -34,6 +34,8 @@ final class LinearTripEditSaveService
         $actualLoadingDate = LinearRouteService::normalizeDate($post['actual_loading_date'] ?? '');
         $actualUnloadingDate = LinearRouteService::normalizeDate($post['actual_unloading_date'] ?? '');
         $comments = trim((string) ($post['comments'] ?? ''));
+        $routePoints = LinearRoutePointService::normalizeSubmitted($post);
+        LinearRoutePointService::validate($routePoints, $errors);
 
         if (!in_array($routeType, [LinearRouteService::ROUTE_TYPE_LINEAR, LinearRouteService::ROUTE_TYPE_AGENCY], true)) {
             $errors['route_type'] = 'Выберите тип рейса.';
@@ -165,6 +167,8 @@ final class LinearTripEditSaveService
             if ($update->rowCount() === 0 && self::lockRoute($pdo, $routeId) === null) {
                 throw new RuntimeException('Route update failed.');
             }
+
+            LinearRoutePointService::store($pdo, $routeId, $routePoints, $userId, $roleCode);
 
             if ($isFinanceRealm) {
                 self::storeFinance(

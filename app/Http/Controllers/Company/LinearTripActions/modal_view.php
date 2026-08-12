@@ -38,6 +38,7 @@ try {
         echo '<div class="notice warn">Рейс не найден.</div>';
         exit;
     }
+    $route['route_points'] = \App\Service\LinearRoutePointService::fetch($localPdo, (int) $id);
     if (!LinearRouteService::canViewRoute($route, $localPdo, $sessionUser)) {
         http_response_code(403);
         echo '<div class="notice warn">У вас нет доступа к этой записи.</div>';

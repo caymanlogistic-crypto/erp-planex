@@ -14,6 +14,7 @@ $old = [
     'actual_loading_date' => $route['actual_loading_date'] ?? '',
     'actual_unloading_date' => $route['actual_unloading_date'] ?? '',
     'comments' => $route['comments'] ?? '',
+    'route_points' => $route['route_points'] ?? ['loading' => [''], 'unloading' => ['']],
     'customer_payments' => $route['payments']['customer'] ?? [],
     'carrier_payments' => $route['payments']['carrier'] ?? [],
     'principal_rows' => [],

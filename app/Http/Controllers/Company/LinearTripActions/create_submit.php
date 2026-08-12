@@ -30,6 +30,8 @@ $cargoTypeName = LinearRouteService::normalizeCargoTypeName((string) ($_POST['ca
 $plannedLoadingDate = LinearRouteService::normalizeDate($_POST['planned_loading_date'] ?? '');
 $plannedUnloadingDate = $plannedLoadingDate;
 $comments = trim((string) ($_POST['comments'] ?? ''));
+$routePoints = \App\Service\LinearRoutePointService::normalizeSubmitted($_POST);
+\App\Service\LinearRoutePointService::validate($routePoints, $errors);
 
 $isFinanceRealm = ($sessionUser['role_code'] ?? '') === 'company_owner';
 
@@ -471,6 +473,7 @@ try {
         ':updated_by_role' => $roleCode,
     ]);
     $linearRouteId = (int) $localPdo->lastInsertId();
+    \App\Service\LinearRoutePointService::store($localPdo, $linearRouteId, $routePoints, $userId, $roleCode);
 
     $storedPrincipals = [];
     if ($isFinanceRealm) {
