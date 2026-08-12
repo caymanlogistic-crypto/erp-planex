@@ -4,86 +4,55 @@
 
 ## Статус
 
-`DUAL_OPERATION_ROUTE_POINTS_PRODUCTION_READY`
+`FINANCE_MODERNIZATION_HANDOFF_READY`
 
-Параллельные агенты остановлены. Каноническая/default ветка — `chatgpt/production-stabilization-20260802`. Репозиторий работает в однопоточном режиме: один агент вносит изменения в каноническую ветку, после каждого push сначала проходит canonical CI, и только его успешное завершение запускает единственный production deploy workflow.
+Предыдущий цикл доработок линейных рейсов завершён и опубликован. Следующий рабочий цикл — модификация бухгалтерского/финансового блока ERP PLANEX новым агентом.
 
-## Текущая завершённая доработка
+## Режим работы
 
-Линейные рейсы переведены с двух независимых блоков `Загрузка` / `Выгрузка` на единый логический блок `Загрузка / выгрузка`.
+Каноническая/default ветка: `chatgpt/production-stabilization-20260802`. Работа последовательная: один агент, текущий HEAD, один production path. Не создавать параллельные Pxx deploy-ветки/workflows.
 
-Пользовательский контракт:
+Перед любым изменением новый агент обязан выполнить read-only ознакомление с системой и особенно finance. Основной специализированный документ: `docs/ai/FINANCE_HANDOFF.md`.
 
-- при создании нового рейса по умолчанию показываются две полноширинные точки;
-- у первой по умолчанию активна операция `Загрузка`;
-- у второй по умолчанию активна операция `Выгрузка`;
-- у каждой точки справа встроены два независимых suffix-toggle: `Загрузка` и `Выгрузка`;
-- допустимы три состояния точки: только загрузка, только выгрузка, одновременно загрузка + выгрузка;
-- `+ Добавить точку` добавляет новую строку без выбранной операции, пользователь фиксирует нужный тип;
-- заполненную точку нельзя сохранить без выбранной операции;
-- в рейсе должна существовать как минимум одна операция загрузки и одна операция выгрузки;
-- создание и редактирование используют одну модель данных;
-- существующие рейсы с прежними раздельными точками остаются совместимыми;
-- в просмотре рейса точки объединяются в одну строку `Загрузка / выгрузка` и рядом с каждым адресом показываются компактные метки операций.
+## Что сначала изучить
 
-## Поддержка БД
+1. `README.md` и `AGENTS.md`.
+2. `docs/ai/HANDOFF_FOR_NEW_AGENT.md`.
+3. `docs/ai/PROJECT_STATE.md`.
+4. `docs/ai/FINANCE_HANDOFF.md`.
+5. `docs/ai/DECISIONS.md` и `DOCUMENTATION_INDEX.md`.
+6. Фактический current code/schema finance: routes -> controllers/actions -> services -> views/assets -> migrations/tables -> tests.
+7. Текущие production finance screens read-only.
 
-Новая миграция не потребовалась. Существующая таблица `linear_route_points`, созданная `058_create_linear_route_points.sql`, уже поддерживает требуемую модель:
+Первый результат нового агента должен быть не кодом, а карта финансового блока `screen -> route -> controller/action -> service -> tables -> tests`, список найденных противоречий/рисков и подтверждение понимания deployment/database discipline.
 
-- `point_type` хранит `loading` или `unloading`;
-- `sort_order` задаёт общий порядок логических точек;
-- для точки с двумя операциями сохраняются две физические строки с одинаковыми `linear_route_id`, `sort_order` и `address_text`: одна `loading`, одна `unloading`;
-- уникального ограничения, запрещающего такую пару, нет;
-- `LinearRoutePointService::fetch()` собирает такую пару обратно в одну логическую точку с двумя флагами;
-- `LinearRoutePointService::store()` сохраняет логическую точку атомарно в рамках уже существующей транзакции рейса.
+## Finance invariants
 
-Таким образом схема production БД функционал поддерживает без ALTER/CREATE и без запуска миграций в стандартном deploy.
+- Finance доступен только `company_owner`; не расширять права без отдельного задания.
+- Tenant isolation обязательна.
+- Денежные значения хранятся как decimal money; форматирование не должно менять значение.
+- Банковский XLSX import, matching/reconciliation, allocations/actions/history должны оставаться аудируемыми и fail-closed.
+- Не менять production finance data ради тестов.
+- Любое DDL — только migration; standard deploy migrations не запускает.
+- При schema change после deploy нужен отдельный controlled migration/reconciliation + проверка tenant journals.
+- При использовании нового/существующего service из web entrypoint проверять `app/Support/entrypoint_dependencies.php`; исторически отсутствие dependency уже давало live HTTP 500.
 
-## Совместимость формы
+## Deployment
 
-Каноническая модель POST:
+Нормальный путь:
 
-- `route_points[points][N][address]`
-- `route_points[points][N][loading]`
-- `route_points[points][N][unloading]`
+`push canonical -> ERP PLANEX CI -> SUCCESS -> workflow_run -> ERPv2 Controlled Deploy`.
 
-Для совместимости с существующим PHP partial браузер одновременно формирует выровненные скрытые legacy-проекции `route_points[loading][]` / `route_points[unloading][]`. Это нужно только для корректного восстановления формы после server-side validation redirect; сервис сохраняет новую логическую модель и поддерживает старый формат как fallback.
+Deploy делает backup, собирает artifact строго из green SHA, запускает P07, проверяет marker, `/erpv2/login`, DB fingerprint, старый `/erp`, `.env` и runtime directories. Ручной exact-SHA `workflow_dispatch` остаётся fallback и требует `DEPLOY_ERPV2`.
 
-## Регрессионная защита
+Standard deploy НЕ запускает migrations.
 
-Добавлен `tests/linear_route_point_dual_operation_test.php` и включён в canonical CI. Тест проверяет:
+Нельзя сообщать пользователю «готово» только после commit/CI. Для code/UI нужны green CI + successful deploy + focused runtime verification; для schema changes дополнительно controlled migration verification.
 
-- только загрузку;
-- только выгрузку;
-- загрузку + выгрузку в одной точке;
-- сохранение глобального порядка;
-- legacy compatibility projection;
-- ошибки точки без операции и операции без адреса;
-- наличие минимум одной загрузки и одной выгрузки;
-- статическую совместимость текущей схемы `058_create_linear_route_points.sql` с двумя физическими operation rows.
+## Предыдущая функциональность, которую нельзя сломать
 
-## Последний подтверждённый gate и deploy функционального SHA
+Линейные рейсы поддерживают multi-driver crews, единый блок `Загрузка / выгрузка`, комбинированные операции одной точки и табличный реестр. Legacy `/erp` запрещено менять. Persistent `storage/companies/{company_id}/...` нельзя очищать deploy-ом.
 
-Functional SHA: `6341d7f9fd7d095203d58a3297d44014ba5c0766`.
+## Следующее действие
 
-Canonical CI run `31598355896` — `SUCCESS`.
-
-После зелёного CI автоматически запустился `ERPv2 Controlled Deploy`:
-
-- run: `31598400792`
-- job: `94119454092`
-- result: `SUCCESS`
-
-Подтверждены exact-SHA checkout, backup, P07 deploy, marker equality, `/erpv2/login` HTTP 200, неизменность DB fingerprint, старого `/erp`, `.env` и сохранение runtime directories.
-
-## Control plane
-
-- В `.github/workflows` остаются только `ci.yml` и единственный production-capable `erpv2_controlled_deploy.yml`.
-- Автодеплой: `push` в canonical branch -> `ERP PLANEX CI` -> только при `SUCCESS` и только для исходного `push` запускается `ERPv2 Controlled Deploy` через `workflow_run`.
-- Ручной exact-SHA deploy через `workflow_dispatch` сохранён как fallback и требует `confirm_deploy=DEPLOY_ERPV2`.
-- Standard deploy не запускает миграции автоматически.
-- Старый `/erp` запрещено изменять.
-
-## Следующая задача
-
-Доработка `Загрузка / выгрузка` завершена. Перед следующей функциональной задачей агент работает только от текущего HEAD canonical branch, не создаёт дополнительные deploy workflows/ветки и после каждого изменения ждёт зелёный CI + успешный auto-deploy + релевантную runtime-проверку прежде чем сообщать пользователю о готовности.
+Новый агент начинает с read-only ознакомления с finance и ждёт конкретного задания пользователя на модификацию после отчёта о понимании системы.
