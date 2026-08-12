@@ -62,8 +62,16 @@
     }
 
     function formatAmount(input) {
-        var digits = String(input.value || '').replace(/\D/g, '');
-        input.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        var raw = String(input.value || '').replace(/[\s\u00a0]/g, '').replace(',', '.');
+        raw = raw.replace(/[^0-9.]/g, '');
+        var firstDot = raw.indexOf('.');
+        var integerPart = firstDot >= 0 ? raw.slice(0, firstDot) : raw;
+        var fractionPart = firstDot >= 0 ? raw.slice(firstDot + 1).replace(/\./g, '').slice(0, 2) : '';
+        integerPart = integerPart.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+        if (integerPart === '' && raw !== '') integerPart = '0';
+        var grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        if (fractionPart !== '' && !/^0+$/.test(fractionPart)) grouped += ',' + fractionPart;
+        input.value = grouped;
     }
 
     function decorateAmount(input) {
