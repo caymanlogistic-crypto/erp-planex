@@ -18,7 +18,6 @@ jobs:
         run: |
           set -euo pipefail
           curl -sS -o /tmp/login -w 'HTTP_LOGIN=%{http_code}\n' https://plan-ex.ru/erpv2/login || true
-          head -c 300 /tmp/login || true; echo
           ssh -p "$SSH_PORT" -i ~/.ssh/p39 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
           set -u
           ROOT=/home/s/spugovxsim/planexp; LIVE="$ROOT/public_html/erpv2"
@@ -26,7 +25,8 @@ jobs:
           php8.5 -l "$LIVE/public/index.php" || true
           php8.5 -l "$LIVE/app/Support/entrypoint_dependencies.php" || true
           php8.5 -l "$LIVE/app/Service/LinearRoutePointService.php" || true
-          echo '--- error logs ---'
-          tail -n 80 "$LIVE/storage/logs"/*.log 2>/dev/null || true
-          echo '--- server dirs ---'; ls -la "$LIVE" | head
+          echo '--- migration audit ---'
+          cd "$LIVE" && php8.5 scripts/p39_migration_audit.php || true
+          echo '--- route migration status ---'
+          php8.5 -r '$_SERVER["REQUEST_METHOD"]="GET"; require "app/Support/helpers.php"; require "app/Support/environment.php"; loadEnvFileNonOverwriting(".env"); $c=require "bootstrap/app.php"; require "app/Support/entrypoint_dependencies.php"; $db=new App\Core\Database($c["database"]); $p=$db->connection(); foreach($p->query("SELECT * FROM companies WHERE status=\"active\"")->fetchAll(PDO::FETCH_ASSOC) as $co){$l=(new App\Core\Database(companyDatabaseConfig($c,$co)))->connection(); echo "company=".$co["id"]." table=".$l->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=\"linear_route_points\"")->fetchColumn()." journal="; $s=$l->prepare("SELECT checksum FROM schema_migrations WHERE migration=\"052_create_linear_route_points.sql\""); $s->execute(); var_export($s->fetchColumn()); echo PHP_EOL;}' || true
           REMOTE
