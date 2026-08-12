@@ -11,6 +11,44 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
     || $selectedRouteType !== ''
     || !empty($validationErrors)
     || !empty($formError);
+
+$paymentAmountCents = static function ($value): int {
+    $clean = trim(str_replace(["\xc2\xa0", ' ', ','], ['', '', '.'], (string) $value));
+    if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $clean)) {
+        return 0;
+    }
+    [$whole, $fraction] = array_pad(explode('.', $clean, 2), 2, '');
+    $fraction = str_pad(substr($fraction, 0, 2), 2, '0');
+    return ((int) $whole * 100) + (int) $fraction;
+};
+
+$formatCents = static function (int $cents): string {
+    $rubles = intdiv(max(0, $cents), 100);
+    return number_format($rubles, 0, ',', ' ') . ' ₽';
+};
+
+$paymentDetail = static function (array $payment) use ($paymentAmountCents, $formatCents): string {
+    $parts = [
+        $formatCents($paymentAmountCents($payment['amount'] ?? 0)),
+        LinearRouteService::paymentMethodLabel($payment['payment_method'] ?? null),
+        LinearRouteService::vatRateLabel($payment['vat_rate'] ?? null),
+    ];
+
+    $condition = LinearRouteService::conditionTypeLabel($payment['condition_type'] ?? null);
+    if ($condition === '—') {
+        $condition = trim((string) ($payment['payment_due_type'] ?? ''));
+    }
+    if ($condition !== '') {
+        $parts[] = $condition;
+    }
+
+    $daysCount = isset($payment['days_count']) ? (int) $payment['days_count'] : (isset($payment['payment_due_days']) ? (int) $payment['payment_due_days'] : 0);
+    if ($daysCount > 0) {
+        $parts[] = $daysCount . ' ' . (($payment['days_kind'] ?? $payment['payment_due_days_kind'] ?? 'calendar') === 'working' ? 'РД' : 'БД');
+    }
+
+    return implode(' · ', array_values(array_filter($parts, static fn(string $part): bool => $part !== '' && $part !== '—')));
+};
 ?>
 <?php if ($company === null): ?>
 
@@ -58,7 +96,7 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
         <div class="panel-body">
             <div class="empty-state">
                 <p class="empty-title">Линейные рейсы ещё не созданы.</p>
-                <p class="empty-desc">Создайте первый рейс через модальное окно: выберите тип, участников, исполнителя, груз, даты и финансовые условия.</p>
+                <p class="empty-desc">Создайте первый рейс через модальное окно: выберите участников, исполнителя, маршрут и финансовые условия.</p>
             </div>
         </div>
     </div>
@@ -78,84 +116,100 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
             </div>
         </div>
         <div class="table-scroll">
-            <table class="table">
+            <table class="table linear-trip-registry">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Тип</th>
-                        <th>Заказчик</th>
-                        <th>Перевозчик</th>
-                        <th>Принципалы</th>
-                        <th>Исполнитель рейса</th>
-                        <th>Груз</th>
-                        <th>Даты</th>
-                        <th>Оплаты</th>
+                        <th class="registry-id">ID</th>
+                        <th class="registry-date">Дата загрузки</th>
+                        <th class="registry-date">Дата выгрузки</th>
+                        <th class="registry-client">Заказчик</th>
+                        <th class="registry-executor">Исполнитель</th>
+                        <th class="registry-route">Маршрут</th>
+                        <th class="registry-cargo">Груз</th>
+                        <th class="registry-rate">Ставка заказчика</th>
+                        <th class="registry-rate">Ставка перевозчика</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($routes as $route): ?>
                         <?php
-                        $principalLabel = !empty($route['principal_summary']) ? implode(', ', $route['principal_summary']) : '—';
-                        $executorLabel = trim((string) (($route['executor_contractor_name'] ?? '') . ' · ' . ($route['executor_driver_name'] ?? '')));
-                        $executorPlates = trim((string) ($route['executor_primary_plate'] ?? ''));
-                        if (!empty($route['executor_secondary_plate'])) {
-                            $executorPlates .= ' + ' . $route['executor_secondary_plate'];
+                        $actualLoading = trim((string) ($route['actual_loading_date'] ?? ''));
+                        $loadingDate = $actualLoading !== '' ? $actualLoading : trim((string) ($route['planned_loading_date'] ?? ''));
+                        $actualUnloading = trim((string) ($route['actual_unloading_date'] ?? ''));
+
+                        $executorCarrier = trim((string) ($route['executor_contractor_name'] ?? ''));
+                        if ($executorCarrier === '') {
+                            $executorCarrier = trim((string) ($route['carrier_name'] ?? ''));
+                        }
+                        $executorDrivers = trim((string) ($route['registry_driver_names'] ?? $route['executor_driver_name'] ?? ''));
+                        $executorVehicle = trim((string) ($route['registry_vehicle_label'] ?? ''));
+                        if ($executorVehicle === '') {
+                            $plateParts = array_values(array_filter([
+                                trim((string) ($route['executor_primary_plate'] ?? '')),
+                                trim((string) ($route['executor_secondary_plate'] ?? '')),
+                            ], static fn(string $value): bool => $value !== ''));
+                            $executorVehicle = implode(' + ', $plateParts);
                         }
 
-                        $moneyParts = [];
-                        if ($isFinanceRealm) {
-                            foreach (($route['payments']['customer'] ?? []) as $payment) {
-                                $moneyParts[] = 'Заказчик: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
-                            }
-                            foreach (($route['payments']['carrier'] ?? []) as $payment) {
-                                $moneyParts[] = 'Перевозчик: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
-                            }
-                            foreach (($route['principal_items'] ?? []) as $principal) {
-                                $principalPayments = $route['payments']['principals'][(int) ($principal['id'] ?? 0)] ?? [];
-                                foreach ($principalPayments as $payment) {
-                                    $moneyParts[] = 'Принципал: ' . LinearRouteService::formatAmount($payment['amount'] ?? null);
-                                }
-                            }
+                        $customerPayments = $isFinanceRealm ? ($route['payments']['customer'] ?? []) : [];
+                        $carrierPayments = $isFinanceRealm ? ($route['payments']['carrier'] ?? []) : [];
+                        $customerTotalCents = 0;
+                        foreach ($customerPayments as $payment) {
+                            $customerTotalCents += $paymentAmountCents($payment['amount'] ?? 0);
                         }
-                        if ($moneyParts === []) {
-                            $moneyParts[] = '—';
+                        $carrierTotalCents = 0;
+                        foreach ($carrierPayments as $payment) {
+                            $carrierTotalCents += $paymentAmountCents($payment['amount'] ?? 0);
                         }
                         ?>
                         <tr data-erp-sort-date="<?= (int) $route['id'] ?>" data-linear-route-id="<?= (int) $route['id'] ?>">
-                            <td class="col-mono">#<?= (int) $route['id'] ?></td>
-                            <td><?= e(LinearRouteService::routeTypeLabel((string) ($route['route_type'] ?? ''))) ?></td>
-                            <td><?= e($route['client_name'] ?? '—') ?></td>
-                            <td><?= e($route['carrier_name'] ?? '—') ?></td>
-                            <td><?= e($principalLabel) ?></td>
-                            <td class="cell-double">
-                                <span class="cell-main"><?= e($executorLabel !== '' ? $executorLabel : '—') ?></span>
-                                <span class="cell-sub"><?= e($executorPlates !== '' ? $executorPlates : '—') ?></span>
+                            <td class="col-mono registry-id">#<?= (int) $route['id'] ?></td>
+                            <td class="registry-date<?= $actualLoading === '' ? ' registry-date-planned' : '' ?>">
+                                <?= e($loadingDate !== '' ? ui_date($loadingDate) : '—') ?>
                             </td>
-                            <td><?= e($route['cargo_type_name'] ?? '—') ?></td>
-                            <td class="cell-double">
-                                <span class="cell-main"><?= e(ui_date($route['planned_loading_date'] ?? null)) ?></span>
-                                <?php if (LinearRouteService::shouldShowPlannedUnloading($route['planned_loading_date'] ?? null, $route['planned_unloading_date'] ?? null)): ?>
-                                <span class="cell-sub"><?= e(ui_date($route['planned_unloading_date'] ?? null)) ?></span>
+                            <td class="registry-date"><?= e($actualUnloading !== '' ? ui_date($actualUnloading) : '—') ?></td>
+                            <td class="registry-client"><?= e($route['client_name'] ?? '—') ?></td>
+                            <td class="registry-executor">
+                                <span class="registry-executor-line"><?= e($executorCarrier !== '' ? $executorCarrier : '—') ?></span>
+                                <?php if ($executorDrivers !== ''): ?>
+                                    <span class="registry-executor-line registry-executor-secondary"><?= e($executorDrivers) ?></span>
+                                <?php endif; ?>
+                                <?php if ($executorVehicle !== ''): ?>
+                                    <span class="registry-executor-line registry-executor-secondary"><?= e($executorVehicle) ?></span>
                                 <?php endif; ?>
                             </td>
-                            <td class="cell-double">
-                                <?php foreach ($moneyParts as $index => $moneyPart): ?>
-                                    <?php if ($index === 0): ?>
-                                        <span class="cell-main"><?= e($moneyPart) ?></span>
-                                    <?php else: ?>
-                                        <span class="cell-sub"><?= e($moneyPart) ?></span>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                                <?php if ($isFinanceRealm): ?>
-                                <?php
-                                $invCounts = $route['invoice_counts'] ?? [];
-                                $invParts = [];
-                                if (!empty($invCounts['customer'])) $invParts[] = 'Сч. заказчика: ' . (int) $invCounts['customer'];
-                                if (!empty($invCounts['carrier'])) $invParts[] = 'Сч. перевозчика: ' . (int) $invCounts['carrier'];
-                                if (!empty($invCounts['principal'])) $invParts[] = 'Сч. принципала: ' . (int) $invCounts['principal'];
-                                if (!empty($invParts)): ?>
-                                    <span class="cell-sub invoice-hint"><?= e(implode(' · ', $invParts)) ?></span>
+                            <td class="registry-route">
+                                <?php if (!empty($route['registry_points'])): ?>
+                                    <?php foreach ($route['registry_points'] as $point): ?>
+                                        <span class="registry-route-line">
+                                            <?php if (!empty($point['is_loading'])): ?><span class="registry-route-tag">[Загрузка]</span><?php endif; ?>
+                                            <?php if (!empty($point['is_unloading'])): ?><span class="registry-route-tag">[Выгрузка]</span><?php endif; ?>
+                                            <?= e($point['address_text'] ?? '—') ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span class="registry-empty">—</span>
                                 <?php endif; ?>
+                            </td>
+                            <td class="registry-cargo"><?= e(trim((string) ($route['cargo_type_name'] ?? '')) !== '' ? $route['cargo_type_name'] : '—') ?></td>
+                            <td class="registry-rate">
+                                <?php if ($isFinanceRealm && $customerPayments !== []): ?>
+                                    <span class="registry-rate-total"><?= e($formatCents($customerTotalCents)) ?></span>
+                                    <?php foreach ($customerPayments as $payment): ?>
+                                        <span class="registry-payment-line"><?= e($paymentDetail($payment)) ?></span>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span class="registry-empty">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="registry-rate">
+                                <?php if ($isFinanceRealm && $carrierPayments !== []): ?>
+                                    <span class="registry-rate-total"><?= e($formatCents($carrierTotalCents)) ?></span>
+                                    <?php foreach ($carrierPayments as $payment): ?>
+                                        <span class="registry-payment-line"><?= e($paymentDetail($payment)) ?></span>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span class="registry-empty">—</span>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -190,6 +244,7 @@ $showCreateModal = (($_GET['show_create'] ?? '') === '1')
 
 <?php endif; ?>
 <link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-form-ux.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-form-ux.css')) ?>">
+<link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-registry.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-registry.css')) ?>">
 <script src="<?= app_url('/assets/js/linear-trip-executor-carrier.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-executor-carrier.js')) ?>"></script>
 <link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-route-points.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-route-points.css')) ?>">
 <script src="<?= app_url('/assets/js/linear-trip-route-points.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-route-points.js')) ?>"></script>
