@@ -16,12 +16,14 @@ for old, new in RENAMES.items():
     elif not Path(new).exists():
         raise SystemExit(f'missing migration source: {old}')
 
-roots = [Path('app'), Path('database'), Path('scripts'), Path('tools'), Path('tests'), Path('.github')]
+# Do not rewrite GitHub workflow files here: GitHub App push tokens may not have
+# workflow-file permission. Runtime/source references are updated deterministically.
+roots = [Path('app'), Path('database'), Path('scripts'), Path('tools'), Path('tests')]
 for root in roots:
     if not root.exists():
         continue
     for p in root.rglob('*'):
-        if not p.is_file() or p.suffix.lower() not in {'.php', '.py', '.yml', '.yaml', '.md', '.txt', '.sql'}:
+        if not p.is_file() or p.suffix.lower() not in {'.php', '.py', '.md', '.txt', '.sql'}:
             continue
         try:
             s = p.read_text(encoding='utf-8')
