@@ -1,0 +1,95 @@
+name: ERP PLANEX CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-planex-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          find app bootstrap config public scripts tests tools -type f -name '*.php' -print0 \
+            | xargs -0 -r -n1 php -l >/tmp/php-lint.log
+          cat /tmp/php-lint.log
+
+      - name: Migration numbering
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from collections import Counter
+          import re
+          failed = False
+          for d in (Path('database/migrations'), Path('database/migrations-local')):
+              rows = []
+              if d.exists():
+                  for p in d.glob('*.sql'):
+                      m = re.match(r'(\d+)_', p.name)
+                      if m:
+                          rows.append((int(m.group(1)), p.name))
+              counts = Counter(n for n, _ in rows)
+              duplicates = {n: [f for nn, f in rows if nn == n] for n, c in counts.items() if c > 1}
+              print(f'{d}: migrations={len(rows)} duplicates={duplicates}')
+              if duplicates:
+                  failed = True
+          raise SystemExit(1 if failed else 0)
+          PY
+
+      - name: Migration normalization regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f database/migrations-local/057_create_crew_drivers.sql
+          test -f database/migrations-local/058_create_linear_route_points.sql
+          test ! -f database/migrations-local/029_create_crew_drivers.sql
+          test ! -f database/migrations-local/052_create_linear_route_points.sql
+          grep -q "029_create_crew_drivers.sql.*057_create_crew_drivers.sql" scripts/p40_reconcile_migration_names.php
+          grep -q "052_create_linear_route_points.sql.*058_create_linear_route_points.sql" scripts/p40_reconcile_migration_names.php
+
+      - name: Architecture guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tools/architecture_guard.php
+
+      - name: JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' f; do
+            node --check "$f"
+          done < <(find public/assets/js tools -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+
+      - name: Control-plane guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          allowed = Path('.github/workflows/erpv2_controlled_deploy.yml')
+          violations = []
+          for p in Path('.github/workflows').glob('*.y*ml'):
+              text = p.read_text(encoding='utf-8')
+              mutating = any(token in text for token in ['P07_deploy_erpv2.sh', 'public_html/erpv2', 'deploy_backups'])
+              if mutating and p != allowed:
+                  violations.append(str(p))
+          print('deploy-capable workflow violations=', violations)
+          raise SystemExit(1 if violations else 0)
+          PY
