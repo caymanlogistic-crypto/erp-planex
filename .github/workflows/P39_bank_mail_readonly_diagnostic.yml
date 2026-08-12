@@ -1,0 +1,73 @@
+name: P39 Bank Mail Readonly Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+    paths:
+      - '.github/workflows/P39_bank_mail_readonly_diagnostic.yml'
+      - '.github/p39/**'
+  push:
+    branches:
+      - chatgpt/p39-bank-mail-diagnostic-20260812
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/p39_key
+          chmod 600 ~/.ssh/p39_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Read-only production diagnosis
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          SSH="ssh -i ~/.ssh/p39_key -p ${SSH_PORT:-22} -o BatchMode=yes -o StrictHostKeyChecking=yes ${SSH_USER}@${SSH_HOST}"
+          $SSH 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp/public_html/erpv2
+          MARKER=/home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt
+          echo "DEPLOYED_SHA=$(cat "$MARKER" 2>/dev/null || echo MISSING)"
+          PHPBIN=""
+          for p in php8.5 php8.4 php8.3 php; do
+            if command -v "$p" >/dev/null 2>&1; then PHPBIN="$p"; break; fi
+          done
+          echo "PHP_BIN=$PHPBIN"
+          "$PHPBIN" -r 'echo "CLI_PHP_VERSION=".PHP_VERSION.PHP_EOL; echo "CLI_IMAP_LOADED=".(extension_loaded("imap")?"YES":"NO").PHP_EOL; echo "IMAP_OPEN_FUNCTION=".(function_exists("imap_open")?"YES":"NO").PHP_EOL;'
+          "$PHPBIN" -r '
+            $f="/home/s/spugovxsim/planexp/private-config/erpv2.env";
+            $env=[];
+            if (is_file($f)) foreach (file($f, FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+              $line=trim($line); if ($line==="" || $line[0]==="#" || !str_contains($line,"=")) continue;
+              [$k,$v]=explode("=",$line,2); $env[trim($k)]=trim($v);
+            }
+            foreach (["BANK_IMAP_HOST","BANK_IMAP_PORT","BANK_IMAP_SSL","BANK_IMAP_USERNAME","BANK_IMAP_PASSWORD","BANK_IMAP_FROM","BANK_IMAP_SUBJECT_CONTAINS","BANK_IMAP_ALLOWED_HOSTS"] as $k) {
+              echo $k."=".(isset($env[$k]) && $env[$k]!=="" ? "SET" : "NOT_SET").PHP_EOL;
+            }
+          '
+          echo '--- RECENT BANK/IMAP ERRORS (redacted messages only) ---'
+          for f in "$ROOT"/logs/* /home/s/spugovxsim/planexp/private-storage/erpv2/logs/*; do
+            [ -f "$f" ] || continue
+            grep -Ei 'Manual bank statement|IMAP|bank statement refresh|bank statement.*error' "$f" 2>/dev/null | tail -n 40 | sed -E 's/(password|token|secret|username|login)[^ ,;:]*/\1=[REDACTED]/Ig' || true
+          done
+          echo '--- SOURCE CONTRACT ---'
+          grep -n "refresh-from-mail" "$ROOT/app/Http/Routes/company_bank_finance.php" || true
+          grep -n "extension_loaded('imap')\|BANK_IMAP_" "$ROOT/app/Service/HardenedBankStatementImapImporter.php" || true
+          REMOTE
+      - name: Cleanup key
+        if: always()
+        run: rm -f ~/.ssh/p39_key
