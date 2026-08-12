@@ -44,6 +44,40 @@ if ($companyId > 0) {
             $clients = LinearRouteService::fetchVisibleClients($localPdo, $sessionUser);
             $contractors = LinearRouteService::fetchVisibleContractors($localPdo, $sessionUser);
             $routeExecutors = LinearRouteService::fetchVisibleRouteExecutors($localPdo, $sessionUser);
+
+            // A route executor can contain several drivers. Keep the legacy primary-driver
+            // columns for compatibility, but use the scalable crew_drivers membership for
+            // the user-facing selector so every driver assigned to the crew is visible.
+            if ($routeExecutors !== []) {
+                $crewIds = array_values(array_filter(array_map(
+                    static fn(array $executor): int => (int) ($executor['id'] ?? 0),
+                    $routeExecutors
+                )));
+                if ($crewIds !== []) {
+                    $placeholders = implode(',', array_fill(0, count($crewIds), '?'));
+                    $driverStmt = $localPdo->prepare(
+                        "SELECT cd.crew_id,
+                                GROUP_CONCAT(d.full_name ORDER BY cd.position ASC SEPARATOR ' / ') AS driver_names
+                           FROM crew_drivers cd
+                           JOIN drivers d ON d.id = cd.driver_id
+                          WHERE cd.crew_id IN ({$placeholders})
+                          GROUP BY cd.crew_id"
+                    );
+                    $driverStmt->execute($crewIds);
+                    $driverNamesByCrew = [];
+                    foreach ($driverStmt->fetchAll(PDO::FETCH_ASSOC) as $driverRow) {
+                        $driverNamesByCrew[(int) $driverRow['crew_id']] = trim((string) ($driverRow['driver_names'] ?? ''));
+                    }
+                    foreach ($routeExecutors as &$executor) {
+                        $crewId = (int) ($executor['id'] ?? 0);
+                        if (($driverNamesByCrew[$crewId] ?? '') !== '') {
+                            $executor['driver_name'] = $driverNamesByCrew[$crewId];
+                        }
+                    }
+                    unset($executor);
+                }
+            }
+
             $cargoTypeSuggestions = LinearRouteService::cargoTypeSuggestions($localPdo, '');
 
             $isFinanceRealm = ($sessionUser['role_code'] ?? '') === 'company_owner';
