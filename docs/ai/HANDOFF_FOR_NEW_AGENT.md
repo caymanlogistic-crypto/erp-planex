@@ -8,58 +8,57 @@ ERP PLANEX is a PHP/MySQL multi-tenant logistics ERP. Production runtime is `htt
 
 Canonical/default branch: `chatgpt/production-stabilization-20260802`.
 
-Repository stabilization status: `HANDOFF_READY`. The parallel P26–P40 work period has been normalized into a single controlled line. The stabilization line contains the production functionality accumulated through P39/P40, including multi-driver crews, trip form/view improvements, finance controls, route points and hardened local migration handling.
+Repository stabilization status: `HANDOFF_READY_AUTO_DEPLOY_ACTIVE`. Parallel P26–P40 work has been normalized into a single development/deployment line. The canonical branch contains the production functionality accumulated through P39/P40, including multi-driver crews, trip form/view improvements, finance controls, route points and hardened local migration handling.
 
-The previous default-branch state was preserved as `backup/pre-stabilization-default-20260812` for recovery evidence only.
+The previous default-branch state is preserved as `backup/pre-stabilization-default-20260812` for recovery evidence only.
 
 ## 2. Repository control plane
 
 There are exactly two workflow files in the canonical branch:
 
-- `.github/workflows/ci.yml` — automatic/read-only engineering gate;
+- `.github/workflows/ci.yml` — automatic engineering gate on push/PR;
 - `.github/workflows/erpv2_controlled_deploy.yml` — the only production-capable workflow.
 
-`erpv2_controlled_deploy.yml` is `workflow_dispatch` only. Deployment requires an exact source SHA and the literal confirmation `DEPLOY_ERPV2`. It builds from the exact commit, creates a server backup, deploys through the proven P07 engine, checks the deployed marker, preserves `.env` and runtime directories, verifies that the old `/erp` and DB fingerprints did not change, and requires `/erpv2/login` HTTP 200.
+The production path is now deliberately single-agent and automatic only after a green canonical CI:
 
-Temporary P24–P40 push-trigger/reconcile/deploy workflows were removed during stabilization. Do not restore them and do not create a second production path.
+`push to chatgpt/production-stabilization-20260802` -> `ERP PLANEX CI` -> `workflow_run` with `conclusion=success`, original event=`push`, exact canonical branch -> `ERPv2 Controlled Deploy`.
 
-Important: the normalized controlled-deploy workflow has not yet been executed after stabilization. Therefore repository HEAD and deployed production SHA must not be assumed equal. A deployment claim requires a successful controlled-deploy run plus its post-deploy evidence.
+No direct push-triggered deployment exists. The deploy workflow receives the exact `workflow_run.head_sha`, verifies it as a real 40-character commit, checks it out detached, builds the artifact from exactly that SHA, creates a server backup, deploys through the proven P07 engine, checks the deployed marker, preserves `.env` and runtime directories, verifies that old `/erp` and DB fingerprints did not change, and requires `/erpv2/login` HTTP 200.
 
-## 3. Verified repository baseline
+The same workflow retains `workflow_dispatch` as a manual exact-SHA fallback. Manual deployment requires the exact source SHA and literal confirmation `DEPLOY_ERPV2`.
 
-Final stabilization CI run: `31586894872`.
+Standard application deployment does NOT run database migrations. Schema changes require a separate explicit migration step with tenant journal verification.
 
-Verified SHA: `99903d638b82b6cbb1c2706aae5630251f1df01e`.
+Temporary P24–P40 deploy/reconcile workflows remain removed. Do not restore them and do not create a second production path.
 
-Result: `SUCCESS`.
+## 3. Verified automatic deployment baseline
 
-The final gate passed:
+Guarded auto-deploy activation was validated on 2026-08-12.
 
-1. PHP syntax;
-2. Python syntax for `tools/*.py`;
-3. central/local migration number uniqueness;
-4. migration-name normalization regression;
-5. fail-closed dynamic SQL identifier safety audit;
-6. architecture guard;
-7. JavaScript syntax;
-8. control-plane guard;
-9. canonical P21 control-plane policy.
+Canonical CI:
 
-At that gate: central migrations = 11, local migrations = 57, duplicate migration numbers = 0, workflow files = 2, deploy-capable workflows = 1, automatic production deploy workflows = 0.
+- run: `31595645852`
+- SHA: `e387b2d206c84295392ec13c6630a11acf9502e5`
+- result: `SUCCESS`
 
-## 4. Production baseline versus repository HEAD
+Automatically triggered deployment:
 
-Last confirmed production baseline before repository-only normalization: `844c15de2455d6f45f4d136a2fcbb80dad98e984` on the P39 migration-checksum reconciliation line.
+- workflow: `ERPv2 Controlled Deploy`
+- run: `31595690419`
+- job: `94110512307`
+- event: `workflow_run`
+- source SHA: `e387b2d206c84295392ec13c6630a11acf9502e5`
+- result: `SUCCESS`
 
-A repository comparison from that production baseline to the normalized line shows no additional user-facing PHP/JS/CSS runtime changes. The delta is primarily:
+Verified deploy steps include exact-SHA checkout, artifact build, SSH setup, pre-deploy backup, P07 deployment, marker equality, HTTP verification, DB fingerprint equality, old `/erp` fingerprint equality, `.env` equality, runtime directory preservation and evidence artifact upload.
 
-- removal of obsolete Pxx workflows and trigger files;
-- canonical CI/control-plane files;
-- documentation/handoff updates;
-- renaming local migrations `029 -> 057` and `052 -> 058`;
-- migration reconciliation/verification tools and scripts.
+The CI gate passed PHP syntax, Python syntax, migration number uniqueness, migration-name normalization regression, dynamic SQL identifier safety audit, architecture guard, JavaScript syntax, control-plane guard and the updated P21 control-plane policy.
 
-Therefore do not deploy the current HEAD merely to make SHA values equal. Deploy when a real product/runtime change requires publication, using the controlled workflow and the migration-journal rules below.
+## 4. Current product delta
+
+The latest user-facing finance change is in `Банк -> Банковские счета`: the transaction table now displays a separate `ИНН` column immediately after `Контрагент`. The value comes from the already imported `counterparty_inn`; no DB schema/import format change was required.
+
+Because deploy is automatic after green CI, every completed code change must be treated as unfinished until BOTH the corresponding CI run and its triggered deploy run are successful.
 
 ## 5. Dynamic SQL identifier safety
 
@@ -80,6 +79,8 @@ A fifth analogous site exists in `Superadmin/ManagementActions/entity_list.php`;
   - `052_create_linear_route_points.sql` -> `058_create_linear_route_points.sql`
 - Historical production journal rows may therefore contain old names. Use `scripts/p40_reconcile_migration_names.php` before treating them as missing migrations; never blindly re-run CREATE/ALTER statements against production.
 - Known checksum reconciliation in `LocalMigrationService` is fail-closed: compatibility must be proven from the actual schema before an historical checksum is accepted.
+- Normal CRUD must not run the full local migration chain as a side effect.
+- Standard auto-deploy explicitly does not execute migrations.
 
 ## 7. Important domain facts
 
@@ -99,21 +100,21 @@ For browser acceptance use the proven GitHub Actions runtime when needed: Node.j
 
 ## 9. Production verification discipline
 
-Before claiming PRODUCTION READY after a code change:
+Before telling the user that a change is ready for testing:
 
-1. Run canonical CI and focused tests for touched modules.
-2. Check duplicate migration numbers in both migration directories.
-3. If schema changes are involved, verify both fresh-schema and upgrade behavior.
-4. Reconcile renamed production migration journal rows before any migration run.
-5. Deploy only exact SHA through the controlled deployment workflow.
+1. Work only from the canonical branch and inspect its exact current HEAD.
+2. Make the smallest coherent change; do not create a parallel deploy workflow/branch.
+3. Wait for canonical CI on that SHA to complete successfully.
+4. Confirm the triggered `ERPv2 Controlled Deploy` run started from that same CI push SHA.
+5. Wait for deploy `SUCCESS`.
 6. Verify server marker equals source SHA.
 7. Verify `/erpv2/login` HTTP 200.
-8. Verify old `/erp` fingerprint unchanged.
-9. Verify `.env` and runtime directories preserved.
-10. Verify expected migration journal state in all active tenant DBs.
-11. For UI changes, run Playwright/Chromium and check console/page/request failures.
+8. Verify old `/erp`, DB and `.env` fingerprints did not change unexpectedly.
+9. Verify runtime directories are preserved.
+10. If schema changes are involved, do NOT rely on standard auto-deploy; perform the explicit migration/reconciliation procedure and verify all active tenant migration journals.
+11. For material UI changes, run Playwright/Chromium and check console/page/request failures.
 
-Repository CI success alone is not production deployment evidence.
+A green CI alone is not production evidence. A pushed commit alone is not production evidence. The normal completion criterion is green CI + successful triggered deploy + relevant focused runtime verification.
 
 ## 10. Documentation priority
 
@@ -132,4 +133,4 @@ P11–P40 Markdown/JSON reports are historical evidence and may describe states 
 
 ## 11. First action for a new agent
 
-Inspect the exact canonical HEAD, inspect the two workflow files, confirm latest CI, check migration numbering and perform read-only production verification if the new task depends on runtime state. Never create another automatic production deploy path and never assume production matches repository HEAD without deployment evidence.
+Inspect the exact canonical HEAD, the two workflow files, latest CI and latest triggered deploy. Keep the single deployment path. Do not create new Pxx auto-deploy workflows. Work serially: change -> push -> green CI -> automatic controlled deploy -> runtime verification -> report ready.
