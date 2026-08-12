@@ -1,73 +1,54 @@
 # ERP PLANEX — правила работы агентов
 
-Актуально на 2026-08-12. Этот файл является текущим операционным контрактом для разработки. Исторические E7–P40 документы сохраняются как evidence и не переопределяют эти правила.
+Актуально на 2026-08-12. Это текущий операционный контракт. Исторические E7–P40 документы — evidence, а не инструкция.
 
-## Начало работы
+## Перед началом
 
-Перед любым изменением агент обязан прочитать:
+Обязательно прочитать: `README.md`, `docs/ai/HANDOFF_FOR_NEW_AGENT.md`, `docs/ai/PROJECT_STATE.md`, `docs/ai/CURRENT_TASK.md`, `docs/ai/DECISIONS.md`. Для finance дополнительно `docs/ai/FINANCE_HANDOFF.md`; для UI — `docs/ui/DESIGN_STANDARD.md`.
 
-1. `README.md`.
-2. `docs/ai/HANDOFF_FOR_NEW_AGENT.md`.
-3. `docs/ai/PROJECT_STATE.md`.
-4. `docs/ai/CURRENT_TASK.md`.
-5. `docs/ai/DECISIONS.md`.
-6. Для UI — `docs/ui/DESIGN_STANDARD.md` и master-reference ERP PLANEX.
+## Каноническая линия
 
-## Каноническая ветка
+Repository: `caymanlogistic-crypto/erp-planex`.
+Canonical/default branch: `chatgpt/production-stabilization-20260802`.
+Работа последовательная: один агент, один current HEAD, один production path. Старые Pxx/recovery branches не использовать для разработки/deploy.
 
-Каноническая/default ветка: `chatgpt/production-stabilization-20260802`.
+Production: `https://plan-ex.ru/erpv2/`. Legacy `/erp` не менять.
 
-Нельзя продолжать разработку из старых Pxx-веток, исторических deploy-веток или recovery-ветки. Перед работой всегда сверять текущий HEAD канонической ветки и состояние GitHub Actions.
+## CI и deploy
 
-Recovery evidence: `backup/pre-stabilization-default-20260812`. Она нужна только для аварийного сравнения/восстановления и не является источником deployment.
+В canonical branch два workflow:
 
-## Production control plane
+- `.github/workflows/ci.yml` — автоматический engineering gate;
+- `.github/workflows/erpv2_controlled_deploy.yml` — единственный production-capable workflow.
 
-Production runtime: `/erpv2`. Legacy `/erp` запрещено менять.
+Нормальный путь: `push canonical -> ERP PLANEX CI -> green push CI -> workflow_run -> ERPv2 Controlled Deploy`.
 
-Единственный production-capable workflow: `.github/workflows/erpv2_controlled_deploy.yml`.
+Deploy использует exact green `head_sha`, делает server backup, собирает artifact строго из SHA, deploy через P07 и проверяет marker, `/erpv2/login`, DB fingerprint, old `/erp`, `.env`, runtime directories. `workflow_dispatch` остаётся ручным exact-SHA fallback и требует `DEPLOY_ERPV2`.
 
-Он должен оставаться только `workflow_dispatch`, принимать точный 40-символьный SHA и требовать `confirm_deploy=DEPLOY_ERPV2`. Автоматические production deploy по `push`, `pull_request`, `schedule`, `workflow_run`, issue/event запрещены.
+Не создавать второй deploy workflow. Не сообщать READY до successful deploy и focused verification. Standard deploy не запускает migrations.
 
-`.github/workflows/ci.yml` — единственный автоматический CI workflow. Он read-only относительно production и выполняет lint, migration numbering, architecture guard, JavaScript syntax и control-plane policy audit.
+## БД
 
-## База данных и миграции
+ERP multi-tenant: central DB + company operational DB `erp_company_{id}`. Любое DDL — только migration. Нельзя ALTER/CREATE production schema из controller/temp web script/deploy. Local migration numbers уникальны; известные normalized names: `057_create_crew_drivers.sql`, `058_create_linear_route_points.sql`. Historical journal aliases reconciled only controlled tooling.
 
-ERP многотенантная: центральная БД хранит глобальные/управляющие данные, операционные данные компаний находятся в `erp_company_{id}`.
+При schema change обязательны fresh-schema/upgrade checks, explicit migration/reconciliation и tenant journal verification. Auto-deploy сам по себе schema change не завершает.
 
-Любое изменение схемы — только миграцией. Нельзя вручную ALTER/CREATE production-схему из контроллера, временного скрипта или deploy workflow без отдельной migration/reconciliation процедуры.
+## Finance
 
-Номера локальных миграций уникальны. После нормализации используются:
+Finance доступен только `company_owner`. Tenant isolation, auditability и fail-closed reconciliation обязательны. Не менять production finance rows ради тестов. Money хранить/обрабатывать как decimal; UI formatting не должно менять numeric value. При web use любого service проверять runtime dependency chain и `app/Support/entrypoint_dependencies.php`.
 
-- `057_create_crew_drivers.sql`;
-- `058_create_linear_route_points.sql`.
-
-Исторические journal names `029_create_crew_drivers.sql` и `052_create_linear_route_points.sql` должны обрабатываться через `scripts/p40_reconcile_migration_names.php`; нельзя слепо повторно выполнять их DDL.
+Перед finance modifications новый агент сначала читает `docs/ai/FINANCE_HANDOFF.md` и делает read-only карту `screen -> route -> controller/action -> service -> tables -> tests`.
 
 ## Защищённые доменные решения
 
-`Исполнитель рейса` — пользовательская сущность `Подрядчик + водитель + ТС`, технически реализованная через `driver_vehicle_blocks` и `crews`.
-
-`driver_vehicle_blocks` использует `vehicle_set_id`; поля `vehicle_id` в этой таблице быть не должно. Legacy `crews.vehicle_id` при необходимости соответствует `vehicle_sets.primary_vehicle_unit_id`.
-
-Finance доступен только `company_owner`.
-
-Документы хранятся в `storage/companies/{company_id}/documents/...`; storage нельзя очищать как временный каталог.
+`Исполнитель рейса` = подрядчик + водитель(и) + vehicle set через `driver_vehicle_blocks`/`crews`; `driver_vehicle_blocks` использует `vehicle_set_id`. Multi-driver crews поддерживаются. Linear route points поддерживают loading/unloading и обе операции в одной логической точке. Persistent documents/storage нельзя удалять deploy-ом.
 
 ## UI
 
-ERP PLANEX — desktop-first, minimum production desktop width 1440px, industrial density, строгие borders, малые радиусы и коричнево-медная визуальная система. Реестры — table-first. Запрещено самовольно заменять интерфейс на generic SaaS, Bootstrap/AdminLTE dashboard или card lists.
+Desktop-first industrial ERP, minimum production desktop width 1440px, table-first registries, compact density, strict borders/small radii, brown/copper system. Не заменять generic SaaS/Bootstrap/AdminLTE styling без прямого задания.
 
-## Проверка изменений
+Для material runtime/UI acceptance использовать proven Chromium/Playwright contour: Ubuntu 24.04, Node 22, Playwright 1.54.2, Chromium headless, 1920x1080 (и чувствительные 1536x864/1366x768), deviceScaleFactor 1, ru-RU, Europe/Moscow; проверять console/page/request/unexpected HTTP failures.
 
-Перед утверждением изменения обязательны focused tests по затронутому модулю, PHP lint, JavaScript syntax при изменении JS, architecture guard, отсутствие дублей migration numbers и зелёный `.github/workflows/ci.yml`.
+## Документация
 
-После schema change дополнительно проверяются fresh-schema и upgrade path. После production deploy проверяются exact server marker, `/erpv2/login`, сохранность `.env`/runtime directories, old `/erp` fingerprint и ожидаемое состояние migration journal всех активных tenants.
-
-Для UI/runtime audit используется Chromium/Playwright: 1920×1080, deviceScaleFactor 1, `ru-RU`, `Europe/Moscow`, headless=true, с проверкой console/page/request/http failures.
-
-## Работа с документацией
-
-Текущими источниками правды являются `README.md`, этот файл, `docs/ai/HANDOFF_FOR_NEW_AGENT.md`, `PROJECT_STATE.md`, `CURRENT_TASK.md`, `DECISIONS.md`, `DOCUMENTATION_INDEX.md` и `docs/ui/DESIGN_STANDARD.md`.
-
-Все документы, помеченные в `DOCUMENTATION_INDEX.md` как HISTORICAL, сохраняют исторические факты и не должны использоваться как инструкция по текущему branch/deploy/runtime.
+Current truth: code/schema, `README.md`, этот файл, `docs/ai/HANDOFF_FOR_NEW_AGENT.md`, `PROJECT_STATE.md`, `CURRENT_TASK.md`, `FINANCE_HANDOFF.md`, `DECISIONS.md`, `DOCUMENTATION_INDEX.md`, `docs/ui/DESIGN_STANDARD.md`. Historical docs не должны переопределять current branch/deploy/runtime.
