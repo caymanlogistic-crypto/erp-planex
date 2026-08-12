@@ -1,0 +1,83 @@
+.linear-trip-registry {
+    min-width: 1480px;
+}
+
+.linear-trip-registry th,
+.linear-trip-registry td {
+    vertical-align: top;
+}
+
+.linear-trip-registry .registry-id {
+    width: 46px;
+    white-space: nowrap;
+}
+
+.linear-trip-registry .registry-date {
+    width: 92px;
+    white-space: nowrap;
+}
+
+.linear-trip-registry .registry-client {
+    width: 150px;
+}
+
+.linear-trip-registry .registry-executor {
+    width: 250px;
+}
+
+.linear-trip-registry .registry-route {
+    width: 320px;
+}
+
+.linear-trip-registry .registry-cargo {
+    width: 135px;
+}
+
+.linear-trip-registry .registry-rate {
+    width: 220px;
+}
+
+.registry-date-planned {
+    color: #8b877f;
+}
+
+.registry-executor-line,
+.registry-route-line,
+.registry-payment-line {
+    display: block;
+    line-height: 1.32;
+}
+
+.registry-executor-line + .registry-executor-line,
+.registry-route-line + .registry-route-line,
+.registry-payment-line + .registry-payment-line {
+    margin-top: 2px;
+}
+
+.registry-executor-secondary,
+.registry-payment-line {
+    color: #817d75;
+    font-size: 11px;
+}
+
+.registry-route-tag {
+    display: inline-block;
+    margin-right: 4px;
+    padding: 0;
+    color: #7c4718;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.registry-rate-total {
+    display: block;
+    margin-bottom: 3px;
+    color: #211d19;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.registry-empty {
+    color: #817d75;
+}
