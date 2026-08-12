@@ -266,3 +266,41 @@
     });
   }).observe(document.documentElement, {childList: true, subtree: true});
 })();
+
+(function () {
+  'use strict';
+
+  function normalizeLinearTripUi(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+
+    scope.querySelectorAll('.registry-route-tag').forEach(function (tag) {
+      var text = String(tag.textContent || '').trim();
+      if (text === '↘') tag.textContent = '↓';
+      if (text === '↗') tag.textContent = '↑';
+    });
+
+    scope.querySelectorAll('select[data-condition-type]').forEach(function (select) {
+      Array.prototype.forEach.call(select.options, function (option) {
+        if (option.value === 'start_day') option.textContent = 'На загрузке';
+        if (option.value === 'end_day') option.textContent = 'На выгрузке';
+      });
+    });
+  }
+
+  function init() {
+    normalizeLinearTripUi(document);
+    new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1) normalizeLinearTripUi(node);
+        });
+      });
+    }).observe(document.body, {childList: true, subtree: true});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, {once: true});
+  } else {
+    init();
+  }
+})();
