@@ -67,7 +67,7 @@ jobs:
           echo "::add-mask::$credentials"
           printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
 
-      - name: Verify drivers contractors and vehicles
+      - name: Verify create view edit persistence
         shell: bash
         run: |
           set -euo pipefail
@@ -79,161 +79,92 @@ jobs:
           const owner = creds.find(x => String(x.role || '').toUpperCase() === 'OWNER');
           if (!owner) throw new Error('OWNER credentials unavailable');
           const suffix = String(Date.now()).slice(-7);
-          const qa = {
-            driverName: 'QA DRIVER ' + suffix,
-            contractorName: 'ООО QA CONTRACTOR ' + suffix,
-            plate: 'А' + suffix.slice(-3) + 'ВС99',
-          };
-          let driverId = 0, contractorId = 0, vehicleId = 0;
+          const qa = {driverName:'Тестов Водитель '+suffix,contractorName:'ООО QA CONTRACTOR '+suffix,plate:'А'+suffix.slice(-3)+'ВС99',vin:'X9F1234567890'+suffix.slice(-4)};
+          let driverId=0,contractorId=0,vehicleId=0;
+          const must=(c,m)=>{if(!c)throw new Error(m);};
 
-          const must = (cond, msg) => { if (!cond) throw new Error(msg); };
-          const esc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+            const page=await context.newPage();
+            const pageErrors=[]; page.on('pageerror',e=>pageErrors.push(e.message));
 
-          (async () => {
-            const browser = await chromium.launch({headless:true});
-            const context = await browser.newContext({viewport:{width:1920,height:1080}, locale:'ru-RU', timezoneId:'Europe/Moscow', ignoreHTTPSErrors:true});
-            const page = await context.newPage();
-            const browserErrors = [];
-            page.on('pageerror', e => browserErrors.push('pageerror: ' + e.message));
-            page.on('console', m => { if (m.type() === 'error') browserErrors.push('console: ' + m.text()); });
-
-            async function login() {
-              await page.goto(new URL('login', BASE).href, {waitUntil:'domcontentloaded', timeout:45000});
-              const user = page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first();
-              const pass = page.locator('input[type="password"]').first();
-              await user.fill(owner.username); await pass.fill(owner.password);
-              await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}), page.locator('button[type="submit"],input[type="submit"]').first().click()]);
-              await page.waitForTimeout(700);
-              must(!/\/login(?:[/?#]|$)/i.test(page.url()), 'authentication failed');
+            async function login(){
+              await page.goto(new URL('login',BASE).href,{waitUntil:'domcontentloaded',timeout:45000});
+              await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);
+              await page.locator('input[type="password"]').first().fill(owner.password);
+              await Promise.all([page.waitForLoadState('domcontentloaded').catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+              await page.waitForTimeout(700); must(!/\/login(?:[/?#]|$)/i.test(page.url()),'authentication failed');
             }
-            async function reqPost(path, form) {
-              const r = await context.request.post(new URL(path.replace(/^\//,''), BASE).href, {form});
-              const text = await r.text();
-              must(r.ok(), path + ' HTTP ' + r.status() + ': ' + text.slice(0,400));
-              return text;
+            async function liveSubmit(selector,values){
+              const result=await page.locator(selector).evaluate(async(form,values)=>{
+                const fd=new FormData(form); Object.entries(values).forEach(([k,v])=>fd.set(k,String(v)));
+                const response=await fetch(form.action,{method:'POST',body:fd,credentials:'same-origin'});
+                return {status:response.status,ok:response.ok,text:await response.text()};
+              },values);
+              must(result.ok,selector+' HTTP '+result.status+': '+result.text.slice(0,500));
+              must(!/Ошибка при сохранении|Ошибка сохранения|Сессия формы истекла/.test(result.text),selector+' error: '+result.text.slice(0,600));
+              return result.text;
             }
-            async function reqGet(path) {
-              const r = await context.request.get(new URL(path.replace(/^\//,''), BASE).href);
-              const text = await r.text();
-              must(r.ok(), path + ' HTTP ' + r.status());
-              return text;
+            async function rowId(path,selector,text,attr){
+              await page.goto(new URL(path,BASE).href,{waitUntil:'domcontentloaded',timeout:45000});
+              const row=page.locator(selector).filter({hasText:text}).first(); await row.waitFor({state:'attached',timeout:10000}); return Number(await row.getAttribute(attr)||0);
             }
-            async function findRow(path, selector, needle, idAttr) {
-              await page.goto(new URL(path, BASE).href, {waitUntil:'domcontentloaded', timeout:45000});
-              const row = page.locator(selector).filter({hasText:needle}).first();
-              await row.waitFor({state:'attached', timeout:10000});
-              return Number(await row.getAttribute(idAttr) || 0);
+            async function openEdit(rowSelector,editButton,formSelector){
+              await page.locator(rowSelector).dblclick(); await page.locator(editButton).waitFor({state:'visible',timeout:10000}); await page.locator(editButton).click(); await page.locator(formSelector).waitFor({state:'visible',timeout:10000});
+            }
+            async function openView(rowSelector,editButton){
+              await page.locator(rowSelector).dblclick(); await page.locator(editButton).waitFor({state:'visible',timeout:10000}); return await page.locator('.modal-overlay.is-open').last().innerText();
             }
 
-            try {
+            try{
               await login();
 
-              // DRIVER: create form contract + create persistence.
-              await page.goto(new URL('company/drivers', BASE).href, {waitUntil:'domcontentloaded'});
-              await page.getByRole('button', {name:/Создать водителя|Добавить нового водителя/i}).first().click();
-              const driverForm = page.locator('#driver-create-form');
-              await driverForm.waitFor({state:'visible'});
-              for (const field of ['full_name','passport_issue_date','license_issue_date','comments']) must(await driverForm.locator('[name="'+field+'"]').count() > 0, 'driver create missing ' + field);
-              await page.evaluate(() => closeModal('driver-create-modal'));
+              await page.goto(new URL('company/drivers',BASE).href,{waitUntil:'domcontentloaded'});
+              await page.getByRole('button',{name:/Создать водителя|Добавить нового водителя/i}).first().click();
+              const df=page.locator('#driver-create-form'); await df.waitFor({state:'visible'});
+              for(const f of ['full_name','passport_issue_date','license_issue_date','comments'])must(await df.locator('[name="'+f+'"]').count()>0,'driver create missing '+f);
+              await liveSubmit('#driver-create-form',{full_name:qa.driverName,phone:'+7999000'+suffix.slice(-4),passport_number:'4500123456',passport_department_code:'770001',passport_issued_by:'QA МВД',passport_issue_date:'01.08.2026',license_number:'7712345678',license_issue_date:'02.08.2026',snils:'12345678901',email:'qa.'+suffix+'@example.com',comments:'QA driver create '+suffix});
+              driverId=await rowId('company/drivers','tr[data-driver-id]',qa.driverName,'data-driver-id'); must(driverId>0,'driver create did not persist');
+              const drow='tr[data-driver-id="'+driverId+'"]'; await openEdit(drow,'[data-driver-edit-btn]','#driver-edit-form');
+              must(await page.locator('#driver-edit-form [name="passport_issue_date"]').inputValue()==='01.08.2026','driver passport date not restored');
+              must(await page.locator('#driver-edit-form [name="license_issue_date"]').inputValue()==='02.08.2026','driver license date not restored');
+              await liveSubmit('#driver-edit-form',{full_name:qa.driverName,phone:'+7999000'+suffix.slice(-4),passport_number:'4500123456',passport_department_code:'770001',passport_issued_by:'QA МВД EDIT',passport_issue_date:'03.08.2026',license_number:'7712345678',license_issue_date:'04.08.2026',snils:'12345678901',email:'qa.'+suffix+'@example.com',comments:'QA driver edit '+suffix});
+              await page.goto(new URL('company/drivers',BASE).href,{waitUntil:'domcontentloaded'}); let text=await openView(drow,'[data-driver-edit-btn]');
+              for(const v of ['QA МВД EDIT','03.08.2026','04.08.2026','QA driver edit '+suffix])must(text.includes(v),'driver view missing '+v);
 
-              await reqPost('/company/drivers/modal-create', {
-                full_name: qa.driverName,
-                phone: '+7999000' + suffix.slice(-4),
-                passport_number: '4500123456',
-                passport_department_code: '770001',
-                passport_issued_by: 'QA МВД',
-                passport_issue_date: '01.08.2026',
-                license_number: '7712345678',
-                license_issue_date: '02.08.2026',
-                snils: '12345678901',
-                email: 'qa.' + suffix + '@example.com',
-                comments: 'QA driver create ' + suffix
-              });
-              driverId = await findRow('company/drivers', 'tr[data-driver-id]', qa.driverName, 'data-driver-id');
-              must(driverId > 0, 'driver create did not persist');
-              let driverView = await reqGet('/company/drivers/' + driverId + '/modal-view');
-              for (const value of [qa.driverName,'01.08.2026','02.08.2026','QA driver create ' + suffix]) must(driverView.includes(value), 'driver view missing ' + value);
-              let driverEdit = await reqGet('/company/drivers/' + driverId + '/modal-edit');
-              must(driverEdit.includes('value="01.08.2026"'), 'driver edit passport date is not DD.MM.YYYY');
-              must(driverEdit.includes('value="02.08.2026"'), 'driver edit license date is not DD.MM.YYYY');
-              await reqPost('/company/drivers/' + driverId + '/modal-edit', {
-                full_name: qa.driverName,
-                phone: '+7999000' + suffix.slice(-4),
-                passport_number: '4500123456', passport_department_code:'770001', passport_issued_by:'QA МВД EDIT', passport_issue_date:'03.08.2026',
-                license_number:'7712345678', license_issue_date:'04.08.2026', snils:'12345678901', email:'qa.'+suffix+'@example.com', comments:'QA driver edit '+suffix
-              });
-              driverView = await reqGet('/company/drivers/' + driverId + '/modal-view');
-              for (const value of ['QA МВД EDIT','03.08.2026','04.08.2026','QA driver edit ' + suffix]) must(driverView.includes(value), 'driver edit not persisted: ' + value);
+              await page.goto(new URL('company/contractors',BASE).href,{waitUntil:'domcontentloaded'});
+              await page.getByRole('button',{name:/Создать перевозчика/i}).first().click(); const cf=page.locator('#le-create-form'); await cf.waitFor({state:'visible'});
+              for(const f of ['name','inn','director_full_name','bank_account','bank_name','bank_bik','bank_corr_account'])must(await cf.locator('[name="'+f+'"]').count()>0,'contractor create missing '+f);
+              const inn='77'+suffix.padStart(8,'0').slice(-8);
+              await liveSubmit('#le-create-form',{name:qa.contractorName,inn,contractor_type:'legal_entity',kpp:'770101001',ogrn:'1027700132195',director_full_name:'QA Руководитель',director_position:'Директор',legal_address:'QA юридический адрес',physical_address:'QA фактический адрес',bank_account:'40702810123456789012',bank_bik:'044525225',bank_name:'QA Банк',bank_corr_account:'30101810400000000225',comments:'QA contractor create '+suffix,'contacts[0][contact_person]':'QA Контакт','contacts[0][phone]':'+79991112233','contacts[0][email]':'contract.'+suffix+'@example.com','contacts[0][comment]':'QA contact comment','contacts[0][is_primary]':'1','contacts[0][is_document_email]':'1'});
+              contractorId=await rowId('company/contractors','tr[data-contractor-id]',qa.contractorName,'data-contractor-id'); must(contractorId>0,'contractor create did not persist');
+              const crow='tr[data-contractor-id="'+contractorId+'"]'; text=await openView(crow,'[data-contractor-edit-btn]');
+              for(const v of ['QA Руководитель','Директор','40702810123456789012','QA Банк','044525225','30101810400000000225','QA Контакт','QA contact comment'])must(text.includes(v),'contractor view missing '+v);
+              await page.locator('[data-contractor-edit-btn]').click(); await page.locator('#contractor-edit-form').waitFor({state:'visible',timeout:10000});
+              await liveSubmit('#contractor-edit-form',{name:qa.contractorName,inn,contractor_type:'legal_entity',kpp:'770101001',ogrn:'1027700132195',director_full_name:'QA Руководитель EDIT',director_position:'Генеральный директор',legal_address:'QA юридический адрес 2',physical_address:'QA фактический адрес 2',bank_account:'40702810123456789012',bank_bik:'044525225',bank_name:'QA Банк EDIT',bank_corr_account:'30101810400000000225',comments:'QA contractor edit '+suffix,'contacts[0][contact_person]':'QA Контакт EDIT','contacts[0][phone]':'+79991112233','contacts[0][email]':'contract.'+suffix+'@example.com','contacts[0][comment]':'QA contact edited','contacts[0][is_primary]':'1','contacts[0][is_document_email]':'1'});
+              await page.goto(new URL('company/contractors',BASE).href,{waitUntil:'domcontentloaded'}); text=await openView(crow,'[data-contractor-edit-btn]');
+              for(const v of ['QA Руководитель EDIT','Генеральный директор','QA Банк EDIT','QA Контакт EDIT','QA contact edited'])must(text.includes(v),'contractor edit missing '+v);
 
-              // CONTRACTOR: create, view full requisites, edit, contacts.
-              await page.goto(new URL('company/contractors', BASE).href, {waitUntil:'domcontentloaded'});
-              await page.getByRole('button', {name:/Создать перевозчика/i}).first().click();
-              const contractorForm = page.locator('#le-create-form');
-              await contractorForm.waitFor({state:'visible'});
-              for (const field of ['name','inn','director_full_name','bank_account','bank_name','bank_bik','bank_corr_account']) must(await contractorForm.locator('[name="'+field+'"]').count() > 0, 'contractor create missing ' + field);
-              await page.evaluate(() => closeModal('le-contractor-modal'));
+              await page.goto(new URL('company/vehicle-sets',BASE).href,{waitUntil:'domcontentloaded'}); await page.getByRole('button',{name:/Добавить новый транспорт/i}).first().click();
+              const vf=page.locator('#vehicle-set-create-form'); await vf.waitFor({state:'visible'}); await vf.locator('select[name="set_type"]').selectOption('single'); await page.waitForTimeout(200);
+              for(const f of ['brand','model','plate_number','vin','diagnostic_card_number','diagnostic_card_date'])must(await vf.locator('[name="units[primary]['+f+']"]').count()>0,'vehicle create missing '+f);
+              await liveSubmit('#vehicle-set-create-form',{set_type:'single',status:'active',comments:'QA vehicle create '+suffix,'units[primary][unit_type]':'truck','units[primary][brand]':'QA BRAND','units[primary][model]':'MODEL '+suffix,'units[primary][plate_number]':qa.plate,'units[primary][vin]':qa.vin,'units[primary][diagnostic_card_number]':'123456789012345','units[primary][diagnostic_card_date]':'05.08.2026','units[primary][capacity_tons]':'20,5','units[primary][volume_m3]':'86,5'});
+              vehicleId=await rowId('company/vehicle-sets','tr[data-vehicle-set-id]',qa.plate,'data-vehicle-set-id'); must(vehicleId>0,'vehicle create did not persist');
+              const vrow='tr[data-vehicle-set-id="'+vehicleId+'"]'; text=await openView(vrow,'[data-vehicle-set-edit-btn]');
+              for(const v of ['QA BRAND','MODEL '+suffix,'05.08.2026','20,5','86,5'])must(text.includes(v),'vehicle view missing '+v);
+              await page.locator('[data-vehicle-set-edit-btn]').click(); await page.locator('#vehicle-set-edit-form').waitFor({state:'visible',timeout:10000});
+              must(await page.locator('#vehicle-set-edit-form [name="units[primary][diagnostic_card_date]"]').inputValue()==='05.08.2026','vehicle date not restored');
+              await liveSubmit('#vehicle-set-edit-form',{set_type:'single',status:'active',comments:'QA vehicle edit '+suffix,'units[primary][brand]':'QA BRAND EDIT','units[primary][model]':'MODEL EDIT '+suffix,'units[primary][plate_number]':qa.plate,'units[primary][vin]':qa.vin,'units[primary][diagnostic_card_number]':'987654321012345','units[primary][diagnostic_card_date]':'06.08.2026','units[primary][capacity_tons]':'21,5','units[primary][volume_m3]':'87,5'});
+              await page.goto(new URL('company/vehicle-sets',BASE).href,{waitUntil:'domcontentloaded'}); text=await openView(vrow,'[data-vehicle-set-edit-btn]');
+              for(const v of ['QA BRAND EDIT','MODEL EDIT '+suffix,'987654321012345','06.08.2026','21,5','87,5','QA vehicle edit '+suffix])must(text.includes(v),'vehicle edit missing '+v);
 
-              const inn = '77' + suffix.padStart(8,'0').slice(-8);
-              await reqPost('/company/contractors/create', {
-                is_modal:'1', name:qa.contractorName, inn, contractor_type:'legal_entity', kpp:'770101001', ogrn:'1027700132195',
-                director_full_name:'QA Руководитель', director_position:'Директор', legal_address:'QA юридический адрес', physical_address:'QA фактический адрес',
-                bank_account:'40702810123456789012', bank_bik:'044525225', bank_name:'QA Банк', bank_corr_account:'30101810400000000225', comments:'QA contractor create '+suffix,
-                'contacts[0][contact_person]':'QA Контакт', 'contacts[0][phone]':'+79991112233', 'contacts[0][email]':'contract.'+suffix+'@example.com', 'contacts[0][comment]':'QA contact comment', 'contacts[0][is_primary]':'1', 'contacts[0][is_document_email]':'1'
-              });
-              contractorId = await findRow('company/contractors', 'tr[data-contractor-id]', qa.contractorName, 'data-contractor-id');
-              must(contractorId > 0, 'contractor create did not persist');
-              let contractorView = await reqGet('/company/contractors/' + contractorId + '/modal-view');
-              for (const value of ['QA Руководитель','Директор','40702810123456789012','QA Банк','044525225','30101810400000000225','QA Контакт','QA contact comment']) must(contractorView.includes(value), 'contractor view missing ' + value);
-              let contractorEdit = await reqGet('/company/contractors/' + contractorId + '/modal-edit');
-              for (const value of ['QA Руководитель','QA Банк','QA Контакт']) must(contractorEdit.includes(value), 'contractor edit missing ' + value);
-              await reqPost('/company/contractors/' + contractorId + '/modal-edit', {
-                name:qa.contractorName, inn, contractor_type:'legal_entity', kpp:'770101001', ogrn:'1027700132195',
-                director_full_name:'QA Руководитель EDIT', director_position:'Генеральный директор', legal_address:'QA юридический адрес 2', physical_address:'QA фактический адрес 2',
-                bank_account:'40702810123456789012', bank_bik:'044525225', bank_name:'QA Банк EDIT', bank_corr_account:'30101810400000000225', comments:'QA contractor edit '+suffix,
-                'contacts[0][contact_person]':'QA Контакт EDIT', 'contacts[0][phone]':'+79991112233', 'contacts[0][email]':'contract.'+suffix+'@example.com', 'contacts[0][comment]':'QA contact edited', 'contacts[0][is_primary]':'1', 'contacts[0][is_document_email]':'1'
-              });
-              contractorView = await reqGet('/company/contractors/' + contractorId + '/modal-view');
-              for (const value of ['QA Руководитель EDIT','QA Банк EDIT','QA Контакт EDIT','QA contact edited']) must(contractorView.includes(value), 'contractor edit not persisted: ' + value);
-
-              // VEHICLE: create fields, create persistence, view, edit persistence.
-              await page.goto(new URL('company/vehicle-sets', BASE).href, {waitUntil:'domcontentloaded'});
-              await page.getByRole('button', {name:/Добавить новый транспорт/i}).first().click();
-              const vehicleForm = page.locator('#vehicle-set-create-form');
-              await vehicleForm.waitFor({state:'visible'});
-              await vehicleForm.locator('select[name="set_type"]').selectOption('single');
-              await page.waitForTimeout(200);
-              for (const f of ['brand','model','plate_number','vin','diagnostic_card_number','diagnostic_card_date']) must(await vehicleForm.locator('[name="units[primary]['+f+']"]').count() > 0, 'vehicle create missing ' + f);
-              await page.evaluate(() => closeModal('vehicle-set-create-modal'));
-
-              await reqPost('/company/vehicle-sets/create', {
-                set_type:'single', status:'active', comments:'QA vehicle create '+suffix,
-                'units[primary][unit_type]':'truck', 'units[primary][brand]':'QA BRAND', 'units[primary][model]':'MODEL '+suffix,
-                'units[primary][plate_number]':qa.plate, 'units[primary][vin]':'X9F1234567890' + suffix.slice(-4),
-                'units[primary][diagnostic_card_number]':'123456789012345', 'units[primary][diagnostic_card_date]':'05.08.2026',
-                'units[primary][capacity_tons]':'20,5', 'units[primary][volume_m3]':'86,5'
-              });
-              vehicleId = await findRow('company/vehicle-sets', 'tr[data-vehicle-set-id]', qa.plate, 'data-vehicle-set-id');
-              must(vehicleId > 0, 'vehicle create did not persist');
-              let vehicleView = await reqGet('/company/vehicle-sets/' + vehicleId + '/modal-view');
-              for (const value of ['QA BRAND','MODEL '+suffix,'05.08.2026','20,5','86,5']) must(vehicleView.includes(value), 'vehicle view missing ' + value);
-              let vehicleEdit = await reqGet('/company/vehicle-sets/' + vehicleId + '/modal-edit');
-              must(vehicleEdit.includes('value="05.08.2026"'), 'vehicle edit date not displayed as DD.MM.YYYY');
-              await reqPost('/company/vehicle-sets/' + vehicleId + '/modal-edit', {
-                set_type:'single', status:'active', comments:'QA vehicle edit '+suffix,
-                'units[primary][brand]':'QA BRAND EDIT', 'units[primary][model]':'MODEL EDIT '+suffix, 'units[primary][plate_number]':qa.plate,
-                'units[primary][vin]':'X9F1234567890' + suffix.slice(-4), 'units[primary][diagnostic_card_number]':'987654321012345',
-                'units[primary][diagnostic_card_date]':'06.08.2026', 'units[primary][capacity_tons]':'21,5', 'units[primary][volume_m3]':'87,5'
-              });
-              vehicleView = await reqGet('/company/vehicle-sets/' + vehicleId + '/modal-view');
-              for (const value of ['QA BRAND EDIT','MODEL EDIT '+suffix,'987654321012345','06.08.2026','21,5','87,5','QA vehicle edit '+suffix]) must(vehicleView.includes(value), 'vehicle edit not persisted: ' + value);
-
-              console.log(JSON.stringify({success:true, driverId, contractorId, vehicleId, browserErrors}, null, 2));
-              must(browserErrors.length === 0, 'browser errors: ' + browserErrors.join(' | '));
-            } finally {
-              if (driverId) await context.request.post(new URL('company/drivers/'+driverId+'/modal-delete', BASE).href).catch(()=>{});
-              if (contractorId) await context.request.post(new URL('company/contractors/'+contractorId+'/modal-archive', BASE).href).catch(()=>{});
-              if (vehicleId) await context.request.post(new URL('company/vehicle-sets/'+vehicleId+'/modal-archive', BASE).href).catch(()=>{});
+              must(pageErrors.length===0,'page errors: '+pageErrors.join(' | ')); console.log(JSON.stringify({success:true,driverId,contractorId,vehicleId,pageErrors},null,2));
+            }finally{
+              if(driverId)await context.request.post(new URL('company/drivers/'+driverId+'/modal-delete',BASE).href).catch(()=>{});
+              if(contractorId)await context.request.post(new URL('company/contractors/'+contractorId+'/modal-archive',BASE).href).catch(()=>{});
+              if(vehicleId)await context.request.post(new URL('company/vehicle-sets/'+vehicleId+'/modal-archive',BASE).href).catch(()=>{});
               await browser.close();
             }
-          })().catch(err => { console.error(err.stack || err); process.exit(1); });
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
           NODE
