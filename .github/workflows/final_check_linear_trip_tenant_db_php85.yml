@@ -1,0 +1,62 @@
+name: Final check linear trip tenant DB PHP85
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/final_check_linear_trip_tenant_db_php85.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: 46ef86e15919db2c1c063cc763059094c75bbd04
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Verify tenant schemas read-only with PHP 8.5
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/db_check85"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/db_check85" "$HOME/.ssh/known_hosts"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/db_check85" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "EXPECTED_DEPLOY_HEAD='$EXPECTED_DEPLOY_HEAD' /usr/bin/php8.5 -d display_errors=1" <<'PHP'
+          <?php
+          $root='/home/s/spugovxsim/planexp';
+          $marker=trim((string)file_get_contents($root.'/deploy/P07_erpv2_deployed_commit.txt'));
+          if($marker!==getenv('EXPECTED_DEPLOY_HEAD')){fwrite(STDERR,"DEPLOY_MARKER_MISMATCH {$marker}\n");exit(2);}
+          function envRead($path){$out=[];foreach(file($path,FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES)?:[] as $line){$line=trim($line);if($line===''||$line[0]==='#'||!str_contains($line,'='))continue;[$k,$v]=explode('=',$line,2);$out[trim($k)]=trim($v," \t\n\r\0\x0B\"'");}return $out;}
+          function resolveCompanyPassword($stored,$appKey){
+              if($stored==='')return '';
+              if(!str_starts_with($stored,'v2:'))return $stored;
+              $data=base64_decode(substr($stored,3),true);if($data===false||strlen($data)<29)throw new RuntimeException('encrypted company password invalid');
+              $key=hash('sha256',$appKey,true);$iv=substr($data,0,12);$tag=substr($data,12,16);$cipher=substr($data,28);
+              $plain=openssl_decrypt($cipher,'aes-256-gcm',$key,OPENSSL_RAW_DATA,$iv,$tag);if($plain===false)throw new RuntimeException('company password decrypt failed');return $plain;
+          }
+          $e=envRead($root.'/public_html/erpv2/.env');
+          $host=$e['DB_HOST']??'127.0.0.1';$port=$e['DB_PORT']??'3306';$central=$e['DB_DATABASE']??'erp_planex';$user=$e['DB_USERNAME']??'root';$pass=$e['DB_PASSWORD']??'';$appKey=$e['APP_ENCRYPTION_KEY']??'';
+          $centralPdo=new PDO("mysql:host={$host};port={$port};dbname={$central};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+          $companies=$centralPdo->query("SELECT id,db_identifier,db_host,db_port,db_username,db_password FROM companies WHERE db_identifier IS NOT NULL AND db_identifier<>'' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+          if(!$companies){fwrite(STDERR,"NO_COMPANY_DATABASES\n");exit(3);} $checked=0;
+          foreach($companies as $company){
+              $dbHost=$company['db_host']?:$host;$dbPort=$company['db_port']?:$port;$dbUser=$company['db_username']?:$user;$dbPass=$company['db_password']!==''?resolveCompanyPassword((string)$company['db_password'],$appKey):$pass;$dbName=(string)$company['db_identifier'];
+              $tenant=new PDO("mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4",$dbUser,$dbPass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+              $rows=$tenant->query("SHOW COLUMNS FROM linear_routes")->fetchAll(PDO::FETCH_ASSOC);$map=[];foreach($rows as $r){$map[$r['Field']]=$r['Null'];}
+              foreach(['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'] as $name){if(!array_key_exists($name,$map)){fwrite(STDERR,'MISSING_COLUMN company_id='.$company['id'].' column='.$name."\n");exit(4);}if($map[$name]!=='YES'){fwrite(STDERR,'COLUMN_NOT_NULLABLE company_id='.$company['id'].' column='.$name.' nullable='.$map[$name]."\n");exit(5);}}
+              $checked++;echo 'TENANT_DATE_SCHEMA_OK company_id='.$company['id'].' four_columns=YES nullable=YES'."\n";
+          }
+          if($checked<1){fwrite(STDERR,"NO_TENANT_CHECKED\n");exit(6);} echo 'DEPLOY_MARKER_OK '.$marker."\n";
+          PHP
+          rm -f "$HOME/.ssh/db_check85"
