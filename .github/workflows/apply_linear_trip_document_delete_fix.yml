@@ -1,0 +1,170 @@
+name: Apply linear trip document delete fix
+
+on:
+  push:
+    branches:
+      - fix-linear-trip-doc-delete-20260813
+    paths:
+      - '.github/workflows/apply_linear_trip_document_delete_fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt/production-stabilization-20260802
+          fetch-depth: 0
+
+      - name: Verify expected head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "0ec115bec457c1489265981586d1392ba71a9c8a"
+
+      - name: Patch edit document deletion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          partial = Path('app/View/partials/company_linear_trip_create_form.php')
+          s = partial.read_text()
+          old = "? 'Можно заменить существующие файлы или добавить недостающие.'"
+          new = "? 'Можно заменить, удалить существующие файлы или добавить недостающие.'"
+          if old not in s:
+              raise SystemExit('partial hint anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = '''                    <label class="btn btn-secondary file-action-btn">
+                        <span><?= $hasExistingDoc ? 'Заменить' : 'Выбрать' ?></span>
+                        <input type="file" name="<?= e($inputName) ?>" class="file-input-hidden">
+                    </label>
+                </div>'''
+          new = '''                    <label class="btn btn-secondary file-action-btn">
+                        <span><?= $hasExistingDoc ? 'Заменить' : 'Выбрать' ?></span>
+                        <input type="file" name="<?= e($inputName) ?>" class="file-input-hidden">
+                    </label>
+                    <?php if ($routeFormMode === 'edit' && $hasExistingDoc): ?>
+                    <input type="hidden" name="delete_document_ids[]" value="" data-delete-document-input>
+                    <button type="button" class="file-remove" title="Удалить документ" aria-label="Удалить документ" onclick="var r=this.closest('.document-file-row');var i=r&&r.querySelector('[data-delete-document-input]');if(i){i.value='<?= (int) $existingDoc['id'] ?>';r.style.display='none';}">×</button>
+                    <?php endif; ?>
+                </div>'''
+          if old not in s:
+              raise SystemExit('predefined document action anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = '''                <div class="file-item file-item-predef document-file-row has-file has-existing-file">
+                    <div class="file-type-badge <?= e($otherState['badge_class']) ?>"><?= e($otherState['badge_text']) ?></div>
+                    <div class="file-info">
+                        <div class="file-name"><?= e($otherDocument['document_type'] ?? $otherDocument['type_name'] ?? 'Документ') ?></div>
+                        <div class="file-meta"><?= e($otherDocument['original_name'] ?? $otherDocument['stored_name'] ?? 'Файл') ?></div>
+                        <div class="driver-doc-meta">
+                            <a href="<?= app_url('/company/documents/view?id=' . (int) $otherDocument['id']) ?>" target="_blank" rel="noopener" class="js-doc-popup-window">Просмотр</a>
+                            <a href="<?= app_url('/company/documents/download?id=' . (int) $otherDocument['id']) ?>" download>Скачать</a>
+                            <a href="<?= app_url('/company/documents/upload?entity_type=linear_route&entity_id=' . (int) ($old['id'] ?? 0) . '&replace=' . (int) $otherDocument['id']) ?>">Заменить</a>
+                        </div>
+                    </div>
+                </div>'''
+          new = '''                <div class="file-item file-item-predef document-file-row has-file has-existing-file">
+                    <div class="file-type-badge <?= e($otherState['badge_class']) ?>"><?= e($otherState['badge_text']) ?></div>
+                    <div class="file-info">
+                        <div class="file-name"><?= e($otherDocument['document_type'] ?? $otherDocument['type_name'] ?? 'Документ') ?></div>
+                        <div class="file-meta"><?= e($otherDocument['original_name'] ?? $otherDocument['stored_name'] ?? 'Файл') ?></div>
+                        <div class="driver-doc-meta">
+                            <a href="<?= app_url('/company/documents/view?id=' . (int) $otherDocument['id']) ?>" target="_blank" rel="noopener" class="js-doc-popup-window">Просмотр</a>
+                            <a href="<?= app_url('/company/documents/download?id=' . (int) $otherDocument['id']) ?>" download>Скачать</a>
+                        </div>
+                    </div>
+                    <a href="<?= app_url('/company/documents/upload?entity_type=linear_route&entity_id=' . (int) ($old['id'] ?? 0) . '&replace=' . (int) $otherDocument['id']) ?>" class="btn btn-secondary file-action-btn"><span>Заменить</span></a>
+                    <input type="hidden" name="delete_document_ids[]" value="" data-delete-document-input>
+                    <button type="button" class="file-remove" title="Удалить документ" aria-label="Удалить документ" onclick="var r=this.closest('.document-file-row');var i=r&&r.querySelector('[data-delete-document-input]');if(i){i.value='<?= (int) $otherDocument['id'] ?>';r.style.display='none';}">×</button>
+                </div>'''
+          if old not in s:
+              raise SystemExit('custom existing document anchor missing')
+          s = s.replace(old, new, 1)
+          partial.write_text(s)
+
+          service = Path('app/Service/LinearTripEditSaveService.php')
+          s = service.read_text()
+          old = "        $comments = trim((string) ($post['comments'] ?? ''));\n        $routePoints = LinearRoutePointService::normalizeSubmitted($post);"
+          new = """        $comments = trim((string) ($post['comments'] ?? ''));
+        $deleteDocumentIds = array_values(array_unique(array_filter(
+            array_map(static fn ($value): int => (int) $value, (array) ($post['delete_document_ids'] ?? [])),
+            static fn (int $documentId): bool => $documentId > 0
+        )));
+        $editableDocumentIds = [];
+        foreach ($existingDocsByCode as $documents) {
+            foreach ((array) $documents as $document) {
+                $documentId = (int) ($document['id'] ?? 0);
+                if ($documentId > 0) $editableDocumentIds[] = $documentId;
+            }
+        }
+        if (array_diff($deleteDocumentIds, $editableDocumentIds) !== []) {
+            $errors['documents'] = 'Один из документов недоступен для удаления.';
+        }
+        $routePoints = LinearRoutePointService::normalizeSubmitted($post);"""
+          if old not in s:
+              raise SystemExit('service delete parse anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = "            LinearTripDocumentUploadService::persist($pdo, $stagedPlans, $companyId, $routeId, $userId, $roleCode, $movedFinalFiles);"
+          new = """            self::retireRequestedDocuments($pdo, $deleteDocumentIds, $routeId, $userId, $roleCode);
+            LinearTripDocumentUploadService::persist($pdo, $stagedPlans, $companyId, $routeId, $userId, $roleCode, $movedFinalFiles);"""
+          if old not in s:
+              raise SystemExit('service persist anchor missing')
+          s = s.replace(old, new, 1)
+
+          anchor = "    private static function retirePrincipalDocuments(PDO $pdo, array $existingDocsByCode, int $routeId, int $userId, string $roleCode): void\n"
+          helper = '''    private static function retireRequestedDocuments(PDO $pdo, array $documentIds, int $routeId, int $userId, string $roleCode): void
+    {
+        if ($documentIds === []) return;
+        $placeholders = implode(',', array_fill(0, count($documentIds), '?'));
+        $stmt = $pdo->prepare(
+            "UPDATE documents
+                SET deleted_at = NOW(), deleted_by_user_id = ?, deleted_by_role = ?,
+                    delete_comment = 'Linear route document removed from edit form'
+              WHERE id IN ({$placeholders})
+                AND entity_type = ?
+                AND entity_id = ?
+                AND deleted_at IS NULL"
+        );
+        $stmt->execute(array_merge(
+            [$userId, $roleCode],
+            $documentIds,
+            [LinearTripDocumentUploadService::ENTITY_TYPE, $routeId]
+        ));
+    }
+
+'''
+          if anchor not in s:
+              raise SystemExit('service helper anchor missing')
+          s = s.replace(anchor, helper + anchor, 1)
+          service.write_text(s)
+          PY
+
+      - name: Validate changed code
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/View/partials/company_linear_trip_create_form.php
+          php -l app/Service/LinearTripEditSaveService.php
+          grep -q 'name="delete_document_ids\[\]"' app/View/partials/company_linear_trip_create_form.php
+          grep -q 'retireRequestedDocuments' app/Service/LinearTripEditSaveService.php
+          test "$(git status --short | wc -l)" -eq 2
+          git diff --check
+
+      - name: Commit to canonical branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/View/partials/company_linear_trip_create_form.php app/Service/LinearTripEditSaveService.php
+          git commit -m 'Add document removal to linear trip edit'
+          git push origin HEAD:chatgpt/production-stabilization-20260802
