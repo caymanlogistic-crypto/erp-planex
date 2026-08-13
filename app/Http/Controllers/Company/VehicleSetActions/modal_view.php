@@ -10,5 +10,6 @@ $unitsByRole=['primary'=>[],'secondary'=>[]];if(!empty($unitIds)){$units=$servic
 $docsByRole=['primary'=>[],'secondary'=>[]];if(!empty($unitIds)){$docs=$service->getDocsForUnits($localPdo,$unitIds);foreach($docs as $doc){$eId=(int)($doc['entity_id']??0);if($eId===(int)($vs['primary_vehicle_unit_id']??0))$docsByRole['primary'][]=$doc;elseif($eId===(int)($vs['secondary_vehicle_unit_id']??0))$docsByRole['secondary'][]=$doc;}}
 $rules=vehicleSetTypeRules();$unitTitles=['primary'=>$rules[$vs['set_type']??'']['units']['primary']['label']??'Основная единица','secondary'=>$rules[$vs['set_type']??'']['units']['secondary']['label']??'Доп. единица'];
 $canEdit=false;$canDelete=false;if($roleCode==='company_owner'||$roleCode==='senior_logist'){$canEdit=true;$canDelete=true;}elseif($roleCode==='logist'){$userId=(int)($_SESSION['user_id']??0);if((int)($vs['created_by_user_id']??0)===$userId){$canEdit=true;$canDelete=true;}elseif($grantAccessLevel==='edit'){$canEdit=true;}}
+$vehicleSet=$vs;
 header('Content-Type: text/html; charset=utf-8');require base_path('app/View/partials/company_vehicle_set_modal_view.php');exit;}
 catch(\Throwable $e){http_response_code(500);echo'<div class="notice warn">Ошибка загрузки: '.e($e->getMessage()).'</div>';exit;}
