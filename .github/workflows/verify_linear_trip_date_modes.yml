@@ -138,6 +138,7 @@ jobs:
             await createModal.waitFor({ state: 'visible', timeout: 5000 });
             const createForm = createModal.locator('form[data-linear-trip-form]');
             await createForm.locator('[data-trip-date-control="start"]').waitFor({ state: 'visible', timeout: 5000 });
+            await page.waitForTimeout(450);
             const createMetrics = await createForm.evaluate((form) => {
               const dateRow = form.querySelector('.linear-trip-date-row');
               const participantRow = form.querySelector('.linear-trip-participant-row');
@@ -165,6 +166,7 @@ jobs:
                 executorParent: executor && executor.closest('.linear-trip-participant-row') ? 'participant' : 'other',
               };
             });
+            console.log('CREATE_METRICS=' + JSON.stringify(createMetrics));
             if (createMetrics.startLabel.indexOf('Начало рейса') === -1) throw new Error('Create start label is wrong');
             if (createMetrics.endLabel.indexOf('Окончание рейса') === -1) throw new Error('Create end label is wrong');
             if (JSON.stringify(createMetrics.startActive) !== JSON.stringify(['plan'])) throw new Error(`Create start default is not Plan: ${JSON.stringify(createMetrics.startActive)}`);
@@ -177,10 +179,13 @@ jobs:
             if (createMetrics.cargoValue === 'Не указан') throw new Error('Create cargo still defaults to hidden legacy value');
             await page.screenshot({ path: 'verify_output/create-modal.png', fullPage: false });
             await createModal.locator('.modal-close').click();
+            await createModal.waitFor({ state: 'hidden', timeout: 5000 });
 
             await row.dblclick();
             const viewModal = page.locator('#linear-trip-view-modal.is-open');
             await viewModal.waitFor({ state: 'visible', timeout: 7000 });
+            await viewModal.locator('.trip-view-table').waitFor({ state: 'visible', timeout: 7000 });
+            await page.waitForTimeout(250);
             const viewText = await viewModal.innerText();
             if (!viewText.includes('Начало рейса')) throw new Error('View lacks Start date');
             if (!viewText.includes('Окончание рейса')) throw new Error('View lacks End date');
@@ -195,6 +200,7 @@ jobs:
               const editForm = viewModal.locator('#linear-trip-edit-form');
               await editForm.waitFor({ state: 'visible', timeout: 7000 });
               await editForm.locator('[data-trip-date-control="start"]').waitFor({ state: 'visible', timeout: 5000 });
+              await page.waitForTimeout(350);
               const editMetrics = await editForm.evaluate((form) => {
                 const start = form.querySelector('[data-trip-date-control="start"]');
                 const end = form.querySelector('[data-trip-date-control="end"]');
@@ -215,6 +221,7 @@ jobs:
                   hasActualEnd: !!form.querySelector('[name="actual_unloading_date"]'),
                 };
               });
+              console.log('EDIT_METRICS=' + JSON.stringify(editMetrics));
               if (editMetrics.startActive.length !== 1 || !editMetrics.startValue) throw new Error(`Edit start state invalid: ${JSON.stringify(editMetrics)}`);
               if (!editMetrics.cargoVisible) throw new Error('Cargo field is not visible in edit');
               if (!editMetrics.cargoLabel.includes('Перевозимый груз')) throw new Error(`Edit cargo label is wrong: ${editMetrics.cargoLabel}`);
