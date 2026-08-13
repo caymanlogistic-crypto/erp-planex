@@ -172,8 +172,6 @@
     dateRow.appendChild(createControl(form, 'end', planEnd, factEnd, endKind));
     primaryRow.parentNode.insertBefore(dateRow, primaryRow);
 
-    /* Keep all four original inputs in the form. The old planned-start field is visually hidden
-       above, so it does not consume a grid column, but its value remains available for edit/save. */
     primaryRow.classList.add('linear-trip-participant-row');
 
     var cargoField = unhideCargo(form);
@@ -234,4 +232,62 @@
   script.src = source.replace('linear-trip-date-mode.js', 'linear-trip-document-delete.js');
   script.defer = true;
   document.head.appendChild(script);
+}());
+
+(function () {
+  'use strict';
+
+  function ensureTitleStyle() {
+    if (document.getElementById('linear-trip-modal-title-style')) return;
+    var style = document.createElement('style');
+    style.id = 'linear-trip-modal-title-style';
+    style.textContent = '#linear-trip-create-modal .modal-title,#linear-trip-view-modal .modal-title{font-family:"IBM Plex Sans","Segoe UI",Arial,sans-serif!important;font-size:19px!important;font-weight:700!important;letter-spacing:-0.035em!important;line-height:1!important;color:var(--text-main)!important;}';
+    document.head.appendChild(style);
+  }
+
+  function setTitle(shell, text) {
+    if (!shell || !text) return;
+    var title = shell.querySelector('.modal-title');
+    if (title && title.textContent !== text) title.textContent = text;
+  }
+
+  function editRouteId(form) {
+    if (!form) return '';
+    var match = String(form.action || '').match(/\/linear\/(\d+)\/modal-edit(?:$|\?)/);
+    if (match) return match[1];
+    var idInput = form.querySelector('[name="id"]');
+    return idInput ? String(idInput.value || '').trim() : '';
+  }
+
+  function syncTitles() {
+    ensureTitleStyle();
+    var createShell = document.getElementById('linear-trip-create-modal');
+    if (createShell) setTitle(createShell, 'Создание нового рейса');
+
+    var shell = document.getElementById('linear-trip-view-modal');
+    if (!shell) return;
+
+    var editForm = shell.querySelector('#linear-trip-edit-form');
+    if (editForm) {
+      var editId = editRouteId(editForm);
+      setTitle(shell, 'Редактирование данных рейса' + (editId ? ' #' + editId : ''));
+      return;
+    }
+
+    var marker = shell.querySelector('[data-trip-view-title]');
+    if (marker) {
+      var markerTitle = String(marker.getAttribute('data-trip-view-title') || '').trim();
+      if (markerTitle) setTitle(shell, markerTitle);
+    }
+  }
+
+  syncTitles();
+  new MutationObserver(function (records) {
+    for (var i = 0; i < records.length; i += 1) {
+      if (records[i].type === 'childList' && records[i].addedNodes.length) {
+        syncTitles();
+        break;
+      }
+    }
+  }).observe(document.body, {childList: true, subtree: true});
 }());
