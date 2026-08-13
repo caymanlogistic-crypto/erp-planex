@@ -1,0 +1,242 @@
+name: Verify linear trip date modes
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/verify_linear_trip_date_modes.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: a51390ab0f9f6eda06252ee49c60a07e0ae9db78
+  BASE_URL: https://plan-ex.ru/erpv2/
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout verification branch
+        uses: actions/checkout@v4
+
+      - name: Verify exact production deployment marker
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/verify_trip_dates"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/verify_trip_dates" "${HOME}/.ssh/known_hosts"
+          deployed="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/verify_trip_dates" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt")"
+          echo "deployed=${deployed}"
+          test "${deployed}" = "${EXPECTED_DEPLOY_HEAD}"
+          rm -f "${HOME}/.ssh/verify_trip_dates"
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve owner credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "${credentials}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "${HOME}/.ssh"
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/verify_trip_credentials"
+            chmod 600 "${HOME}/.ssh/verify_trip_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/verify_trip_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/verify_trip_credentials"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Verify lifecycle date UX in production Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verify_output
+          node <<'NODE'
+          'use strict';
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+
+          const BASE = process.env.BASE_URL || 'https://plan-ex.ru/erpv2/';
+          const credentials = JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+          const owner = credentials.find((item) => String(item.role || '').toUpperCase() === 'OWNER');
+          if (!owner) throw new Error('OWNER credentials not found');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({
+              viewport: { width: 1920, height: 1080 },
+              deviceScaleFactor: 1,
+              locale: 'ru-RU',
+              timezoneId: 'Europe/Moscow',
+              ignoreHTTPSErrors: true,
+            });
+            const page = await context.newPage();
+            const browserErrors = [];
+            page.on('pageerror', (e) => browserErrors.push(`pageerror: ${e.message}`));
+            page.on('console', (m) => { if (m.type() === 'error') browserErrors.push(`console: ${m.text()}`); });
+
+            await page.goto(new URL('login', BASE).href, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            const user = page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first();
+            const pass = page.locator('input[type="password"]').first();
+            if (!(await user.count()) || !(await pass.count())) throw new Error('Login form not detected');
+            await user.fill(owner.username);
+            await pass.fill(owner.password);
+            await Promise.all([
+              page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {}),
+              page.locator('button[type="submit"],input[type="submit"]').first().click(),
+            ]);
+            await page.waitForTimeout(1000);
+            if (/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('OWNER authentication failed');
+
+            await page.goto(new URL('company/trips/linear', BASE).href, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            await page.waitForTimeout(900);
+            if (!page.url().includes('/company/trips/linear')) throw new Error(`Unexpected registry URL: ${page.url()}`);
+
+            const route9 = page.locator('tr[data-linear-route-id="9"]').first();
+            const anyRoute = page.locator('tr[data-linear-route-id]').first();
+            const row = (await route9.count()) ? route9 : anyRoute;
+            if (!(await row.count())) throw new Error('No linear trip rows found');
+            const routeId = await row.getAttribute('data-linear-route-id');
+            const registryDates = await row.locator('td.registry-date').evaluateAll((cells) => cells.map((cell) => ({
+              text: cell.innerText.trim(),
+              planned: cell.classList.contains('registry-date-planned'),
+              color: getComputedStyle(cell.querySelector('.registry-date-value') || cell).color,
+            })));
+            if (!registryDates.length || !registryDates[0].text) throw new Error('Registry start date is empty');
+            if (registryDates[0].planned && !registryDates[0].text.includes('(плановая)')) throw new Error('Planned registry start lacks planned note');
+            if (registryDates[1] && registryDates[1].planned && !registryDates[1].text.includes('(плановая)')) throw new Error('Planned registry end lacks planned note');
+
+            // Create modal: first row dates, second participants, third cargo.
+            await page.getByRole('link', { name: 'Создать рейс' }).click();
+            const createModal = page.locator('#linear-trip-create-modal.is-open');
+            await createModal.waitFor({ state: 'visible', timeout: 5000 });
+            const createForm = createModal.locator('form[data-linear-trip-form]');
+            await createForm.locator('[data-trip-date-control="start"]').waitFor({ state: 'visible', timeout: 5000 });
+            const createMetrics = await createForm.evaluate((form) => {
+              const dateRow = form.querySelector('.linear-trip-date-row');
+              const participantRow = form.querySelector('.linear-trip-participant-row');
+              const cargoRow = form.querySelector('.linear-trip-cargo-row');
+              const start = form.querySelector('[data-trip-date-control="start"]');
+              const end = form.querySelector('[data-trip-date-control="end"]');
+              const cargo = form.querySelector('input[name="cargo_type_name"]');
+              const client = form.querySelector('[name="client_id"]');
+              const executor = form.querySelector('[name="route_executor_id"]');
+              const active = (root) => [...root.querySelectorAll('[data-trip-date-kind].is-active')].map((b) => b.getAttribute('data-trip-date-kind'));
+              const dr = dateRow.getBoundingClientRect();
+              const pr = participantRow.getBoundingClientRect();
+              const cr = cargoRow.getBoundingClientRect();
+              return {
+                dateY: Math.round(dr.y), participantY: Math.round(pr.y), cargoY: Math.round(cr.y),
+                dateWidth: Math.round(dr.width), participantWidth: Math.round(pr.width), cargoWidth: Math.round(cr.width),
+                startLabel: start.querySelector('.field-label').textContent.trim(),
+                endLabel: end.querySelector('.field-label').textContent.trim(),
+                startActive: active(start), endActive: active(end),
+                cargoVisible: !!(cargo && cargo.offsetParent !== null),
+                cargoValue: cargo ? cargo.value : null,
+                clientParent: client && client.closest('.linear-trip-participant-row') ? 'participant' : 'other',
+                executorParent: executor && executor.closest('.linear-trip-participant-row') ? 'participant' : 'other',
+              };
+            });
+            if (createMetrics.startLabel.indexOf('Начало рейса') === -1) throw new Error('Create start label is wrong');
+            if (createMetrics.endLabel.indexOf('Окончание рейса') === -1) throw new Error('Create end label is wrong');
+            if (JSON.stringify(createMetrics.startActive) !== JSON.stringify(['plan'])) throw new Error(`Create start default is not Plan: ${JSON.stringify(createMetrics.startActive)}`);
+            if (createMetrics.endActive.length !== 0) throw new Error(`Create end must have no default: ${JSON.stringify(createMetrics.endActive)}`);
+            if (!(createMetrics.dateY < createMetrics.participantY && createMetrics.participantY < createMetrics.cargoY)) throw new Error(`Create row order is wrong: ${JSON.stringify(createMetrics)}`);
+            if (createMetrics.clientParent !== 'participant' || createMetrics.executorParent !== 'participant') throw new Error('Client/executor are not on participant row');
+            if (!createMetrics.cargoVisible) throw new Error('Cargo field is not visible in create');
+            if (createMetrics.cargoWidth < createMetrics.participantWidth * 0.9) throw new Error('Cargo row is not full width');
+            if (createMetrics.cargoValue === 'Не указан') throw new Error('Create cargo still defaults to hidden legacy value');
+            await page.screenshot({ path: 'verify_output/create-modal.png', fullPage: false });
+            await createModal.locator('.modal-close').click();
+
+            // View modal: effective start/end and cargo.
+            await row.dblclick();
+            const viewModal = page.locator('#linear-trip-view-modal.is-open');
+            await viewModal.waitFor({ state: 'visible', timeout: 7000 });
+            const viewText = await viewModal.innerText();
+            if (!viewText.includes('Начало рейса')) throw new Error('View lacks Start date');
+            if (!viewText.includes('Окончание рейса')) throw new Error('View lacks End date');
+            if (!viewText.includes('Перевозимый груз')) throw new Error('View lacks cargo');
+            const plannedViewNotes = await viewModal.locator('.trip-view-date-note').allTextContents();
+            if (registryDates.some((d) => d.planned) && !plannedViewNotes.some((t) => t.includes('плановая'))) throw new Error('View lacks planned date note');
+            await page.screenshot({ path: 'verify_output/view-modal.png', fullPage: false });
+
+            // Edit modal: same date controls and cargo, existing plan/fact state selected from DB.
+            const editButton = viewModal.locator('[data-linear-trip-edit-btn]');
+            if (await editButton.count()) {
+              await editButton.click();
+              const editForm = viewModal.locator('#linear-trip-edit-form');
+              await editForm.waitFor({ state: 'visible', timeout: 7000 });
+              await editForm.locator('[data-trip-date-control="start"]').waitFor({ state: 'visible', timeout: 5000 });
+              const editMetrics = await editForm.evaluate((form) => {
+                const start = form.querySelector('[data-trip-date-control="start"]');
+                const end = form.querySelector('[data-trip-date-control="end"]');
+                const cargo = form.querySelector('input[name="cargo_type_name"]');
+                const active = (root) => [...root.querySelectorAll('[data-trip-date-kind].is-active')].map((b) => b.getAttribute('data-trip-date-kind'));
+                return {
+                  startActive: active(start),
+                  endActive: active(end),
+                  startValue: start.querySelector('[data-trip-date-visible]').value,
+                  endValue: end.querySelector('[data-trip-date-visible]').value,
+                  cargoVisible: !!(cargo && cargo.offsetParent !== null),
+                  cargoValue: cargo ? cargo.value : null,
+                  hasPlannedStart: !!form.querySelector('[name="planned_loading_date"]'),
+                  hasActualStart: !!form.querySelector('[name="actual_loading_date"]'),
+                  hasPlannedEnd: !!form.querySelector('[name="planned_unloading_date"]'),
+                  hasActualEnd: !!form.querySelector('[name="actual_unloading_date"]'),
+                };
+              });
+              if (editMetrics.startActive.length !== 1 || !editMetrics.startValue) throw new Error(`Edit start state invalid: ${JSON.stringify(editMetrics)}`);
+              if (!editMetrics.cargoVisible) throw new Error('Cargo field is not visible in edit');
+              if (!editMetrics.hasPlannedStart || !editMetrics.hasActualStart || !editMetrics.hasPlannedEnd || !editMetrics.hasActualEnd) throw new Error('Edit form lost one of four DB-backed dates');
+              await page.screenshot({ path: 'verify_output/edit-modal.png', fullPage: false });
+            }
+
+            const result = { routeId, registryDates, createMetrics, plannedViewNotes, browserErrors };
+            fs.writeFileSync('verify_output/result.json', JSON.stringify(result, null, 2));
+            console.log(JSON.stringify(result, null, 2));
+            if (browserErrors.length) throw new Error(`Browser errors: ${browserErrors.join(' | ')}`);
+
+            await context.close();
+            await browser.close();
+          })().catch((error) => {
+            console.error(error.stack || error.message || String(error));
+            process.exit(1);
+          });
+          NODE
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linear-trip-date-mode-verification
+          path: verify_output/
+          if-no-files-found: warn
+          retention-days: 14
