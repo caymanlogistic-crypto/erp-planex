@@ -1,6 +1,5 @@
 <?php
 
-use App\Service\DocumentService;
 use App\Service\LinearRouteService;
 
 $na = '—';
@@ -152,9 +151,7 @@ $paymentDueLabel = static function (array $payment): string {
         <?php $hasDocs = false; ?>
         <?php foreach ($documentTitles as $docKey => $docTitle): ?>
           <?php foreach (($docsByCode[$docKey] ?? []) as $document): $hasDocs = true; ?>
-            <?php $badge = DocumentService::detectDocumentBadge($document['original_name'] ?? $document['stored_name'] ?? null, $document['mime_type'] ?? null); ?>
             <div class="file-item file-item-predef document-file-row has-file has-existing-file driver-doc-view-item">
-              <div class="file-type-badge <?= e($badge['badge_class']) ?>"><?= e($badge['badge_text']) ?></div>
               <div class="file-info"><div class="file-name"><?= e($docTitle) ?></div><div class="file-meta"><?= e($document['original_name'] ?? $document['stored_name'] ?? 'Файл') ?></div></div>
               <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window"><span>Просмотр</span></a>
               <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">↓</a>
@@ -162,9 +159,7 @@ $paymentDueLabel = static function (array $payment): string {
           <?php endforeach; ?>
         <?php endforeach; ?>
         <?php foreach (($docsByCode['other'] ?? []) as $document): $hasDocs = true; ?>
-          <?php $badge = DocumentService::detectDocumentBadge($document['original_name'] ?? $document['stored_name'] ?? null, $document['mime_type'] ?? null); ?>
           <div class="file-item file-item-predef document-file-row has-file has-existing-file driver-doc-view-item">
-            <div class="file-type-badge <?= e($badge['badge_class']) ?>"><?= e($badge['badge_text']) ?></div>
             <div class="file-info"><div class="file-name"><?= e($document['document_type'] ?? $document['type_name'] ?? 'Документ') ?></div><div class="file-meta"><?= e($document['original_name'] ?? $document['stored_name'] ?? 'Файл') ?></div></div>
             <a href="<?= app_url('/company/documents/view?id=' . (int) $document['id']) ?>" target="_blank" rel="noopener" class="btn btn-secondary file-action-btn js-doc-popup-window"><span>Просмотр</span></a>
             <a href="<?= app_url('/company/documents/download?id=' . (int) $document['id']) ?>" class="predef-file-clear driver-doc-download-btn" download title="Скачать файл" aria-label="Скачать файл">↓</a>
