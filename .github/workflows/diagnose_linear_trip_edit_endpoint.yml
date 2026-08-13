@@ -1,0 +1,54 @@
+name: Diagnose linear trip edit endpoint
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/diagnose_linear_trip_edit_endpoint.yml'
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: https://plan-ex.ru/erpv2/
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve owner credentials
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/c"
+            chmod 600 "$HOME/.ssh/c"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/c" --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          echo "::add-mask::$credentials"
+          printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+      - name: Inspect raw endpoint and edit transition
+        shell: bash
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const BASE=process.env.BASE_URL, creds=JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64,'base64').toString('utf8')), owner=creds.find(x=>String(x.role).toUpperCase()==='OWNER');
+          (async()=>{const b=await chromium.launch({headless:true}),c=await b.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true}),p=await c.newPage();const events=[];p.on('pageerror',e=>events.push('pageerror:'+e.message));p.on('console',m=>{if(m.type()==='error')events.push('console:'+m.text())});p.on('response',r=>{if(r.url().includes('/company/trips/linear/'))events.push('response:'+r.status()+':'+r.url())});
+          await p.goto(new URL('login',BASE).href,{waitUntil:'domcontentloaded'});await p.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);await p.locator('input[type=password]').first().fill(owner.password);await p.locator('button[type=submit],input[type=submit]').first().click();await p.waitForTimeout(900);await p.goto(new URL('company/trips/linear',BASE).href,{waitUntil:'domcontentloaded'});await p.waitForTimeout(700);let row=p.locator('tr[data-linear-route-id="9"]').first();if(!(await row.count()))row=p.locator('tr[data-linear-route-id]').first();const id=await row.getAttribute('data-linear-route-id');const endpoint=new URL('company/trips/linear/'+id+'/modal-edit',BASE).href;const raw=await p.evaluate(async u=>{const r=await fetch(u,{credentials:'same-origin',cache:'no-store'});return{status:r.status,text:await r.text()}},endpoint);console.log('RAW_EDIT_STATUS='+raw.status);console.log('RAW_HAS_FORM='+raw.text.includes('linear-trip-edit-form'));console.log('RAW_LENGTH='+raw.text.length);
+          await row.dblclick();const m=p.locator('#linear-trip-view-modal.is-open');await m.waitFor({state:'visible'});await m.locator('.trip-view-table').waitFor({state:'visible'});const btn=m.locator('[data-linear-trip-edit-btn]');console.log('EDIT_BTN_COUNT='+await btn.count());await btn.click();await p.waitForTimeout(1500);console.log('AFTER_CLICK_FORM_COUNT='+await m.locator('#linear-trip-edit-form').count());console.log('AFTER_CLICK_BODY_TEXT='+JSON.stringify((await m.innerText()).slice(0,500)));console.log('EVENTS='+JSON.stringify(events));if(raw.status!==200||!raw.text.includes('linear-trip-edit-form'))throw Error('raw edit endpoint invalid');if(!(await m.locator('#linear-trip-edit-form').count()))throw Error('ModalShell did not insert edit form');await b.close();})().catch(e=>{console.error(e.stack||String(e));process.exit(1)});
+          NODE
