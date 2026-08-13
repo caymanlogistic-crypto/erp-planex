@@ -42,6 +42,26 @@ if (PHP_SAPI !== 'cli') {
     ob_start(static function (string $html): string {
         if (!str_contains($html, '</body>')) return $html;
         $src = app_url('/assets/js/driver-phone-optional.js') . '?v=' . filemtime(base_path('public/assets/js/driver-phone-optional.js'));
-        return str_replace('</body>', '<script src="' . e($src) . '"></script></body>', $html);
+        $baseFix = <<<'HTML'
+<script>
+(function(){
+  function fix(root){
+    if(!root||!root.querySelectorAll)return;
+    var forms=[];
+    if(root.matches&&root.matches('#vehicle-set-edit-form'))forms.push(root);
+    root.querySelectorAll('#vehicle-set-edit-form').forEach(function(form){forms.push(form);});
+    forms.forEach(function(form){
+      var action=form.getAttribute('action')||'';
+      if(action.indexOf('/company/vehicle-sets/')!==0)return;
+      var base=window.getErpBasePath?window.getErpBasePath():'';
+      if(base)form.setAttribute('action',base+action);
+    });
+  }
+  fix(document);
+  new MutationObserver(function(records){records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1)fix(node);});});}).observe(document.body,{childList:true,subtree:true});
+}());
+</script>
+HTML;
+        return str_replace('</body>', '<script src="' . e($src) . '"></script>' . $baseFix . '</body>', $html);
     });
 }
