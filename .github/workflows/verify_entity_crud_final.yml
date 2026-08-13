@@ -1,0 +1,255 @@
+name: Verify entity CRUD final
+
+on:
+  push:
+    branches: [verify-entity-crud-20260813]
+    paths: ['.github/workflows/verify_entity_crud_final.yml']
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: 6a35828324d609a7423211f9d46f446505702aaa
+  BASE_URL: http://planexp.ru/erpv2/
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify deployed SHA
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/entity_verify"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/entity_verify" "$HOME/.ssh/known_hosts"
+          deployed="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/entity_verify" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          echo "deployed=$deployed"
+          test "$deployed" = "$EXPECTED_DEPLOY_HEAD"
+          rm -f "$HOME/.ssh/entity_verify"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve owner credentials
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/entity_credentials"
+            chmod 600 "$HOME/.ssh/entity_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/entity_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/entity_credentials"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - name: Live CRUD verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          'use strict';
+          const { chromium } = require('playwright');
+          const BASE = process.env.BASE_URL;
+          const creds = JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+          const owner = creds.find(x => String(x.role || '').toUpperCase() === 'OWNER');
+          if (!owner) throw new Error('OWNER credentials unavailable');
+          const suffix = String(Date.now()).slice(-7);
+          const qa = {
+            driverName: 'Тестов Водитель ' + suffix,
+            contractorName: 'ООО QA CONTRACTOR ' + suffix,
+            plate: 'А' + suffix.slice(-3) + 'ВС99',
+            vin: 'X9F1234567890' + suffix.slice(-4)
+          };
+          let driverId=0, contractorId=0, vehicleId=0;
+          const must=(c,m)=>{if(!c)throw new Error(m);};
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+            const page=await context.newPage();
+            const pageErrors=[];
+            page.on('pageerror',e=>pageErrors.push(e.message));
+
+            async function login(){
+              await page.goto(new URL('login',BASE).href,{waitUntil:'domcontentloaded',timeout:45000});
+              await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);
+              await page.locator('input[type="password"]').first().fill(owner.password);
+              await page.locator('button[type="submit"],input[type="submit"]').first().click();
+              await page.waitForTimeout(900);
+              must(!/\/login(?:[/?#]|$)/i.test(page.url()),'authentication failed');
+            }
+
+            async function setValues(formSelector, values){
+              await page.locator(formSelector).evaluate((form,values)=>{
+                for(const [name,value] of Object.entries(values)){
+                  const field=form.elements.namedItem(name);
+                  if(!field) continue;
+                  const el=(field instanceof RadioNodeList)?field[0]:field;
+                  if(!el) continue;
+                  if(el.type==='checkbox') el.checked=String(value)==='1'||value===true;
+                  else el.value=String(value);
+                  el.dispatchEvent(new Event('input',{bubbles:true}));
+                  el.dispatchEvent(new Event('change',{bubbles:true}));
+                }
+              },values);
+            }
+
+            async function assertErpv2Action(formSelector){
+              const pathname=await page.locator(formSelector).evaluate(f=>new URL(f.action,location.href).pathname);
+              must(pathname.startsWith('/erpv2/company/'), formSelector+' wrong action '+pathname);
+            }
+
+            async function submitUi(formSelector, values){
+              await setValues(formSelector,values);
+              await page.locator(formSelector).evaluate(form=>form.requestSubmit());
+              await page.waitForTimeout(1300);
+            }
+
+            async function rowId(path,selector,text,attr){
+              await page.goto(new URL(path,BASE).href,{waitUntil:'domcontentloaded',timeout:45000});
+              const row=page.locator(selector).filter({hasText:text}).first();
+              await row.waitFor({state:'attached',timeout:12000});
+              return Number(await row.getAttribute(attr)||0);
+            }
+
+            async function openView(rowSelector,editButton){
+              await page.locator(rowSelector).dblclick();
+              await page.locator(editButton).waitFor({state:'visible',timeout:10000});
+              await page.waitForTimeout(250);
+              return await page.locator('.modal-overlay.is-open').last().innerText();
+            }
+
+            async function cleanup(url){
+              try{await page.evaluate(async u=>{await fetch(u,{method:'POST',credentials:'same-origin'});},new URL(url,BASE).href);}catch(e){}
+            }
+
+            try{
+              await login();
+
+              // DRIVER create -> view -> edit -> view
+              await page.goto(new URL('company/drivers',BASE).href,{waitUntil:'domcontentloaded'});
+              await page.getByRole('button',{name:/Создать водителя|Добавить нового водителя/i}).first().click();
+              await page.locator('#driver-create-form').waitFor({state:'visible'});
+              await assertErpv2Action('#driver-create-form');
+              await submitUi('#driver-create-form',{
+                full_name:qa.driverName, phone:'+7 999 000-12-34', passport_number:'4500 123456', passport_department_code:'770-001',
+                passport_issued_by:'QA МВД', passport_issue_date:'01.08.2026', license_number:'7712 345678', license_issue_date:'02.08.2026',
+                snils:'123-456-789 01', email:'qa.'+suffix+'@example.com', comments:'QA driver create '+suffix
+              });
+              driverId=await rowId('company/drivers','tr[data-driver-id]',qa.driverName,'data-driver-id');
+              must(driverId>0,'driver create did not persist');
+              const drow='tr[data-driver-id="'+driverId+'"]';
+              let text=await openView(drow,'[data-driver-edit-btn]');
+              for(const v of ['QA МВД','01.08.2026','02.08.2026','QA driver create '+suffix]) must(text.includes(v),'driver view missing '+v);
+              await page.locator('[data-driver-edit-btn]').click();
+              await page.locator('#driver-edit-form').waitFor({state:'visible',timeout:10000});
+              await assertErpv2Action('#driver-edit-form');
+              must(await page.locator('#driver-edit-form [name="passport_issue_date"]').inputValue()==='01.08.2026','driver passport date not restored');
+              must(await page.locator('#driver-edit-form [name="license_issue_date"]').inputValue()==='02.08.2026','driver license date not restored');
+              await submitUi('#driver-edit-form',{
+                full_name:qa.driverName, phone:'+7 999 000-12-34', passport_number:'4500 123456', passport_department_code:'770-001',
+                passport_issued_by:'QA МВД EDIT', passport_issue_date:'03.08.2026', license_number:'7712 345678', license_issue_date:'04.08.2026',
+                snils:'123-456-789 01', email:'qa.'+suffix+'@example.com', comments:'QA driver edit '+suffix
+              });
+              await page.goto(new URL('company/drivers',BASE).href,{waitUntil:'domcontentloaded'});
+              text=await openView(drow,'[data-driver-edit-btn]');
+              for(const v of ['QA МВД EDIT','03.08.2026','04.08.2026','QA driver edit '+suffix]) must(text.includes(v),'driver edit missing '+v);
+
+              // CONTRACTOR create -> view -> edit -> view
+              await page.goto(new URL('company/contractors',BASE).href,{waitUntil:'domcontentloaded'});
+              await page.getByRole('button',{name:/Создать перевозчика/i}).first().click();
+              await page.locator('#le-create-form').waitFor({state:'visible'});
+              const inn='77'+suffix.padStart(8,'0').slice(-8);
+              await submitUi('#le-create-form',{
+                name:qa.contractorName,inn,contractor_type:'legal_entity',kpp:'770101001',ogrn:'1027700132195',
+                director_full_name:'QA Руководитель',director_position:'Директор',legal_address:'QA юридический адрес',physical_address:'QA фактический адрес',
+                bank_account:'40702810123456789012',bank_bik:'044525225',bank_name:'QA Банк',bank_corr_account:'30101810400000000225',
+                comments:'QA contractor create '+suffix,'contacts[0][contact_person]':'QA Контакт','contacts[0][phone]':'+7 999 111-22-33',
+                'contacts[0][email]':'contract.'+suffix+'@example.com','contacts[0][comment]':'QA contact comment','contacts[0][is_primary]':'1','contacts[0][is_document_email]':'1'
+              });
+              contractorId=await rowId('company/contractors','tr[data-contractor-id]',qa.contractorName,'data-contractor-id');
+              must(contractorId>0,'contractor create did not persist');
+              const crow='tr[data-contractor-id="'+contractorId+'"]';
+              text=await openView(crow,'[data-contractor-edit-btn]');
+              for(const v of ['QA Руководитель','Директор','40702810123456789012','QA Банк','044525225','30101810400000000225','QA Контакт','QA contact comment']) must(text.includes(v),'contractor view missing '+v);
+              await page.locator('[data-contractor-edit-btn]').click();
+              await page.locator('#contractor-edit-form').waitFor({state:'visible',timeout:10000});
+              await submitUi('#contractor-edit-form',{
+                name:qa.contractorName,inn,contractor_type:'legal_entity',kpp:'770101001',ogrn:'1027700132195',
+                director_full_name:'QA Руководитель EDIT',director_position:'Генеральный директор',legal_address:'QA юридический адрес 2',physical_address:'QA фактический адрес 2',
+                bank_account:'40702810123456789012',bank_bik:'044525225',bank_name:'QA Банк EDIT',bank_corr_account:'30101810400000000225',
+                comments:'QA contractor edit '+suffix,'contacts[0][contact_person]':'QA Контакт EDIT','contacts[0][phone]':'+7 999 111-22-33',
+                'contacts[0][email]':'contract.'+suffix+'@example.com','contacts[0][comment]':'QA contact edited','contacts[0][is_primary]':'1','contacts[0][is_document_email]':'1'
+              });
+              await page.goto(new URL('company/contractors',BASE).href,{waitUntil:'domcontentloaded'});
+              text=await openView(crow,'[data-contractor-edit-btn]');
+              for(const v of ['QA Руководитель EDIT','Генеральный директор','QA Банк EDIT','QA Контакт EDIT','QA contact edited']) must(text.includes(v),'contractor edit missing '+v);
+
+              // VEHICLE create -> view -> edit -> view
+              await page.goto(new URL('company/vehicle-sets',BASE).href,{waitUntil:'domcontentloaded'});
+              await page.getByRole('button',{name:/Добавить новый транспорт/i}).first().click();
+              const vf=page.locator('#vehicle-set-create-form');
+              await vf.waitFor({state:'visible'});
+              await assertErpv2Action('#vehicle-set-create-form');
+              await vf.locator('select[name="set_type"]').selectOption('single');
+              await page.waitForTimeout(250);
+              await submitUi('#vehicle-set-create-form',{
+                set_type:'single',status:'active',comments:'QA vehicle create '+suffix,'units[primary][unit_type]':'truck',
+                'units[primary][brand]':'QA BRAND','units[primary][model]':'MODEL '+suffix,'units[primary][plate_number]':qa.plate,
+                'units[primary][vin]':qa.vin,'units[primary][diagnostic_card_number]':'123456789012345','units[primary][diagnostic_card_date]':'05.08.2026',
+                'units[primary][capacity_tons]':'20,5','units[primary][volume_m3]':'86,5'
+              });
+              vehicleId=await rowId('company/vehicle-sets','tr[data-vehicle-set-id]',qa.plate,'data-vehicle-set-id');
+              must(vehicleId>0,'vehicle create did not persist');
+              const vrow='tr[data-vehicle-set-id="'+vehicleId+'"]';
+              text=await openView(vrow,'[data-vehicle-set-edit-btn]');
+              for(const v of ['QA BRAND','MODEL '+suffix,'05.08.2026','20,5','86,5']) must(text.includes(v),'vehicle view missing '+v);
+              await page.locator('[data-vehicle-set-edit-btn]').click();
+              await page.locator('#vehicle-set-edit-form').waitFor({state:'visible',timeout:10000});
+              await assertErpv2Action('#vehicle-set-edit-form');
+              must(await page.locator('#vehicle-set-edit-form [name="units[primary][diagnostic_card_date]"]').inputValue()==='05.08.2026','vehicle date not restored');
+              await submitUi('#vehicle-set-edit-form',{
+                set_type:'single',status:'active',comments:'QA vehicle edit '+suffix,
+                'units[primary][brand]':'QA BRAND EDIT','units[primary][model]':'MODEL EDIT '+suffix,'units[primary][plate_number]':qa.plate,
+                'units[primary][vin]':qa.vin,'units[primary][diagnostic_card_number]':'987654321012345','units[primary][diagnostic_card_date]':'06.08.2026',
+                'units[primary][capacity_tons]':'21,5','units[primary][volume_m3]':'87,5'
+              });
+              await page.goto(new URL('company/vehicle-sets',BASE).href,{waitUntil:'domcontentloaded'});
+              text=await openView(vrow,'[data-vehicle-set-edit-btn]');
+              for(const v of ['QA BRAND EDIT','MODEL EDIT '+suffix,'987654321012345','06.08.2026','21,5','87,5','QA vehicle edit '+suffix]) must(text.includes(v),'vehicle edit missing '+v);
+
+              must(pageErrors.length===0,'page errors: '+pageErrors.join(' | '));
+              console.log('FINAL_ENTITY_CRUD_PASS '+JSON.stringify({driverId,contractorId,vehicleId,pageErrors}));
+            } finally {
+              if(driverId) await cleanup('company/drivers/'+driverId+'/modal-delete');
+              if(contractorId) await cleanup('company/contractors/'+contractorId+'/modal-archive');
+              if(vehicleId) await cleanup('company/vehicle-sets/'+vehicleId+'/modal-archive');
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e.stack||e);process.exit(1);});
+          NODE
