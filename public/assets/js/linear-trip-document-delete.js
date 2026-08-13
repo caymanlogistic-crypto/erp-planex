@@ -16,10 +16,9 @@
       var id = parseInt(url.searchParams.get('id') || '0', 10) || 0;
       if (!id) return;
 
-      /* Use the exact existing delete control used by additional document rows. */
       var button = document.createElement('button');
       button.type = 'button';
-      button.className = 'file-remove';
+      button.className = 'file-remove predef-file-clear';
       button.title = 'Удалить документ';
       button.textContent = '×';
       button.setAttribute('data-linear-trip-document-delete', String(id));
