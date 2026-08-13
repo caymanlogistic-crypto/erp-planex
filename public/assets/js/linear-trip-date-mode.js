@@ -9,6 +9,14 @@
     return input ? String(input.value || '').trim() : '';
   }
 
+  function nativeDateValue(raw) {
+    var date = String(raw || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    var match = date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (match) return match[3] + '-' + match[2] + '-' + match[1];
+    return '';
+  }
+
   function ensureBackingInput(form, name) {
     var input = form.querySelector('[name="' + name + '"]');
     if (input) return input;
@@ -71,7 +79,7 @@
     var target = backingFor(control, kind);
     var visibleInput = control.querySelector('[data-trip-date-visible]');
     if (visibleInput) {
-      visibleInput.value = value(target);
+      visibleInput.value = nativeDateValue(value(target));
       visibleInput.focus();
     }
   }
@@ -100,7 +108,7 @@
     setActive(control, initialKind);
     var visible = control.querySelector('[data-trip-date-visible]');
     var initialBacking = initialKind ? (initialKind === 'fact' ? factInput : planInput) : null;
-    if (visible && initialBacking) visible.value = value(initialBacking);
+    if (visible && initialBacking) visible.value = nativeDateValue(value(initialBacking));
     control.querySelectorAll('[data-trip-date-kind]').forEach(function (button) {
       button.addEventListener('click', function () { chooseKind(control, button.getAttribute('data-trip-date-kind')); });
     });
@@ -164,9 +172,9 @@
     dateRow.appendChild(createControl(form, 'end', planEnd, factEnd, endKind));
     primaryRow.parentNode.insertBefore(dateRow, primaryRow);
 
+    /* Keep all four original inputs in the form. The old planned-start field is visually hidden
+       above, so it does not consume a grid column, but its value remains available for edit/save. */
     primaryRow.classList.add('linear-trip-participant-row');
-    var planStartField = planStart.closest('.field');
-    if (planStartField && planStartField.parentNode === primaryRow) primaryRow.removeChild(planStartField);
 
     var cargoField = unhideCargo(form);
     if (cargoField) {
