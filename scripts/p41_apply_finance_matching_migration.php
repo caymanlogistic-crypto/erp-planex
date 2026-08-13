@@ -1,9 +1,88 @@
 <?php
-require_once __DIR__.'/../app/Support/helpers.php';require_once __DIR__.'/../app/Support/environment.php';loadEnvFileNonOverwriting(dirname(__DIR__).'/.env');$config=require __DIR__.'/../bootstrap/app.php';require_once base_path('app/Support/entrypoint_dependencies.php');
-$name='063_finance_matching_classification.sql';$path=base_path('database/migrations-local/'.$name);$sql=file_get_contents($path);if($sql===false||trim($sql)==='')throw new RuntimeException('Migration missing.');$checksum=hash('sha256',$sql);$central=(new \App\Core\Database($config['database']))->connection();$companies=$central->query("SELECT * FROM companies WHERE status='active' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);$applied=$existing=0;
-foreach($companies as $company){$pdo=(new \App\Core\Database(companyDatabaseConfig($config,$company)))->connection();$pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations (id INT UNSIGNED NOT NULL AUTO_INCREMENT,migration VARCHAR(255) NOT NULL,checksum VARCHAR(64) NOT NULL,executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(id),UNIQUE KEY uk_local_migration(migration)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");$lockName='planex_p41_'.substr(hash('sha256',(string)$pdo->query('SELECT DATABASE()')->fetchColumn()),0,32);$lock=$pdo->prepare('SELECT GET_LOCK(?,10)');$lock->execute([$lockName]);if((int)$lock->fetchColumn()!==1)throw new RuntimeException('Cannot acquire tenant migration lock.');
- try{$s=$pdo->prepare('SELECT checksum FROM schema_migrations WHERE migration=?');$s->execute([$name]);$stored=$s->fetchColumn();if($stored!==false){if(!hash_equals((string)$stored,$checksum))throw new RuntimeException('Migration checksum mismatch company '.(int)$company['id']);$existing++;}else{$pdo->exec($sql);$s=$pdo->prepare('INSERT INTO schema_migrations(migration,checksum) VALUES(?,?)');$s->execute([$name,$checksum]);$applied++;}
-  $required=[['TABLES','TABLE_NAME','finance_cash_flow_centers'],['COLUMNS','COLUMN_NAME','classification_status'],['COLUMNS','COLUMN_NAME','classification_locked']];foreach($required as [$kind,$column,$value]){$table=$kind==='TABLES'?'finance_cash_flow_centers':'bank_transactions';$q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.$kind WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND $column=?");$q->execute([$table,$value]);if((int)$q->fetchColumn()!==1)throw new RuntimeException("Schema verification failed: $table.$value");}
-  $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='finance_matching_rules' AND COLUMN_NAME='target_cash_account_id'");$q->execute();if((int)$q->fetchColumn()!==1)throw new RuntimeException('Rule schema verification failed.');
- }finally{$release=$pdo->prepare('SELECT RELEASE_LOCK(?)');$release->execute([$lockName]);}}
-printf("P41_FINANCE_MIGRATION_OK companies=%d applied=%d existing=%d checksum=%s\n",count($companies),$applied,$existing,$checksum);
+
+require_once __DIR__ . '/../app/Support/helpers.php';
+require_once __DIR__ . '/../app/Support/environment.php';
+loadEnvFileNonOverwriting(dirname(__DIR__) . '/.env');
+$config = require __DIR__ . '/../bootstrap/app.php';
+require_once base_path('app/Support/entrypoint_dependencies.php');
+
+$migrationName = '063_finance_matching_classification.sql';
+$migrationPath = base_path('database/migrations-local/' . $migrationName);
+$sql = file_get_contents($migrationPath);
+if ($sql === false || trim($sql) === '') {
+    throw new RuntimeException('P41 migration SQL is missing or empty.');
+}
+$checksum = hash('sha256', $sql);
+$db = new \App\Core\Database($config['database']);
+$pdo = $db->connection();
+$companies = $pdo->query("SELECT * FROM companies WHERE status = 'active' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+$count = 0;
+$appliedCount = 0;
+$existingCount = 0;
+
+foreach ($companies as $company) {
+    $localDb = new \App\Core\Database(companyDatabaseConfig($config, $company));
+    $local = $localDb->connection();
+    $local->exec("CREATE TABLE IF NOT EXISTS `schema_migrations` (`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,`migration` VARCHAR(255) NOT NULL,`checksum` VARCHAR(64) NOT NULL,`executed_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY (`id`),UNIQUE KEY `uk_local_migration` (`migration`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $databaseName = (string) $local->query('SELECT DATABASE()')->fetchColumn();
+    $lockName = 'planex_p41_' . substr(hash('sha256', $databaseName), 0, 32);
+    $lock = $local->prepare('SELECT GET_LOCK(?, 10)');
+    $lock->execute(array($lockName));
+    if ((int) $lock->fetchColumn() !== 1) {
+        throw new RuntimeException('Cannot acquire P41 migration lock.');
+    }
+
+    try {
+        $stmt = $local->prepare('SELECT checksum FROM schema_migrations WHERE migration = ? LIMIT 1');
+        $stmt->execute(array($migrationName));
+        $stored = $stmt->fetchColumn();
+
+        if ($stored !== false) {
+            if (!hash_equals((string) $stored, $checksum)) {
+                throw new RuntimeException('P41 migration checksum mismatch in company ' . (int) $company['id']);
+            }
+            $existingCount++;
+        } else {
+            $local->exec($sql);
+            $insert = $local->prepare('INSERT INTO schema_migrations (migration, checksum) VALUES (?, ?)');
+            $insert->execute(array($migrationName, $checksum));
+            $appliedCount++;
+        }
+
+        $tableCheck = $local->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'finance_cash_flow_centers'");
+        if ((int) $tableCheck->fetchColumn() !== 1) {
+            throw new RuntimeException('finance_cash_flow_centers table missing after P41 migration.');
+        }
+
+        $columns = array(
+            array('bank_transactions', 'classification_status'),
+            array('bank_transactions', 'classification_locked'),
+            array('bank_transactions', 'linked_cash_transaction_id'),
+            array('finance_operations', 'cash_flow_center_id'),
+            array('finance_operations', 'classification_status'),
+            array('finance_matching_rules', 'target_cash_flow_center_id'),
+            array('finance_matching_rules', 'target_cash_account_id'),
+            array('finance_matching_rules', 'deleted_at')
+        );
+        $columnCheck = $local->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        foreach ($columns as $column) {
+            $columnCheck->execute(array($column[0], $column[1]));
+            if ((int) $columnCheck->fetchColumn() !== 1) {
+                throw new RuntimeException('Schema verification failed: ' . $column[0] . '.' . $column[1]);
+            }
+        }
+    } finally {
+        $release = $local->prepare('SELECT RELEASE_LOCK(?)');
+        $release->execute(array($lockName));
+    }
+    $count++;
+}
+
+printf(
+    "P41_FINANCE_MIGRATION_OK companies=%d applied=%d existing=%d checksum=%s\n",
+    $count,
+    $appliedCount,
+    $existingCount,
+    $checksum
+);
