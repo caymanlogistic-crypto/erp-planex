@@ -63,24 +63,24 @@ $paymentDueLabel = static function (array $payment): string {
 ?>
 <link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-route-points.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-route-points.css')) ?>">
 <style>
-/* View partial is loaded via AJAX; keep its document geometry self-contained. */
-#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item{
+/* View partial is loaded via AJAX into linear-trip-view-modal. */
+#linear-trip-view-modal .driver-modal-docs .driver-doc-view-item{
   display:grid!important;
   grid-template-columns:minmax(0,1fr) 108px 30px!important;
   column-gap:8px!important;
   align-items:center!important;
   width:100%!important;
 }
-#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item>.file-info{
+#linear-trip-view-modal .driver-modal-docs .driver-doc-view-item>.file-info{
   grid-column:1!important;
   min-width:0!important;
   width:100%!important;
   max-width:none!important;
 }
-#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item>.file-action-btn{grid-column:2!important;width:108px!important}
-#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item>.driver-doc-download-btn{grid-column:3!important}
-#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item .file-name,
-#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item .file-meta{
+#linear-trip-view-modal .driver-modal-docs .driver-doc-view-item>.file-action-btn{grid-column:2!important;width:108px!important}
+#linear-trip-view-modal .driver-modal-docs .driver-doc-view-item>.driver-doc-download-btn{grid-column:3!important}
+#linear-trip-view-modal .driver-modal-docs .driver-doc-view-item .file-name,
+#linear-trip-view-modal .driver-modal-docs .driver-doc-view-item .file-meta{
   display:block!important;
   width:100%!important;
   max-width:none!important;
