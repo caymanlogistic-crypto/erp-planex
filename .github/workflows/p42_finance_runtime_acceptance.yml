@@ -76,7 +76,11 @@ jobs:
           echo "::add-mask::$cred"
           echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
       - name: Read-only finance Playwright acceptance
-        run: node .github/p41/P41_finance_runtime.js | tee P42_RUNTIME.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p41/P41_finance_runtime.js | tee P42_RUNTIME.txt
+          grep -q 'P41_FINANCE_RUNTIME_OK' P42_RUNTIME.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
