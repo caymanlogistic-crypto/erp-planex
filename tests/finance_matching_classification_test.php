@@ -12,7 +12,7 @@ $r=$base;$r['amount_to']='1400.00';ok(S::applyRuleToTransaction(null,$r,$tx)['ma
 $r=$base;$r['bank_account_id']=9;ok(S::applyRuleToTransaction(null,$r,$tx)['matched']===false,'bank mismatch blocks rule');
 $r=$base;$r['direction']='INCOME';ok(S::applyRuleToTransaction(null,$r,$tx)['matched']===false,'direction mismatch blocks rule');
 $low=$base;$low['id']=2;$low['priority']=10;$high=$base;$high['id']=3;$high['priority']=500;$best=S::selectBestMatchingRule([$low,$high],$tx);ok(($best['rule']['id']??0)===3,'maximum numeric priority wins');
-$tie=$base;$tie['id']=4;$conflict=S::selectBestMatchingRule([$high,$tie+['priority'=>500]],$tx);ok(!empty($conflict['conflict']),'equal maximum priority conflicts');
+$tie=$base;$tie['id']=4;$tie['priority']=500;$conflict=S::selectBestMatchingRule([$high,$tie],$tx);ok(!empty($conflict['conflict']),'equal maximum priority conflicts');
 $off=$high;$off['active']=0;$best=S::selectBestMatchingRule([$off,$low],$tx);ok(($best['rule']['id']??0)===2,'inactive rule ignored');
 $suggest=$base;$suggest['auto_apply']=0;ok(S::applyRuleToTransaction(null,$suggest,$tx)['result']==='suggest','non-auto rule is suggestion');
 ok(S::isManualProtected(['classification_locked'=>1,'classification_status'=>'AUTO']),'manual lock protects');
