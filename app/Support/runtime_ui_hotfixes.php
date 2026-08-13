@@ -41,6 +41,13 @@ if (PHP_SAPI !== 'cli') {
 
     ob_start(static function (string $html): string {
         if (!str_contains($html, '</body>')) return $html;
+
+        // ERPv2 lives below /erpv2. A few legacy partials still emit root-relative
+        // document links; scope the compatibility rewrite to ERPv2 so /erp is untouched.
+        if (app_base_path() === '/erpv2') {
+            $html = str_replace('href="/company/documents', 'href="/erpv2/company/documents', $html);
+        }
+
         $src = app_url('/assets/js/driver-phone-optional.js') . '?v=' . filemtime(base_path('public/assets/js/driver-phone-optional.js'));
         $baseFix = <<<'HTML'
 <script>
@@ -48,11 +55,11 @@ if (PHP_SAPI !== 'cli') {
   function fix(root){
     if(!root||!root.querySelectorAll)return;
     var forms=[];
-    if(root.matches&&root.matches('#vehicle-set-edit-form'))forms.push(root);
-    root.querySelectorAll('#vehicle-set-edit-form').forEach(function(form){forms.push(form);});
+    if(root.matches&&(root.matches('#vehicle-set-edit-form')||root.matches('#driver-edit-form')))forms.push(root);
+    root.querySelectorAll('#vehicle-set-edit-form,#driver-edit-form').forEach(function(form){forms.push(form);});
     forms.forEach(function(form){
       var action=form.getAttribute('action')||'';
-      if(action.indexOf('/company/vehicle-sets/')!==0)return;
+      if(action.indexOf('/company/')!==0)return;
       var base=window.getErpBasePath?window.getErpBasePath():'';
       if(base)form.setAttribute('action',base+action);
     });
