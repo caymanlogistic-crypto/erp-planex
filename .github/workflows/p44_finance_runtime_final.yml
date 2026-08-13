@@ -1,0 +1,75 @@
+name: P44 Finance Runtime Final
+on:
+  workflow_run:
+    workflows: ["ERPv2 Controlled Deploy"]
+    types: [completed]
+    branches: [chatgpt/production-stabilization-20260802]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Verify exact deployed marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p44"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p44" "$HOME/.ssh/known_hosts"
+          got="$(ssh -p "$PORT" -i "$HOME/.ssh/p44" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$got" = "$SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p44_key
+            chmod 600 /tmp/p44_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p44_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Fail-closed read-only finance acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p41/P41_finance_runtime.js | tee P44_RUNTIME.txt
+          grep -q 'P41_FINANCE_RUNTIME_OK' P44_RUNTIME.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P44_finance_runtime_${{ github.event.workflow_run.head_sha }}
+          path: P44_RUNTIME.txt
+          if-no-files-found: warn
