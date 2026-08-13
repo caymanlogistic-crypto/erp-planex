@@ -1,0 +1,197 @@
+name: Verify linear trip document layout
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-doc-layout-20260813
+    paths:
+      - '.github/workflows/verify_linear_trip_doc_layout.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: b5ef8f48129284ff761c27e5d85ea6a719e0293c
+  BASE_URL: https://plan-ex.ru/erpv2/
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout verification branch
+        uses: actions/checkout@v4
+
+      - name: Verify exact production deployment marker
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/verify_trip_layout"
+          printf '%s\n' "${KNOWN_HOSTS}" > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/verify_trip_layout" "${HOME}/.ssh/known_hosts"
+          deployed="$(ssh -p "${SSH_PORT}" -i "${HOME}/.ssh/verify_trip_layout" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "${SSH_USER}@${SSH_HOST}" "cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt")"
+          echo "deployed=${deployed}"
+          test "${deployed}" = "${EXPECTED_DEPLOY_HEAD}"
+          rm -f "${HOME}/.ssh/verify_trip_layout"
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve owner credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "${credentials}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "${HOME}/.ssh"
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/verify_trip_credentials"
+            chmod 600 "${HOME}/.ssh/verify_trip_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/verify_trip_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/verify_trip_credentials"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Verify document layout in production Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verify_output
+          node <<'NODE'
+          'use strict';
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+
+          const BASE = process.env.BASE_URL || 'https://plan-ex.ru/erpv2/';
+          const credentials = JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+          const owner = credentials.find((item) => String(item.role || '').toUpperCase() === 'OWNER');
+          if (!owner) throw new Error('OWNER credentials not found');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({
+              viewport: { width: 1920, height: 1080 },
+              deviceScaleFactor: 1,
+              locale: 'ru-RU',
+              timezoneId: 'Europe/Moscow',
+              ignoreHTTPSErrors: true,
+            });
+            const page = await context.newPage();
+            const errors = [];
+            page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+            page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+
+            await page.goto(new URL('login', BASE).href, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            const user = page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first();
+            const pass = page.locator('input[type="password"]').first();
+            if (!(await user.count()) || !(await pass.count())) throw new Error('Login form not detected');
+            await user.fill(owner.username);
+            await pass.fill(owner.password);
+            await Promise.all([
+              page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {}),
+              page.locator('button[type="submit"],input[type="submit"]').first().click(),
+            ]);
+            await page.waitForTimeout(1000);
+            if (/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('OWNER authentication failed');
+
+            await page.goto(new URL('company/trips/linear', BASE).href, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            await page.waitForTimeout(500);
+            let row = page.locator('tr[data-linear-route-id="9"]').first();
+            if (!(await row.count())) row = page.locator('tr[data-linear-route-id]').first();
+            if (!(await row.count())) throw new Error('No linear trip rows found');
+            const routeId = await row.getAttribute('data-linear-route-id');
+            await row.dblclick();
+
+            const modal = page.locator('#linear-trip-view-modal.is-open');
+            await modal.waitFor({ state: 'visible', timeout: 10000 });
+            const docRow = modal.locator('.driver-doc-view-item').first();
+            await docRow.waitFor({ state: 'visible', timeout: 10000 });
+
+            const metrics = await docRow.evaluate((row) => {
+              const info = row.querySelector('.file-info');
+              const action = row.querySelector('.file-action-btn');
+              const download = row.querySelector('.driver-doc-download-btn');
+              const name = row.querySelector('.file-name');
+              const meta = row.querySelector('.file-meta');
+              const rr = row.getBoundingClientRect();
+              const ir = info.getBoundingClientRect();
+              const ar = action.getBoundingClientRect();
+              const dr = download.getBoundingClientRect();
+              const ns = getComputedStyle(name);
+              const ms = getComputedStyle(meta);
+              const rs = getComputedStyle(row);
+              return {
+                rowWidth: Math.round(rr.width),
+                infoWidth: Math.round(ir.width),
+                actionWidth: Math.round(ar.width),
+                downloadWidth: Math.round(dr.width),
+                infoShare: Number((ir.width / rr.width).toFixed(3)),
+                gridTemplateColumns: rs.gridTemplateColumns,
+                fileName: name.textContent.trim(),
+                fileMeta: meta.textContent.trim(),
+                nameWhiteSpace: ns.whiteSpace,
+                nameTextOverflow: ns.textOverflow,
+                metaWhiteSpace: ms.whiteSpace,
+                metaTextOverflow: ms.textOverflow,
+              };
+            });
+            const badgeCount = await modal.locator('.driver-doc-view-item .file-type-badge').count();
+            const styleInsideBody = await modal.locator('.modal-body > style').count();
+
+            const result = {
+              routeId,
+              finalUrl: page.url(),
+              badgeCount,
+              styleInsideBody,
+              metrics,
+              browserErrors: errors,
+            };
+            fs.writeFileSync('verify_output/result.json', JSON.stringify(result, null, 2));
+            await page.screenshot({ path: 'verify_output/linear-trip-view-documents.png', fullPage: false });
+            console.log(JSON.stringify(result, null, 2));
+
+            if (badgeCount !== 0) throw new Error(`File type badge still rendered: ${badgeCount}`);
+            if (styleInsideBody < 1) throw new Error('View layout style was not preserved inside modal body');
+            if (metrics.infoWidth < 160) throw new Error(`Document text column is still too narrow: ${metrics.infoWidth}px`);
+            if (metrics.infoWidth <= metrics.actionWidth) throw new Error(`Document text column (${metrics.infoWidth}px) is not wider than action button (${metrics.actionWidth}px)`);
+            if (metrics.nameWhiteSpace !== 'normal' || metrics.metaWhiteSpace !== 'normal') throw new Error('Document text is still forced to one line');
+            if (metrics.nameTextOverflow === 'ellipsis' || metrics.metaTextOverflow === 'ellipsis') throw new Error('Document text still uses ellipsis');
+            if (errors.length) throw new Error(`Browser errors detected: ${errors.join(' | ')}`);
+
+            await context.close();
+            await browser.close();
+          })().catch((error) => {
+            console.error(error.stack || error.message || String(error));
+            process.exit(1);
+          });
+          NODE
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linear-trip-document-layout-verification
+          path: verify_output/
+          if-no-files-found: warn
+          retention-days: 14
