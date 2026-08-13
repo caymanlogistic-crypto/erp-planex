@@ -9,6 +9,18 @@
     return input ? String(input.value || '').trim() : '';
   }
 
+  function ensureBackingInput(form, name) {
+    var input = form.querySelector('[name="' + name + '"]');
+    if (input) return input;
+    input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = '';
+    input.setAttribute('data-trip-date-generated-backing', '1');
+    form.appendChild(input);
+    return input;
+  }
+
   function setActive(control, kind) {
     var hidden = control.querySelector('[data-trip-date-kind-value]');
     if (hidden) hidden.value = kind || '';
@@ -104,6 +116,8 @@
       field.hidden = false;
       field.classList.remove('is-hidden');
       field.style.removeProperty('display');
+      var label = field.querySelector('.field-label');
+      if (label) label.innerHTML = 'Перевозимый груз <span class="req">*</span>';
     }
     if (!isEditForm(form) && form.dataset.tripCargoNormalized !== '1' && value(cargo) === 'Не указан') {
       cargo.value = '';
@@ -115,12 +129,12 @@
   function initForm(form) {
     if (!form || !form.matches('form[data-linear-trip-form]')) return;
     var planStart = form.querySelector('[name="planned_loading_date"]');
-    var planEnd = form.querySelector('[name="planned_unloading_date"]');
-    var factStart = form.querySelector('[name="actual_loading_date"]');
-    var factEnd = form.querySelector('[name="actual_unloading_date"]');
+    var planEnd = ensureBackingInput(form, 'planned_unloading_date');
+    var factStart = ensureBackingInput(form, 'actual_loading_date');
+    var factEnd = ensureBackingInput(form, 'actual_unloading_date');
     var client = form.querySelector('[name="client_id"]');
     var executor = form.querySelector('[name="route_executor_id"]');
-    var primaryRow = planStart ? planStart.closest('.linear-trip-primary-row') : null;
+    var primaryRow = planStart ? (planStart.closest('.linear-trip-primary-row') || form.querySelector('.linear-trip-primary-row')) : null;
     if (!planStart || !planEnd || !factStart || !factEnd || !client || !executor || !primaryRow) return;
 
     if (form.dataset.tripDateModeReady === '1') {
@@ -179,6 +193,10 @@
   function scan(root) {
     if (!root || !root.querySelectorAll) return;
     if (root.matches && root.matches('form[data-linear-trip-form]')) initForm(root);
+    if (root.closest) {
+      var parentForm = root.closest('form[data-linear-trip-form]');
+      if (parentForm) initForm(parentForm);
+    }
     root.querySelectorAll('form[data-linear-trip-form]').forEach(initForm);
   }
 
