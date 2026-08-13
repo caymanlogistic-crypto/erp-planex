@@ -1,0 +1,233 @@
+name: Final verify linear trip date modes
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/final_verify_linear_trip_date_modes.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: e18363fba8d1de592b133d9e691626bf62705c36
+  BASE_URL: https://plan-ex.ru/erpv2/
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify deployed SHA and tenant DB date columns
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/final_trip_verify"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/final_trip_verify" "$HOME/.ssh/known_hosts"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/final_trip_verify" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "EXPECTED_DEPLOY_HEAD='$EXPECTED_DEPLOY_HEAD' php -d display_errors=1" <<'PHP'
+          <?php
+          $root = '/home/s/spugovxsim/planexp';
+          $marker = trim((string) file_get_contents($root . '/deploy/P07_erpv2_deployed_commit.txt'));
+          if ($marker !== getenv('EXPECTED_DEPLOY_HEAD')) {
+              fwrite(STDERR, "marker mismatch: {$marker}\n"); exit(2);
+          }
+          function envFile(string $path): array {
+              $out=[];
+              foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+                  $line=trim($line);
+                  if ($line==='' || $line[0]==='#' || !str_contains($line,'=')) continue;
+                  [$k,$v]=explode('=',$line,2);
+                  $out[trim($k)]=trim($v," \t\n\r\0\x0B\"'");
+              }
+              return $out;
+          }
+          $e=envFile($root.'/public_html/erpv2/.env');
+          $host=$e['DB_HOST'] ?? '127.0.0.1';
+          $port=$e['DB_PORT'] ?? '3306';
+          $central=$e['DB_DATABASE'] ?? 'erp_planex';
+          $user=$e['DB_USERNAME'] ?? 'root';
+          $pass=$e['DB_PASSWORD'] ?? '';
+          $pdo=new PDO("mysql:host={$host};port={$port};dbname={$central};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+          $ids=$pdo->query("SELECT id FROM companies WHERE status='active' ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+          if (!$ids) { fwrite(STDERR,"no active companies\n"); exit(3); }
+          $checked=0;
+          foreach ($ids as $id) {
+              $schema='erp_company_'.(int)$id;
+              $q=$pdo->prepare("SELECT COLUMN_NAME, IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='linear_routes' AND COLUMN_NAME IN ('planned_loading_date','planned_unloading_date','actual_loading_date','actual_unloading_date') ORDER BY COLUMN_NAME");
+              $q->execute([$schema]);
+              $rows=$q->fetchAll(PDO::FETCH_KEY_PAIR);
+              if (!$rows) continue;
+              $checked++;
+              foreach (['planned_loading_date','planned_unloading_date','actual_loading_date','actual_unloading_date'] as $column) {
+                  if (!array_key_exists($column,$rows)) { fwrite(STDERR,"{$schema}: missing {$column}\n"); exit(4); }
+              }
+              if ($rows['planned_loading_date'] !== 'YES' || $rows['planned_unloading_date'] !== 'YES') {
+                  fwrite(STDERR,"{$schema}: planned dates are not nullable\n"); exit(5);
+              }
+              if ($rows['actual_loading_date'] !== 'YES' || $rows['actual_unloading_date'] !== 'YES') {
+                  fwrite(STDERR,"{$schema}: actual dates are not nullable\n"); exit(6);
+              }
+              echo "DB_DATE_COLUMNS_OK schema={$schema} planned_start={$rows['planned_loading_date']} actual_start={$rows['actual_loading_date']} planned_end={$rows['planned_unloading_date']} actual_end={$rows['actual_unloading_date']}\n";
+          }
+          if ($checked < 1) { fwrite(STDERR,"no tenant linear_routes table found\n"); exit(7); }
+          echo "DEPLOY_MARKER_OK {$marker}\n";
+          PHP
+          rm -f "$HOME/.ssh/final_trip_verify"
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve owner credentials
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/final_credentials"
+            chmod 600 "$HOME/.ssh/final_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/final_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/final_credentials"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+
+      - name: Verify registry create view and edit in production Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p final_verify_output
+          node <<'NODE'
+          'use strict';
+          const fs=require('fs');
+          const {chromium}=require('playwright');
+          const BASE=process.env.BASE_URL;
+          const creds=JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64,'base64').toString('utf8'));
+          const owner=creds.find(x=>String(x.role||'').toUpperCase()==='OWNER');
+          if(!owner) throw new Error('OWNER credential missing');
+          const has=(text,needle)=>String(text||'').toLocaleLowerCase('ru-RU').includes(String(needle).toLocaleLowerCase('ru-RU'));
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+            const page=await context.newPage();
+            const errors=[];
+            page.on('pageerror',e=>errors.push('pageerror: '+e.message));
+            page.on('console',m=>{if(m.type()==='error') errors.push('console: '+m.text());});
+
+            await page.goto(new URL('login',BASE).href,{waitUntil:'domcontentloaded',timeout:45000});
+            const user=page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first();
+            const pass=page.locator('input[type="password"]').first();
+            await user.fill(owner.username); await pass.fill(owner.password);
+            await Promise.all([page.waitForLoadState('domcontentloaded',{timeout:20000}).catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+            await page.waitForTimeout(900);
+            if(/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('authentication failed');
+
+            await page.goto(new URL('company/trips/linear',BASE).href,{waitUntil:'domcontentloaded',timeout:45000});
+            await page.waitForTimeout(900);
+            let row=page.locator('tr[data-linear-route-id="9"]').first();
+            if(!(await row.count())) row=page.locator('tr[data-linear-route-id]').first();
+            if(!(await row.count())) throw new Error('no route row');
+            const routeId=await row.getAttribute('data-linear-route-id');
+            const normalColor=await row.locator('td').nth(2).evaluate(el=>getComputedStyle(el).color);
+            const registryDates=await row.locator('td.registry-date').evaluateAll(cells=>cells.map(cell=>({text:cell.innerText.trim(),planned:cell.classList.contains('registry-date-planned'),color:getComputedStyle(cell.querySelector('.registry-date-value')||cell).color})));
+            if(registryDates.length!==2) throw new Error('registry must contain start and end columns');
+            for(const d of registryDates){
+              if(d.planned && !has(d.text,'(плановая)')) throw new Error('planned registry date lacks note: '+JSON.stringify(d));
+              if(d.planned && d.color===normalColor) throw new Error('planned registry date is not visually gray/different: '+JSON.stringify(d));
+            }
+            await page.screenshot({path:'final_verify_output/registry.png',fullPage:false});
+
+            await page.getByRole('link',{name:'Создать рейс'}).click();
+            const create=page.locator('#linear-trip-create-modal.is-open');
+            await create.waitFor({state:'visible',timeout:5000});
+            const cf=create.locator('form[data-linear-trip-form]');
+            await cf.locator('[data-trip-date-control="start"]').waitFor({state:'visible',timeout:5000});
+            await page.waitForTimeout(400);
+            const cm=await cf.evaluate(form=>{
+              const dates=form.querySelector('.linear-trip-date-row'), participants=form.querySelector('.linear-trip-participant-row'), cargoRow=form.querySelector('.linear-trip-cargo-row');
+              const start=form.querySelector('[data-trip-date-control="start"]'), end=form.querySelector('[data-trip-date-control="end"]');
+              const cargo=form.querySelector('[name="cargo_type_name"]');
+              const active=x=>[...x.querySelectorAll('[data-trip-date-kind].is-active')].map(b=>b.dataset.tripDateKind);
+              const dr=dates.getBoundingClientRect(),pr=participants.getBoundingClientRect(),cr=cargoRow.getBoundingClientRect();
+              return {dateY:dr.y,participantY:pr.y,cargoY:cr.y,dateWidth:dr.width,participantWidth:pr.width,cargoWidth:cr.width,startLabel:start.querySelector('.field-label').textContent.trim(),endLabel:end.querySelector('.field-label').textContent.trim(),startActive:active(start),endActive:active(end),cargoLabel:cargo.closest('.field').querySelector('.field-label').textContent.trim(),cargoVisible:!!cargo.offsetParent,cargoValue:cargo.value,clientInRow:!!form.querySelector('.linear-trip-participant-row [name="client_id"]'),executorInRow:!!form.querySelector('.linear-trip-participant-row [name="route_executor_id"]')};
+            });
+            if(!has(cm.startLabel,'Начало рейса')||!has(cm.endLabel,'Окончание рейса')) throw new Error('create date labels wrong '+JSON.stringify(cm));
+            if(JSON.stringify(cm.startActive)!==JSON.stringify(['plan'])||cm.endActive.length!==0) throw new Error('create defaults wrong '+JSON.stringify(cm));
+            if(!(cm.dateY<cm.participantY&&cm.participantY<cm.cargoY)) throw new Error('create row order wrong '+JSON.stringify(cm));
+            if(!cm.clientInRow||!cm.executorInRow||!cm.cargoVisible||!has(cm.cargoLabel,'Перевозимый груз')) throw new Error('create participant/cargo layout wrong '+JSON.stringify(cm));
+            if(cm.cargoWidth<cm.participantWidth*0.9||cm.cargoValue==='Не указан') throw new Error('create cargo width/default wrong '+JSON.stringify(cm));
+            await page.screenshot({path:'final_verify_output/create.png',fullPage:false});
+            await create.locator('.modal-close').click(); await create.waitFor({state:'hidden',timeout:5000});
+
+            await row.dblclick();
+            const view=page.locator('#linear-trip-view-modal.is-open');
+            await view.waitFor({state:'visible',timeout:7000});
+            await view.locator('.trip-view-table').waitFor({state:'visible',timeout:7000});
+            await page.waitForTimeout(250);
+            const vt=await view.innerText();
+            if(!has(vt,'Начало рейса')||!has(vt,'Окончание рейса')||!has(vt,'Перевозимый груз')) throw new Error('view lifecycle fields missing');
+            if(registryDates.some(d=>d.planned)&&!(await view.locator('.trip-view-date-note').allTextContents()).some(t=>has(t,'плановая'))) throw new Error('view planned note missing');
+            await page.screenshot({path:'final_verify_output/view.png',fullPage:false});
+
+            const editBtn=view.locator('[data-linear-trip-edit-btn]');
+            if(!(await editBtn.count())) throw new Error('edit button missing for owner');
+            await editBtn.click();
+            const ef=view.locator('#linear-trip-edit-form');
+            await ef.waitFor({state:'visible',timeout:7000});
+            await ef.locator('[data-trip-date-control="start"]').waitFor({state:'visible',timeout:5000});
+            await page.waitForTimeout(350);
+            const em=await ef.evaluate(form=>{
+              const dates=form.querySelector('.linear-trip-date-row'),participants=form.querySelector('.linear-trip-participant-row'),cargoRow=form.querySelector('.linear-trip-cargo-row');
+              const start=form.querySelector('[data-trip-date-control="start"]'),end=form.querySelector('[data-trip-date-control="end"]'),cargo=form.querySelector('[name="cargo_type_name"]');
+              const active=x=>[...x.querySelectorAll('[data-trip-date-kind].is-active')].map(b=>b.dataset.tripDateKind);
+              const dr=dates.getBoundingClientRect(),pr=participants.getBoundingClientRect(),cr=cargoRow.getBoundingClientRect();
+              return {dateY:dr.y,participantY:pr.y,cargoY:cr.y,dateWidth:dr.width,participantWidth:pr.width,cargoWidth:cr.width,startActive:active(start),endActive:active(end),startValue:start.querySelector('[data-trip-date-visible]').value,endValue:end.querySelector('[data-trip-date-visible]').value,cargoVisible:!!cargo.offsetParent,cargoLabel:cargo.closest('.field').querySelector('.field-label').textContent.trim(),fourBackings:['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'].every(n=>!!form.querySelector('[name="'+n+'"]')),clientInRow:!!form.querySelector('.linear-trip-participant-row [name="client_id"]'),executorInRow:!!form.querySelector('.linear-trip-participant-row [name="route_executor_id"]')};
+            });
+            if(em.startActive.length!==1||!em.startValue) throw new Error('edit start state wrong '+JSON.stringify(em));
+            if(!(em.dateY<em.participantY&&em.participantY<em.cargoY)) throw new Error('edit row order wrong '+JSON.stringify(em));
+            if(!em.fourBackings||!em.clientInRow||!em.executorInRow||!em.cargoVisible||!has(em.cargoLabel,'Перевозимый груз')) throw new Error('edit lifecycle layout/backings wrong '+JSON.stringify(em));
+            if(em.cargoWidth<em.participantWidth*0.9) throw new Error('edit cargo is not full width '+JSON.stringify(em));
+            await page.screenshot({path:'final_verify_output/edit.png',fullPage:false});
+
+            const result={routeId,normalColor,registryDates,create:cm,edit:em,browserErrors:errors};
+            fs.writeFileSync('final_verify_output/result.json',JSON.stringify(result,null,2));
+            console.log('FINAL_VERIFY='+JSON.stringify(result));
+            if(errors.length) throw new Error('browser errors: '+errors.join(' | '));
+            await browser.close();
+          })().catch(e=>{console.error(e.stack||String(e));process.exit(1);});
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-linear-trip-date-mode-verification
+          path: final_verify_output/
+          if-no-files-found: warn
+          retention-days: 14
