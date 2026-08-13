@@ -1,0 +1,2 @@
+<?php
+// CFU settings panel.
