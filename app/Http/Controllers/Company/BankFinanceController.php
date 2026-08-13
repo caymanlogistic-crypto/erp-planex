@@ -1,70 +1,16 @@
 <?php
-
 namespace App\Http\Controllers\Company;
-
 use App\Core\Database;
-
-final class BankFinanceController
-{
-    public function __construct(
-        private readonly array $config,
-        private readonly Database $db
-    ) {
-    }
-
-    public function index(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-
-        require base_path('app/Http/Controllers/Company/BankFinanceActions/index.php');
-    }
-
-    public function import(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-
-        require base_path('app/Http/Controllers/Company/BankFinanceActions/import.php');
-    }
-
-    public function refreshFromMail(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-
-        require base_path('app/Http/Controllers/Company/BankFinanceActions/refreshFromMail.php');
-    }
-
-    public function settings(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-
-        require base_path('app/Http/Controllers/Company/BankFinanceActions/settings.php');
-    }
-
-    public function bankStatementSettings(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-
-        require base_path('app/Http/Controllers/Company/BankFinanceActions/bankStatementSettings.php');
-    }
-
-    public function deleteImport(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-
-        require base_path('app/Http/Controllers/Company/BankFinanceActions/deleteImport.php');
-    }
-
-    public function reconciliationJson(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-
-        require base_path('app/Http/Controllers/Company/BankFinanceActions/reconciliationJson.php');
-    }
+final class BankFinanceController{
+ public function __construct(private readonly array $config,private readonly Database $db){}
+ private function action(string $name):void{$config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/BankFinanceActions/'.$name.'.php');}
+ public function index():void{$this->action('index');}
+ public function import():void{$this->action('import');}
+ public function refreshFromMail():void{$this->action('refreshFromMail');}
+ public function settings():void{$this->action('settings');}
+ public function bankStatementSettings():void{$this->action('bankStatementSettings');}
+ public function deleteImport():void{$this->action('deleteImport');}
+ public function reconciliationJson():void{$this->action('reconciliationJson');}
+ public function classifyForm(int $id):void{$bankTransactionId=$id;$this->action('classifyForm');}
+ public function classifySubmit(int $id):void{$bankTransactionId=$id;$this->action('classifySubmit');}
 }
