@@ -1,1 +1,63 @@
-x
+name: Verify vehicle comment persistence
+on:
+  push:
+    branches: [verify-entity-crud-20260813]
+    paths: ['.github/workflows/verify_vehicle_comment.yml']
+permissions:
+  contents: read
+env:
+  BASE_URL: http://planexp.ru/erpv2/
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve credentials
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/c"
+          chmod 600 "$HOME/.ssh/c"
+          credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/c" --input .github/p11/P11_runtime_credentials.enc.json)"
+          rm -f "$HOME/.ssh/c"
+          echo "::add-mask::$credentials"
+          printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+      - name: Diagnose live vehicle comment
+        shell: bash
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const BASE=process.env.BASE_URL;
+          const creds=JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64,'base64').toString('utf8'));
+          const owner=creds.find(x=>String(x.role||'').toUpperCase()==='OWNER');
+          const suffix=String(Date.now()).slice(-7), plate='В'+suffix.slice(-3)+'ЕТ99', vin='X8F1234567890'+suffix.slice(-4);
+          let id=0;
+          const must=(c,m)=>{if(!c)throw Error(m)};
+          (async()=>{
+            const b=await chromium.launch({headless:true}); const c=await b.newContext({locale:'ru-RU',timezoneId:'Europe/Moscow'}); const p=await c.newPage();
+            try{
+              await p.goto(new URL('login',BASE).href); await p.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username); await p.locator('input[type="password"]').fill(owner.password); await p.locator('button[type="submit"],input[type="submit"]').first().click(); await p.waitForTimeout(700);
+              await p.goto(new URL('company/vehicle-sets',BASE).href); await p.getByRole('button',{name:/Добавить новый транспорт/i}).first().click(); const cf=p.locator('#vehicle-set-create-form'); await cf.waitFor(); await cf.locator('select[name="set_type"]').selectOption('single');
+              await cf.evaluate((f,v)=>{for(const [n,x] of Object.entries(v)){const e=f.elements.namedItem(n);if(e){e.value=x;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}}f.requestSubmit();},{set_type:'single',status:'active',comments:'CREATE COMMENT '+suffix,'units[primary][brand]':'QA','units[primary][model]':'COMMENT','units[primary][plate_number]':plate,'units[primary][vin]':vin,'units[primary][diagnostic_card_number]':'123456789012345','units[primary][diagnostic_card_date]':'05.08.2026','units[primary][capacity_tons]':'20','units[primary][volume_m3]':'80'}); await p.waitForTimeout(1100);
+              await p.goto(new URL('company/vehicle-sets',BASE).href); const row=p.locator('tr[data-vehicle-set-id]').filter({hasText:plate}).first(); await row.waitFor(); id=Number(await row.getAttribute('data-vehicle-set-id')); must(id,'no vehicle id');
+              await row.dblclick(); await p.locator('[data-vehicle-set-edit-btn]').waitFor(); const createView=await p.locator('.modal-overlay.is-open').last().innerText(); console.log('CREATE_VIEW_HAS_COMMENT='+createView.includes('CREATE COMMENT '+suffix));
+              await p.locator('[data-vehicle-set-edit-btn]').click(); const ef=p.locator('#vehicle-set-edit-form'); await ef.waitFor(); const target='EDIT COMMENT '+suffix; await ef.locator('[name="comments"]').fill(target); console.log('FORM_COMMENT='+await ef.locator('[name="comments"]').inputValue());
+              let reqBody=''; p.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/company/vehicle-sets/'+id+'/modal-edit')){reqBody=r.postData()||''; console.log('POST_HAS_COMMENT='+reqBody.includes(target));}});
+              const respPromise=p.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/company/vehicle-sets/'+id+'/modal-edit')); await ef.evaluate(f=>f.requestSubmit()); const resp=await respPromise; const responseText=await resp.text(); console.log('RESPONSE_HAS_COMMENT='+responseText.includes(target)); console.log('RESPONSE_STATUS='+resp.status()); await p.waitForTimeout(400);
+              await p.goto(new URL('company/vehicle-sets',BASE).href); const row2=p.locator('tr[data-vehicle-set-id="'+id+'"]'); await row2.dblclick(); await p.locator('[data-vehicle-set-edit-btn]').waitFor(); const finalView=await p.locator('.modal-overlay.is-open').last().innerText(); console.log('FINAL_VIEW_HAS_COMMENT='+finalView.includes(target));
+              must(reqBody.includes(target),'comment absent from POST'); must(responseText.includes(target),'comment absent from save response'); must(finalView.includes(target),'comment absent from fresh view'); console.log('VEHICLE_COMMENT_PASS id='+id);
+            } finally { await b.close(); }
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          NODE
