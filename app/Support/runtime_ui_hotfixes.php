@@ -54,9 +54,10 @@ if (PHP_SAPI !== 'cli') {
 (function(){
   function fix(root){
     if(!root||!root.querySelectorAll)return;
+    var selector='#vehicle-set-create-form,#vehicle-set-edit-form,#driver-create-form,#driver-edit-form';
     var forms=[];
-    if(root.matches&&(root.matches('#vehicle-set-edit-form')||root.matches('#driver-edit-form')))forms.push(root);
-    root.querySelectorAll('#vehicle-set-edit-form,#driver-edit-form').forEach(function(form){forms.push(form);});
+    if(root.matches&&root.matches(selector))forms.push(root);
+    root.querySelectorAll(selector).forEach(function(form){forms.push(form);});
     forms.forEach(function(form){
       var action=form.getAttribute('action')||'';
       if(action.indexOf('/company/')!==0)return;
