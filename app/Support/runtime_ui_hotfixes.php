@@ -1,13 +1,46 @@
 <?php
 
-// Small compatibility layer for UI corrections that must load after app.js
-// without rewriting the main layout. The injected asset is inert outside
-// driver forms and can be removed once app.js is refactored.
+// Compatibility layer for focused UI/runtime corrections.
 if (PHP_SAPI !== 'cli') {
-    ob_start(static function (string $html): string {
-        if (!str_contains($html, '</body>')) {
-            return $html;
+    $path = current_app_path();
+
+    // Date pickers submit DD.MM.YYYY while DATE columns require YYYY-MM-DD.
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && preg_match('~^/company/drivers/\d+/(?:modal-edit|edit)$~', $path)) {
+        foreach (['passport_issue_date', 'license_issue_date', 'license_expire_date'] as $field) {
+            if (!isset($_POST[$field])) continue;
+            $value = trim((string) $_POST[$field]);
+            if (preg_match('/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/', $value, $m)) {
+                $day = (int) $m[1]; $month = (int) $m[2]; $year = (int) $m[3];
+                if (checkdate($month, $day, $year)) {
+                    $_POST[$field] = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                }
+            }
         }
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && preg_match('~^/company/vehicle-sets(?:/create|/\d+/modal-edit)$~', $path)
+        && !empty($_POST['units']) && is_array($_POST['units'])) {
+        foreach ($_POST['units'] as $role => $unit) {
+            if (!is_array($unit)) continue;
+            foreach (['capacity_tons', 'volume_m3'] as $field) {
+                if (!array_key_exists($field, $unit)) continue;
+                $raw = preg_replace('/\s+/u', '', trim((string) $unit[$field])) ?? '';
+                $_POST['units'][$role][$field] = $raw === '' ? '' : str_replace(',', '.', $raw);
+            }
+            if (array_key_exists('diagnostic_card_date', $unit)) {
+                $value = trim((string) $unit['diagnostic_card_date']);
+                if (preg_match('/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/', $value, $m)) {
+                    $day = (int) $m[1]; $month = (int) $m[2]; $year = (int) $m[3];
+                    if (checkdate($month, $day, $year)) {
+                        $_POST['units'][$role]['diagnostic_card_date'] = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                    }
+                }
+            }
+        }
+    }
+
+    ob_start(static function (string $html): string {
+        if (!str_contains($html, '</body>')) return $html;
         $src = app_url('/assets/js/driver-phone-optional.js') . '?v=' . filemtime(base_path('public/assets/js/driver-phone-optional.js'));
         return str_replace('</body>', '<script src="' . e($src) . '"></script></body>', $html);
     });

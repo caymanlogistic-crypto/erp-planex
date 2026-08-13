@@ -1,20 +1,139 @@
 <?php
 /** @var VehicleSetService $service */
 requireRole(['company_owner', 'senior_logist', 'logist']);
-$companyId=$service->getCompanyId();if($companyId<=0){http_response_code(404);echo'<div class="notice warn">Компания не найдена.</div>';exit;}
-try{$company=$service->loadCompany($companyId);if(!$company||($company['status']??'')!=='active'){http_response_code(404);echo'<div class="notice warn">Компания не найдена или неактивна.</div>';exit;}
-$localPdo=$service->getLocalPdo($company);$vs=$service->getVehicleSetById($localPdo,(int)$id);if(!$vs){http_response_code(404);echo'<div class="notice warn">Транспорт не найден.</div>';exit;}
-$roleCode=$_SESSION['role_code']??'';$canEdit=false;if($roleCode==='company_owner'||$roleCode==='senior_logist'){$canEdit=true;}elseif($roleCode==='logist'){$userId=(int)($_SESSION['user_id']??0);if((int)($vs['created_by_user_id']??0)===$userId)$canEdit=true;else{$gc=$localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type='vehicle_set' AND entity_id=? AND granted_to_user_id=? AND revoked_at IS NULL LIMIT 1");$gc->execute([(int)$id,$userId]);$gr=$gc->fetch(PDO::FETCH_ASSOC);$canEdit=($gr['access_level']??null)==='edit';}}
-if(!$canEdit){http_response_code(403);echo'<div class="notice warn">У вас нет права редактировать эту запись.</div>';exit;}
-// Simple update - update status and comments on vehicle_sets, update unit fields from POST
-$status=trim($_POST['status']??$vs['status']??'active');$comments=trim($_POST['comments']??'');
-$localPdo->prepare("UPDATE vehicle_sets SET status=?, comments=?, updated_by_user_id=?, updated_by_role=? WHERE id=?")->execute([$status,$comments?:null,(int)$_SESSION['user_id'],$_SESSION['role_code']??null,(int)$id]);
-// Reload for view
-$vs=$service->getVehicleSetById($localPdo,(int)$id);$unitIds=array_values(array_filter([(int)($vs['primary_vehicle_unit_id']??0),(int)($vs['secondary_vehicle_unit_id']??0)]));
-$unitsByRole=['primary'=>[],'secondary'=>[]];if(!empty($unitIds)){$units=$service->getUnitsByIds($localPdo,$unitIds);foreach($units as $unit){$uId=(int)($unit['id']??0);if($uId===(int)($vs['primary_vehicle_unit_id']??0))$unitsByRole['primary']=$unit;elseif($uId===(int)($vs['secondary_vehicle_unit_id']??0))$unitsByRole['secondary']=$unit;}}
-$docsByRole=['primary'=>[],'secondary'=>[]];if(!empty($unitIds)){$docs=$service->getDocsForUnits($localPdo,$unitIds);foreach($docs as $doc){$eId=(int)($doc['entity_id']??0);if($eId===(int)($vs['primary_vehicle_unit_id']??0))$docsByRole['primary'][]=$doc;elseif($eId===(int)($vs['secondary_vehicle_unit_id']??0))$docsByRole['secondary'][]=$doc;}}
-$rules=vehicleSetTypeRules();$unitTitles=['primary'=>$rules[$vs['set_type']??'']['units']['primary']['label']??'Основная единица','secondary'=>$rules[$vs['set_type']??'']['units']['secondary']['label']??'Доп. единица'];
-$canEdit=$roleCode==='company_owner'||$roleCode==='senior_logist'||($roleCode==='logist'&&(int)($vs['created_by_user_id']??0)===(int)($_SESSION['user_id']??0));$canDelete=$canEdit;
-$grantAccessLevel=null;if($roleCode==='logist'){$gc=$localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type='vehicle_set' AND entity_id=? AND granted_to_user_id=? AND revoked_at IS NULL LIMIT 1");$gc->execute([(int)$id,(int)($_SESSION['user_id']??0)]);$gr=$gc->fetch(PDO::FETCH_ASSOC);$grantAccessLevel=$gr['access_level']??null;}
-header('Content-Type: text/html; charset=utf-8');require base_path('app/View/partials/company_vehicle_set_modal_view.php');exit;}
-catch(\Throwable $e){http_response_code(500);echo'<div class="notice warn">Ошибка: '.e($e->getMessage()).'</div>';exit;}
+
+$companyId = $service->getCompanyId();
+if ($companyId <= 0) { http_response_code(404); echo '<div class="notice warn">Компания не найдена.</div>'; exit; }
+
+try {
+    $company = $service->loadCompany($companyId);
+    if (!$company || ($company['status'] ?? '') !== 'active') { http_response_code(404); echo '<div class="notice warn">Компания не найдена или неактивна.</div>'; exit; }
+    $localPdo = $service->getLocalPdo($company);
+    $vs = $service->getVehicleSetById($localPdo, (int) $id);
+    if (!$vs) { http_response_code(404); echo '<div class="notice warn">Транспорт не найден.</div>'; exit; }
+
+    $roleCode = (string) ($_SESSION['role_code'] ?? '');
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    $canEdit = $roleCode === 'company_owner' || $roleCode === 'senior_logist';
+    if ($roleCode === 'logist') {
+        if ((int) ($vs['created_by_user_id'] ?? 0) === $userId) $canEdit = true;
+        else {
+            $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type='vehicle_set' AND entity_id=? AND granted_to_user_id=? AND revoked_at IS NULL LIMIT 1");
+            $gc->execute([(int) $id, $userId]);
+            $canEdit = $gc->fetchColumn() === 'edit';
+        }
+    }
+    if (!$canEdit) { http_response_code(403); echo '<div class="notice warn">У вас нет права редактировать эту запись.</div>'; exit; }
+
+    $rules = vehicleSetTypeRules();
+    $setType = (string) ($vs['set_type'] ?? 'single');
+    $rule = $rules[$setType] ?? null;
+    if (!$rule) throw new RuntimeException('Неизвестный тип комплекта.');
+
+    $postedUnits = isset($_POST['units']) && is_array($_POST['units']) ? $_POST['units'] : [];
+    $errors = [];
+    $unitPayload = [];
+    foreach (['primary', 'secondary'] as $role) {
+        $roleRule = $rule['units'][$role] ?? null;
+        if (!$roleRule) continue;
+        $source = isset($postedUnits[$role]) && is_array($postedUnits[$role]) ? $postedUnits[$role] : [];
+        $payload = [
+            'brand' => trim((string) ($source['brand'] ?? '')),
+            'model' => trim((string) ($source['model'] ?? '')),
+            'plate_number' => trim((string) ($source['plate_number'] ?? '')),
+            'vin' => strtoupper(trim((string) ($source['vin'] ?? ''))),
+            'diagnostic_card_number' => trim((string) ($source['diagnostic_card_number'] ?? '')),
+            'diagnostic_card_date' => trim((string) ($source['diagnostic_card_date'] ?? '')),
+            'capacity_tons' => trim((string) ($source['capacity_tons'] ?? '')),
+            'volume_m3' => trim((string) ($source['volume_m3'] ?? '')),
+        ];
+        foreach (['brand' => 'Укажите марку', 'model' => 'Укажите модель', 'plate_number' => 'Укажите госномер', 'vin' => 'Укажите VIN', 'diagnostic_card_number' => 'Укажите диагностическую карту', 'diagnostic_card_date' => 'Укажите дату получения'] as $field => $message) {
+            if ($payload[$field] === '') $errors['units'][$role][$field] = $message;
+        }
+        if ($payload['vin'] !== '' && !preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $payload['vin'])) $errors['units'][$role]['vin'] = 'Формат VIN: 17 символов';
+        if (!empty($roleRule['show_capacity'])) {
+            if ($payload['capacity_tons'] === '' || !is_numeric($payload['capacity_tons']) || (float) $payload['capacity_tons'] <= 0) $errors['units'][$role]['capacity_tons'] = 'Укажите грузоподъёмность';
+        }
+        if (!empty($roleRule['show_volume'])) {
+            if ($payload['volume_m3'] === '' || !is_numeric($payload['volume_m3']) || (float) $payload['volume_m3'] <= 0) $errors['units'][$role]['volume_m3'] = 'Укажите объём кузова';
+        }
+        if ($payload['diagnostic_card_date'] !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $payload['diagnostic_card_date'])) $errors['units'][$role]['diagnostic_card_date'] = 'Укажите корректную дату';
+        $unitPayload[$role] = $payload;
+    }
+
+    if ($errors) {
+        $unitIds = array_values(array_filter([(int)($vs['primary_vehicle_unit_id'] ?? 0), (int)($vs['secondary_vehicle_unit_id'] ?? 0)]));
+        $unitsByRole = ['primary' => [], 'secondary' => []];
+        $docsByRole = ['primary' => [], 'secondary' => []];
+        if ($unitIds) {
+            foreach ($service->getUnitsByIds($localPdo, $unitIds) as $unit) {
+                $uid = (int) ($unit['id'] ?? 0);
+                if ($uid === (int) ($vs['primary_vehicle_unit_id'] ?? 0)) $unitsByRole['primary'] = $unit;
+                elseif ($uid === (int) ($vs['secondary_vehicle_unit_id'] ?? 0)) $unitsByRole['secondary'] = $unit;
+            }
+            foreach ($service->getDocsForUnits($localPdo, $unitIds) as $doc) {
+                $eid = (int) ($doc['entity_id'] ?? 0);
+                if ($eid === (int) ($vs['primary_vehicle_unit_id'] ?? 0)) $docsByRole['primary'][] = $doc;
+                elseif ($eid === (int) ($vs['secondary_vehicle_unit_id'] ?? 0)) $docsByRole['secondary'][] = $doc;
+            }
+        }
+        $old = ['set_type' => $setType, 'status' => $vs['status'] ?? 'active', 'comments' => $_POST['comments'] ?? '', 'units' => $postedUnits];
+        $formError = null;
+        $vehicleSet = $vs;
+        header('Content-Type: text/html; charset=utf-8');
+        require base_path('app/View/partials/company_vehicle_set_modal_edit.php');
+        exit;
+    }
+
+    $localPdo->beginTransaction();
+    try {
+        $status = trim((string) ($_POST['status'] ?? $vs['status'] ?? 'active'));
+        if (!in_array($status, ['active', 'inactive'], true)) $status = 'active';
+        $comments = trim((string) ($_POST['comments'] ?? ''));
+        $localPdo->prepare('UPDATE vehicle_sets SET status=?,comments=?,updated_by_user_id=?,updated_by_role=? WHERE id=?')
+            ->execute([$status, $comments !== '' ? $comments : null, $userId, $roleCode, (int) $id]);
+
+        $updateUnit = $localPdo->prepare('UPDATE vehicle_units SET brand=:brand,model=:model,plate_number=:plate_number,vin=:vin,diagnostic_card_number=:diagnostic_card_number,diagnostic_card_date=:diagnostic_card_date,capacity_tons=:capacity_tons,volume_m3=:volume_m3,status=:status,updated_by_user_id=:uid,updated_by_role=:role WHERE id=:id');
+        foreach ($unitPayload as $role => $payload) {
+            $unitId = $role === 'primary' ? (int) ($vs['primary_vehicle_unit_id'] ?? 0) : (int) ($vs['secondary_vehicle_unit_id'] ?? 0);
+            if ($unitId <= 0) continue;
+            $roleRule = $rule['units'][$role] ?? [];
+            $updateUnit->execute([
+                ':brand' => $payload['brand'], ':model' => $payload['model'], ':plate_number' => $payload['plate_number'], ':vin' => $payload['vin'],
+                ':diagnostic_card_number' => $payload['diagnostic_card_number'], ':diagnostic_card_date' => $payload['diagnostic_card_date'] ?: null,
+                ':capacity_tons' => !empty($roleRule['show_capacity']) ? (float) $payload['capacity_tons'] : null,
+                ':volume_m3' => !empty($roleRule['show_volume']) ? (float) $payload['volume_m3'] : null,
+                ':status' => $status, ':uid' => $userId, ':role' => $roleCode, ':id' => $unitId,
+            ]);
+        }
+        $localPdo->commit();
+    } catch (Throwable $e) {
+        if ($localPdo->inTransaction()) $localPdo->rollBack();
+        throw $e;
+    }
+
+    $vs = $service->getVehicleSetById($localPdo, (int) $id);
+    $unitIds = array_values(array_filter([(int)($vs['primary_vehicle_unit_id'] ?? 0), (int)($vs['secondary_vehicle_unit_id'] ?? 0)]));
+    $unitsByRole = ['primary' => [], 'secondary' => []];
+    $docsByRole = ['primary' => [], 'secondary' => []];
+    foreach ($service->getUnitsByIds($localPdo, $unitIds) as $unit) {
+        $uid=(int)($unit['id']??0);
+        if ($uid===(int)($vs['primary_vehicle_unit_id']??0)) $unitsByRole['primary']=$unit;
+        elseif ($uid===(int)($vs['secondary_vehicle_unit_id']??0)) $unitsByRole['secondary']=$unit;
+    }
+    foreach ($service->getDocsForUnits($localPdo, $unitIds) as $doc) {
+        $eid=(int)($doc['entity_id']??0);
+        if ($eid===(int)($vs['primary_vehicle_unit_id']??0)) $docsByRole['primary'][]=$doc;
+        elseif ($eid===(int)($vs['secondary_vehicle_unit_id']??0)) $docsByRole['secondary'][]=$doc;
+    }
+    $unitTitles = ['primary'=>$rule['units']['primary']['label']??'Основная единица','secondary'=>$rule['units']['secondary']['label']??'Доп. единица'];
+    $vehicleSet = $vs;
+    $canDelete = $canEdit;
+    header('Content-Type: text/html; charset=utf-8');
+    require base_path('app/View/partials/company_vehicle_set_modal_view.php');
+    exit;
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo '<div class="notice warn">Ошибка сохранения транспорта: ' . e($e->getMessage()) . '</div>';
+    exit;
+}
