@@ -16,8 +16,9 @@ try {
     $userId = (int) ($_SESSION['user_id'] ?? 0);
     $canEdit = $roleCode === 'company_owner' || $roleCode === 'senior_logist';
     if ($roleCode === 'logist') {
-        if ((int) ($vs['created_by_user_id'] ?? 0) === $userId) $canEdit = true;
-        else {
+        if ((int) ($vs['created_by_user_id'] ?? 0) === $userId) {
+            $canEdit = true;
+        } else {
             $gc = $localPdo->prepare("SELECT access_level FROM entity_access_grants WHERE entity_type='vehicle_set' AND entity_id=? AND granted_to_user_id=? AND revoked_at IS NULL LIMIT 1");
             $gc->execute([(int) $id, $userId]);
             $canEdit = $gc->fetchColumn() === 'edit';
@@ -47,17 +48,26 @@ try {
             'capacity_tons' => trim((string) ($source['capacity_tons'] ?? '')),
             'volume_m3' => trim((string) ($source['volume_m3'] ?? '')),
         ];
-        foreach (['brand' => 'Укажите марку', 'model' => 'Укажите модель', 'plate_number' => 'Укажите госномер', 'vin' => 'Укажите VIN', 'diagnostic_card_number' => 'Укажите диагностическую карту', 'diagnostic_card_date' => 'Укажите дату получения'] as $field => $message) {
-            if ($payload[$field] === '') $errors['units'][$role][$field] = $message;
+
+        // Keep edit validation aligned with create: only plate is required.
+        // All technical attributes may legitimately be added later or cleared.
+        if ($payload['plate_number'] === '') {
+            $errors['units'][$role]['plate_number'] = 'Укажите госномер';
         }
-        if ($payload['vin'] !== '' && !preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $payload['vin'])) $errors['units'][$role]['vin'] = 'Формат VIN: 17 символов';
-        if (!empty($roleRule['show_capacity'])) {
-            if ($payload['capacity_tons'] === '' || !is_numeric($payload['capacity_tons']) || (float) $payload['capacity_tons'] <= 0) $errors['units'][$role]['capacity_tons'] = 'Укажите грузоподъёмность';
+        if ($payload['vin'] !== '' && !preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $payload['vin'])) {
+            $errors['units'][$role]['vin'] = 'Формат VIN: 17 символов';
         }
-        if (!empty($roleRule['show_volume'])) {
-            if ($payload['volume_m3'] === '' || !is_numeric($payload['volume_m3']) || (float) $payload['volume_m3'] <= 0) $errors['units'][$role]['volume_m3'] = 'Укажите объём кузова';
+        if ($payload['diagnostic_card_date'] !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $payload['diagnostic_card_date'])) {
+            $errors['units'][$role]['diagnostic_card_date'] = 'Укажите корректную дату';
         }
-        if ($payload['diagnostic_card_date'] !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $payload['diagnostic_card_date'])) $errors['units'][$role]['diagnostic_card_date'] = 'Укажите корректную дату';
+        if (!empty($roleRule['show_capacity']) && $payload['capacity_tons'] !== ''
+            && (!is_numeric($payload['capacity_tons']) || (float) $payload['capacity_tons'] <= 0)) {
+            $errors['units'][$role]['capacity_tons'] = 'Укажите корректную грузоподъёмность';
+        }
+        if (!empty($roleRule['show_volume']) && $payload['volume_m3'] !== ''
+            && (!is_numeric($payload['volume_m3']) || (float) $payload['volume_m3'] <= 0)) {
+            $errors['units'][$role]['volume_m3'] = 'Укажите корректный объём кузова';
+        }
         $unitPayload[$role] = $payload;
     }
 
@@ -104,11 +114,18 @@ try {
             if ($unitId <= 0) continue;
             $roleRule = $rule['units'][$role] ?? [];
             $updateUnit->execute([
-                ':brand' => $payload['brand'], ':model' => $payload['model'], ':plate_number' => $payload['plate_number'], ':vin' => $payload['vin'],
-                ':diagnostic_card_number' => $payload['diagnostic_card_number'], ':diagnostic_card_date' => $payload['diagnostic_card_date'] ?: null,
-                ':capacity_tons' => !empty($roleRule['show_capacity']) ? (float) $payload['capacity_tons'] : null,
-                ':volume_m3' => !empty($roleRule['show_volume']) ? (float) $payload['volume_m3'] : null,
-                ':status' => $status, ':uid' => $userId, ':role' => $roleCode, ':id' => $unitId,
+                ':brand' => $payload['brand'],
+                ':model' => $payload['model'],
+                ':plate_number' => $payload['plate_number'],
+                ':vin' => $payload['vin'],
+                ':diagnostic_card_number' => $payload['diagnostic_card_number'] !== '' ? $payload['diagnostic_card_number'] : null,
+                ':diagnostic_card_date' => $payload['diagnostic_card_date'] !== '' ? $payload['diagnostic_card_date'] : null,
+                ':capacity_tons' => !empty($roleRule['show_capacity']) && $payload['capacity_tons'] !== '' ? (float) $payload['capacity_tons'] : null,
+                ':volume_m3' => !empty($roleRule['show_volume']) && $payload['volume_m3'] !== '' ? (float) $payload['volume_m3'] : null,
+                ':status' => $status,
+                ':uid' => $userId,
+                ':role' => $roleCode,
+                ':id' => $unitId,
             ]);
         }
         $localPdo->commit();
@@ -201,14 +218,14 @@ try {
     $unitsByRole = ['primary' => [], 'secondary' => []];
     $docsByRole = ['primary' => [], 'secondary' => []];
     foreach ($service->getUnitsByIds($localPdo, $unitIds) as $unit) {
-        $uid=(int)($unit['id']??0);
-        if ($uid===(int)($vs['primary_vehicle_unit_id']??0)) $unitsByRole['primary']=$unit;
-        elseif ($uid===(int)($vs['secondary_vehicle_unit_id']??0)) $unitsByRole['secondary']=$unit;
+        $uid = (int)($unit['id'] ?? 0);
+        if ($uid === (int)($vs['primary_vehicle_unit_id'] ?? 0)) $unitsByRole['primary'] = $unit;
+        elseif ($uid === (int)($vs['secondary_vehicle_unit_id'] ?? 0)) $unitsByRole['secondary'] = $unit;
     }
     foreach ($service->getDocsForUnits($localPdo, $unitIds) as $doc) {
-        $eid=(int)($doc['entity_id']??0);
-        if ($eid===(int)($vs['primary_vehicle_unit_id']??0)) $docsByRole['primary'][]=$doc;
-        elseif ($eid===(int)($vs['secondary_vehicle_unit_id']??0)) $docsByRole['secondary'][]=$doc;
+        $eid = (int)($doc['entity_id'] ?? 0);
+        if ($eid === (int)($vs['primary_vehicle_unit_id'] ?? 0)) $docsByRole['primary'][] = $doc;
+        elseif ($eid === (int)($vs['secondary_vehicle_unit_id'] ?? 0)) $docsByRole['secondary'][] = $doc;
     }
 
     if ($docErrors !== []) {
@@ -220,7 +237,10 @@ try {
         exit;
     }
 
-    $unitTitles = ['primary'=>$rule['units']['primary']['label']??'Основная единица','secondary'=>$rule['units']['secondary']['label']??'Доп. единица'];
+    $unitTitles = [
+        'primary' => $rule['units']['primary']['label'] ?? 'Основная единица',
+        'secondary' => $rule['units']['secondary']['label'] ?? 'Доп. единица',
+    ];
     $vehicleSet = $vs;
     $canDelete = $canEdit;
     header('Content-Type: text/html; charset=utf-8');
