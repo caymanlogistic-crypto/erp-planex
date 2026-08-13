@@ -69,8 +69,8 @@ $paymentDueLabel = static function (array $payment): string {
     return $label;
 };
 ?>
-<div data-trip-view-title="Просмотр данных рейса #<?= $routeId ?>" hidden></div>
 <div class="modal-body driver-modal-body">
+  <div data-trip-view-title="Просмотр данных рейса #<?= $routeId ?>" hidden></div>
   <style>
   /* ModalShell preserves .modal-body but discards top-level style/link nodes from AJAX partials. */
   #linear-trip-view-modal .driver-modal-docs .driver-doc-view-item{
