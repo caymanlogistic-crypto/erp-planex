@@ -61,7 +61,7 @@ try {
         $unitPayload[$role] = $payload;
     }
 
-    if ($errors) {
+    $loadEditContext = static function () use ($service, $localPdo, $vs): array {
         $unitIds = array_values(array_filter([(int)($vs['primary_vehicle_unit_id'] ?? 0), (int)($vs['secondary_vehicle_unit_id'] ?? 0)]));
         $unitsByRole = ['primary' => [], 'secondary' => []];
         $docsByRole = ['primary' => [], 'secondary' => []];
@@ -77,6 +77,11 @@ try {
                 elseif ($eid === (int) ($vs['secondary_vehicle_unit_id'] ?? 0)) $docsByRole['secondary'][] = $doc;
             }
         }
+        return [$unitIds, $unitsByRole, $docsByRole];
+    };
+
+    if ($errors) {
+        [, $unitsByRole, $docsByRole] = $loadEditContext();
         $old = ['set_type' => $setType, 'status' => $vs['status'] ?? 'active', 'comments' => $_POST['comments'] ?? '', 'units' => $postedUnits];
         $formError = null;
         $vehicleSet = $vs;
@@ -112,6 +117,85 @@ try {
         throw $e;
     }
 
+    require_once base_path('app/Support/legal_entity_document_upload.php');
+    $docErrors = [];
+    $unitIdsByRole = [
+        'primary' => (int) ($vs['primary_vehicle_unit_id'] ?? 0),
+        'secondary' => (int) ($vs['secondary_vehicle_unit_id'] ?? 0),
+    ];
+
+    $sizeError = function_exists('validateTotalUploadSize') ? validateTotalUploadSize() : '';
+    if ($sizeError !== '') $docErrors[] = $sizeError;
+
+    if ($docErrors === []) {
+        foreach (($_POST['delete_existing_doc'] ?? []) as $docId => $flag) {
+            if ($flag !== '1') continue;
+            foreach ($unitIdsByRole as $unitId) {
+                if ($unitId <= 0) continue;
+                $check = $localPdo->prepare("SELECT id FROM documents WHERE id=? AND entity_type='vehicle_unit' AND entity_id=? AND deleted_at IS NULL LIMIT 1");
+                $check->execute([(int)$docId, $unitId]);
+                if ($check->fetchColumn()) {
+                    softDeleteEntityDocument($localPdo, (int)$docId, 'vehicle_unit', $unitId, $userId, 'Archived via vehicle modal edit');
+                    break;
+                }
+            }
+        }
+
+        $existingFiles = $_FILES['existing_doc_file'] ?? [];
+        if (!empty($existingFiles['name']) && is_array($existingFiles['name'])) {
+            foreach ($existingFiles['name'] as $docId => $origName) {
+                if (($existingFiles['error'][$docId] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || trim((string)$origName) === '') continue;
+                foreach ($unitIdsByRole as $unitId) {
+                    if ($unitId <= 0) continue;
+                    $check = $localPdo->prepare("SELECT id FROM documents WHERE id=? AND entity_type='vehicle_unit' AND entity_id=? AND deleted_at IS NULL LIMIT 1");
+                    $check->execute([(int)$docId, $unitId]);
+                    if (!$check->fetchColumn()) continue;
+                    try {
+                        replaceEntityDocument($localPdo, (int)$docId, $unitId, 'vehicle_unit', $companyId, [
+                            'name' => (string)$origName,
+                            'tmp_name' => (string)($existingFiles['tmp_name'][$docId] ?? ''),
+                            'type' => (string)($existingFiles['type'][$docId] ?? ''),
+                            'size' => (int)($existingFiles['size'][$docId] ?? 0),
+                        ], $userId, $roleCode);
+                    } catch (Throwable $e) {
+                        $docErrors[] = 'Не удалось заменить документ транспорта: ' . $e->getMessage();
+                    }
+                    break;
+                }
+            }
+        }
+
+        foreach ($unitIdsByRole as $unitRole => $unitId) {
+            if ($unitId <= 0) continue;
+            $customFiles = function_exists('vehicleSetNormalizeRoleFiles') ? vehicleSetNormalizeRoleFiles($_FILES['custom_doc_file'] ?? [], $unitRole) : [];
+            $customTitles = $_POST['custom_doc_type'][$unitRole] ?? [];
+            if (!is_array($customTitles)) $customTitles = [];
+            foreach ($customFiles as $idx => $fileInfo) {
+                if (($fileInfo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || trim((string)($fileInfo['name'] ?? '')) === '') continue;
+                $title = trim((string)($customTitles[$idx] ?? ''));
+                if ($title === '') {
+                    $docErrors[] = 'Введите название произвольного документа транспорта';
+                    continue;
+                }
+                $extension = strtolower(pathinfo((string)$fileInfo['name'], PATHINFO_EXTENSION));
+                if (!in_array($extension, legalEntityDocumentAllowedExtensions(), true)) {
+                    $docErrors[] = 'Произвольный документ «' . $title . '»: недопустимый формат';
+                    continue;
+                }
+                if ((int)($fileInfo['size'] ?? 0) > legalEntityDocumentMaxFileSize()) {
+                    $docErrors[] = 'Произвольный документ «' . $title . '»: размер > 20 МБ';
+                    continue;
+                }
+                try {
+                    $typeId = createLegalEntityCustomDocumentType($localPdo, 'vehicle_unit', $title, $userId, $roleCode);
+                    storeLegalEntityDocumentRecord($localPdo, $companyId, 'vehicle_unit', $unitId, $title, $typeId, $fileInfo, $userId, $roleCode);
+                } catch (Throwable $e) {
+                    $docErrors[] = 'Не удалось добавить документ «' . $title . '»: ' . $e->getMessage();
+                }
+            }
+        }
+    }
+
     $vs = $service->getVehicleSetById($localPdo, (int) $id);
     $unitIds = array_values(array_filter([(int)($vs['primary_vehicle_unit_id'] ?? 0), (int)($vs['secondary_vehicle_unit_id'] ?? 0)]));
     $unitsByRole = ['primary' => [], 'secondary' => []];
@@ -126,6 +210,16 @@ try {
         if ($eid===(int)($vs['primary_vehicle_unit_id']??0)) $docsByRole['primary'][]=$doc;
         elseif ($eid===(int)($vs['secondary_vehicle_unit_id']??0)) $docsByRole['secondary'][]=$doc;
     }
+
+    if ($docErrors !== []) {
+        $old = ['set_type' => $setType, 'status' => $vs['status'] ?? 'active', 'comments' => $_POST['comments'] ?? '', 'units' => $postedUnits];
+        $formError = 'Ошибка при обработке документов: ' . implode('; ', $docErrors);
+        $vehicleSet = $vs;
+        header('Content-Type: text/html; charset=utf-8');
+        require base_path('app/View/partials/company_vehicle_set_modal_edit.php');
+        exit;
+    }
+
     $unitTitles = ['primary'=>$rule['units']['primary']['label']??'Основная единица','secondary'=>$rule['units']['secondary']['label']??'Доп. единица'];
     $vehicleSet = $vs;
     $canDelete = $canEdit;
