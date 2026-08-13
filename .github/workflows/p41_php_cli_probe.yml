@@ -1,0 +1,25 @@
+name: P41 PHP CLI Probe
+on:
+  push:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Probe PHP CLI over SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p41_probe"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p41_probe" "$HOME/.ssh/known_hosts"
+          ssh -p "$PORT" -i "$HOME/.ssh/p41_probe" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'set -eu; echo DEFAULT; command -v php || true; php -v || true; echo CANDIDATES; for p in /usr/bin/php* /usr/local/bin/php* /opt/php*/bin/php /opt/*/bin/php; do [ -x "$p" ] || continue; echo "--- $p"; "$p" -v 2>/dev/null | head -n 1 || true; done'
