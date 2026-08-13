@@ -1,0 +1,199 @@
+name: Final verify trip lifecycle current
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/final_verify_trip_lifecycle_current.yml'
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: https://plan-ex.ru/erpv2/
+  EXPECTED_DEPLOY_HEAD: 0ec115bec457c1489265981586d1392ba71a9c8a
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact production marker
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/final_marker"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/final_marker" "$HOME/.ssh/known_hosts"
+          deployed="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/final_marker" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$deployed" = "$EXPECTED_DEPLOY_HEAD"
+          echo "DEPLOY_MARKER_OK=$deployed"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve owner credentials
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/final_creds"
+            chmod 600 "$HOME/.ssh/final_creds"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/final_creds" --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+      - name: Verify registry create view edit in production Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p final_trip_verify
+          node <<'NODE'
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+          const BASE = process.env.BASE_URL;
+          const creds = JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64,'base64').toString('utf8'));
+          const owner = creds.find(x => String(x.role || '').toUpperCase() === 'OWNER');
+          const has = (a,b) => String(a || '').toLocaleLowerCase('ru-RU').includes(String(b).toLocaleLowerCase('ru-RU'));
+          if (!owner) throw new Error('OWNER credentials missing');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport:{width:1920,height:1080}, deviceScaleFactor:1, locale:'ru-RU', timezoneId:'Europe/Moscow', ignoreHTTPSErrors:true });
+            const page = await context.newPage();
+            const browserErrors = [];
+            page.on('pageerror', e => browserErrors.push('pageerror: ' + e.message));
+            page.on('console', m => { if (m.type() === 'error') browserErrors.push('console: ' + m.text()); });
+
+            await page.goto(new URL('login', BASE).href, { waitUntil:'domcontentloaded', timeout:45000 });
+            await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').first().fill(owner.password);
+            await page.locator('button[type="submit"],input[type="submit"]').first().click({ timeout:5000 });
+            await page.waitForTimeout(1000);
+            if (/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('authentication failed');
+
+            await page.goto(new URL('company/trips/linear', BASE).href, { waitUntil:'domcontentloaded', timeout:45000 });
+            await page.waitForTimeout(800);
+            let row = page.locator('tr[data-linear-route-id="9"]').first();
+            if (!(await row.count())) row = page.locator('tr[data-linear-route-id]').first();
+            if (!(await row.count())) throw new Error('no linear route rows');
+            const routeId = await row.getAttribute('data-linear-route-id');
+            const normalColor = await row.locator('td').nth(3).evaluate(el => getComputedStyle(el).color);
+            const registryDates = await row.locator('td.registry-date').evaluateAll(cells => cells.map(cell => ({
+              text: cell.innerText.trim(),
+              planned: cell.classList.contains('registry-date-planned'),
+              color: getComputedStyle(cell.querySelector('.registry-date-value') || cell).color
+            })));
+            if (registryDates.length !== 2) throw new Error('registry must have 2 lifecycle date cells');
+            for (const d of registryDates) {
+              if (d.planned && !has(d.text, '(плановая)')) throw new Error('planned registry date missing note: ' + JSON.stringify(d));
+              if (d.planned && d.color === normalColor) throw new Error('planned registry date is not visually gray: ' + JSON.stringify(d));
+            }
+            await page.screenshot({ path:'final_trip_verify/registry.png' });
+
+            await page.getByRole('link', { name:'Создать рейс' }).click();
+            const createModal = page.locator('#linear-trip-create-modal.is-open');
+            await createModal.waitFor({ state:'visible', timeout:7000 });
+            const createForm = createModal.locator('form[data-linear-trip-form]');
+            await createForm.locator('[data-trip-date-control="start"]').waitFor({ state:'visible', timeout:7000 });
+            await page.waitForTimeout(350);
+            const create = await createForm.evaluate(form => {
+              const dateRow=form.querySelector('.linear-trip-date-row'), participantRow=form.querySelector('.linear-trip-participant-row'), cargoRow=form.querySelector('.linear-trip-cargo-row');
+              const start=form.querySelector('[data-trip-date-control="start"]'), end=form.querySelector('[data-trip-date-control="end"]'), cargo=form.querySelector('[name="cargo_type_name"]');
+              const active = root => [...root.querySelectorAll('[data-trip-date-kind].is-active')].map(b => b.dataset.tripDateKind);
+              const dr=dateRow.getBoundingClientRect(), pr=participantRow.getBoundingClientRect(), cr=cargoRow.getBoundingClientRect();
+              return {
+                ys:[dr.y,pr.y,cr.y], widths:[dr.width,pr.width,cr.width],
+                startLabel:start.querySelector('.field-label').textContent.trim(), endLabel:end.querySelector('.field-label').textContent.trim(),
+                startActive:active(start), endActive:active(end),
+                cargoLabel:cargo.closest('.field').querySelector('.field-label').textContent.trim(), cargoVisible:!!cargo.offsetParent, cargoValue:cargo.value,
+                clientInParticipant:!!form.querySelector('.linear-trip-participant-row [name="client_id"]'), executorInParticipant:!!form.querySelector('.linear-trip-participant-row [name="route_executor_id"]'),
+                fourBackings:['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'].every(n => !!form.querySelector('[name="'+n+'"]'))
+              };
+            });
+            if (!has(create.startLabel,'Начало рейса') || !has(create.endLabel,'Окончание рейса')) throw new Error('create labels wrong: ' + JSON.stringify(create));
+            if (JSON.stringify(create.startActive) !== '["plan"]' || create.endActive.length !== 0) throw new Error('create defaults wrong: ' + JSON.stringify(create));
+            if (!(create.ys[0] < create.ys[1] && create.ys[1] < create.ys[2])) throw new Error('create row order wrong: ' + JSON.stringify(create));
+            if (!create.clientInParticipant || !create.executorInParticipant || !create.cargoVisible || !create.fourBackings || !has(create.cargoLabel,'Перевозимый груз')) throw new Error('create structure wrong: ' + JSON.stringify(create));
+            if (create.widths[2] < create.widths[1] * 0.9 || create.cargoValue === 'Не указан') throw new Error('create cargo row wrong: ' + JSON.stringify(create));
+            await page.screenshot({ path:'final_trip_verify/create.png' });
+            await createModal.locator('.modal-close').click();
+            await createModal.waitFor({ state:'hidden', timeout:5000 });
+
+            await row.dblclick({ timeout:5000 });
+            const viewModal = page.locator('#linear-trip-view-modal.is-open');
+            await viewModal.waitFor({ state:'visible', timeout:7000 });
+            await viewModal.locator('.trip-view-table').waitFor({ state:'visible', timeout:7000 });
+            const viewText = await viewModal.innerText();
+            if (!has(viewText,'Начало рейса') || !has(viewText,'Окончание рейса') || !has(viewText,'Перевозимый груз')) throw new Error('view lifecycle fields missing');
+            if (registryDates.some(d=>d.planned) && !(await viewModal.locator('.trip-view-date-note').allTextContents()).some(t=>has(t,'плановая'))) throw new Error('view planned note missing');
+            await page.screenshot({ path:'final_trip_verify/view.png' });
+
+            const editButton = viewModal.locator('[data-linear-trip-edit-btn]');
+            if (!(await editButton.count())) throw new Error('edit button missing');
+            await editButton.click({ timeout:5000 });
+            const editForm = page.locator('#linear-trip-view-modal #linear-trip-edit-form');
+            await editForm.waitFor({ state:'visible', timeout:12000 });
+            await editForm.locator('[data-trip-date-control="start"]').waitFor({ state:'visible', timeout:7000 });
+            await page.waitForTimeout(300);
+            const edit = await editForm.evaluate(form => {
+              const dateRow=form.querySelector('.linear-trip-date-row'), participantRow=form.querySelector('.linear-trip-participant-row'), cargoRow=form.querySelector('.linear-trip-cargo-row');
+              const start=form.querySelector('[data-trip-date-control="start"]'), end=form.querySelector('[data-trip-date-control="end"]'), cargo=form.querySelector('[name="cargo_type_name"]');
+              const names=['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'];
+              const active = root => [...root.querySelectorAll('[data-trip-date-kind].is-active')].map(b => b.dataset.tripDateKind);
+              const backings = Object.fromEntries(names.map(n => [n, (form.querySelector('[name="'+n+'"]') || {}).value || '']));
+              const dr=dateRow.getBoundingClientRect(), pr=participantRow.getBoundingClientRect(), cr=cargoRow.getBoundingClientRect();
+              return {
+                ys:[dr.y,pr.y,cr.y], widths:[dr.width,pr.width,cr.width], startActive:active(start), endActive:active(end),
+                startValue:start.querySelector('[data-trip-date-visible]').value, endValue:end.querySelector('[data-trip-date-visible]').value,
+                backings, fourBackings:names.every(n => !!form.querySelector('[name="'+n+'"]')),
+                cargoVisible:!!cargo.offsetParent, cargoLabel:cargo.closest('.field').querySelector('.field-label').textContent.trim(),
+                clientInParticipant:!!form.querySelector('.linear-trip-participant-row [name="client_id"]'), executorInParticipant:!!form.querySelector('.linear-trip-participant-row [name="route_executor_id"]')
+              };
+            });
+            if (edit.startActive.length !== 1 || !edit.startValue) throw new Error('edit start state invalid: ' + JSON.stringify(edit));
+            if (!(edit.ys[0] < edit.ys[1] && edit.ys[1] < edit.ys[2])) throw new Error('edit row order wrong: ' + JSON.stringify(edit));
+            if (!edit.fourBackings || !edit.clientInParticipant || !edit.executorInParticipant || !edit.cargoVisible || !has(edit.cargoLabel,'Перевозимый груз')) throw new Error('edit structure invalid: ' + JSON.stringify(edit));
+            if (edit.widths[2] < edit.widths[1] * 0.9) throw new Error('edit cargo row not full width: ' + JSON.stringify(edit));
+            const activeStart = edit.startActive[0] === 'fact' ? edit.backings.actual_loading_date : edit.backings.planned_loading_date;
+            if (!activeStart) throw new Error('edit active start backing lost: ' + JSON.stringify(edit));
+            if (edit.endActive.length === 1) {
+              const activeEnd = edit.endActive[0] === 'fact' ? edit.backings.actual_unloading_date : edit.backings.planned_unloading_date;
+              if (!activeEnd) throw new Error('edit active end backing lost: ' + JSON.stringify(edit));
+            }
+            await page.screenshot({ path:'final_trip_verify/edit.png' });
+
+            const result = { routeId, normalColor, registryDates, create, edit, browserErrors };
+            fs.writeFileSync('final_trip_verify/result.json', JSON.stringify(result,null,2));
+            console.log('FINAL_TRIP_VERIFY=' + JSON.stringify(result));
+            if (browserErrors.length) throw new Error('browser errors: ' + browserErrors.join(' | '));
+            await browser.close();
+          })().catch(e => { console.error(e.stack || String(e)); process.exit(1); });
+          NODE
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-trip-lifecycle-current
+          path: final_trip_verify/
+          if-no-files-found: warn
+          retention-days: 14
