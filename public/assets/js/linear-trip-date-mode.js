@@ -226,3 +226,12 @@
     observer.observe(document.body, {childList: true, subtree: true});
   }
 })();
+
+(function () {
+  var source = document.currentScript && document.currentScript.src ? document.currentScript.src : '';
+  if (!source) return;
+  var script = document.createElement('script');
+  script.src = source.replace('linear-trip-date-mode.js', 'linear-trip-document-delete.js');
+  script.defer = true;
+  document.head.appendChild(script);
+}());
