@@ -1,0 +1,63 @@
+name: Final check linear trip tenant DB
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/final_check_linear_trip_tenant_db.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: 46ef86e15919db2c1c063cc763059094c75bbd04
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Verify tenant DB schemas through each company connection
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/db_final"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/db_final" "$HOME/.ssh/known_hosts"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/db_final" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "EXPECTED_DEPLOY_HEAD='$EXPECTED_DEPLOY_HEAD' php -d display_errors=1" <<'PHP'
+          <?php
+          $root='/home/s/spugovxsim/planexp';
+          $marker=trim((string)file_get_contents($root.'/deploy/P07_erpv2_deployed_commit.txt'));
+          if($marker!==getenv('EXPECTED_DEPLOY_HEAD')){fwrite(STDERR,"DEPLOY_MARKER_MISMATCH\n");exit(2);}
+          function envRead($path){$out=array();$lines=@file($path,FILE_IGNORE_NEW_LINES);if($lines===false)return $out;foreach($lines as $line){$line=trim($line);if($line===''||substr($line,0,1)==='#'||strpos($line,'=')===false)continue;$parts=explode('=',$line,2);$out[trim($parts[0])]=trim($parts[1]," \t\n\r\0\x0B\"'");}return $out;}
+          function resolveCompanyPassword($stored,$appKey){
+              if($stored==='')return '';
+              if(substr($stored,0,3)!=='v2:')return $stored;
+              if($appKey==='')throw new Exception('APP_ENCRYPTION_KEY missing');
+              $data=base64_decode(substr($stored,3),true);if($data===false||strlen($data)<29)throw new Exception('encrypted company password invalid');
+              $key=hash('sha256',$appKey,true);$iv=substr($data,0,12);$tag=substr($data,12,16);$cipher=substr($data,28);
+              $plain=openssl_decrypt($cipher,'aes-256-gcm',$key,OPENSSL_RAW_DATA,$iv,$tag);if($plain===false)throw new Exception('company password decrypt failed');return $plain;
+          }
+          $e=envRead($root.'/public_html/erpv2/.env');
+          $host=isset($e['DB_HOST'])?$e['DB_HOST']:'127.0.0.1';$port=isset($e['DB_PORT'])?$e['DB_PORT']:'3306';$central=isset($e['DB_DATABASE'])?$e['DB_DATABASE']:'erp_planex';$user=isset($e['DB_USERNAME'])?$e['DB_USERNAME']:'root';$pass=isset($e['DB_PASSWORD'])?$e['DB_PASSWORD']:'';$appKey=isset($e['APP_ENCRYPTION_KEY'])?$e['APP_ENCRYPTION_KEY']:'';
+          $centralPdo=new PDO('mysql:host='.$host.';port='.$port.';dbname='.$central.';charset=utf8mb4',$user,$pass,array(PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION));
+          $companies=$centralPdo->query("SELECT id,db_identifier,db_host,db_port,db_username,db_password FROM companies WHERE db_identifier IS NOT NULL AND db_identifier<>'' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+          if(!$companies){fwrite(STDERR,"NO_COMPANY_DATABASES\n");exit(3);} $checked=0;
+          foreach($companies as $company){
+              $dbHost=!empty($company['db_host'])?$company['db_host']:$host;$dbPort=!empty($company['db_port'])?$company['db_port']:$port;$dbUser=!empty($company['db_username'])?$company['db_username']:$user;$dbPass=!empty($company['db_password'])?resolveCompanyPassword($company['db_password'],$appKey):$pass;$dbName=$company['db_identifier'];
+              try{$tenant=new PDO('mysql:host='.$dbHost.';port='.$dbPort.';dbname='.$dbName.';charset=utf8mb4',$dbUser,$dbPass,array(PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION));}catch(Exception $ex){fwrite(STDERR,'TENANT_CONNECT_FAILED company_id='.$company['id']."\n");exit(4);}
+              $rows=$tenant->query("SHOW COLUMNS FROM linear_routes")->fetchAll(PDO::FETCH_ASSOC);$map=array();foreach($rows as $r){$map[$r['Field']]=$r['Null'];}
+              foreach(array('planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date') as $name){if(!isset($map[$name])){fwrite(STDERR,'MISSING_COLUMN company_id='.$company['id'].' column='.$name."\n");exit(5);}if($map[$name]!=='YES'){fwrite(STDERR,'COLUMN_NOT_NULLABLE company_id='.$company['id'].' column='.$name."\n");exit(6);}}
+              $checked++;echo 'TENANT_DATE_SCHEMA_OK company_id='.$company['id'].' four_columns=YES nullable=YES'."\n";
+          }
+          if($checked<1){fwrite(STDERR,"NO_TENANT_CHECKED\n");exit(7);} echo 'DEPLOY_MARKER_OK '.$marker."\n";
+          PHP
+          rm -f "$HOME/.ssh/db_final"
