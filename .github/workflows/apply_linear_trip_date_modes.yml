@@ -85,6 +85,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git add -N \
+            database/migrations-local/062_allow_optional_linear_route_plan_dates.sql \
+            public/assets/css/linear-trip-date-mode.css \
+            public/assets/js/linear-trip-date-mode.js
           git diff --name-only | sort > /tmp/changed.txt
           cat > /tmp/expected.txt <<'EOF'
           app/Http/Controllers/Company/LinearTripActions/create_submit.php
