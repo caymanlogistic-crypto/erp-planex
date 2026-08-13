@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  EXPECTED_DEPLOY_HEAD: a51390ab0f9f6eda06252ee49c60a07e0ae9db78
+  EXPECTED_DEPLOY_HEAD: e18363fba8d1de592b133d9e691626bf62705c36
   BASE_URL: https://plan-ex.ru/erpv2/
 
 jobs:
@@ -133,7 +133,6 @@ jobs:
             if (registryDates[0].planned && !registryDates[0].text.includes('(плановая)')) throw new Error('Planned registry start lacks planned note');
             if (registryDates[1] && registryDates[1].planned && !registryDates[1].text.includes('(плановая)')) throw new Error('Planned registry end lacks planned note');
 
-            // Create modal: first row dates, second participants, third cargo.
             await page.getByRole('link', { name: 'Создать рейс' }).click();
             const createModal = page.locator('#linear-trip-create-modal.is-open');
             await createModal.waitFor({ state: 'visible', timeout: 5000 });
@@ -146,6 +145,7 @@ jobs:
               const start = form.querySelector('[data-trip-date-control="start"]');
               const end = form.querySelector('[data-trip-date-control="end"]');
               const cargo = form.querySelector('input[name="cargo_type_name"]');
+              const cargoField = cargo ? cargo.closest('.field') : null;
               const client = form.querySelector('[name="client_id"]');
               const executor = form.querySelector('[name="route_executor_id"]');
               const active = (root) => [...root.querySelectorAll('[data-trip-date-kind].is-active')].map((b) => b.getAttribute('data-trip-date-kind'));
@@ -160,6 +160,7 @@ jobs:
                 startActive: active(start), endActive: active(end),
                 cargoVisible: !!(cargo && cargo.offsetParent !== null),
                 cargoValue: cargo ? cargo.value : null,
+                cargoLabel: cargoField && cargoField.querySelector('.field-label') ? cargoField.querySelector('.field-label').textContent.trim() : '',
                 clientParent: client && client.closest('.linear-trip-participant-row') ? 'participant' : 'other',
                 executorParent: executor && executor.closest('.linear-trip-participant-row') ? 'participant' : 'other',
               };
@@ -171,12 +172,12 @@ jobs:
             if (!(createMetrics.dateY < createMetrics.participantY && createMetrics.participantY < createMetrics.cargoY)) throw new Error(`Create row order is wrong: ${JSON.stringify(createMetrics)}`);
             if (createMetrics.clientParent !== 'participant' || createMetrics.executorParent !== 'participant') throw new Error('Client/executor are not on participant row');
             if (!createMetrics.cargoVisible) throw new Error('Cargo field is not visible in create');
+            if (!createMetrics.cargoLabel.includes('Перевозимый груз')) throw new Error(`Cargo label is wrong: ${createMetrics.cargoLabel}`);
             if (createMetrics.cargoWidth < createMetrics.participantWidth * 0.9) throw new Error('Cargo row is not full width');
             if (createMetrics.cargoValue === 'Не указан') throw new Error('Create cargo still defaults to hidden legacy value');
             await page.screenshot({ path: 'verify_output/create-modal.png', fullPage: false });
             await createModal.locator('.modal-close').click();
 
-            // View modal: effective start/end and cargo.
             await row.dblclick();
             const viewModal = page.locator('#linear-trip-view-modal.is-open');
             await viewModal.waitFor({ state: 'visible', timeout: 7000 });
@@ -188,7 +189,6 @@ jobs:
             if (registryDates.some((d) => d.planned) && !plannedViewNotes.some((t) => t.includes('плановая'))) throw new Error('View lacks planned date note');
             await page.screenshot({ path: 'verify_output/view-modal.png', fullPage: false });
 
-            // Edit modal: same date controls and cargo, existing plan/fact state selected from DB.
             const editButton = viewModal.locator('[data-linear-trip-edit-btn]');
             if (await editButton.count()) {
               await editButton.click();
@@ -199,6 +199,7 @@ jobs:
                 const start = form.querySelector('[data-trip-date-control="start"]');
                 const end = form.querySelector('[data-trip-date-control="end"]');
                 const cargo = form.querySelector('input[name="cargo_type_name"]');
+                const cargoField = cargo ? cargo.closest('.field') : null;
                 const active = (root) => [...root.querySelectorAll('[data-trip-date-kind].is-active')].map((b) => b.getAttribute('data-trip-date-kind'));
                 return {
                   startActive: active(start),
@@ -207,6 +208,7 @@ jobs:
                   endValue: end.querySelector('[data-trip-date-visible]').value,
                   cargoVisible: !!(cargo && cargo.offsetParent !== null),
                   cargoValue: cargo ? cargo.value : null,
+                  cargoLabel: cargoField && cargoField.querySelector('.field-label') ? cargoField.querySelector('.field-label').textContent.trim() : '',
                   hasPlannedStart: !!form.querySelector('[name="planned_loading_date"]'),
                   hasActualStart: !!form.querySelector('[name="actual_loading_date"]'),
                   hasPlannedEnd: !!form.querySelector('[name="planned_unloading_date"]'),
@@ -215,6 +217,7 @@ jobs:
               });
               if (editMetrics.startActive.length !== 1 || !editMetrics.startValue) throw new Error(`Edit start state invalid: ${JSON.stringify(editMetrics)}`);
               if (!editMetrics.cargoVisible) throw new Error('Cargo field is not visible in edit');
+              if (!editMetrics.cargoLabel.includes('Перевозимый груз')) throw new Error(`Edit cargo label is wrong: ${editMetrics.cargoLabel}`);
               if (!editMetrics.hasPlannedStart || !editMetrics.hasActualStart || !editMetrics.hasPlannedEnd || !editMetrics.hasActualEnd) throw new Error('Edit form lost one of four DB-backed dates');
               await page.screenshot({ path: 'verify_output/edit-modal.png', fullPage: false });
             }
