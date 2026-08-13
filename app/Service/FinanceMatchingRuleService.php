@@ -7,10 +7,9 @@ require_once __DIR__.'/FinanceMatchingRuleCfuTrait.php';
 require_once __DIR__.'/FinanceMatchingRuleEngineTrait.php';
 require_once __DIR__.'/FinanceMatchingRuleClassificationTrait.php';
 require_once __DIR__.'/FinanceMatchingRuleManualTrait.php';
-require_once __DIR__.'/FinanceMatchingRuleTransferTrait.php';
 require_once __DIR__.'/FinanceMatchingRuleTransferExecutionTrait.php';
 final class FinanceMatchingRuleService{
  private const ALLOWED_DIRECTIONS=['INCOME','EXPENSE'];
  private const ALLOWED_ACTION_TYPES=['categorize','match_invoice','match_counterparty','transfer_to_cash'];
- use FinanceMatchingRuleUtilityTrait,FinanceMatchingRuleValidationTrait,FinanceMatchingRuleCrudTrait,FinanceMatchingRuleCfuTrait,FinanceMatchingRuleEngineTrait,FinanceMatchingRuleClassificationTrait,FinanceMatchingRuleManualTrait,FinanceMatchingRuleTransferTrait,FinanceMatchingRuleTransferExecutionTrait;
+ use FinanceMatchingRuleUtilityTrait,FinanceMatchingRuleValidationTrait,FinanceMatchingRuleCrudTrait,FinanceMatchingRuleCfuTrait,FinanceMatchingRuleEngineTrait,FinanceMatchingRuleClassificationTrait,FinanceMatchingRuleManualTrait,FinanceMatchingRuleTransferExecutionTrait;
 }
