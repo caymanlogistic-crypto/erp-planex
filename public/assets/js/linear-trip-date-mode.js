@@ -125,7 +125,10 @@
       field.classList.remove('is-hidden');
       field.style.removeProperty('display');
       var label = field.querySelector('.field-label');
-      if (label) label.innerHTML = 'Перевозимый груз <span class="req">*</span>';
+      if (label && label.dataset.tripCargoLabelReady !== '1') {
+        label.innerHTML = 'Перевозимый груз <span class="req">*</span>';
+        label.dataset.tripCargoLabelReady = '1';
+      }
     }
     if (!isEditForm(form) && form.dataset.tripCargoNormalized !== '1' && value(cargo) === 'Не указан') {
       cargo.value = '';
@@ -145,10 +148,7 @@
     var primaryRow = planStart ? (planStart.closest('.linear-trip-primary-row') || form.querySelector('.linear-trip-primary-row')) : null;
     if (!planStart || !planEnd || !factStart || !factEnd || !client || !executor || !primaryRow) return;
 
-    if (form.dataset.tripDateModeReady === '1') {
-      unhideCargo(form);
-      return;
-    }
+    if (form.dataset.tripDateModeReady === '1') return;
     form.dataset.tripDateModeReady = '1';
 
     [planStart, planEnd, factStart, factEnd].forEach(function (input) {
