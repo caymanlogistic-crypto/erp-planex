@@ -1,0 +1,194 @@
+name: Runtime entity verification
+
+on:
+  push:
+    branches:
+      - chatgpt/runtime-verification-20260813
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout verification branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load proven browser audit sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+          mkdir -p .github/p11 .github/p12 runtime_verification_output
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+          git show origin/p11-audit-v2:.github/p12/P12_fast_audit.js > .github/p12/P12_fast_audit.js
+          git show origin/p11-audit-v2:.github/p12/P12_route_targets.json > .github/p12/P12_route_targets.json
+          sed -i 's/2b61d9dcd32efe3a861341da7939b26a7cd02499/6a35828324d609a7423211f9d46f446505702aaa/g' .github/p12/P12_fast_audit.js
+          node --check .github/p12/P12_fast_audit.js
+          python -m json.tool .github/p12/P12_route_targets.json >/dev/null
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve runtime credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/runtime_credentials"
+            chmod 600 "${HOME}/.ssh/runtime_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/runtime_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/runtime_credentials"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P12_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Execute proven 65-route Full HD audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p12/P12_fast_audit.js | tee runtime_verification_output/P12_runtime_summary.json
+
+      - name: Verify driver contractor vehicle modal URLs in ERPv2
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > runtime_entity_urls.js <<'NODE'
+          'use strict';
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+          const BASE = 'https://plan-ex.ru/erpv2';
+          const creds = JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+          const owner = creds.find(c => String(c.role).toUpperCase() === 'OWNER');
+          if (!owner) throw new Error('OWNER credentials missing');
+          const results = [];
+          const assert = (ok, label, detail='') => {
+            results.push({label, pass: !!ok, detail});
+            if (!ok) throw new Error(label + (detail ? ': ' + detail : ''));
+          };
+          async function login(page) {
+            await page.goto(BASE + '/login', {waitUntil:'domcontentloaded', timeout:30000});
+            await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').first().fill(owner.password);
+            await Promise.all([
+              page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{}),
+              page.locator('button[type="submit"],input[type="submit"]').first().click()
+            ]);
+            await page.waitForTimeout(700);
+            assert(!/\/login(?:[/?#]|$)/i.test(page.url()), 'owner_login', page.url());
+          }
+          async function insertFragment(page, url, label) {
+            const raw = await page.evaluate(async (u) => {
+              const r = await fetch(u, {credentials:'same-origin'});
+              return {status:r.status, text:await r.text()};
+            }, url);
+            assert(raw.status === 200, label + '_http_200', String(raw.status));
+            const nodeId = 'runtime-fragment-' + Math.random().toString(36).slice(2);
+            await page.evaluate(({id, html}) => {
+              const host = document.createElement('div');
+              host.id = id;
+              host.innerHTML = html;
+              document.body.appendChild(host);
+            }, {id: nodeId, html: raw.text});
+            await page.waitForTimeout(120);
+            return {nodeId, raw:raw.text};
+          }
+          async function checkEntity(page, cfg) {
+            await page.goto(BASE + cfg.page, {waitUntil:'domcontentloaded', timeout:30000});
+            await page.waitForTimeout(350);
+            const create = await page.locator(cfg.createForm).first().getAttribute('action').catch(()=>null);
+            assert(create && create.startsWith('/erpv2/company/'), cfg.name + '_create_action', String(create));
+            const id = await page.locator(cfg.row).first().getAttribute(cfg.idAttr).catch(()=>null);
+            assert(id && /^\d+$/.test(id), cfg.name + '_existing_id', String(id));
+
+            const edit = await insertFragment(page, BASE + cfg.editPath(id), cfg.name + '_edit');
+            const editAction = await page.locator('#' + edit.nodeId + ' ' + cfg.editForm).first().getAttribute('action').catch(()=>null);
+            assert(editAction && editAction.startsWith('/erpv2/company/'), cfg.name + '_edit_action', String(editAction));
+            await page.locator('#' + edit.nodeId).remove();
+
+            const view = await insertFragment(page, BASE + cfg.viewPath(id), cfg.name + '_view');
+            const rootLinks = await page.locator('#' + view.nodeId + ' a[href^="/company/documents"]').count();
+            assert(rootLinks === 0, cfg.name + '_no_root_document_links', String(rootLinks));
+            const docLinks = await page.locator('#' + view.nodeId + ' a[href*="/company/documents"]').evaluateAll(els => els.map(e => e.getAttribute('href')));
+            assert(docLinks.every(h => !h || h.startsWith('/erpv2/company/documents')), cfg.name + '_document_links_scoped', JSON.stringify(docLinks));
+            await page.locator('#' + view.nodeId).remove();
+          }
+          (async()=>{
+            const browser = await chromium.launch({headless:true});
+            try {
+              const context = await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+              const page = await context.newPage();
+              await login(page);
+
+              await checkEntity(page, {
+                name:'driver', page:'/company/drivers', createForm:'#driver-create-form', row:'tr[data-driver-id]', idAttr:'data-driver-id',
+                editPath:id=>`/company/drivers/${id}/modal-edit`, viewPath:id=>`/company/drivers/${id}/modal-view`, editForm:'#driver-edit-form'
+              });
+              await checkEntity(page, {
+                name:'vehicle', page:'/company/vehicle-sets', createForm:'#vehicle-set-create-form', row:'tr[data-vehicle-set-id]', idAttr:'data-vehicle-set-id',
+                editPath:id=>`/company/vehicle-sets/${id}/modal-edit`, viewPath:id=>`/company/vehicle-sets/${id}/modal-view`, editForm:'#vehicle-set-edit-form'
+              });
+
+              await page.goto(BASE + '/company/contractors', {waitUntil:'domcontentloaded', timeout:30000});
+              const contractorId = await page.locator('tr[data-contractor-id]').first().getAttribute('data-contractor-id').catch(()=>null);
+              assert(contractorId && /^\d+$/.test(contractorId), 'contractor_existing_id', String(contractorId));
+              const contractorEdit = await insertFragment(page, `${BASE}/company/contractors/${contractorId}/modal-edit`, 'contractor_edit');
+              const contractorAction = await page.locator('#' + contractorEdit.nodeId + ' form').first().getAttribute('action').catch(()=>null);
+              assert(contractorAction && contractorAction.startsWith('/erpv2/company/'), 'contractor_edit_action', String(contractorAction));
+              await page.locator('#' + contractorEdit.nodeId).remove();
+              const contractorView = await insertFragment(page, `${BASE}/company/contractors/${contractorId}/modal-view`, 'contractor_view');
+              const contractorRootLinks = await page.locator('#' + contractorView.nodeId + ' a[href^="/company/documents"]').count();
+              assert(contractorRootLinks === 0, 'contractor_no_root_document_links', String(contractorRootLinks));
+              await page.locator('#' + contractorView.nodeId).remove();
+
+              await page.getByRole('button', {name:/создать перевозчика/i}).first().click();
+              await page.waitForSelector('#le-create-form', {timeout:10000});
+              const contractorCreateAction = await page.locator('#le-create-form').getAttribute('action');
+              assert(contractorCreateAction && contractorCreateAction.startsWith('/erpv2/company/'), 'contractor_create_action', String(contractorCreateAction));
+
+              fs.writeFileSync('runtime_verification_output/entity_url_results.json', JSON.stringify({status:'PASS', results}, null, 2));
+              console.log(JSON.stringify({status:'PASS', checks:results.length}));
+              await context.close();
+            } finally {
+              await browser.close();
+            }
+          })().catch(err => {
+            fs.writeFileSync('runtime_verification_output/entity_url_results.json', JSON.stringify({status:'FAIL', error:String(err.stack||err), results}, null, 2));
+            console.error(err);
+            process.exit(1);
+          });
+          NODE
+          node runtime_entity_urls.js | tee runtime_verification_output/entity_url_console.json
+
+      - name: Upload runtime verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-entity-verification
+          path: |
+            runtime_verification_output/
+            P12_fast_output/
+          if-no-files-found: warn
+          retention-days: 14
