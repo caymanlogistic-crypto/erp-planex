@@ -1,122 +1,23 @@
 <?php
-
-$rule = $rule ?? null;
-$bankAccounts = $bankAccounts ?? [];
-$ddsCategories = $ddsCategories ?? [];
-$contractors = $contractors ?? [];
-$formError = $formError ?? null;
-$isEdit = $rule !== null;
-$action = $isEdit ? app_url('/company/finance/settings/matching-rules/edit') : app_url('/company/finance/settings/matching-rules/create');
+$rule=$rule??null;$isEdit=$rule!==null;$bankAccounts=$bankAccounts??[];$ddsCategories=$ddsCategories??[];$contractors=$contractors??[];$cashFlowCenters=$cashFlowCenters??[];$cashAccounts=$cashAccounts??[];$action=$isEdit?app_url('/company/finance/settings/matching-rules/edit'):app_url('/company/finance/settings/matching-rules/create');$v=static fn($k,$d='')=>$isEdit?($rule[$k]??$d):$d;
 ?>
-<?php if ($formError): ?>
-<div class="form-alert alert-error"><?= e($formError) ?></div>
-<?php endif; ?>
-<form action="<?= $action ?>" method="post" class="matching-rule-form">
-    <?= csrfField() ?>
-    <?php if ($isEdit): ?>
-    <input type="hidden" name="id" value="<?= (int)$rule['id'] ?>">
-    <?php endif; ?>
-    <div class="modal-body">
-        <div class="section-title"><?= $isEdit ? 'Редактирование правила разнесения' : 'Новое правило разнесения' ?></div>
-        <div class="form-grid-3">
-            <div class="field">
-                <label class="field-label">Название <span class="field-required">*</span></label>
-                <input type="text" name="name" class="field-input" placeholder="Например: Комиссия банка" required
-                    value="<?= e($isEdit ? $rule['name'] : '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Приоритет</label>
-                <input type="number" name="priority" class="field-input" value="<?= (int)($isEdit ? $rule['priority'] : 100) ?>" min="1">
-            </div>
-            <div class="field">
-                <label class="field-label">Направление</label>
-                <select name="direction" class="field-select">
-                    <option value="">— Оба направления —</option>
-                    <option value="INCOME" <?= $isEdit && $rule['direction'] === 'INCOME' ? 'selected' : '' ?>>Поступление</option>
-                    <option value="EXPENSE" <?= $isEdit && $rule['direction'] === 'EXPENSE' ? 'selected' : '' ?>>Расход</option>
-                </select>
-            </div>
-            <div class="field">
-                <label class="field-label">Банковский счёт</label>
-                <select name="bank_account_id" class="field-select">
-                    <option value="">— Любой —</option>
-                    <?php foreach ($bankAccounts as $ba): ?>
-                    <option value="<?= (int)$ba['id'] ?>" <?= $isEdit && (int)($rule['bank_account_id'] ?? 0) === (int)$ba['id'] ? 'selected' : '' ?>>
-                        <?= e($ba['bank_name'] ?? '') ?> — <?= e($ba['account_number'] ?? '') ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="field">
-                <label class="field-label">ИНН контрагента</label>
-                <input type="text" name="counterparty_inn" class="field-input" placeholder="Точный ИНН"
-                    value="<?= e($isEdit ? $rule['counterparty_inn'] ?? '' : '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Тип действия <span class="field-required">*</span></label>
-                <select name="action_type" class="field-select" required>
-                    <option value="categorize" <?= $isEdit && $rule['action_type'] === 'categorize' ? 'selected' : '' ?>>Назначить категорию ДДС</option>
-                    <option value="match_counterparty" <?= $isEdit && $rule['action_type'] === 'match_counterparty' ? 'selected' : '' ?>>Связать контрагента</option>
-                </select>
-            </div>
-            <div class="field">
-                <label class="field-label">Целевая статья ДДС</label>
-                <select name="target_dds_category_id" class="field-select">
-                    <option value="">— Не назначать —</option>
-                    <?php foreach ($ddsCategories as $dc): ?>
-                    <option value="<?= (int)$dc['id'] ?>" <?= $isEdit && (int)($rule['target_dds_category_id'] ?? 0) === (int)$dc['id'] ? 'selected' : '' ?>>
-                        <?= e($dc['code'] ?? '') ?> — <?= e($dc['name'] ?? '') ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="field">
-                <label class="field-label">Целевой контрагент</label>
-                <select name="target_counterparty_id" class="field-select">
-                    <option value="">— Не назначать —</option>
-                    <?php foreach ($contractors as $cp): ?>
-                    <option value="<?= (int)$cp['id'] ?>" <?= $isEdit && (int)($rule['target_counterparty_id'] ?? 0) === (int)$cp['id'] ? 'selected' : '' ?>>
-                        <?= e($cp['name'] ?? '') ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="field">
-                <label class="field-label">Содержит в назначении</label>
-                <input type="text" name="purpose_contains" class="field-input" placeholder="Часть текста назначения"
-                    value="<?= e($isEdit ? $rule['purpose_contains'] ?? '' : '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Регулярное выражение</label>
-                <input type="text" name="purpose_regex" class="field-input" placeholder="PCRE regex"
-                    value="<?= e($isEdit ? $rule['purpose_regex'] ?? '' : '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Сумма от</label>
-                <input type="number" name="amount_from" class="field-input" step="0.01" min="0"
-                    value="<?= e($isEdit && $rule['amount_from'] !== null ? $rule['amount_from'] : '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">Сумма до</label>
-                <input type="number" name="amount_to" class="field-input" step="0.01" min="0"
-                    value="<?= e($isEdit && $rule['amount_to'] !== null ? $rule['amount_to'] : '') ?>">
-            </div>
-            <div class="field">
-                <label class="field-label">
-                    <input type="checkbox" name="auto_apply" value="1"
-                        <?= $isEdit && ($rule['auto_apply'] ?? 0) ? 'checked' : '' ?>>
-                    Автоматически применять
-                </label>
-                <p class="field-note">Внимание: авто-применение только для безопасных однозначных совпадений.</p>
-            </div>
-        </div>
-    </div>
-    <div class="modal-foot is-spaced">
-        <div class="modal-foot-actions">
-            <button type="button" class="btn btn-ghost" data-close-modal="<?= $isEdit ? 'matching-rule-edit-modal' : 'matching-rule-create-modal' ?>">Отмена</button>
-        </div>
-        <div class="modal-foot-actions">
-            <button type="submit" class="btn btn-primary"><?= $isEdit ? 'Сохранить' : 'Создать' ?></button>
-        </div>
-    </div>
-</form>
+<form action="<?= e($action) ?>" method="post" class="matching-rule-form"><?= csrfField() ?><?php if($isEdit): ?><input type="hidden" name="id" value="<?= (int)$rule['id'] ?>"><?php endif; ?>
+<div class="modal-body"><div class="section-title"><?= $isEdit?'Редактирование правила':'Новое правило' ?></div>
+<div class="form-grid-3">
+ <div class="field"><label class="field-label">Название *</label><input class="field-input" name="name" required value="<?= e($v('name')) ?>"></div>
+ <div class="field"><label class="field-label">Приоритет</label><input class="field-input" type="number" name="priority" min="1" max="100000" value="<?= (int)$v('priority',100) ?>"><div class="field-note">Чем больше число, тем выше приоритет.</div></div>
+ <div class="field"><label class="field-label">Направление</label><select class="field-select" name="direction"><option value="">Оба</option><option value="INCOME" <?= $v('direction')==='INCOME'?'selected':'' ?>>Поступление</option><option value="EXPENSE" <?= $v('direction')==='EXPENSE'?'selected':'' ?>>Расход</option></select></div>
+ <div class="field"><label class="field-label">Банковский счёт</label><select class="field-select" name="bank_account_id"><option value="">Любой</option><?php foreach($bankAccounts as $x): ?><option value="<?= (int)$x['id'] ?>" <?= (int)$v('bank_account_id')===(int)$x['id']?'selected':'' ?>><?= e(($x['bank_name']??'').' — '.($x['account_number']??'')) ?></option><?php endforeach; ?></select></div>
+ <div class="field"><label class="field-label">ИНН контрагента</label><input class="field-input" name="counterparty_inn" value="<?= e($v('counterparty_inn')) ?>" placeholder="10 или 12 цифр"></div>
+ <div class="field"><label class="field-label">Назначение содержит</label><input class="field-input" name="purpose_contains" value="<?= e($v('purpose_contains')) ?>"></div>
+ <div class="field"><label class="field-label">Regex назначения</label><input class="field-input" name="purpose_regex" value="<?= e($v('purpose_regex')) ?>" placeholder="/комиссия/iu"></div>
+ <div class="field"><label class="field-label">Сумма от</label><input class="field-input" type="number" step="0.01" min="0" name="amount_from" value="<?= e($v('amount_from')) ?>"></div>
+ <div class="field"><label class="field-label">Сумма до</label><input class="field-input" type="number" step="0.01" min="0" name="amount_to" value="<?= e($v('amount_to')) ?>"></div>
+ <div class="field"><label class="field-label">Действие *</label><select class="field-select" name="action_type" required><option value="categorize" <?= $v('action_type','categorize')==='categorize'?'selected':'' ?>>Назначить ЦФУ + ДДС</option><option value="transfer_to_cash" <?= $v('action_type')==='transfer_to_cash'?'selected':'' ?>>Внутренний перевод Банк → Касса</option><option value="match_counterparty" <?= $v('action_type')==='match_counterparty'?'selected':'' ?>>Связать контрагента</option><option value="match_invoice" <?= $v('action_type')==='match_invoice'?'selected':'' ?>>Связать со счётом</option></select></div>
+ <div class="field"><label class="field-label">ЦФУ</label><select class="field-select" name="target_cash_flow_center_id"><option value="">Не назначать</option><?php foreach($cashFlowCenters as $x): ?><option value="<?= (int)$x['id'] ?>" <?= (int)$v('target_cash_flow_center_id')===(int)$x['id']?'selected':'' ?>><?= e($x['name']) ?></option><?php endforeach; ?></select></div>
+ <div class="field"><label class="field-label">Статья ДДС</label><select class="field-select" name="target_dds_category_id"><option value="">Не назначать</option><?php foreach($ddsCategories as $x): ?><option value="<?= (int)$x['id'] ?>" <?= (int)$v('target_dds_category_id')===(int)$x['id']?'selected':'' ?>><?= e(($x['code']??'').' — '.$x['name']) ?></option><?php endforeach; ?></select></div>
+ <div class="field"><label class="field-label">Целевая касса</label><select class="field-select" name="target_cash_account_id"><option value="">Не переводить</option><?php foreach($cashAccounts as $x): ?><option value="<?= (int)$x['id'] ?>" <?= (int)$v('target_cash_account_id')===(int)$x['id']?'selected':'' ?>><?= e($x['name']) ?></option><?php endforeach; ?></select><div class="field-note">Используется только для действия Банк → Касса.</div></div>
+ <div class="field"><label class="field-label">Целевой контрагент</label><select class="field-select" name="target_counterparty_id"><option value="">Не назначать</option><?php foreach($contractors as $x): ?><option value="<?= (int)$x['id'] ?>" <?= (int)$v('target_counterparty_id')===(int)$x['id']?'selected':'' ?>><?= e($x['name']) ?></option><?php endforeach; ?></select><input type="hidden" name="target_counterparty_type" value="contractor"></div>
+ <div class="field"><input type="hidden" name="auto_apply" value="0"><label class="field-label"><input type="checkbox" name="auto_apply" value="1" <?= $isEdit?(!empty($rule['auto_apply'])?'checked':''):'checked' ?>> Применять автоматически</label><div class="field-note">При конфликте одинакового максимального приоритета авто-применение блокируется.</div></div>
+</div></div>
+<div class="modal-foot is-spaced"><button type="button" class="btn btn-ghost" data-close-modal="<?= $isEdit?'matching-rule-edit-modal':'matching-rule-create-modal' ?>">Отмена</button><button type="submit" class="btn btn-primary"><?= $isEdit?'Сохранить':'Создать правило' ?></button></div></form>
