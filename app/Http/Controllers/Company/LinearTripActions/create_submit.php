@@ -27,8 +27,16 @@ $clientId = (int) ($_POST['client_id'] ?? 0);
 $carrierId = (int) ($_POST['carrier_contractor_id'] ?? 0);
 $routeExecutorId = (int) ($_POST['route_executor_id'] ?? 0);
 $cargoTypeName = LinearRouteService::normalizeCargoTypeName((string) ($_POST['cargo_type_name'] ?? ''));
+$startDateKind = trim((string) ($_POST['start_date_kind'] ?? 'plan'));
+$endDateKind = trim((string) ($_POST['end_date_kind'] ?? ''));
 $plannedLoadingDate = LinearRouteService::normalizeDate($_POST['planned_loading_date'] ?? '');
-$plannedUnloadingDate = $plannedLoadingDate;
+$plannedUnloadingDate = LinearRouteService::normalizeDate($_POST['planned_unloading_date'] ?? '');
+$actualLoadingDate = LinearRouteService::normalizeDate($_POST['actual_loading_date'] ?? '');
+$actualUnloadingDate = LinearRouteService::normalizeDate($_POST['actual_unloading_date'] ?? '');
+if ($endDateKind === '') {
+    $plannedUnloadingDate = null;
+    $actualUnloadingDate = null;
+}
 $comments = trim((string) ($_POST['comments'] ?? ''));
 $routePoints = \App\Service\LinearRoutePointService::normalizeSubmitted($_POST);
 \App\Service\LinearRoutePointService::validate($routePoints, $errors);
@@ -202,10 +210,27 @@ if ($routeExecutorId <= 0) {
     $errors['route_executor_id'] = 'Выберите исполнителя рейса.';
 }
 if ($cargoTypeName === '') {
-    $errors['cargo_type_name'] = 'Укажите тип груза.';
+    $errors['cargo_type_name'] = 'Укажите перевозимый груз.';
 }
-if ($plannedLoadingDate === null) {
-    $errors['planned_loading_date'] = 'Укажите плановую дату загрузки.';
+if (!in_array($startDateKind, ['plan', 'fact'], true)) {
+    $errors['start_date_kind'] = 'Выберите плановую или фактическую дату начала рейса.';
+} elseif ($startDateKind === 'plan' && $plannedLoadingDate === null) {
+    $errors['planned_loading_date'] = 'Укажите плановую дату начала рейса.';
+} elseif ($startDateKind === 'fact' && $actualLoadingDate === null) {
+    $errors['actual_loading_date'] = 'Укажите фактическую дату начала рейса.';
+}
+if (!in_array($endDateKind, ['', 'plan', 'fact'], true)) {
+    $errors['end_date_kind'] = 'Выберите плановую или фактическую дату окончания рейса.';
+} elseif ($endDateKind === 'plan' && $plannedUnloadingDate === null) {
+    $errors['planned_unloading_date'] = 'Укажите плановую дату окончания рейса.';
+} elseif ($endDateKind === 'fact' && $actualUnloadingDate === null) {
+    $errors['actual_unloading_date'] = 'Укажите фактическую дату окончания рейса.';
+}
+if ($plannedLoadingDate !== null && $plannedUnloadingDate !== null && $plannedUnloadingDate < $plannedLoadingDate) {
+    $errors['planned_unloading_date'] = 'Плановое окончание рейса не может быть раньше планового начала.';
+}
+if ($actualLoadingDate !== null && $actualUnloadingDate !== null && $actualUnloadingDate < $actualLoadingDate) {
+    $errors['actual_unloading_date'] = 'Фактическое окончание рейса не может быть раньше фактического начала.';
 }
 
 try {
@@ -433,6 +458,8 @@ try {
             cargo_type_id,
             planned_loading_date,
             planned_unloading_date,
+            actual_loading_date,
+            actual_unloading_date,
             status,
             comments,
             created_by_user_id,
@@ -450,6 +477,8 @@ try {
             :cargo_type_id,
             :planned_loading_date,
             :planned_unloading_date,
+            :actual_loading_date,
+            :actual_unloading_date,
             'active',
             :comments,
             :created_by_user_id,
@@ -466,6 +495,8 @@ try {
         ':cargo_type_id' => $cargoTypeId,
         ':planned_loading_date' => $plannedLoadingDate,
         ':planned_unloading_date' => $plannedUnloadingDate,
+        ':actual_loading_date' => $actualLoadingDate,
+        ':actual_unloading_date' => $actualUnloadingDate,
         ':comments' => $comments !== '' ? $comments : null,
         ':created_by_user_id' => $userId,
         ':created_by_role' => $roleCode,
@@ -510,6 +541,8 @@ try {
             [
                 'planned_loading_date' => $plannedLoadingDate,
                 'planned_unloading_date' => $plannedUnloadingDate,
+                'actual_loading_date' => $actualLoadingDate,
+                'actual_unloading_date' => $actualUnloadingDate,
             ]
         );
         $syncLegacyTerms($localPdo, $linearRouteId, $customerPayments, $carrierPayments, $principalPaymentMap, $userId, $roleCode);

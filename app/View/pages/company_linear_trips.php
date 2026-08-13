@@ -131,9 +131,14 @@ $paymentDetail = static function (array $payment) use ($paymentAmountCents, $for
                 <tbody>
                     <?php foreach ($routes as $route): ?>
                         <?php
+                        $plannedLoading = trim((string) ($route['planned_loading_date'] ?? ''));
                         $actualLoading = trim((string) ($route['actual_loading_date'] ?? ''));
-                        $loadingDate = $actualLoading !== '' ? $actualLoading : trim((string) ($route['planned_loading_date'] ?? ''));
+                        $loadingDate = $actualLoading !== '' ? $actualLoading : $plannedLoading;
+                        $loadingIsPlanned = $actualLoading === '' && $plannedLoading !== '';
+                        $plannedUnloading = trim((string) ($route['planned_unloading_date'] ?? ''));
                         $actualUnloading = trim((string) ($route['actual_unloading_date'] ?? ''));
+                        $unloadingDate = $actualUnloading !== '' ? $actualUnloading : $plannedUnloading;
+                        $unloadingIsPlanned = $actualUnloading === '' && $plannedUnloading !== '';
 
                         $executorCarrier = trim((string) ($route['executor_contractor_name'] ?? ''));
                         if ($executorCarrier === '') {
@@ -162,10 +167,14 @@ $paymentDetail = static function (array $payment) use ($paymentAmountCents, $for
                         ?>
                         <tr data-erp-sort-date="<?= (int) $route['id'] ?>" data-linear-route-id="<?= (int) $route['id'] ?>">
                             <td class="col-mono registry-id">#<?= (int) $route['id'] ?></td>
-                            <td class="registry-date<?= $actualLoading === '' ? ' registry-date-planned' : '' ?>">
-                                <?= e($loadingDate !== '' ? ui_date($loadingDate) : '—') ?>
+                            <td class="registry-date<?= $loadingIsPlanned ? ' registry-date-planned' : '' ?>">
+                                <span class="registry-date-value"><?= e($loadingDate !== '' ? ui_date($loadingDate) : '—') ?></span>
+                                <?php if ($loadingIsPlanned): ?><span class="registry-date-note">(плановая)</span><?php endif; ?>
                             </td>
-                            <td class="registry-date"><?= e($actualUnloading !== '' ? ui_date($actualUnloading) : '—') ?></td>
+                            <td class="registry-date<?= $unloadingIsPlanned ? ' registry-date-planned' : '' ?>">
+                                <span class="registry-date-value"><?= e($unloadingDate !== '' ? ui_date($unloadingDate) : '—') ?></span>
+                                <?php if ($unloadingIsPlanned): ?><span class="registry-date-note">(плановая)</span><?php endif; ?>
+                            </td>
                             <td class="registry-client"><?= e($route['client_name'] ?? '—') ?></td>
                             <td class="registry-executor">
                                 <span class="registry-executor-line"><?= e($executorCarrier !== '' ? $executorCarrier : '—') ?></span>
@@ -246,3 +255,5 @@ $paymentDetail = static function (array $payment) use ($paymentAmountCents, $for
 <script src="<?= app_url('/assets/js/linear-trip-executor-carrier.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-executor-carrier.js')) ?>"></script>
 <link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-route-points.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-route-points.css')) ?>">
 <script src="<?= app_url('/assets/js/linear-trip-route-points.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-route-points.js')) ?>"></script>
+<link rel="stylesheet" href="<?= app_url('/assets/css/linear-trip-date-mode.css') ?>?v=<?= filemtime(base_path('public/assets/css/linear-trip-date-mode.css')) ?>">
+<script src="<?= app_url('/assets/js/linear-trip-date-mode.js') ?>?v=<?= filemtime(base_path('public/assets/js/linear-trip-date-mode.js')) ?>"></script>

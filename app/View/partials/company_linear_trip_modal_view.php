@@ -33,6 +33,14 @@ $sumPayments = static function (array $payments): float {
 $customerTotal = $sumPayments($customerPayments);
 $carrierTotal = $sumPayments($carrierPayments);
 $margin = $customerTotal - $carrierTotal;
+$plannedLoading = trim((string) ($route['planned_loading_date'] ?? ''));
+$actualLoading = trim((string) ($route['actual_loading_date'] ?? ''));
+$displayLoading = $actualLoading !== '' ? $actualLoading : $plannedLoading;
+$loadingIsPlanned = $actualLoading === '' && $plannedLoading !== '';
+$plannedUnloading = trim((string) ($route['planned_unloading_date'] ?? ''));
+$actualUnloading = trim((string) ($route['actual_unloading_date'] ?? ''));
+$displayUnloading = $actualUnloading !== '' ? $actualUnloading : $plannedUnloading;
+$unloadingIsPlanned = $actualUnloading === '' && $plannedUnloading !== '';
 
 $renderPoints = static function (array $items) use ($na): void {
     if ($items === []) {
@@ -104,8 +112,16 @@ $paymentDueLabel = static function (array $payment): string {
             <td><?= e($executorDisplay) ?></td>
           </tr>
           <tr>
-            <td>Плановая дата загрузки</td>
-            <td><?= e(ui_date($route['planned_loading_date'] ?? null)) ?></td>
+            <td>Начало рейса</td>
+            <td><span class="trip-view-date<?= $loadingIsPlanned ? ' is-planned' : '' ?>"><span class="trip-view-date-value"><?= e($displayLoading !== '' ? ui_date($displayLoading) : '—') ?></span><?php if ($loadingIsPlanned): ?><span class="trip-view-date-note">(плановая)</span><?php endif; ?></span></td>
+          </tr>
+          <tr>
+            <td>Окончание рейса</td>
+            <td><span class="trip-view-date<?= $unloadingIsPlanned ? ' is-planned' : '' ?>"><span class="trip-view-date-value"><?= e($displayUnloading !== '' ? ui_date($displayUnloading) : '—') ?></span><?php if ($unloadingIsPlanned): ?><span class="trip-view-date-note">(плановая)</span><?php endif; ?></span></td>
+          </tr>
+          <tr>
+            <td>Перевозимый груз</td>
+            <td><?= e(trim((string) ($route['cargo_type_name'] ?? '')) !== '' ? (string) $route['cargo_type_name'] : '—') ?></td>
           </tr>
           <tr>
             <td>Загрузка</td>

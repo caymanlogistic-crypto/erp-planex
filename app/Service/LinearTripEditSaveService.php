@@ -29,10 +29,16 @@ final class LinearTripEditSaveService
         $carrierId = (int) ($post['carrier_contractor_id'] ?? 0);
         $routeExecutorId = (int) ($post['route_executor_id'] ?? 0);
         $cargoTypeName = LinearRouteService::normalizeCargoTypeName((string) ($post['cargo_type_name'] ?? ''));
+        $startDateKind = trim((string) ($post['start_date_kind'] ?? 'plan'));
+        $endDateKind = trim((string) ($post['end_date_kind'] ?? ''));
         $plannedLoadingDate = LinearRouteService::normalizeDate($post['planned_loading_date'] ?? '');
         $plannedUnloadingDate = LinearRouteService::normalizeDate($post['planned_unloading_date'] ?? '');
         $actualLoadingDate = LinearRouteService::normalizeDate($post['actual_loading_date'] ?? '');
         $actualUnloadingDate = LinearRouteService::normalizeDate($post['actual_unloading_date'] ?? '');
+        if ($endDateKind === '') {
+            $plannedUnloadingDate = null;
+            $actualUnloadingDate = null;
+        }
         $comments = trim((string) ($post['comments'] ?? ''));
         $routePoints = LinearRoutePointService::normalizeSubmitted($post);
         LinearRoutePointService::validate($routePoints, $errors);
@@ -43,13 +49,26 @@ final class LinearTripEditSaveService
         if ($clientId <= 0) $errors['client_id'] = 'Выберите заказчика.';
         if ($carrierId <= 0) $errors['carrier_contractor_id'] = 'Выберите перевозчика.';
         if ($routeExecutorId <= 0) $errors['route_executor_id'] = 'Выберите исполнителя рейса.';
-        if ($cargoTypeName === '') $errors['cargo_type_name'] = 'Укажите тип груза.';
-        if ($plannedLoadingDate === null) $errors['planned_loading_date'] = 'Укажите плановую дату загрузки.';
+        if ($cargoTypeName === '') $errors['cargo_type_name'] = 'Укажите перевозимый груз.';
+        if (!in_array($startDateKind, ['plan', 'fact'], true)) {
+            $errors['start_date_kind'] = 'Выберите плановую или фактическую дату начала рейса.';
+        } elseif ($startDateKind === 'plan' && $plannedLoadingDate === null) {
+            $errors['planned_loading_date'] = 'Укажите плановую дату начала рейса.';
+        } elseif ($startDateKind === 'fact' && $actualLoadingDate === null) {
+            $errors['actual_loading_date'] = 'Укажите фактическую дату начала рейса.';
+        }
+        if (!in_array($endDateKind, ['', 'plan', 'fact'], true)) {
+            $errors['end_date_kind'] = 'Выберите плановую или фактическую дату окончания рейса.';
+        } elseif ($endDateKind === 'plan' && $plannedUnloadingDate === null) {
+            $errors['planned_unloading_date'] = 'Укажите плановую дату окончания рейса.';
+        } elseif ($endDateKind === 'fact' && $actualUnloadingDate === null) {
+            $errors['actual_unloading_date'] = 'Укажите фактическую дату окончания рейса.';
+        }
         if ($plannedLoadingDate !== null && $plannedUnloadingDate !== null && $plannedUnloadingDate < $plannedLoadingDate) {
-            $errors['planned_unloading_date'] = 'Дата выгрузки не может быть раньше даты загрузки.';
+            $errors['planned_unloading_date'] = 'Плановое окончание рейса не может быть раньше планового начала.';
         }
         if ($actualLoadingDate !== null && $actualUnloadingDate !== null && $actualUnloadingDate < $actualLoadingDate) {
-            $errors['actual_unloading_date'] = 'Фактическая выгрузка не может быть раньше фактической загрузки.';
+            $errors['actual_unloading_date'] = 'Фактическое окончание рейса не может быть раньше фактического начала.';
         }
 
         $customerPayments = [];

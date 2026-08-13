@@ -1,0 +1,22 @@
+/* Linear trip lifecycle dates: one visible date per edge, backed by independent plan/fact DB fields. */
+[data-linear-trip-form] .linear-trip-date-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start;margin:0 0 6px}
+[data-linear-trip-form] .linear-trip-date-control{min-width:0;margin:0}
+[data-linear-trip-form] .linear-trip-date-shell{display:grid;grid-template-columns:minmax(0,1fr) auto;min-width:0}
+[data-linear-trip-form] .linear-trip-date-shell>.field-input{min-width:0;border-top-right-radius:0!important;border-bottom-right-radius:0!important}
+[data-linear-trip-form] .linear-trip-date-modes{display:flex;align-items:stretch}
+[data-linear-trip-form] .linear-trip-date-modes .linear-trip-route-point-toggle{min-width:48px;border-left:0}
+[data-linear-trip-form] .linear-trip-date-modes .linear-trip-route-point-toggle:last-child{border-radius:0 2px 2px 0}
+[data-linear-trip-form] .linear-trip-primary-row.linear-trip-participant-row{grid-template-columns:minmax(0,1fr) minmax(0,1.45fr);gap:8px;margin-bottom:6px}
+[data-linear-trip-form] .linear-trip-cargo-row{display:block;margin:0 0 5px}
+[data-linear-trip-form] .linear-trip-cargo-row>.field{display:block!important;width:100%!important;max-width:none!important;flex:none!important}
+[data-linear-trip-form] .linear-trip-cargo-row .field-input{width:100%}
+[data-linear-trip-form] .linear-trip-date-backing{display:none!important}
+[data-linear-trip-form] .field:has([name="cargo_type_name"]){display:block!important}
+#linear-trip-edit-form .field:has([name="cargo_type_name"]){display:block!important}
+.registry-date-value{display:block}
+.registry-date-note{display:block;margin-top:2px;font-size:9px;font-weight:500;line-height:1.1;color:var(--text-faint,#80776d)}
+.registry-date-planned .registry-date-value{color:var(--text-faint,#80776d);font-weight:500}
+.trip-view-date{display:inline-flex;flex-direction:column;align-items:flex-start}
+.trip-view-date.is-planned .trip-view-date-value{color:var(--text-faint,#80776d);font-weight:500}
+.trip-view-date-note{margin-top:1px;font-size:9px;font-weight:500;color:var(--text-faint,#80776d)}
+@media(max-width:680px){[data-linear-trip-form] .linear-trip-date-row,[data-linear-trip-form] .linear-trip-primary-row.linear-trip-participant-row{grid-template-columns:1fr}[data-linear-trip-form] .linear-trip-date-shell{grid-template-columns:minmax(0,1fr) auto}}
