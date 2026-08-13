@@ -1,0 +1,57 @@
+name: Check linear trip date DB identifiers
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/check_linear_trip_date_db_identifiers.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: e18363fba8d1de592b133d9e691626bf62705c36
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Query tenant schemas read-only
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/db_check"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/db_check" "$HOME/.ssh/known_hosts"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/db_check" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "EXPECTED_DEPLOY_HEAD='$EXPECTED_DEPLOY_HEAD' php -d display_errors=1" <<'PHP'
+          <?php
+          $root='/home/s/spugovxsim/planexp';
+          $marker=trim((string)file_get_contents($root.'/deploy/P07_erpv2_deployed_commit.txt'));
+          if($marker!==getenv('EXPECTED_DEPLOY_HEAD')){fwrite(STDERR,"marker mismatch\n");exit(2);}
+          function envf($p){$o=array();$ls=@file($p,FILE_IGNORE_NEW_LINES);if($ls===false)return $o;foreach($ls as $l){$l=trim($l);if($l===''||substr($l,0,1)==='#'||strpos($l,'=')===false)continue;$x=explode('=',$l,2);$o[trim($x[0])]=trim($x[1]," \t\n\r\0\x0B\"'");}return $o;}
+          $e=envf($root.'/public_html/erpv2/.env');
+          $pdo=new PDO('mysql:host='.(isset($e['DB_HOST'])?$e['DB_HOST']:'127.0.0.1').';port='.(isset($e['DB_PORT'])?$e['DB_PORT']:'3306').';dbname='.(isset($e['DB_DATABASE'])?$e['DB_DATABASE']:'erp_planex').';charset=utf8mb4',isset($e['DB_USERNAME'])?$e['DB_USERNAME']:'root',isset($e['DB_PASSWORD'])?$e['DB_PASSWORD']:'',array(PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION));
+          $companies=$pdo->query("SELECT id,db_identifier FROM companies WHERE db_identifier IS NOT NULL AND db_identifier<>'' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+          $checked=0;
+          foreach($companies as $company){
+            $schema=$company['db_identifier'];
+            $q=$pdo->prepare("SELECT COLUMN_NAME,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='linear_routes' AND COLUMN_NAME IN ('planned_loading_date','planned_unloading_date','actual_loading_date','actual_unloading_date') ORDER BY COLUMN_NAME");$q->execute(array($schema));$rows=$q->fetchAll(PDO::FETCH_KEY_PAIR);if(!$rows)continue;$checked++;
+            foreach(array('planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date') as $n){if(!isset($rows[$n])){fwrite(STDERR,'company '.$company['id'].' missing '.$n."\n");exit(3);}if($rows[$n]!=='YES'){fwrite(STDERR,'company '.$company['id'].' '.$n.' nullable='.$rows[$n]."\n");exit(4);}}
+            echo 'DB_DATE_COLUMNS_OK company_id='.$company['id'].' planned_start=YES actual_start=YES planned_end=YES actual_end=YES'."\n";
+          }
+          if($checked<1){
+            echo "CENTRAL_USER_CANNOT_SEE_TENANT_INFORMATION_SCHEMA\n";
+            foreach($companies as $company){echo 'COMPANY_DB_IDENTIFIER_PRESENT company_id='.$company['id']."\n";}
+            exit(10);
+          }
+          echo 'DEPLOY_MARKER_OK '.$marker."\n";
+          PHP
