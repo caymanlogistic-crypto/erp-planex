@@ -1,0 +1,101 @@
+name: Final browser verify linear trip date modes v2
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/final_browser_verify_linear_trip_date_modes_v2.yml'
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: https://plan-ex.ru/erpv2/
+  EXPECTED_DEPLOY_HEAD: 46ef86e15919db2c1c063cc763059094c75bbd04
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify production marker
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/verify_marker"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/verify_marker" "$HOME/.ssh/known_hosts"
+          deployed="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/verify_marker" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$deployed" = "$EXPECTED_DEPLOY_HEAD"
+          echo "DEPLOY_MARKER_OK=$deployed"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve owner credentials
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/final_credentials"
+            chmod 600 "$HOME/.ssh/final_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/final_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/final_credentials"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+      - name: Verify registry create view and edit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p browser_verify_output
+          node <<'NODE'
+          const fs=require('fs'); const {chromium}=require('playwright');
+          const BASE=process.env.BASE_URL; const creds=JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64,'base64').toString('utf8')); const owner=creds.find(x=>String(x.role||'').toUpperCase()==='OWNER');
+          const has=(a,b)=>String(a||'').toLocaleLowerCase('ru-RU').includes(String(b).toLocaleLowerCase('ru-RU'));
+          if(!owner)throw Error('OWNER missing');
+          (async()=>{
+            const browser=await chromium.launch({headless:true}); const ctx=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true}); const page=await ctx.newPage(); const errors=[];
+            page.on('pageerror',e=>errors.push('pageerror:'+e.message)); page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text());});
+            await page.goto(new URL('login',BASE).href,{waitUntil:'domcontentloaded',timeout:45000}); await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username); await page.locator('input[type="password"]').first().fill(owner.password); await Promise.all([page.waitForLoadState('domcontentloaded',{timeout:20000}).catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]); await page.waitForTimeout(900); if(/\/login(?:[/?#]|$)/i.test(page.url()))throw Error('auth failed');
+            await page.goto(new URL('company/trips/linear',BASE).href,{waitUntil:'domcontentloaded',timeout:45000}); await page.waitForTimeout(900);
+            let row=page.locator('tr[data-linear-route-id="9"]').first(); if(!(await row.count()))row=page.locator('tr[data-linear-route-id]').first(); if(!(await row.count()))throw Error('no routes'); const routeId=await row.getAttribute('data-linear-route-id');
+            const normalColor=await row.locator('td').nth(3).evaluate(el=>getComputedStyle(el).color); const dates=await row.locator('td.registry-date').evaluateAll(cs=>cs.map(c=>({text:c.innerText.trim(),planned:c.classList.contains('registry-date-planned'),color:getComputedStyle(c.querySelector('.registry-date-value')||c).color})));
+            if(dates.length!==2)throw Error('registry dates count '+dates.length); dates.forEach(d=>{if(d.planned&&!has(d.text,'(плановая)'))throw Error('planned note missing '+JSON.stringify(d));if(d.planned&&d.color===normalColor)throw Error('planned date not gray '+JSON.stringify(d));}); await page.screenshot({path:'browser_verify_output/registry.png'});
+            await page.getByRole('link',{name:'Создать рейс'}).click(); const create=page.locator('#linear-trip-create-modal.is-open'); await create.waitFor({state:'visible',timeout:5000}); const cf=create.locator('form[data-linear-trip-form]'); await cf.locator('[data-trip-date-control="start"]').waitFor({state:'visible',timeout:5000}); await page.waitForTimeout(400);
+            const cm=await cf.evaluate(f=>{const d=f.querySelector('.linear-trip-date-row'),p=f.querySelector('.linear-trip-participant-row'),c=f.querySelector('.linear-trip-cargo-row'),s=f.querySelector('[data-trip-date-control="start"]'),e=f.querySelector('[data-trip-date-control="end"]'),g=f.querySelector('[name="cargo_type_name"]'),active=x=>[...x.querySelectorAll('[data-trip-date-kind].is-active')].map(b=>b.dataset.tripDateKind),dr=d.getBoundingClientRect(),pr=p.getBoundingClientRect(),cr=c.getBoundingClientRect();return{ys:[dr.y,pr.y,cr.y],widths:[dr.width,pr.width,cr.width],startLabel:s.querySelector('.field-label').textContent.trim(),endLabel:e.querySelector('.field-label').textContent.trim(),startActive:active(s),endActive:active(e),cargoLabel:g.closest('.field').querySelector('.field-label').textContent.trim(),cargoVisible:!!g.offsetParent,cargoValue:g.value,four:['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'].every(n=>!!f.querySelector('[name="'+n+'"]')),client:!!f.querySelector('.linear-trip-participant-row [name="client_id"]'),executor:!!f.querySelector('.linear-trip-participant-row [name="route_executor_id"]')};});
+            if(!has(cm.startLabel,'Начало рейса')||!has(cm.endLabel,'Окончание рейса')||JSON.stringify(cm.startActive)!=='["plan"]'||cm.endActive.length!==0)throw Error('create date controls '+JSON.stringify(cm)); if(!(cm.ys[0]<cm.ys[1]&&cm.ys[1]<cm.ys[2])||!cm.client||!cm.executor||!cm.cargoVisible||!cm.four||!has(cm.cargoLabel,'Перевозимый груз')||cm.widths[2]<cm.widths[1]*.9||cm.cargoValue==='Не указан')throw Error('create layout '+JSON.stringify(cm)); await page.screenshot({path:'browser_verify_output/create.png'}); await create.locator('.modal-close').click(); await create.waitFor({state:'hidden',timeout:5000});
+            await row.dblclick(); const view=page.locator('#linear-trip-view-modal.is-open'); await view.waitFor({state:'visible',timeout:7000}); await view.locator('.trip-view-table').waitFor({state:'visible',timeout:7000}); await page.waitForTimeout(250); const vt=await view.innerText(); if(!has(vt,'Начало рейса')||!has(vt,'Окончание рейса')||!has(vt,'Перевозимый груз'))throw Error('view fields missing'); if(dates.some(d=>d.planned)&&!(await view.locator('.trip-view-date-note').allTextContents()).some(t=>has(t,'плановая')))throw Error('view planned note missing'); await page.screenshot({path:'browser_verify_output/view.png'});
+            const eb=view.locator('[data-linear-trip-edit-btn]'); if(!(await eb.count()))throw Error('edit button missing'); await eb.click(); const ef=view.locator('#linear-trip-edit-form'); await ef.waitFor({state:'visible',timeout:7000}); await ef.locator('[data-trip-date-control="start"]').waitFor({state:'visible',timeout:5000}); await page.waitForTimeout(350);
+            const em=await ef.evaluate(f=>{const d=f.querySelector('.linear-trip-date-row'),p=f.querySelector('.linear-trip-participant-row'),c=f.querySelector('.linear-trip-cargo-row'),s=f.querySelector('[data-trip-date-control="start"]'),e=f.querySelector('[data-trip-date-control="end"]'),g=f.querySelector('[name="cargo_type_name"]'),active=x=>[...x.querySelectorAll('[data-trip-date-kind].is-active')].map(b=>b.dataset.tripDateKind),dr=d.getBoundingClientRect(),pr=p.getBoundingClientRect(),cr=c.getBoundingClientRect();return{ys:[dr.y,pr.y,cr.y],widths:[dr.width,pr.width,cr.width],startActive:active(s),endActive:active(e),startValue:s.querySelector('[data-trip-date-visible]').value,endValue:e.querySelector('[data-trip-date-visible]').value,cargoVisible:!!g.offsetParent,cargoLabel:g.closest('.field').querySelector('.field-label').textContent.trim(),four:['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'].every(n=>!!f.querySelector('[name="'+n+'"]')),backings:Object.fromEntries(['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'].map(n=>[n,(f.querySelector('[name="'+n+'"]')||{}).value||''])),client:!!f.querySelector('.linear-trip-participant-row [name="client_id"]'),executor:!!f.querySelector('.linear-trip-participant-row [name="route_executor_id"]')};});
+            if(em.startActive.length!==1||!em.startValue||!(em.ys[0]<em.ys[1]&&em.ys[1]<em.ys[2])||!em.four||!em.client||!em.executor||!em.cargoVisible||!has(em.cargoLabel,'Перевозимый груз')||em.widths[2]<em.widths[1]*.9)throw Error('edit layout/state '+JSON.stringify(em)); const activeStart=em.startActive[0]==='fact'?em.backings.actual_loading_date:em.backings.planned_loading_date; if(!activeStart)throw Error('edit active start backing lost '+JSON.stringify(em)); if(em.endActive.length===1){const activeEnd=em.endActive[0]==='fact'?em.backings.actual_unloading_date:em.backings.planned_unloading_date;if(!activeEnd)throw Error('edit active end backing lost '+JSON.stringify(em));} await page.screenshot({path:'browser_verify_output/edit.png'});
+            const result={routeId,normalColor,dates,create:cm,edit:em,errors}; fs.writeFileSync('browser_verify_output/result.json',JSON.stringify(result,null,2)); console.log('BROWSER_FINAL='+JSON.stringify(result)); if(errors.length)throw Error(errors.join(' | ')); await browser.close();
+          })().catch(e=>{console.error(e.stack||String(e));process.exit(1);});
+          NODE
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-browser-linear-trip-date-mode-v2
+          path: browser_verify_output/
+          if-no-files-found: warn
+          retention-days: 14
