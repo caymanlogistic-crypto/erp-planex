@@ -1,0 +1,65 @@
+name: Apply linear trip date schema existing tenants
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/apply_linear_trip_date_schema_existing_tenants.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: 46ef86e15919db2c1c063cc763059094c75bbd04
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Apply migration 062 semantics to existing tenant schemas
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/apply_date_schema"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/apply_date_schema" "$HOME/.ssh/known_hosts"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/apply_date_schema" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "EXPECTED_DEPLOY_HEAD='$EXPECTED_DEPLOY_HEAD' /usr/bin/php8.5 -d display_errors=1" <<'PHP'
+          <?php
+          $root='/home/s/spugovxsim/planexp';
+          $marker=trim((string)file_get_contents($root.'/deploy/P07_erpv2_deployed_commit.txt'));
+          if($marker!==getenv('EXPECTED_DEPLOY_HEAD')){fwrite(STDERR,"DEPLOY_MARKER_MISMATCH {$marker}\n");exit(2);}
+          function envRead($path){$out=[];foreach(file($path,FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES)?:[] as $line){$line=trim($line);if($line===''||$line[0]==='#'||!str_contains($line,'='))continue;[$k,$v]=explode('=',$line,2);$out[trim($k)]=trim($v," \t\n\r\0\x0B\"'");}return $out;}
+          function companyPassword($stored,$appKey){if($stored==='')return '';if(!str_starts_with($stored,'v2:'))return $stored;$data=base64_decode(substr($stored,3),true);if($data===false||strlen($data)<29)throw new RuntimeException('encrypted company password invalid');$key=hash('sha256',$appKey,true);$plain=openssl_decrypt(substr($data,28),'aes-256-gcm',$key,OPENSSL_RAW_DATA,substr($data,0,12),substr($data,12,16));if($plain===false)throw new RuntimeException('company password decrypt failed');return $plain;}
+          $e=envRead($root.'/public_html/erpv2/.env');
+          $host=$e['DB_HOST']??'127.0.0.1';$port=$e['DB_PORT']??'3306';$central=$e['DB_DATABASE']??'erp_planex';$user=$e['DB_USERNAME']??'root';$pass=$e['DB_PASSWORD']??'';$appKey=$e['APP_ENCRYPTION_KEY']??'';
+          $centralPdo=new PDO("mysql:host={$host};port={$port};dbname={$central};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+          $companies=$centralPdo->query("SELECT id,db_identifier,db_host,db_port,db_username,db_password FROM companies WHERE db_identifier IS NOT NULL AND db_identifier<>'' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+          if(!$companies){fwrite(STDERR,"NO_COMPANY_DATABASES\n");exit(3);} $changed=0;$checked=0;
+          foreach($companies as $company){
+            $dbHost=$company['db_host']?:$host;$dbPort=$company['db_port']?:$port;$dbUser=$company['db_username']?:$user;$dbPass=$company['db_password']!==''?companyPassword((string)$company['db_password'],$appKey):$pass;$dbName=(string)$company['db_identifier'];
+            $tenant=new PDO("mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4",$dbUser,$dbPass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+            $exists=(int)$tenant->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='linear_routes'")->fetchColumn(); if($exists!==1){echo 'SKIP_NO_LINEAR_ROUTES company_id='.$company['id']."\n";continue;}
+            $stmt=$tenant->query("SELECT COLUMN_NAME,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='linear_routes' AND COLUMN_NAME IN ('planned_loading_date','planned_unloading_date','actual_loading_date','actual_unloading_date')");$map=$stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            foreach(['planned_loading_date','planned_unloading_date','actual_loading_date','actual_unloading_date'] as $name){if(!array_key_exists($name,$map)){fwrite(STDERR,'MISSING_COLUMN company_id='.$company['id'].' column='.$name."\n");exit(4);}}
+            $lock='planex_linear_trip_date_schema_'.(int)$company['id'];$lk=$tenant->prepare('SELECT GET_LOCK(?,10)');$lk->execute([$lock]);if((int)$lk->fetchColumn()!==1){fwrite(STDERR,'LOCK_FAILED company_id='.$company['id']."\n");exit(5);}
+            try{
+              if($map['planned_loading_date']!=='YES'||$map['planned_unloading_date']!=='YES'){
+                $tenant->exec("ALTER TABLE `linear_routes` MODIFY COLUMN `planned_loading_date` DATE NULL, MODIFY COLUMN `planned_unloading_date` DATE NULL");$changed++;echo 'SCHEMA_UPDATED company_id='.$company['id']."\n";
+              }else{echo 'SCHEMA_ALREADY_OK company_id='.$company['id']."\n";}
+            }finally{$rel=$tenant->prepare('SELECT RELEASE_LOCK(?)');$rel->execute([$lock]);}
+            $after=$tenant->query("SELECT COLUMN_NAME,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='linear_routes' AND COLUMN_NAME IN ('planned_loading_date','planned_unloading_date','actual_loading_date','actual_unloading_date')")->fetchAll(PDO::FETCH_KEY_PAIR);
+            foreach(['planned_loading_date','planned_unloading_date','actual_loading_date','actual_unloading_date'] as $name){if(($after[$name]??'')!=='YES'){fwrite(STDERR,'POSTCHECK_NOT_NULLABLE company_id='.$company['id'].' column='.$name."\n");exit(6);}}
+            $checked++;echo 'POSTCHECK_OK company_id='.$company['id'].' four_columns_nullable=YES'."\n";
+          }
+          if($checked<1){fwrite(STDERR,"NO_TENANT_CHECKED\n");exit(7);} echo 'SCHEMA_APPLY_COMPLETE tenants='.$checked.' changed='.$changed.' deploy='.$marker."\n";
+          PHP
+          rm -f "$HOME/.ssh/apply_date_schema"
