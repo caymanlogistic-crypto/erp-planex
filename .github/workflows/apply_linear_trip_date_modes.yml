@@ -1,0 +1,117 @@
+name: Apply linear trip date modes
+
+on:
+  push:
+    branches:
+      - work-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/apply_linear_trip_date_modes.yml'
+
+permissions:
+  contents: write
+
+env:
+  CANONICAL_BRANCH: chatgpt/production-stabilization-20260802
+  EXPECTED_HEAD: b5ef8f48129284ff761c27e5d85ea6a719e0293c
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout canonical exact branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANONICAL_BRANCH }}
+          fetch-depth: 0
+
+      - name: Guard canonical head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_HEAD}"
+
+      - name: Load reviewed patcher from work branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin work-linear-trip-date-modes-20260813:refs/remotes/origin/work-linear-trip-date-modes-20260813
+          mkdir -p .github/scripts
+          git show origin/work-linear-trip-date-modes-20260813:.github/scripts/apply_linear_trip_date_modes.py > /tmp/apply_linear_trip_date_modes.py
+          python -m py_compile /tmp/apply_linear_trip_date_modes.py
+
+      - name: Apply guarded source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/apply_linear_trip_date_modes.py
+          cat > database/migrations-local/062_allow_optional_linear_route_plan_dates.sql <<'SQL'
+          ALTER TABLE `linear_routes`
+              MODIFY COLUMN `planned_loading_date` DATE NULL,
+              MODIFY COLUMN `planned_unloading_date` DATE NULL;
+          SQL
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('public/assets/js/linear-trip-date-mode.js')
+          s = p.read_text(encoding='utf-8')
+          old = "var initialBacking = initialKind ? backingFor(control, initialKind) : null;"
+          new = "var initialBacking = initialKind ? (initialKind === 'fact' ? factInput : planInput) : null;"
+          if s.count(old) != 1:
+              raise SystemExit('date-mode JS initial backing guard failed')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Pre-deploy syntax and contract checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/Http/Controllers/Company/LinearTripActions/create_submit.php
+          php -l app/Service/LinearTripEditSaveService.php
+          php -l app/View/pages/company_linear_trips.php
+          php -l app/View/partials/company_linear_trip_modal_view.php
+          node --check public/assets/js/linear-trip-date-mode.js
+          grep -Fq 'actual_loading_date' app/Http/Controllers/Company/LinearTripActions/create_submit.php
+          grep -Fq 'actual_unloading_date' app/Http/Controllers/Company/LinearTripActions/create_submit.php
+          grep -Fq 'start_date_kind' app/Service/LinearTripEditSaveService.php
+          grep -Fq 'end_date_kind' app/Service/LinearTripEditSaveService.php
+          grep -Fq '(плановая)' app/View/pages/company_linear_trips.php
+          grep -Fq 'Перевозимый груз' app/View/partials/company_linear_trip_modal_view.php
+          grep -Fq 'MODIFY COLUMN `planned_loading_date` DATE NULL' database/migrations-local/062_allow_optional_linear_route_plan_dates.sql
+          grep -Fq 'MODIFY COLUMN `planned_unloading_date` DATE NULL' database/migrations-local/062_allow_optional_linear_route_plan_dates.sql
+          git diff --check
+          git status --short
+
+      - name: Ensure only intended files changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only | sort > /tmp/changed.txt
+          cat > /tmp/expected.txt <<'EOF'
+          app/Http/Controllers/Company/LinearTripActions/create_submit.php
+          app/Service/LinearTripEditSaveService.php
+          app/View/pages/company_linear_trips.php
+          app/View/partials/company_linear_trip_modal_view.php
+          database/migrations-local/062_allow_optional_linear_route_plan_dates.sql
+          public/assets/css/linear-trip-date-mode.css
+          public/assets/js/linear-trip-date-mode.js
+          EOF
+          sort -o /tmp/expected.txt /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/changed.txt
+
+      - name: Commit one atomic canonical change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'caymanlogistic-crypto'
+          git config user.email 'cayman.logistic@gmail.com'
+          git add \
+            app/Http/Controllers/Company/LinearTripActions/create_submit.php \
+            app/Service/LinearTripEditSaveService.php \
+            app/View/pages/company_linear_trips.php \
+            app/View/partials/company_linear_trip_modal_view.php \
+            database/migrations-local/062_allow_optional_linear_route_plan_dates.sql \
+            public/assets/css/linear-trip-date-mode.css \
+            public/assets/js/linear-trip-date-mode.js
+          git commit -m 'Add planned and actual linear trip lifecycle dates'
+          git push origin HEAD:${CANONICAL_BRANCH}
+          git rev-parse HEAD
