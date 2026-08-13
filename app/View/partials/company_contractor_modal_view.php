@@ -35,6 +35,14 @@ $contractorDocumentsUrl = '/company/documents?entity_type=contractor&entity_id='
             <div class="driver-view-cell driver-view-cell-label">ОГРН</div>
             <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['ogrn']) ? e($contractor['ogrn']) : '<span class="is-na">—</span>' ?></div>
           </div>
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">Руководитель</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['director_full_name']) ? e($contractor['director_full_name']) : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">Должность</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['director_position']) ? e($contractor['director_position']) : '<span class="is-na">—</span>' ?></div>
+          </div>
           <div class="driver-view-row driver-view-row-wide">
             <div class="driver-view-cell driver-view-cell-label">Юридический адрес</div>
             <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['legal_address']) ? nl2br(e($contractor['legal_address'])) : '<span class="is-na">—</span>' ?></div>
@@ -42,6 +50,22 @@ $contractorDocumentsUrl = '/company/documents?entity_type=contractor&entity_id='
           <div class="driver-view-row driver-view-row-wide">
             <div class="driver-view-cell driver-view-cell-label">Фактический адрес</div>
             <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['physical_address']) ? nl2br(e($contractor['physical_address'])) : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row driver-view-row-wide">
+            <div class="driver-view-cell driver-view-cell-label">Расчётный счёт</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['bank_account']) ? e($contractor['bank_account']) : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">Банк</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['bank_name']) ? e($contractor['bank_name']) : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row">
+            <div class="driver-view-cell driver-view-cell-label">БИК</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['bank_bik']) ? e($contractor['bank_bik']) : '<span class="is-na">—</span>' ?></div>
+          </div>
+          <div class="driver-view-row driver-view-row-wide">
+            <div class="driver-view-cell driver-view-cell-label">Корр. счёт</div>
+            <div class="driver-view-cell driver-view-cell-value"><?= !empty($contractor['bank_corr_account']) ? e($contractor['bank_corr_account']) : '<span class="is-na">—</span>' ?></div>
           </div>
           <?php if (!empty($contractor['comments'])): ?>
           <div class="driver-view-row driver-view-row-wide">
@@ -68,6 +92,7 @@ $contractorDocumentsUrl = '/company/documents?entity_type=contractor&entity_id='
               <?= e($contact['phone'] ?? '') ?: '—' ?>
               <?php if (!empty($contact['email'])): ?> · <?= e($contact['email']) ?><?php endif; ?>
               <?php if (!empty($contact['is_document_email'])): ?> · для документов<?php endif; ?>
+              <?php if (!empty($contact['comment'])): ?> · <?= e($contact['comment']) ?><?php endif; ?>
             </div>
           </div>
         </div>
