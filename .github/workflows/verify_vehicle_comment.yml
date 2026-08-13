@@ -1,3 +1,4 @@
+# final rerun after production deploy 9e707a5ea401b08dad1a6d28dd4df481458ac158
 name: Verify vehicle comment persistence
 on:
   push:
@@ -52,12 +53,15 @@ jobs:
               await p.goto(new URL('company/vehicle-sets',BASE).href); await p.getByRole('button',{name:/Добавить новый транспорт/i}).first().click(); const cf=p.locator('#vehicle-set-create-form'); await cf.waitFor(); await cf.locator('select[name="set_type"]').selectOption('single');
               await cf.evaluate((f,v)=>{for(const [n,x] of Object.entries(v)){const e=f.elements.namedItem(n);if(e){e.value=x;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}}f.requestSubmit();},{set_type:'single',status:'active',comments:'CREATE COMMENT '+suffix,'units[primary][brand]':'QA','units[primary][model]':'COMMENT','units[primary][plate_number]':plate,'units[primary][vin]':vin,'units[primary][diagnostic_card_number]':'123456789012345','units[primary][diagnostic_card_date]':'05.08.2026','units[primary][capacity_tons]':'20','units[primary][volume_m3]':'80'}); await p.waitForTimeout(1100);
               await p.goto(new URL('company/vehicle-sets',BASE).href); const row=p.locator('tr[data-vehicle-set-id]').filter({hasText:plate}).first(); await row.waitFor(); id=Number(await row.getAttribute('data-vehicle-set-id')); must(id,'no vehicle id');
-              await row.dblclick(); await p.locator('[data-vehicle-set-edit-btn]').waitFor(); const createView=await p.locator('.modal-overlay.is-open').last().innerText(); console.log('CREATE_VIEW_HAS_COMMENT='+createView.includes('CREATE COMMENT '+suffix));
+              await row.dblclick(); await p.locator('[data-vehicle-set-edit-btn]').waitFor(); const createView=await p.locator('.modal-overlay.is-open').last().innerText(); console.log('CREATE_VIEW_HAS_COMMENT='+createView.includes('CREATE COMMENT '+suffix)); must(createView.includes('CREATE COMMENT '+suffix),'create comment absent from fresh view');
               await p.locator('[data-vehicle-set-edit-btn]').click(); const ef=p.locator('#vehicle-set-edit-form'); await ef.waitFor(); const target='EDIT COMMENT '+suffix; await ef.locator('[name="comments"]').fill(target); console.log('FORM_COMMENT='+await ef.locator('[name="comments"]').inputValue());
               let reqBody=''; p.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/company/vehicle-sets/'+id+'/modal-edit')){reqBody=r.postData()||''; console.log('POST_HAS_COMMENT='+reqBody.includes(target));}});
               const respPromise=p.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/company/vehicle-sets/'+id+'/modal-edit')); await ef.evaluate(f=>f.requestSubmit()); const resp=await respPromise; const responseText=await resp.text(); console.log('RESPONSE_HAS_COMMENT='+responseText.includes(target)); console.log('RESPONSE_STATUS='+resp.status()); await p.waitForTimeout(400);
               await p.goto(new URL('company/vehicle-sets',BASE).href); const row2=p.locator('tr[data-vehicle-set-id="'+id+'"]'); await row2.dblclick(); await p.locator('[data-vehicle-set-edit-btn]').waitFor(); const finalView=await p.locator('.modal-overlay.is-open').last().innerText(); console.log('FINAL_VIEW_HAS_COMMENT='+finalView.includes(target));
               must(reqBody.includes(target),'comment absent from POST'); must(responseText.includes(target),'comment absent from save response'); must(finalView.includes(target),'comment absent from fresh view'); console.log('VEHICLE_COMMENT_PASS id='+id);
-            } finally { await b.close(); }
+            } finally {
+              if(id){try{await p.evaluate(async u=>{await fetch(u,{method:'POST',credentials:'same-origin'});},new URL('company/vehicle-sets/'+id+'/modal-archive',BASE).href);}catch(e){}}
+              await b.close();
+            }
           })().catch(e=>{console.error(e.stack||e);process.exit(1)});
           NODE
