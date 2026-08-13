@@ -8,20 +8,38 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: |
           npm install --no-save playwright@1.54.2
           npx playwright install --with-deps chromium
+      - name: Resolve owner credentials
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/vehicle_verify_key"
+            chmod 600 "$HOME/.ssh/vehicle_verify_key"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/vehicle_verify_key" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "$HOME/.ssh/vehicle_verify_key"
+          fi
+          test -n "$credentials"
+          echo "::add-mask::$credentials"
+          printf 'CREDENTIALS=%s\n' "$credentials" >> "$GITHUB_ENV"
       - name: Live vehicle CRUD
         env:
-          CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
           BASE_URL: http://planexp.ru/erpv2/
         run: |
-          test -n "$CREDENTIALS"
           node <<'NODE'
           const {chromium}=require('playwright'), B=process.env.BASE_URL;
           const c=JSON.parse(Buffer.from(process.env.CREDENTIALS,'base64').toString()),o=c.find(x=>String(x.role||'').toUpperCase()==='OWNER');if(!o)throw Error('no owner');
