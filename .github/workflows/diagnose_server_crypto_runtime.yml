@@ -1,0 +1,58 @@
+name: Diagnose server crypto runtime
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/diagnose_server_crypto_runtime.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Inspect available PHP and Python crypto runtimes
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/runtime_diag"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/runtime_diag" "$HOME/.ssh/known_hosts"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/runtime_diag" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          echo DEFAULT_PHP="$(php -v 2>/dev/null | head -n1 || true)"
+          echo DEFAULT_OPENSSL_MODULE="$(php -m 2>/dev/null | grep -i '^openssl$' || true)"
+          for p in /opt/php*/bin/php /usr/local/php*/bin/php /usr/bin/php* /home/*/bin/php; do
+            [ -x "$p" ] || continue
+            v="$($p -r 'echo PHP_VERSION;' 2>/dev/null || true)"
+            [ -n "$v" ] || continue
+            o="$($p -r 'echo function_exists("openssl_decrypt")?"openssl":"no-openssl";' 2>/dev/null || true)"
+            d="$($p -r 'echo extension_loaded("pdo_mysql")?"pdo_mysql":"no-pdo_mysql";' 2>/dev/null || true)"
+            echo "PHP_CANDIDATE path=$p version=$v $o $d"
+          done
+          python3 - <<'PY'
+          import sys
+          print('PYTHON_VERSION=' + sys.version.split()[0])
+          try:
+              import cryptography
+              print('PYTHON_CRYPTOGRAPHY=' + cryptography.__version__)
+          except Exception as e:
+              print('PYTHON_CRYPTOGRAPHY=missing')
+          try:
+              import pymysql
+              print('PYMYSQL=present')
+          except Exception:
+              print('PYMYSQL=missing')
+          PY
+          REMOTE
