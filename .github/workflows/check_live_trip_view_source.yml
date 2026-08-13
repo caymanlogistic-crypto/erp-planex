@@ -1,0 +1,44 @@
+name: Check live trip view source
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/check_live_trip_view_source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check deployed source over SSH
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/check_live"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/check_live" "$HOME/.ssh/known_hosts"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/check_live" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          LIVE=/home/s/spugovxsim/planexp/public_html/erpv2
+          echo "MARKER=$(cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt)"
+          echo '--- live partial fingerprint ---'
+          sha256sum "$LIVE/app/View/partials/company_linear_trip_modal_view.php"
+          grep -n -F 'Начало рейса' "$LIVE/app/View/partials/company_linear_trip_modal_view.php"
+          grep -n -F 'Окончание рейса' "$LIVE/app/View/partials/company_linear_trip_modal_view.php"
+          grep -n -F 'Перевозимый груз' "$LIVE/app/View/partials/company_linear_trip_modal_view.php"
+          echo '--- mtimes ---'
+          stat -c '%y %n' "$LIVE/app/View/partials/company_linear_trip_modal_view.php" "$LIVE/public/assets/js/linear-trip-date-mode.js"
+          echo '--- php opcache cli settings ---'
+          php -i | grep -E '^opcache\.(enable|validate_timestamps|revalidate_freq) ' || true
+          REMOTE
