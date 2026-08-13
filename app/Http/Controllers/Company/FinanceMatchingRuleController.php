@@ -6,72 +6,26 @@ use App\Core\Database;
 
 final class FinanceMatchingRuleController
 {
-    public function __construct(
-        private readonly array $config,
-        private readonly Database $db
-    ) {
-    }
+    public function __construct(private readonly array $config, private readonly Database $db) {}
 
-    public function index(): void
+    private function action(string $file): void
     {
         $config = $this->config;
         $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/index.php');
+        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/' . $file . '.php');
     }
 
-    public function createForm(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/create_form.php');
-    }
-
-    public function createSubmit(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/create_submit.php');
-    }
-
-    public function editForm(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/edit_form.php');
-    }
-
-    public function editSubmit(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/edit_submit.php');
-    }
-
-    public function toggle(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/toggle.php');
-    }
-
-    public function reorder(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/reorder.php');
-    }
-
-    public function preview(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/preview.php');
-    }
-
-    public function testOnTransaction(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceMatchingRuleActions/test_on_transaction.php');
-    }
+    public function index(): void { $this->action('index'); }
+    public function createForm(): void { $this->action('create_form'); }
+    public function createSubmit(): void { $this->action('create_submit'); }
+    public function editForm(): void { $this->action('edit_form'); }
+    public function editSubmit(): void { $this->action('edit_submit'); }
+    public function toggle(): void { $this->action('toggle'); }
+    public function reorder(): void { $this->action('reorder'); }
+    public function preview(): void { $this->action('preview'); }
+    public function testOnTransaction(): void { $this->action('test_on_transaction'); }
+    public function delete(): void { $this->action('delete'); }
+    public function cfuSave(): void { $this->action('cfu_save'); }
+    public function cfuToggle(): void { $this->action('cfu_toggle'); }
+    public function cfuDelete(): void { $this->action('cfu_delete'); }
 }
