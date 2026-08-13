@@ -1,0 +1,53 @@
+name: P43 Finance DOM Diagnostic
+on:
+  push:
+    branches: [chatgpt/p43-finance-dom-diagnostic-20260814]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p43_key
+            chmod 600 /tmp/p43_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p43_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Inspect non-sensitive bank DOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          const {chromium}=require('playwright');
+          const B='https://plan-ex.ru/erpv2/';
+          const cs=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64||'','base64').toString('utf8'));
+          const c=cs.find(x=>String(x.role).toUpperCase()==='OWNER');
+          (async()=>{const b=await chromium.launch({headless:true});const x=await b.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow'});const p=await x.newPage();try{
+            await p.goto(B+'login');await p.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(c.username);await p.locator('input[type="password"]').fill(c.password);await p.locator('button[type="submit"],input[type="submit"]').first().click();await p.waitForTimeout(700);
+            const r=await p.goto(B+'company/finance/bank-accounts',{waitUntil:'domcontentloaded'});await p.waitForTimeout(300);
+            const o={http:r.status(),url:p.url(),register:await p.locator('#bank-classification-register').count(),headers:await p.locator('#bank-classification-register th').allTextContents(),filters:{dateFrom:await p.locator('[name=date_from]').count(),dateTo:await p.locator('[name=date_to]').count(),q:await p.locator('[name=q]').count(),status:await p.locator('[name=classification_status]').count()},warn:await p.locator('.notice.warn').first().innerText().catch(()=>''),title:await p.locator('h1').first().innerText().catch(()=>''),fatal:/(Fatal error|Parse error|Uncaught)/i.test(await p.locator('body').innerText())};console.log(JSON.stringify(o));
+          }finally{await b.close();}})().catch(e=>{console.error(e);process.exit(1)});
+          JS
