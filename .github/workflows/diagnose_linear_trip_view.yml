@@ -1,0 +1,140 @@
+name: Diagnose linear trip modal view
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/diagnose_linear_trip_view.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_DEPLOY_HEAD: e18363fba8d1de592b133d9e691626bf62705c36
+  BASE_URL: https://plan-ex.ru/erpv2/
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve owner credentials securely
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "${credentials}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "${HOME}/.ssh"
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/diag_trip_credentials"
+            chmod 600 "${HOME}/.ssh/diag_trip_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/diag_trip_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/diag_trip_credentials"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P11_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Capture raw and rendered modal view
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnose_output
+          node <<'NODE'
+          'use strict';
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+          const BASE = process.env.BASE_URL;
+          const credentials = JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+          const owner = credentials.find((item) => String(item.role || '').toUpperCase() === 'OWNER');
+          if (!owner) throw new Error('OWNER credentials not found');
+
+          (async () => {
+            const browser = await chromium.launch({headless:true});
+            const context = await browser.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+            const page = await context.newPage();
+            const errors = [];
+            page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+            page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+
+            await page.goto(new URL('login', BASE).href, {waitUntil:'domcontentloaded',timeout:45000});
+            const user = page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first();
+            const pass = page.locator('input[type="password"]').first();
+            await user.fill(owner.username);
+            await pass.fill(owner.password);
+            await Promise.all([
+              page.waitForLoadState('domcontentloaded',{timeout:20000}).catch(()=>{}),
+              page.locator('button[type="submit"],input[type="submit"]').first().click()
+            ]);
+            await page.waitForTimeout(900);
+            if (/\/login(?:[/?#]|$)/i.test(page.url())) throw new Error('Authentication failed');
+
+            await page.goto(new URL('company/trips/linear', BASE).href, {waitUntil:'domcontentloaded',timeout:45000});
+            await page.waitForTimeout(600);
+            let row = page.locator('tr[data-linear-route-id="9"]').first();
+            if (!(await row.count())) row = page.locator('tr[data-linear-route-id]').first();
+            const routeId = await row.getAttribute('data-linear-route-id');
+            const endpoint = new URL(`company/trips/linear/${routeId}/modal-view`, BASE).href;
+
+            const raw = await page.evaluate(async (url) => {
+              const response = await fetch(url, {credentials:'same-origin', cache:'no-store', headers:{'X-Diagnostic':'1'}});
+              return {status: response.status, text: await response.text()};
+            }, endpoint);
+            fs.writeFileSync('diagnose_output/raw-modal-view.html', raw.text);
+
+            await row.dblclick();
+            const modal = page.locator('#linear-trip-view-modal.is-open');
+            await modal.waitFor({state:'visible',timeout:7000});
+            await modal.locator('.trip-view-table').waitFor({state:'visible',timeout:7000});
+            await page.waitForTimeout(300);
+            const modalText = await modal.innerText();
+            const modalHtml = await modal.innerHTML();
+            fs.writeFileSync('diagnose_output/rendered-modal.html', modalHtml);
+            fs.writeFileSync('diagnose_output/rendered-modal.txt', modalText);
+            await page.screenshot({path:'diagnose_output/rendered-modal.png',fullPage:false});
+
+            const summary = {
+              routeId,
+              endpoint,
+              rawStatus: raw.status,
+              rawHasStart: raw.text.includes('Начало рейса'),
+              rawHasEnd: raw.text.includes('Окончание рейса'),
+              rawHasCargo: raw.text.includes('Перевозимый груз'),
+              renderedHasStart: modalText.includes('Начало рейса'),
+              renderedHasEnd: modalText.includes('Окончание рейса'),
+              renderedHasCargo: modalText.includes('Перевозимый груз'),
+              renderedText: modalText,
+              errors
+            };
+            fs.writeFileSync('diagnose_output/summary.json', JSON.stringify(summary,null,2));
+            console.log('DIAGNOSTIC=' + JSON.stringify(summary));
+            await browser.close();
+          })().catch(err => { console.error(err.stack || String(err)); process.exit(1); });
+          NODE
+
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linear-trip-modal-view-diagnostic
+          path: diagnose_output/
+          if-no-files-found: warn
+          retention-days: 7
