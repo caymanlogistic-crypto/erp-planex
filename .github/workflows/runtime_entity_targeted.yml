@@ -1,0 +1,127 @@
+name: Runtime entity targeted
+
+on:
+  push:
+    branches:
+      - chatgpt/runtime-verification-20260813
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Load secure credential resolver
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+          mkdir -p .github/p11 runtime_targeted_output
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        shell: bash
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve credentials
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${PRIVATE_KEY}"
+          python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/runtime_credentials"
+          chmod 600 "${HOME}/.ssh/runtime_credentials"
+          credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/runtime_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+          rm -f "${HOME}/.ssh/runtime_credentials"
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P12_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+      - name: Verify ERPv2 entity URLs and modal fragments
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > runtime_targeted.js <<'NODE'
+          'use strict';
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+          const BASE = 'https://plan-ex.ru/erpv2';
+          const creds = JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+          const owner = creds.find(c => String(c.role).toUpperCase() === 'OWNER');
+          if (!owner) throw new Error('OWNER credentials missing');
+          const results = [];
+          function check(ok,label,detail='') { results.push({label,pass:!!ok,detail}); if(!ok) throw new Error(label+': '+detail); }
+          async function login(page){
+            await page.goto(BASE+'/login',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').first().fill(owner.password);
+            await Promise.all([page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{}),page.locator('button[type="submit"],input[type="submit"]').first().click()]);
+            await page.waitForTimeout(800);
+            check(!/\/login(?:[/?#]|$)/i.test(page.url()),'owner_login',page.url());
+          }
+          async function fragment(page,url,label){
+            const raw=await page.evaluate(async u=>{const r=await fetch(u,{credentials:'same-origin'});return {status:r.status,text:await r.text()};},url);
+            check(raw.status===200,label+'_http',String(raw.status));
+            const id='rt-'+Math.random().toString(36).slice(2);
+            await page.evaluate(({id,html})=>{const h=document.createElement('div');h.id=id;h.innerHTML=html;document.body.appendChild(h);},{id,html:raw.text});
+            await page.waitForTimeout(150);
+            return id;
+          }
+          async function entity(page,cfg){
+            await page.goto(BASE+cfg.page,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForTimeout(400);
+            const ca=await page.locator(cfg.create).first().getAttribute('action').catch(()=>null);
+            check(ca&&ca.startsWith('/erpv2/company/'),cfg.name+'_create_action',String(ca));
+            const id=await page.locator(cfg.row).first().getAttribute(cfg.attr).catch(()=>null);
+            check(id&&/^\d+$/.test(id),cfg.name+'_id',String(id));
+            const eh=await fragment(page,BASE+cfg.edit(id),cfg.name+'_edit');
+            const ea=await page.locator('#'+eh+' '+cfg.editForm).first().getAttribute('action').catch(()=>null);
+            check(ea&&ea.startsWith('/erpv2/company/'),cfg.name+'_edit_action',String(ea));
+            await page.locator('#'+eh).remove();
+            const vh=await fragment(page,BASE+cfg.view(id),cfg.name+'_view');
+            const roots=await page.locator('#'+vh+' a[href^="/company/documents"]').count();
+            check(roots===0,cfg.name+'_root_document_links',String(roots));
+            const docs=await page.locator('#'+vh+' a[href*="/company/documents"]').evaluateAll(es=>es.map(e=>e.getAttribute('href')));
+            check(docs.every(h=>!h||h.startsWith('/erpv2/company/documents')),cfg.name+'_document_links',JSON.stringify(docs));
+            await page.locator('#'+vh).remove();
+          }
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            try{
+              const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+              const page=await context.newPage(); await login(page);
+              await entity(page,{name:'driver',page:'/company/drivers',create:'#driver-create-form',row:'tr[data-driver-id]',attr:'data-driver-id',edit:id=>`/company/drivers/${id}/modal-edit`,view:id=>`/company/drivers/${id}/modal-view`,editForm:'#driver-edit-form'});
+              await entity(page,{name:'vehicle',page:'/company/vehicle-sets',create:'#vehicle-set-create-form',row:'tr[data-vehicle-set-id]',attr:'data-vehicle-set-id',edit:id=>`/company/vehicle-sets/${id}/modal-edit`,view:id=>`/company/vehicle-sets/${id}/modal-view`,editForm:'#vehicle-set-edit-form'});
+              await page.goto(BASE+'/company/contractors',{waitUntil:'domcontentloaded',timeout:30000}); await page.waitForTimeout(400);
+              const cid=await page.locator('tr[data-contractor-id]').first().getAttribute('data-contractor-id').catch(()=>null); check(cid&&/^\d+$/.test(cid),'contractor_id',String(cid));
+              const ce=await fragment(page,`${BASE}/company/contractors/${cid}/modal-edit`,'contractor_edit');
+              const cea=await page.locator('#'+ce+' form').first().getAttribute('action').catch(()=>null); check(cea&&cea.startsWith('/erpv2/company/'),'contractor_edit_action',String(cea)); await page.locator('#'+ce).remove();
+              const cv=await fragment(page,`${BASE}/company/contractors/${cid}/modal-view`,'contractor_view');
+              const cr=await page.locator('#'+cv+' a[href^="/company/documents"]').count(); check(cr===0,'contractor_root_document_links',String(cr)); await page.locator('#'+cv).remove();
+              await page.getByRole('button',{name:/создать перевозчика/i}).first().click(); await page.waitForSelector('#le-create-form',{timeout:10000});
+              const cca=await page.locator('#le-create-form').getAttribute('action'); check(cca&&cca.startsWith('/erpv2/company/'),'contractor_create_action',String(cca));
+              fs.writeFileSync('runtime_targeted_output/results.json',JSON.stringify({status:'PASS',checks:results.length,results},null,2));
+              console.log(JSON.stringify({status:'PASS',checks:results.length}));
+            }finally{await browser.close();}
+          })().catch(e=>{fs.writeFileSync('runtime_targeted_output/results.json',JSON.stringify({status:'FAIL',error:String(e.stack||e),results},null,2));console.error(e);process.exit(1);});
+          NODE
+          node runtime_targeted.js
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-entity-targeted
+          path: runtime_targeted_output/
+          if-no-files-found: error
+          retention-days: 14
