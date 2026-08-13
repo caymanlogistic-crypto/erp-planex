@@ -85,9 +85,11 @@
 [data-linear-trip-form] .linear-trip-layout-main>.section-title:has(+ .field .linear-trip-textarea){margin-top:8px!important;padding-top:0!important;border:0!important}
 [data-linear-trip-form] .linear-trip-layout-main>.field:has(.linear-trip-textarea){border-top:0!important;border-bottom:0!important;padding-top:0!important;padding-bottom:0!important}
 
-/* Exact same document-row geometry as the driver form for create and edit. */
+/* Linear-trip document rows: no file-type badge; give that width to name/description. */
 [data-linear-trip-form] .linear-trip-layout-docs .file-list{margin-top:0;gap:8px}
-[data-linear-trip-form] .linear-trip-layout-docs .document-file-row{display:grid;grid-template-columns:38px minmax(0,1fr) 108px 30px;column-gap:10px;align-items:center;min-height:48px}
+[data-linear-trip-form] .linear-trip-layout-docs .document-file-row{display:grid;grid-template-columns:minmax(0,1fr) 108px 30px;column-gap:10px;align-items:center;min-height:48px}
+[data-linear-trip-form] .linear-trip-layout-docs .document-file-row>.file-type-badge{display:none!important}
+[data-linear-trip-form] .linear-trip-layout-docs .file-info{min-width:0}
 [data-linear-trip-form] .linear-trip-layout-docs .file-action-btn{width:108px;justify-content:center}
 #linear-trip-create-modal .modal-foot{min-height:48px;padding:7px 12px}
 
@@ -112,7 +114,9 @@
 #linear-trip-create-modal .driver-view-inline-label{font-size:9px;color:var(--text-faint)}
 #linear-trip-create-modal .driver-view-row-wide>.driver-view-cell-value{min-width:0}
 #linear-trip-create-modal .driver-view-comments{white-space:pre-wrap}
-#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item{display:grid;grid-template-columns:38px minmax(0,1fr) 108px 30px;column-gap:10px;align-items:center;min-height:48px}
+#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item{display:grid;grid-template-columns:minmax(0,1fr) 108px 30px;column-gap:10px;align-items:center;min-height:48px}
+#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item>.file-type-badge{display:none!important}
+#linear-trip-create-modal .driver-modal-docs .driver-doc-view-item>.file-info{min-width:0}
 #linear-trip-create-modal .driver-modal-docs .file-action-btn{width:108px;justify-content:center}
 
 @media(max-width:900px){[data-linear-trip-form] .linear-trip-layout{grid-template-columns:1fr}[data-linear-trip-form] .linear-trip-layout-docs{border-left:0;border-top:1px solid var(--line)}[data-linear-trip-form] .linear-trip-primary-row{grid-template-columns:148px minmax(0,1fr)}#linear-trip-create-modal .driver-modal-layout{grid-template-columns:1fr}#linear-trip-create-modal .driver-view-grid{grid-template-columns:1fr}}
