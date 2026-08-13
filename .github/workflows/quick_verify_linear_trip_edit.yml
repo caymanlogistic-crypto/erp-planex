@@ -1,0 +1,84 @@
+name: Quick verify linear trip edit
+
+on:
+  push:
+    branches:
+      - verify-linear-trip-date-modes-20260813
+    paths:
+      - '.github/workflows/quick_verify_linear_trip_edit.yml'
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: https://plan-ex.ru/erpv2/
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve owner credentials
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          if [ -z "$credentials" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/qc"
+            chmod 600 "$HOME/.ssh/qc"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/qc" --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          echo "::add-mask::$credentials"
+          printf 'P11_CREDENTIALS_B64=%s\n' "$credentials" >> "$GITHUB_ENV"
+      - name: Bounded edit verification
+        shell: bash
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const BASE=process.env.BASE_URL;
+          const creds=JSON.parse(Buffer.from(process.env.P11_CREDENTIALS_B64,'base64').toString('utf8'));
+          const owner=creds.find(x=>String(x.role||'').toUpperCase()==='OWNER');
+          const hard=setTimeout(()=>{console.error('HARD_TIMEOUT');process.exit(2)},60000);
+          (async()=>{
+            let browser;
+            try{
+              browser=await chromium.launch({headless:true});
+              const ctx=await browser.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true});
+              const p=await ctx.newPage(); const events=[];
+              p.on('response',r=>{if(r.url().includes('/company/trips/linear/'))events.push(`RESP ${r.status()} ${r.url()}`)});
+              p.on('pageerror',e=>events.push('PAGEERROR '+e.message));
+              p.on('console',m=>{if(m.type()==='error')events.push('CONSOLE '+m.text())});
+              await p.goto(new URL('login',BASE).href,{waitUntil:'domcontentloaded',timeout:30000});
+              await p.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(owner.username);
+              await p.locator('input[type=password]').first().fill(owner.password);
+              await p.locator('button[type=submit],input[type=submit]').first().click({timeout:5000}); await p.waitForTimeout(1000);
+              await p.goto(new URL('company/trips/linear',BASE).href,{waitUntil:'domcontentloaded',timeout:30000}); await p.waitForTimeout(800);
+              let row=p.locator('tr[data-linear-route-id="9"]').first(); if(!(await row.count()))row=p.locator('tr[data-linear-route-id]').first(); const id=await row.getAttribute('data-linear-route-id'); console.log('ROUTE_ID='+id);
+              const endpoint=new URL(`company/trips/linear/${id}/modal-edit`,BASE).href;
+              const raw=await p.evaluate(async u=>{const ac=new AbortController();const t=setTimeout(()=>ac.abort(),15000);try{const r=await fetch(u,{credentials:'same-origin',cache:'no-store',signal:ac.signal});return{status:r.status,text:await r.text()}}finally{clearTimeout(t)}},endpoint);
+              console.log('RAW_STATUS='+raw.status); console.log('RAW_HAS_FORM='+raw.text.includes('linear-trip-edit-form')); console.log('RAW_LENGTH='+raw.text.length);
+              if(raw.status!==200||!raw.text.includes('linear-trip-edit-form'))throw Error('raw edit endpoint invalid');
+              await row.dblclick({timeout:5000}); const modal=p.locator('#linear-trip-view-modal.is-open'); await modal.waitFor({state:'visible',timeout:10000}); await modal.locator('.trip-view-table').waitFor({state:'visible',timeout:10000});
+              const eb=modal.locator('[data-linear-trip-edit-btn]'); console.log('EDIT_BUTTON_COUNT='+await eb.count()); await eb.click({timeout:5000});
+              try{await modal.locator('#linear-trip-edit-form').waitFor({state:'visible',timeout:20000});}catch(e){console.log('MODAL_TEXT_AFTER_CLICK='+JSON.stringify((await modal.innerText()).slice(0,700)));console.log('EVENTS='+JSON.stringify(events));throw e;}
+              const form=modal.locator('#linear-trip-edit-form');
+              await form.locator('[data-trip-date-control="start"]').waitFor({state:'visible',timeout:5000}); await p.waitForTimeout(300);
+              const result=await form.evaluate(f=>{const s=f.querySelector('[data-trip-date-control="start"]'),e=f.querySelector('[data-trip-date-control="end"]'),active=x=>[...x.querySelectorAll('[data-trip-date-kind].is-active')].map(b=>b.dataset.tripDateKind),names=['planned_loading_date','actual_loading_date','planned_unloading_date','actual_unloading_date'];return{startActive:active(s),endActive:active(e),startValue:s.querySelector('[data-trip-date-visible]').value,endValue:e.querySelector('[data-trip-date-visible]').value,backings:Object.fromEntries(names.map(n=>[n,(f.querySelector('[name="'+n+'"]')||{}).value||''])),four:names.every(n=>!!f.querySelector('[name="'+n+'"]'))}});
+              console.log('EDIT_RESULT='+JSON.stringify(result)); console.log('EVENTS='+JSON.stringify(events));
+              if(!result.four||result.startActive.length!==1||!result.startValue)throw Error('edit lifecycle state invalid');
+              const activeStart=result.startActive[0]==='fact'?result.backings.actual_loading_date:result.backings.planned_loading_date;if(!activeStart)throw Error('active start backing empty');
+            }finally{clearTimeout(hard);if(browser)await browser.close().catch(()=>{});}
+          })().catch(e=>{clearTimeout(hard);console.error(e.stack||String(e));process.exit(1)});
+          NODE
