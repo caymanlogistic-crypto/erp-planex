@@ -1,0 +1,39 @@
+name: Verify vehicle CRUD latest
+on:
+  push:
+    branches: [verify-vehicle-crud-latest2-20260813]
+    paths: ['.github/workflows/verify_vehicle_crud_latest.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Live vehicle CRUD
+        env:
+          CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          BASE_URL: http://planexp.ru/erpv2/
+        run: |
+          test -n "$CREDENTIALS"
+          node <<'NODE'
+          const {chromium}=require('playwright'), B=process.env.BASE_URL;
+          const c=JSON.parse(Buffer.from(process.env.CREDENTIALS,'base64').toString()),o=c.find(x=>String(x.role||'').toUpperCase()==='OWNER');if(!o)throw Error('no owner');
+          const s=String(Date.now()).slice(-7),p='А'+s.slice(-3)+'ВС99',v='X9F1234567890'+s.slice(-4);let id=0;const ok=(x,m)=>{if(!x)throw Error(m)};
+          (async()=>{const b=await chromium.launch({headless:true}),ctx=await b.newContext({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow',ignoreHTTPSErrors:true}),pg=await ctx.newPage();
+          async function sub(sel,val){let r=await pg.locator(sel).evaluate(async(f,val)=>{let d=new FormData(f);Object.entries(val).forEach(([k,v])=>d.set(k,String(v)));let r=await fetch(f.action,{method:'POST',body:d,credentials:'same-origin'});return{ok:r.ok,status:r.status,text:await r.text(),action:f.action}},val);ok(r.ok,sel+' '+r.status+' '+r.text.slice(0,300));ok(!/Ошибка при сохранении|Ошибка сохранения|Транспорт не найден/.test(r.text),r.text.slice(0,300));return r}
+          try{await pg.goto(new URL('login',B));await pg.locator('input[name="username"],input[name="email"],input[type="email"],input[type="text"]').first().fill(o.username);await pg.locator('input[type="password"]').first().fill(o.password);await pg.locator('button[type="submit"],input[type="submit"]').first().click();await pg.waitForTimeout(700);ok(!/\/login/.test(pg.url()),'login');
+          await pg.goto(new URL('company/vehicle-sets',B));await pg.getByRole('button',{name:/Добавить новый транспорт/i}).first().click();let f=pg.locator('#vehicle-set-create-form');await f.waitFor();await f.locator('[name="set_type"]').selectOption('single');await pg.waitForTimeout(200);
+          await sub('#vehicle-set-create-form',{set_type:'single',status:'active',comments:'QA '+s,'units[primary][unit_type]':'truck','units[primary][brand]':'QA BRAND','units[primary][model]':'M '+s,'units[primary][plate_number]':p,'units[primary][vin]':v,'units[primary][diagnostic_card_number]':'123456789012345','units[primary][diagnostic_card_date]':'05.08.2026','units[primary][capacity_tons]':'20,5','units[primary][volume_m3]':'86,5'});
+          await pg.goto(new URL('company/vehicle-sets',B));let r=pg.locator('tr[data-vehicle-set-id]').filter({hasText:p}).first();await r.waitFor();id=+(await r.getAttribute('data-vehicle-set-id'));ok(id>0,'create');let rs='tr[data-vehicle-set-id="'+id+'"]';await pg.locator(rs).dblclick();await pg.locator('[data-vehicle-set-edit-btn]').waitFor();let t=await pg.locator('.modal-overlay.is-open').last().innerText();for(let x of ['QA BRAND','M '+s,'05.08.2026','20,5','86,5'])ok(t.includes(x),'view '+x);
+          await pg.locator('[data-vehicle-set-edit-btn]').click();f=pg.locator('#vehicle-set-edit-form');await f.waitFor();let a=await f.getAttribute('action');ok(a.includes('/erpv2/company/vehicle-sets/'+id+'/modal-edit'),'action '+a);ok(await f.locator('[name="units[primary][diagnostic_card_date]"]').inputValue()==='05.08.2026','date');
+          await sub('#vehicle-set-edit-form',{set_type:'single',status:'active',comments:'QA EDIT '+s,'units[primary][brand]':'QA BRAND EDIT','units[primary][model]':'ME '+s,'units[primary][plate_number]':p,'units[primary][vin]':v,'units[primary][diagnostic_card_number]':'987654321012345','units[primary][diagnostic_card_date]':'06.08.2026','units[primary][capacity_tons]':'21,5','units[primary][volume_m3]':'87,5'});
+          await pg.goto(new URL('company/vehicle-sets',B));await pg.locator(rs).dblclick();await pg.locator('[data-vehicle-set-edit-btn]').waitFor();t=await pg.locator('.modal-overlay.is-open').last().innerText();for(let x of ['QA BRAND EDIT','ME '+s,'987654321012345','06.08.2026','21,5','87,5','QA EDIT '+s])ok(t.includes(x),'edit '+x);console.log(JSON.stringify({success:true,id,action:a}))}
+          finally{if(id)await ctx.request.post(new URL('company/vehicle-sets/'+id+'/modal-archive',B).href).catch(()=>{});await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
