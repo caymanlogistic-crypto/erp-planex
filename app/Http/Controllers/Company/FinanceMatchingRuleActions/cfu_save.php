@@ -1,0 +1,2 @@
+<?php
+// CFU save endpoint.
