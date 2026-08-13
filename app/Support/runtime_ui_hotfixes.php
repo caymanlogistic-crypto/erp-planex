@@ -54,15 +54,24 @@ if (PHP_SAPI !== 'cli') {
 (function(){
   function fix(root){
     if(!root||!root.querySelectorAll)return;
-    var selector='#vehicle-set-create-form,#vehicle-set-edit-form,#driver-create-form,#driver-edit-form';
+    var base=window.getErpBasePath?window.getErpBasePath():'';
+    var formSelector='#vehicle-set-create-form,#vehicle-set-edit-form,#driver-create-form,#driver-edit-form';
     var forms=[];
-    if(root.matches&&root.matches(selector))forms.push(root);
-    root.querySelectorAll(selector).forEach(function(form){forms.push(form);});
+    if(root.matches&&root.matches(formSelector))forms.push(root);
+    root.querySelectorAll(formSelector).forEach(function(form){forms.push(form);});
     forms.forEach(function(form){
       var action=form.getAttribute('action')||'';
-      if(action.indexOf('/company/')!==0)return;
-      var base=window.getErpBasePath?window.getErpBasePath():'';
-      if(base)form.setAttribute('action',base+action);
+      if(action.indexOf('/company/')===0&&base)form.setAttribute('action',base+action);
+    });
+
+    // Modal views are fetched as HTML fragments, so server-side </body> rewriting
+    // cannot see their links. Normalize document links when fragments enter the DOM.
+    var links=[];
+    if(root.matches&&root.matches('a[href^="/company/documents"]'))links.push(root);
+    root.querySelectorAll('a[href^="/company/documents"]').forEach(function(link){links.push(link);});
+    links.forEach(function(link){
+      var href=link.getAttribute('href')||'';
+      if(href.indexOf('/company/documents')===0&&base)link.setAttribute('href',base+href);
     });
   }
   fix(document);
