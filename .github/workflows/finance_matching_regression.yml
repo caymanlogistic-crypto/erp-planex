@@ -17,15 +17,24 @@ jobs:
           set -euo pipefail
           php -l app/Service/FinanceMatchingRuleService.php
           for f in app/Service/FinanceMatchingRule*Trait.php; do php -l "$f"; done
+          php -l app/Service/FinanceEmployeePaymentService.php
+          php -l app/Http/Controllers/Company/FinanceEmployeePaymentsController.php
+          php -l app/Http/Routes/company_finance_employee_payments.php
           php -l app/Http/Controllers/Company/BankFinanceActions/classifyForm.php
           php -l app/Http/Controllers/Company/BankFinanceActions/classifySubmit.php
           php -l app/Http/Controllers/Company/BankFinanceActions/clearClassification.php
           php -l app/Http/Controllers/Company/FinanceMatchingRuleActions/archive.php
           php -l app/View/pages/company_finance_matching_rules.php
+          php -l app/View/pages/company_finance_employee_payments.php
+          php -l app/View/partials/company_finance_employee_payment_form.php
+          php -l app/View/partials/company_finance_employee_payment_ledger.php
           php -l app/View/partials/company_bank_transaction_classify_form.php
           php -l tests/finance_matching_classification_test.php
+          php -l tests/finance_employee_payments_test.php
       - name: Matching semantics
         run: php tests/finance_matching_classification_test.php
+      - name: Employee settlement semantics
+        run: php tests/finance_employee_payments_test.php
       - name: Migration shape
         shell: bash
         run: |
@@ -33,3 +42,6 @@ jobs:
           grep -q 'finance_cash_flow_centers' database/migrations-local/063_finance_matching_classification.sql
           grep -q 'classification_locked' database/migrations-local/063_finance_matching_classification.sql
           grep -q 'linked_cash_transaction_id' database/migrations-local/063_finance_matching_classification.sql
+          grep -q 'finance_employee_movements' database/migrations-local/065_finance_employee_movements.sql
+          grep -q 'uk_fem_finance_operation' database/migrations-local/065_finance_employee_movements.sql
+          grep -q 'fk_fem_employee' database/migrations-local/065_finance_employee_movements.sql
