@@ -6,7 +6,7 @@ if (PHP_SAPI !== 'cli') {
 
     // Date pickers submit DD.MM.YYYY while DATE columns require YYYY-MM-DD.
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && preg_match('~^/company/drivers/\d+/(?:modal-edit|edit)$~', $path)) {
-        foreach (['passport_issue_date', 'license_issue_date', 'license_expire_date'] as $field) {
+        foreach (['passport_issue_date', 'license_issue_date', 'passport_issue_date', 'license_expire_date'] as $field) {
             if (!isset($_POST[$field])) continue;
             $value = trim((string) $_POST[$field]);
             if (preg_match('/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/', $value, $m)) {
@@ -42,6 +42,9 @@ if (PHP_SAPI !== 'cli') {
     ob_start(static function (string $html): string {
         if (!str_contains($html, '</body>')) return $html;
 
+        // The old menu slot is now the unified financial-structure editor.
+        $html = str_replace('<span class="nav-label">Статьи ДДС</span>', '<span class="nav-label">Финансовая структура</span>', $html);
+
         // ERPv2 lives below /erpv2. A few legacy partials still emit root-relative
         // document links; scope the compatibility rewrite to ERPv2 so /erp is untouched.
         if (app_base_path() === '/erpv2') {
@@ -64,8 +67,6 @@ if (PHP_SAPI !== 'cli') {
       if(action.indexOf('/company/')===0&&base)form.setAttribute('action',base+action);
     });
 
-    // Modal views are fetched as HTML fragments, so server-side </body> rewriting
-    // cannot see their links. Normalize document links when fragments enter the DOM.
     var links=[];
     if(root.matches&&root.matches('a[href^="/company/documents"]'))links.push(root);
     root.querySelectorAll('a[href^="/company/documents"]').forEach(function(link){links.push(link);});
