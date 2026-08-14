@@ -44,6 +44,7 @@ require_once base_path('app/Service/FinanceCashService.php');
 require_once base_path('app/Service/FinanceDdsCategoryService.php');
 require_once base_path('app/Service/FinanceMatchingRuleService.php');
 require_once base_path('app/Service/FinanceStructureService.php');
+require_once base_path('app/Service/FinanceStructureDeletionService.php');
 require_once base_path('app/Service/FinancePaymentCalendarService.php');
 require_once base_path('app/Service/FinanceCashFlowReportService.php');
 require_once base_path('app/Service/FinanceManagementBalanceService.php');
