@@ -275,10 +275,16 @@ function company_breadcrumbs(array $route, string $companyName, ?array $company 
         return $crumbs;
     }
 
-    // /company/finance/bank-accounts
+    // /company/finance/bank-accounts and its nested matching-rules workflow
     if ($page === 'finance' && ($parts[2] ?? '') === 'bank-accounts') {
         $crumbs[] = ['label' => 'Финансы', 'url' => null];
-        $crumbs[] = ['label' => 'Банковские счета', 'url' => null];
+        $crumbs[] = ['label' => 'Выписки со счёта', 'url' => null];
+        return $crumbs;
+    }
+    if ($page === 'finance' && ($parts[2] ?? '') === 'settings' && ($parts[3] ?? '') === 'matching-rules') {
+        $crumbs[] = ['label' => 'Финансы', 'url' => null];
+        $crumbs[] = ['label' => 'Выписки со счёта', 'url' => app_url('/company/finance/bank-accounts')];
+        $crumbs[] = ['label' => 'Правила разнесения', 'url' => null];
         return $crumbs;
     }
 

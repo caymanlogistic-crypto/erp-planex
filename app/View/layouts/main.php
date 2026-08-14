@@ -24,7 +24,7 @@ $vehicleSetsActive = str_starts_with($requestPath, '/company/vehicle-sets');
 $logistsActive = str_starts_with($requestPath, '/company/logists');
 $responsibleAssignmentsActive = str_starts_with($requestPath, '/company/responsible-assignments');
 $financeActive = str_starts_with($requestPath, '/company/finance');
-$bankAccountsActive = str_starts_with($requestPath, '/company/finance/bank-accounts');
+$bankAccountsActive = str_starts_with($requestPath, '/company/finance/bank-accounts') || str_starts_with($requestPath, '/company/finance/settings/matching-rules');
 $cashActive = str_starts_with($requestPath, '/company/finance/cash');
 $ddsCategoriesActive = str_starts_with($requestPath, '/company/finance/settings/dds-categories');
 $matchingRulesActive = str_starts_with($requestPath, '/company/finance/settings/matching-rules');
@@ -255,7 +255,7 @@ if (empty($topbarCrumbs)) {
                         <path d="M5 10L7 12L11 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M4 4V2.5C4 2.2 4.2 2 4.5 2H11.5C11.8 2 12 2.2 12 2.5V4" stroke="currentColor" stroke-width="1.4"/>
                     </svg>
-                    <span class="nav-label">Банк</span>
+                    <span class="nav-label">Выписки со счёта</span>
                 </a>
                 <a class="nav-item<?= $cashActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/cash') ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
@@ -291,13 +291,6 @@ if (empty($topbarCrumbs)) {
                         <path d="M5 7L7 9L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <span class="nav-label">Статьи ДДС</span>
-                </a>
-                <a class="nav-item<?= $matchingRulesActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/settings/matching-rules') ?>">
-                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
-                        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.4"/>
-                        <path d="M5 8L7 10L11 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="nav-label">Правила разнесения</span>
                 </a>
                 <a class="nav-item<?= $paymentCalendarActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/payment-calendar') ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">

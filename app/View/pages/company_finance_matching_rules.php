@@ -36,7 +36,7 @@ $ruleResult = static function(array $r): string {
 <div class="ux-shell" data-ux-page="matching-rules">
  <div class="page-head">
   <div class="page-head-left"><h1 class="page-title">Правила разнесения</h1><div class="page-summary"><span>Автоматизируйте повторяющиеся банковские операции: условие → ЦФУ и статья ДДС.</span></div></div>
-  <div class="page-head-right"><button type="button" class="btn btn-primary btn--toolbar" id="matching-rule-create-btn">+ Правило</button></div>
+  <div class="page-head-right"><a href="<?= app_url('/company/finance/bank-accounts') ?>" class="btn btn-secondary btn--toolbar">Назад к выпискам</a><button type="button" class="btn btn-primary btn--toolbar" id="matching-rule-create-btn">+ Правило</button></div>
  </div>
  <?php if (!empty($successFlash)): ?><div class="notice success"><?= e($successFlash) ?></div><?php endif; ?>
  <?php if (!empty($errorFlash)): ?><div class="notice warn"><?= e($errorFlash) ?></div><?php endif; ?>

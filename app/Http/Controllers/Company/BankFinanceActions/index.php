@@ -1,7 +1,7 @@
 <?php
 requireRole(['company_owner']);
-$pageTitle='Банковские счета';
-$pageContext='Финансы › Банковские счета';
+$pageTitle='Выписки со счёта';
+$pageContext='Финансы › Выписки со счёта';
 $companyId=(int)(getSessionCompanyId()??0);
 $bankFinanceSuccess=$_SESSION['bank_finance_success']??null;
 $bankFinanceError=$_SESSION['bank_finance_error']??null;
@@ -18,7 +18,7 @@ if($companyId>0){
         $stmt->execute([$companyId]);
         $company=$stmt->fetch(PDO::FETCH_ASSOC)?:null;
         if($company&&($company['status']??'')==='active'){
-            $pageContext='Финансы › Банковские счета › Компания: '.e($company['name']);
+            $pageContext='Финансы › Выписки со счёта › Компания: '.e($company['name']);
             $localPdo=(new \App\Core\Database(companyDatabaseConfig($config,$company)))->connection();
             $accounts=\App\Service\BankFinanceService::getAccounts($localPdo);
             $imports=\App\Service\BankFinanceService::getImports($localPdo);
@@ -209,9 +209,6 @@ JS;
         }
     }
 
-    $b='<button type="button" class="btn btn-secondary" data-open-modal="bank-statements-modal">Просмотр выписок</button>';
-    $f='<form method="post" action="'.e(app_url('/company/finance/bank-accounts/refresh-from-mail')).'" class="inline-form">'.csrfField().'<button type="submit" class="btn btn-secondary">Обновить из почты</button></form>';
-    $content=str_replace($b,$b.$f,$content);
 }
 
 require base_path('app/View/layouts/main.php');

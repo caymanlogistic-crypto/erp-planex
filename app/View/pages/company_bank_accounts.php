@@ -49,8 +49,8 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
 
 <div class="page-head">
     <div class="page-head-left">
-        <h1 class="page-title">Банковские счета</h1>
-        <div class="page-summary"><span>Финансовый модуль: импорт и просмотр банковских выписок</span></div>
+        <h1 class="page-title">Выписки со счёта</h1>
+        <div class="page-summary"><span>Загрузка, просмотр и автоматическое разнесение банковских операций</span></div>
     </div>
 </div>
 
@@ -62,8 +62,8 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
 
 <div class="page-head">
     <div class="page-head-left">
-        <h1 class="page-title">Банковские счета</h1>
-        <div class="page-summary"><span>Финансовый модуль: импорт и просмотр банковских выписок</span></div>
+        <h1 class="page-title">Выписки со счёта</h1>
+        <div class="page-summary"><span>Загрузка, просмотр и автоматическое разнесение банковских операций</span></div>
     </div>
 </div>
 
@@ -75,18 +75,21 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
 
 <div class="page-head">
     <div class="page-head-left">
-        <h1 class="page-title">Банковские счета</h1>
-        <div class="page-summary"><span>Финансовый модуль: импорт и просмотр банковских выписок</span></div>
+        <h1 class="page-title">Выписки со счёта</h1>
+        <div class="page-summary"><span>Загрузка, просмотр и автоматическое разнесение банковских операций</span></div>
     </div>
     <div class="page-head-actions">
-        <button type="button" class="btn btn-primary" data-open-modal="bank-statement-upload-modal">Загрузить выписку XLSX</button>
+        <button type="button" class="btn btn-secondary" data-open-modal="bank-statement-upload-modal">Загрузить выписку XLSX</button>
         <button type="button" class="btn btn-secondary" data-open-modal="bank-statements-modal">Просмотр выписок</button>
+        <form method="post" action="<?= app_url('/company/finance/bank-accounts/refresh-from-mail') ?>" class="inline-form"><?= csrfField() ?><button type="submit" class="btn btn-secondary">Обновить из почты</button></form>
+        <a href="<?= app_url('/company/finance/settings/matching-rules') ?>" class="btn btn-secondary">Правила разнесения</a>
+        <form method="post" action="<?= app_url('/company/finance/bank-accounts/apply-rules') ?>" class="inline-form" onsubmit="return confirm('Применить действующие правила ко всем неразнесённым банковским операциям? Ручные разнесения не изменятся.');"><?= csrfField() ?><button type="submit" class="btn btn-primary">Разнести по правилам</button></form>
     </div>
 </div>
 
 <div class="panel">
     <div class="empty-state">
-        <p class="empty-title">Банковские счета ещё не добавлены.</p>
+        <p class="empty-title">Выписки со счёта ещё не добавлены.</p>
         <p class="empty-desc">Загрузите выписку из банка в формате XLSX, чтобы начать работу с финансовым модулем.</p>
     </div>
 </div>
@@ -95,12 +98,15 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
 
 <div class="page-head">
     <div class="page-head-left">
-        <h1 class="page-title">Банковские счета</h1>
-        <div class="page-summary"><span>Финансовый модуль: импорт и просмотр банковских выписок</span></div>
+        <h1 class="page-title">Выписки со счёта</h1>
+        <div class="page-summary"><span>Загрузка, просмотр и автоматическое разнесение банковских операций</span></div>
     </div>
     <div class="page-head-actions">
-        <button type="button" class="btn btn-primary" data-open-modal="bank-statement-upload-modal">Загрузить выписку XLSX</button>
+        <button type="button" class="btn btn-secondary" data-open-modal="bank-statement-upload-modal">Загрузить выписку XLSX</button>
         <button type="button" class="btn btn-secondary" data-open-modal="bank-statements-modal">Просмотр выписок</button>
+        <form method="post" action="<?= app_url('/company/finance/bank-accounts/refresh-from-mail') ?>" class="inline-form"><?= csrfField() ?><button type="submit" class="btn btn-secondary">Обновить из почты</button></form>
+        <a href="<?= app_url('/company/finance/settings/matching-rules') ?>" class="btn btn-secondary">Правила разнесения</a>
+        <form method="post" action="<?= app_url('/company/finance/bank-accounts/apply-rules') ?>" class="inline-form" onsubmit="return confirm('Применить действующие правила ко всем неразнесённым банковским операциям? Ручные разнесения не изменятся.');"><?= csrfField() ?><button type="submit" class="btn btn-primary">Разнести по правилам</button></form>
     </div>
 </div>
 
