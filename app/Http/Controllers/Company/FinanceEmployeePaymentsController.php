@@ -80,12 +80,33 @@ final class FinanceEmployeePaymentsController
     {
         requireRole(['company_owner']);
         [, $pdo] = $this->tenant();
-        $stmt = $pdo->prepare('SELECT id,full_name,login,status FROM users WHERE id=?');
+        $stmt = $pdo->prepare('SELECT id,full_name,login,role_code,status FROM users WHERE id=?');
         $stmt->execute([$id]);
         $employee = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$employee) { http_response_code(404); echo '<div class="form-alert alert-error">Сотрудник не найден.</div>'; return; }
         $ledger = FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, $id);
+        $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo);
         require base_path('app/View/partials/company_finance_employee_payment_ledger.php');
+    }
+
+    public function reassignMovement(int $id): void
+    {
+        requireRole(['company_owner']);
+        verifyCsrfRequest();
+        try {
+            [, $pdo] = $this->tenant();
+            $employeeUserId = (int)($_POST['employee_user_id'] ?? 0);
+            FinanceEmployeePaymentService::reassignMovement(
+                $pdo,
+                $id,
+                $employeeUserId,
+                ['id'=>$_SESSION['user_id'] ?? 0,'role'=>$_SESSION['role_code'] ?? 'company_owner']
+            );
+            $_SESSION['employee_payments_success'] = 'Сотрудник для операции изменён. Денежная операция не изменялась.';
+        } catch (\Throwable $e) {
+            $_SESSION['employee_payments_error'] = $e->getMessage();
+        }
+        redirect_to('/company/finance/employee-payments');
     }
 
     public function bankLink(): void
