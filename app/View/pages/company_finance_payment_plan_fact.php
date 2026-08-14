@@ -1,167 +1,32 @@
 <?php
-
 use App\Service\FinancePaymentPlanFactService;
-
-$fmtDate = function ($d) {
-    if (!$d || $d === '—') {
-        return '—';
-    }
-    $ts = strtotime($d);
-    if ($ts === false) {
-        return '—';
-    }
-    return date('d.m.Y', $ts);
-};
-
-$currentDateFrom = $_GET['date_from'] ?? '';
-$currentDateTo = $_GET['date_to'] ?? '';
-$currentDirection = $_GET['direction'] ?? '';
-$currentStatus = $_GET['status'] ?? '';
-$currentSearch = $_GET['search'] ?? '';
+$fmtDate=static function($d){if(!$d||$d==='—')return '—';$ts=strtotime($d);return $ts===false?'—':date('d.m.Y',$ts);};
+$currentDateFrom=$_GET['date_from']??'';$currentDateTo=$_GET['date_to']??'';$currentDirection=$_GET['direction']??'';$currentStatus=$_GET['status']??'';$currentSearch=$_GET['search']??'';
+$incomePct=!empty($totals['expected_income'])?min(100,max(0,(float)$totals['received_income']/(float)$totals['expected_income']*100)):0;
+$expensePct=!empty($totals['expected_expense'])?min(100,max(0,(float)$totals['paid_expense']/(float)$totals['expected_expense']*100)):0;
 ?>
-<?php if ($company === null): ?>
-<div class="notice warn">Компания не найдена. Укажите корректный company_id.</div>
-<?php elseif (($company['status'] ?? '') !== 'active'): ?>
-<div class="page-head">
-    <div class="page-head-left">
-        <h1 class="page-title">План-факт оплаты</h1>
-        <div class="page-summary"><span>Компания находится в неактивном статусе.</span></div>
-    </div>
+<?php if($company===null):?><div class="notice warn">Компания не найдена.</div>
+<?php elseif(($company['status']??'')!=='active'):?><div class="page-head"><div class="page-head-left"><h1 class="page-title">План-факт оплаты</h1></div></div><div class="notice warn">Работа с отчётом недоступна.</div>
+<?php elseif($dbError!==null):?><div class="page-head"><div class="page-head-left"><h1 class="page-title">План-факт оплаты</h1></div></div><div class="notice warn"><?=e($dbError)?></div>
+<?php else:?>
+<div class="ux-shell" data-ux-page="payment-plan-fact">
+ <div class="page-head"><div class="page-head-left"><h1 class="page-title">План-факт оплаты</h1><div class="page-summary"><span>Сопоставление обязательств с фактическими поступлениями и платежами.</span></div></div></div>
+ <div class="ux-summary-strip"><div><strong>Контроль исполнения:</strong> остаток показывает незакрытую часть плана, просрочка — обязательства с уже наступившей датой.</div><div><?=count($rows??[])?> обязательств</div></div>
+ <?php if(!empty($totals)):?>
+ <div class="ux-kpi-grid cols-3">
+  <div class="ux-kpi is-good"><div class="ux-kpi-label">Поступления · план / факт</div><div class="ux-kpi-value"><?=FinancePaymentPlanFactService::formatAmount($totals['received_income'])?> <span style="font-size:11px;color:var(--text-faint)">из <?=FinancePaymentPlanFactService::formatAmount($totals['expected_income'])?></span></div><div class="ux-progress"><span style="width:<?=round($incomePct)?>%"></span></div><div class="ux-kpi-note">Осталось <?=FinancePaymentPlanFactService::formatAmount($totals['remaining_income'])?> · просрочено <?=FinancePaymentPlanFactService::formatAmount($totals['overdue_income'])?></div></div>
+  <div class="ux-kpi is-bad"><div class="ux-kpi-label">Платежи · план / факт</div><div class="ux-kpi-value"><?=FinancePaymentPlanFactService::formatAmount($totals['paid_expense'])?> <span style="font-size:11px;color:var(--text-faint)">из <?=FinancePaymentPlanFactService::formatAmount($totals['expected_expense'])?></span></div><div class="ux-progress"><span style="width:<?=round($expensePct)?>%"></span></div><div class="ux-kpi-note">Осталось <?=FinancePaymentPlanFactService::formatAmount($totals['remaining_expense'])?> · просрочено <?=FinancePaymentPlanFactService::formatAmount($totals['overdue_expense'])?></div></div>
+  <div class="ux-kpi is-accent"><div class="ux-kpi-label">Нетто · план / факт</div><div class="ux-kpi-value"><?=FinancePaymentPlanFactService::formatAmount($totals['net_fact'])?></div><div class="ux-kpi-note">План <?=FinancePaymentPlanFactService::formatAmount($totals['net_plan'])?> · остаток <?=FinancePaymentPlanFactService::formatAmount($totals['net_remaining'])?></div></div>
+ </div>
+ <?php endif;?>
+ <form method="get" class="ux-filter-panel"><div class="ux-filter-head"><div class="ux-filter-title">Период и состояние обязательств</div><a href="<?=app_url('/company/finance/reports/payment-plan-fact')?>" class="btn btn-ghost btn-sm">Сбросить</a></div><div class="ux-filter-body">
+  <div class="ux-filter-field"><label>С даты</label><input type="date" name="date_from" value="<?=e($currentDateFrom)?>" class="field-input"></div><div class="ux-filter-field"><label>По дату</label><input type="date" name="date_to" value="<?=e($currentDateTo)?>" class="field-input"></div>
+  <div class="ux-filter-field"><label>Сторона</label><select name="direction" class="field-select"><option value="">Все</option><option value="INCOME"<?=$currentDirection==='INCOME'?' selected':''?>>Поступления</option><option value="EXPENSE"<?=$currentDirection==='EXPENSE'?' selected':''?>>Платежи</option></select></div>
+  <div class="ux-filter-field"><label>Статус</label><select name="status" class="field-select"><option value="">Все</option><option value="paid"<?=$currentStatus==='paid'?' selected':''?>>Оплачено</option><option value="overdue"<?=$currentStatus==='overdue'?' selected':''?>>Просрочено</option><option value="partial"<?=$currentStatus==='partial'?' selected':''?>>Частично</option><option value="planned"<?=$currentStatus==='planned'?' selected':''?>>Запланировано</option></select></div>
+  <div class="ux-filter-field is-search"><label>Контрагент или источник</label><input type="search" name="search" value="<?=e($currentSearch)?>" class="field-input" placeholder="Поиск"></div><div class="ux-filter-actions"><button type="submit" class="btn btn-primary">Сформировать</button></div>
+ </div></form>
+ <div class="ux-table"><div class="ux-table-head"><div><div class="ux-table-title">Исполнение обязательств</div><div class="ux-table-meta">Красная линия — просрочка, янтарная — частичное исполнение.</div></div><div class="ux-table-meta">Показано: <?=count($rows??[])?></div></div>
+ <?php if(empty($rows)):?><div class="ux-empty"><strong>Нет данных за период</strong>Создайте счета или рейсы с плановыми оплатами.</div><?php else:?><div class="table-scroll"><table class="table"><thead><tr><th>Плановая дата</th><th>Сторона</th><th>Контрагент / источник</th><th>Рейс</th><th>План</th><th>Факт</th><th>Остаток</th><th>Закрыто</th><th>Просрочка</th><th>Статус</th></tr></thead><tbody>
+ <?php foreach($rows as $r):$st=$r['status']??'';?><tr class="<?=$st==='overdue'?'ux-row-overdue':($st==='partial'?'ux-row-partial':'')?>"><td class="col-mono"><?=$r['planned_date']!==null?$fmtDate($r['planned_date']):'—'?></td><td><?php if($r['side']==='INCOME'):?><span class="badge badge-ok"><span class="dot"></span>Поступление</span><?php else:?><span class="badge badge-danger"><span class="dot"></span>Платёж</span><?php endif;?></td><td><div class="ux-primary-cell"><strong><?=e($r['counterparty']??'—')?></strong><span><?=e($r['source_label']??'—')?></span></div></td><td><?=e($r['route_label']??'—')?></td><td class="col-mono"><?=FinancePaymentPlanFactService::formatAmount($r['planned_amount'])?></td><td class="col-mono"><?=FinancePaymentPlanFactService::formatAmount($r['paid_amount'])?></td><td class="col-mono"><strong><?=FinancePaymentPlanFactService::formatAmount($r['remaining'])?></strong></td><td class="col-mono"><?=$r['actual_closed_date']!==null?$fmtDate($r['actual_closed_date']):'—'?></td><td class="col-mono"><?=($r['overdue_days']??0)>0?(int)$r['overdue_days'].' дн.':'—'?></td><td><?php if($st==='paid'):?><span class="badge badge-ok"><span class="dot"></span>Оплачено</span><?php elseif($st==='overdue'):?><span class="badge badge-danger"><span class="dot"></span>Просрочено</span><?php elseif($st==='partial'):?><span class="badge badge-warning"><span class="dot"></span>Частично</span><?php else:?><span class="badge badge-neutral"><span class="dot"></span>Запланировано</span><?php endif;?></td></tr><?php endforeach;?></tbody></table></div><?php endif;?></div>
 </div>
-<div class="notice warn">Работа с отчётом недоступна.</div>
-<?php elseif ($dbError !== null): ?>
-<div class="page-head">
-    <div class="page-head-left">
-        <h1 class="page-title">План-факт оплаты</h1>
-        <div class="page-summary"><span>Сводный отчёт по плановым и фактическим оплатам.</span></div>
-    </div>
-</div>
-<div class="notice warn"><?= e($dbError) ?></div>
-<?php else: ?>
-<div class="page-head">
-    <div class="page-head-left">
-        <h1 class="page-title">План-факт оплаты</h1>
-        <div class="page-summary"><span>Сводный отчёт по плановым и фактическим оплатам.</span></div>
-    </div>
-</div>
-
-<form method="get" class="table-toolbar table-toolbar--ops">
-    <div class="toolbar-left toolbar-left--ops">
-        <input type="date" name="date_from" value="<?= e($currentDateFrom) ?>" class="toolbar-input toolbar-input--ops" placeholder="Дата с">
-        <input type="date" name="date_to" value="<?= e($currentDateTo) ?>" class="toolbar-input toolbar-input--ops" placeholder="Дата по">
-        <select name="direction" class="toolbar-select toolbar-select--ops">
-            <option value="">Все направления</option>
-            <option value="INCOME"<?= $currentDirection === 'INCOME' ? ' selected' : '' ?>>Поступления</option>
-            <option value="EXPENSE"<?= $currentDirection === 'EXPENSE' ? ' selected' : '' ?>>Платежи</option>
-        </select>
-        <select name="status" class="toolbar-select toolbar-select--ops">
-            <option value="">Все статусы</option>
-            <option value="paid"<?= $currentStatus === 'paid' ? ' selected' : '' ?>>Оплачено</option>
-            <option value="overdue"<?= $currentStatus === 'overdue' ? ' selected' : '' ?>>Просрочено</option>
-            <option value="partial"<?= $currentStatus === 'partial' ? ' selected' : '' ?>>Частично оплачено</option>
-            <option value="planned"<?= $currentStatus === 'planned' ? ' selected' : '' ?>>Запланировано</option>
-        </select>
-        <input type="text" name="search" value="<?= e($currentSearch) ?>" class="toolbar-search toolbar-search--ops" placeholder="Поиск по контрагенту или источнику">
-        <button type="submit" class="btn btn-primary btn--ops-filter">Применить</button>
-        <a href="<?= app_url('/company/finance/reports/payment-plan-fact') ?>" class="btn btn-ghost btn--ops-reset">Сбросить</a>
-    </div>
-</form>
-
-<?php if (!empty($totals)): ?>
-<div class="page-summary page-summary--ops">
-    <span>План поступлений: <b><?= FinancePaymentPlanFactService::formatAmount($totals['expected_income']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Факт поступлений: <b><?= FinancePaymentPlanFactService::formatAmount($totals['received_income']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Остаток поступлений: <b><?= FinancePaymentPlanFactService::formatAmount($totals['remaining_income']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Просрочено поступлений: <b class="text-danger"><?= FinancePaymentPlanFactService::formatAmount($totals['overdue_income']) ?></b></span>
-</div>
-<div class="page-summary page-summary--ops">
-    <span>План платежей: <b><?= FinancePaymentPlanFactService::formatAmount($totals['expected_expense']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Факт платежей: <b><?= FinancePaymentPlanFactService::formatAmount($totals['paid_expense']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Остаток платежей: <b><?= FinancePaymentPlanFactService::formatAmount($totals['remaining_expense']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Просрочено платежей: <b class="text-danger"><?= FinancePaymentPlanFactService::formatAmount($totals['overdue_expense']) ?></b></span>
-</div>
-<div class="page-summary page-summary--ops">
-    <span>Нетто-план: <b><?= FinancePaymentPlanFactService::formatAmount($totals['net_plan']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Нетто-факт: <b><?= FinancePaymentPlanFactService::formatAmount($totals['net_fact']) ?></b></span>
-    <span class="sep">|</span>
-    <span>Нетто-остаток: <b><?= FinancePaymentPlanFactService::formatAmount($totals['net_remaining']) ?></b></span>
-</div>
-<?php endif; ?>
-
-<div class="page-summary page-summary--ops">
-    Показано: <b><?= count($rows) ?></b> записей.
-</div>
-
-<?php if (empty($rows)): ?>
-<div class="panel">
-    <div class="panel-body">
-        <div class="empty-state">
-            <p class="empty-title">Записи не найдены.</p>
-            <p class="empty-desc">Создайте счета или рейсы с плановыми платежами для отображения в отчёте.</p>
-        </div>
-    </div>
-</div>
-<?php else: ?>
-<div class="table-card table-card--standard">
-    <div class="table-scroll">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Дата</th>
-                    <th>Сторона</th>
-                    <th>Контрагент</th>
-                    <th>Источник</th>
-                    <th>Рейс</th>
-                    <th>План</th>
-                    <th>Оплачено</th>
-                    <th>Остаток</th>
-                    <th>Факт. закрытие</th>
-                    <th>Просрочка, дн.</th>
-                    <th>Статус</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($rows as $r): ?>
-                <tr>
-                    <td class="col-mono"><?= $r['planned_date'] !== null ? $fmtDate($r['planned_date']) : '—' ?></td>
-                    <td>
-                        <?php if ($r['side'] === 'INCOME'): ?>
-                        <span class="badge badge-ok"><span class="dot"></span>Поступление</span>
-                        <?php else: ?>
-                        <span class="badge badge-danger"><span class="dot"></span>Платёж</span>
-                        <?php endif; ?>
-                    </td>
-                    <td><?= e($r['counterparty'] ?? '—') ?></td>
-                    <td><?= e($r['source_label']) ?></td>
-                    <td><?= e($r['route_label'] ?? '—') ?></td>
-                    <td class="col-mono"><?= FinancePaymentPlanFactService::formatAmount($r['planned_amount']) ?></td>
-                    <td class="col-mono"><?= FinancePaymentPlanFactService::formatAmount($r['paid_amount']) ?></td>
-                    <td class="col-mono"><?= FinancePaymentPlanFactService::formatAmount($r['remaining']) ?></td>
-                    <td class="col-mono"><?= $r['actual_closed_date'] !== null ? $fmtDate($r['actual_closed_date']) : '—' ?></td>
-                    <td class="col-mono"><?= $r['overdue_days'] > 0 ? $r['overdue_days'] : '—' ?></td>
-                    <td>
-                        <?php if ($r['status'] === 'paid'): ?>
-                        <span class="badge badge-ok"><span class="dot"></span>Оплачено</span>
-                        <?php elseif ($r['status'] === 'overdue'): ?>
-                        <span class="badge badge-danger"><span class="dot"></span>Просрочено</span>
-                        <?php elseif ($r['status'] === 'partial'): ?>
-                        <span class="badge badge-warning"><span class="dot"></span>Частично</span>
-                        <?php else: ?>
-                        <span class="badge badge-neutral"><span class="dot"></span>Запланировано</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-<?php endif; ?>
-<?php endif; ?>
+<?php endif;?>
