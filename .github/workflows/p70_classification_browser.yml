@@ -42,7 +42,10 @@ jobs:
           echo "::add-mask::$cred"
           echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
       - name: Read-only browser acceptance
-        run: node .github/p70/P70_classification_browser.js | tee P70_RUNTIME.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p70/P70_classification_browser.js | tee P70_RUNTIME.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
