@@ -1,0 +1,54 @@
+name: P76 Employee Payments Migration
+on:
+  push:
+    branches: [chatgpt/p76-employee-migration-20260815]
+    paths:
+      - '.github/p76/P76_apply_employee_migration.php'
+      - '.github/workflows/p76_employee_migration.yml'
+permissions:
+  contents: read
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: php -l .github/p76/P76_apply_employee_migration.php
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p76"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p76" "$HOME/.ssh/known_hosts"
+      - name: Verify production SHA and apply migration 065
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 5b3284fc39c66dfd7df98caefacfc5a1c8bf30bd
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=/home/s/spugovxsim/planexp
+          live="$root/public_html/erpv2"
+          got="$(ssh -p "$PORT" -i "$HOME/.ssh/p76" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "cat '$root/deploy/P07_erpv2_deployed_commit.txt'")"
+          test "$got" = "$EXPECTED_SHA"
+          remote="/tmp/P76_apply_employee_migration_${GITHUB_RUN_ID}.php"
+          scp -P "$PORT" -i "$HOME/.ssh/p76" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes .github/p76/P76_apply_employee_migration.php "$USER@$HOST:$remote"
+          ssh -p "$PORT" -i "$HOME/.ssh/p76" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "php '$remote' '$live'; rm -f '$remote'" | tee P76_MIGRATION.txt
+          grep -q 'P76_EMPLOYEE_MIGRATION_OK' P76_MIGRATION.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P76_employee_migration
+          path: P76_MIGRATION.txt
+          if-no-files-found: warn
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f "$HOME/.ssh/p76"
