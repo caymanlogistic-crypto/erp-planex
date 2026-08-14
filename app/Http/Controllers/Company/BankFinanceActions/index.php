@@ -123,9 +123,19 @@ if(($company['status']??'')==='active'&&$dbError===null){
                 var classificationUrl = this.getAttribute('data-classify-url');
                 if (classificationUrl) {
                     fetch(classificationUrl, {credentials:'same-origin'})
-                        .then(function(r) { return r.text(); })
+                        .then(function(r) {
+                            return r.text().then(function(html) {
+                                if (!r.ok) throw new Error(html || ('HTTP ' + r.status));
+                                return html;
+                            });
+                        })
                         .then(function(html) { classificationBody.innerHTML = html; })
-                        .catch(function() { classificationBody.innerHTML = '<div class="form-alert alert-error">Не удалось загрузить разнесение.</div>'; });
+                        .catch(function(err) {
+                            var message = String(err && err.message ? err.message : 'Не удалось загрузить разнесение.').replace(/<[^>]*>/g,'').trim();
+                            classificationBody.innerHTML = '<div class="form-alert alert-error">' + (message || 'Не удалось загрузить разнесение.') + '</div>';
+                        });
+                } else {
+                    classificationBody.innerHTML = '<div class="form-alert alert-error">Не определён адрес разнесения операции.</div>';
                 }
             }
             window.openModal('tx-detail-modal');
@@ -142,17 +152,19 @@ JS;
     $reconSummary=$reconciliation['summary']??[];
     $controlDateLabel=date('d.m.Y',strtotime($reconciliationControlDate));
     $reconHasError=!($reconSummary['all_ok']??false);
-    $reconBanner='<div class="notice '.($reconHasError?'warn':'success').' bank-reconciliation-banner" data-reconciliation-banner>';
-    $reconBanner.='<div><b>Независимая сверка: '.($reconHasError?'есть расхождения':'расхождений нет').'</b>';
-    $reconBanner.=' <span class="field-note">Строгий контроль с '.$controlDateLabel.'. История до этой даты сохранена, но не влияет на текущий статус.</span>';
-    if($reconSummary['service_error']??false){$reconBanner.='<div class="text-danger">Ошибка выполнения проверки.</div>';}
-    if(($reconSummary['invalid_arithmetic']??0)>0){$reconBanner.='<div class="text-danger">Ошибок арифметики: '.(int)$reconSummary['invalid_arithmetic'].'</div>';}
-    if(($reconSummary['gap']??0)>0){$reconBanner.='<div class="text-danger">Разрывов: '.(int)$reconSummary['gap'].'</div>';}
-    if(($reconSummary['duplicate']??0)>0){$reconBanner.='<div class="text-danger">Дубликатов: '.(int)$reconSummary['duplicate'].'</div>';}
-    if(($reconSummary['mismatch']??0)>0){$reconBanner.='<div class="text-danger">Несовпадений оборотов: '.(int)$reconSummary['mismatch'].'</div>';}
-    $reconBanner.='</div><div><button type="button" class="btn btn-secondary btn-toolbar" onclick="window.openModal(\'bank-reconciliation-modal\')">Детали сверки</button></div></div>';
-    $tableAnchor='<div class="table-card table-card--standard bank-finance-card bank-transactions-card">';
-    $content=$replaceFirst($content,$tableAnchor,$tableAnchor.$reconBanner);
+    if($reconHasError){
+        $reconBanner='<div class="notice warn bank-reconciliation-banner" data-reconciliation-banner>';
+        $reconBanner.='<div><b>Независимая сверка: есть расхождения</b>';
+        $reconBanner.=' <span class="field-note">Строгий контроль с '.$controlDateLabel.'. История до этой даты сохранена, но не влияет на текущий статус.</span>';
+        if($reconSummary['service_error']??false){$reconBanner.='<div class="text-danger">Ошибка выполнения проверки.</div>';}
+        if(($reconSummary['invalid_arithmetic']??0)>0){$reconBanner.='<div class="text-danger">Ошибок арифметики: '.(int)$reconSummary['invalid_arithmetic'].'</div>';}
+        if(($reconSummary['gap']??0)>0){$reconBanner.='<div class="text-danger">Разрывов: '.(int)$reconSummary['gap'].'</div>';}
+        if(($reconSummary['duplicate']??0)>0){$reconBanner.='<div class="text-danger">Дубликатов: '.(int)$reconSummary['duplicate'].'</div>';}
+        if(($reconSummary['mismatch']??0)>0){$reconBanner.='<div class="text-danger">Несовпадений оборотов: '.(int)$reconSummary['mismatch'].'</div>';}
+        $reconBanner.='</div><div><button type="button" class="btn btn-secondary btn-toolbar" onclick="window.openModal(\'bank-reconciliation-modal\')">Детали сверки</button></div></div>';
+        $tableAnchor='<div class="table-card table-card--standard bank-finance-card bank-transactions-card">';
+        $content=$replaceFirst($content,$tableAnchor,$tableAnchor.$reconBanner);
+    }
 
     $legacyReconStart=strpos($content,"<div class=\"panel-section\">\n    <div class=\"section-title\">Независимая сверка выписок</div>");
     if($legacyReconStart!==false){
