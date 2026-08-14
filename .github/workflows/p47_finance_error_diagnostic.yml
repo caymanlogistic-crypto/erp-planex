@@ -11,6 +11,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -21,8 +23,8 @@ jobs:
       - name: Resolve OWNER credentials
         shell: bash
         env:
-          CRED: ${{ secrets.P12_CREDENTIALS_B64 }}
-          KEY: ${{ secrets.P11_RUNTIME_KEY }}
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           cred="${CRED:-}"
@@ -46,8 +48,10 @@ jobs:
           node .github/p47/P47_finance_error_diagnostic.js | tee P47_DIAGNOSTIC.txt
           grep -q 'P47_OK' P47_DIAGNOSTIC.txt
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: P47_finance_error_diagnostic
           path: |
             P47_DIAGNOSTIC.txt
             P47_bank.png
+          if-no-files-found: warn
