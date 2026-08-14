@@ -41,7 +41,7 @@ jobs:
           test "$got" = "$EXPECTED_SHA"
           remote="/tmp/P76_apply_employee_migration_${GITHUB_RUN_ID}.php"
           scp -P "$PORT" -i "$HOME/.ssh/p76" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes .github/p76/P76_apply_employee_migration.php "$USER@$HOST:$remote"
-          ssh -p "$PORT" -i "$HOME/.ssh/p76" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "php '$remote' '$live'; rm -f '$remote'" | tee P76_MIGRATION.txt
+          ssh -p "$PORT" -i "$HOME/.ssh/p76" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "/usr/bin/php8.5 '$remote' '$live'; rm -f '$remote'" | tee P76_MIGRATION.txt
           grep -q 'P76_EMPLOYEE_MIGRATION_OK' P76_MIGRATION.txt
       - uses: actions/upload-artifact@v4
         if: always()
