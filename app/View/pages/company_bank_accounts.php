@@ -146,7 +146,6 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
 <?php endif; ?>
         </form>
         <div class="bank-controls-right">
-            <span class="bank-control-meta">Строки: <b><?= count($transactions) ?></b> из <b><?= $txTotal ?></b> (стр. <?= $txPage ?>/<?= $txPages ?>)</span>
             <input type="text" class="toolbar-search" placeholder="Поиск по таблице">
         </div>
     </div>

@@ -44,20 +44,13 @@ $ruleResult=static function(array $r)use($cfuNames,$ddsNames,$cashNames):string{
  <?php if(!empty($successFlash)): ?><div class="notice success"><?= e($successFlash) ?></div><?php endif; ?>
  <?php if(!empty($errorFlash)): ?><div class="notice warn"><?= e($errorFlash) ?></div><?php endif; ?>
 
- <div class="ux-summary-strip"><div><strong>Логика:</strong> если несколько правил имеют одинаковый максимальный приоритет, операция остаётся на проверку.</div><div><?= count($rules??[]) ?> правил</div></div>
- <div class="ux-kpi-grid cols-3">
-  <div class="ux-kpi is-accent"><div class="ux-kpi-label">Активные правила</div><div class="ux-kpi-value"><?= count($activeRules) ?></div><div class="ux-kpi-note">участвуют в разнесении</div></div>
-  <div class="ux-kpi"><div class="ux-kpi-label">Автоприменение</div><div class="ux-kpi-value"><?= $autoRules ?></div><div class="ux-kpi-note">применяются без ручного выбора</div></div>
-  <div class="ux-kpi is-muted"><div class="ux-kpi-label">Отключены</div><div class="ux-kpi-value"><?= $inactiveRules ?></div><div class="ux-kpi-note">сохранены, но не участвуют</div></div>
- </div>
-
  <div class="ux-filter-panel">
   <div class="ux-filter-head"><div class="ux-filter-title">Поиск по правилам</div><div class="ux-table-meta">Без перезагрузки страницы</div></div>
   <div class="ux-filter-body"><div class="ux-filter-field is-search"><label>Название, ИНН, условие или результат</label><input type="search" class="field-input" id="rules-search" placeholder="Например: ЕНП, 7727406020, Налоги"></div><div class="ux-filter-field"><label>Статус</label><select class="field-select" id="rules-status"><option value="all">Все правила</option><option value="active">Активные</option><option value="inactive">Отключённые</option></select></div></div>
  </div>
 
  <div class="table-card table-card--standard">
-  <div class="table-toolbar"><div class="table-toolbar-left"><strong>Сценарии автоматического разнесения</strong><span class="ux-table-meta" id="rules-visible-count">Показано: <?= count($rules??[]) ?></span></div></div>
+  <div class="table-toolbar"><div class="table-toolbar-left"><strong>Сценарии автоматического разнесения</strong></div></div>
   <?php if(empty($rules)): ?><div class="ux-empty"><strong>Правил пока нет</strong>Создайте первое правило для повторяющейся банковской операции.</div>
   <?php else: ?><div class="table-scroll"><table class="table" id="rules-list"><thead><tr><th class="col-tight">Приоритет</th><th>Правило</th><th>Условия</th><th>Результат</th><th class="col-tight">Статус</th><th class="col-actions">Действия</th></tr></thead><tbody>
    <?php foreach($rules as $rule): $active=!empty($rule['active']);$condition=$ruleCondition($rule);$result=$ruleResult($rule);$hay=mb_strtolower(($rule['name']??'').' '.($rule['counterparty_inn']??'').' '.($rule['purpose_contains']??'').' '.$condition.' '.$result); ?>
@@ -80,8 +73,8 @@ $ruleResult=static function(array $r)use($cfuNames,$ddsNames,$cashNames):string{
 <div id="matching-rule-delete-modal" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="1" data-close-on-escape="1"><div class="modal modal-sm"><div class="modal-head"><span class="modal-title">Удалить правило</span><button type="button" class="modal-close" data-close-modal="matching-rule-delete-modal">&times;</button></div><div class="modal-body"><div class="driver-delete-confirm-title" id="matching-rule-delete-title">Удалить правило?</div><div class="driver-delete-confirm-text">Автоматическое разнесение, выполненное именно этим правилом, будет снято. Операции вернутся в статус «Не разнесено». Ручные разнесения и другие правила не изменятся.</div></div><div class="modal-foot"><button type="button" class="btn btn-ghost" data-close-modal="matching-rule-delete-modal">Отмена</button><button type="button" class="btn btn-danger" id="matching-rule-delete-confirm">Удалить</button></div></div></div>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
- const search=document.getElementById('rules-search'),status=document.getElementById('rules-status'),rows=[...document.querySelectorAll('[data-rule-row]')],empty=document.getElementById('rules-empty'),count=document.getElementById('rules-visible-count');
- function filterRules(){let q=(search?search.value:'').trim().toLowerCase(),st=status?status.value:'all',shown=0;rows.forEach(r=>{let ok=(!q||(r.dataset.search||'').includes(q))&&(st==='all'||r.dataset.status===st);r.classList.toggle('ux-hidden',!ok);if(ok)shown++});if(empty)empty.classList.toggle('ux-hidden',shown!==0);if(count)count.textContent='Показано: '+shown}
+ const search=document.getElementById('rules-search'),status=document.getElementById('rules-status'),rows=[...document.querySelectorAll('[data-rule-row]')],empty=document.getElementById('rules-empty');
+ function filterRules(){let q=(search?search.value:'').trim().toLowerCase(),st=status?status.value:'all',shown=0;rows.forEach(r=>{let ok=(!q||(r.dataset.search||'').includes(q))&&(st==='all'||r.dataset.status===st);r.classList.toggle('ux-hidden',!ok);if(ok)shown++});if(empty)empty.classList.toggle('ux-hidden',shown!==0)}
  if(search)search.addEventListener('input',filterRules);if(status)status.addEventListener('change',filterRules);
  function load(btnId,modalId,bodyId,url){let btn=document.getElementById(btnId);if(!btn)return;btn.addEventListener('click',()=>{let body=document.getElementById(bodyId);body.innerHTML='<div class="empty-state compact"><p>Загрузка...</p></div>';window.openModal(modalId);fetch(window.getErpBasePath()+url).then(r=>r.text()).then(h=>body.innerHTML=h).catch(()=>body.innerHTML='<div class="form-alert alert-error">Не удалось загрузить форму.</div>')})}
  load('matching-rule-create-btn','matching-rule-create-modal','matching-rule-create-modal-body','/company/finance/settings/matching-rules/create');
