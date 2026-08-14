@@ -5,5 +5,6 @@ $router->get('/company/finance/employee-payments', [$controller, 'index']);
 $router->get('/company/finance/employee-payments/create', [$controller, 'createForm']);
 $router->post('/company/finance/employee-payments/create', [$controller, 'createSubmit']);
 $router->get('/company/finance/employee-payments/employee/{id}', [$controller, 'employeeDetail']);
+$router->post('/company/finance/employee-payments/movements/{id}/reassign', [$controller, 'reassignMovement']);
 $router->post('/company/finance/employee-payments/bank-link', [$controller, 'bankLink']);
 $router->post('/company/finance/employee-payments/bank-unlink', [$controller, 'bankUnlink']);
