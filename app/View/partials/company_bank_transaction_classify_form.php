@@ -7,6 +7,7 @@ $selectedDds=(int)($tx['dds_category_id']??0);
 $classificationStatus=strtoupper((string)($tx['classification_status']??'UNALLOCATED'));
 $canClearClassification=in_array($classificationStatus,['AUTO','MANUAL'],true);
 $clearFormId='tx-clear-classification-form-'.(int)$tx['id'];
+$clearModalId='tx-clear-classification-modal-'.(int)$tx['id'];
 $allowedMap=$ddsAllowedMap??[];
 $allowedMapJson=json_encode($allowedMap,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 if($allowedMapJson===false)$allowedMapJson='{}';
@@ -29,8 +30,11 @@ if($allowedMapJson===false)$allowedMapJson='{}';
    <div class="field"><label class="field-label">Статья ДДС <span class="field-required">*</span></label><select class="field-select" name="dds_category_id" id="bank-dds-select" required <?= $selectedCfu<=0?'disabled':'' ?>><option value=""><?= $selectedCfu>0?'— Выберите статью —':'— Сначала выберите ЦФУ —' ?></option><?php foreach($dds as $row): ?><option value="<?= (int)$row['id'] ?>" data-dds-id="<?= (int)$row['id'] ?>" <?= $selectedDds===(int)$row['id']?'selected':'' ?>><?= e($row['name']) ?></option><?php endforeach; ?></select><div class="tx-allocation-hint" id="bank-dds-hint">Показываются только статьи, разрешённые для выбранного ЦФУ.</div></div>
   </div>
   <div class="tx-rule-card"><label class="tx-rule-toggle"><input type="checkbox" name="create_rule" value="1" checked><span>Создать правило для будущих операций этого контрагента</span></label><div class="tx-rule-note">Базовое условие: ИНН <?= e($tx['counterparty_inn']??'не указан') ?>. Дополнительные условия применяются вместе по строгой AND-логике.</div><div class="tx-rule-fields"><div class="field"><label class="field-label">Назначение содержит</label><input class="field-input" name="rule_purpose_contains" placeholder="Необязательно"></div><div class="field"><label class="field-label">Приоритет</label><input class="field-input" type="number" name="rule_priority" min="1" max="100000" value="100"></div></div></div>
-  <div class="tx-allocation-actions"><?php if($canClearClassification): ?><button type="button" class="btn btn-danger tx-clear-classification" data-clear-classification-form="<?= e($clearFormId) ?>">Удалить разнесение</button><?php endif; ?><button type="button" class="btn btn-ghost" data-close-modal="tx-detail-modal">Отмена</button><button type="submit" class="btn btn-primary">Сохранить</button></div>
+  <div class="tx-allocation-actions"><?php if($canClearClassification): ?><button type="button" class="btn btn-danger tx-clear-classification" onclick="window.openModal('<?= e($clearModalId) ?>')">Удалить разнесение</button><?php endif; ?><button type="button" class="btn btn-ghost" data-close-modal="tx-detail-modal">Отмена</button><button type="submit" class="btn btn-primary">Сохранить</button></div>
  </section>
 </form>
-<?php if($canClearClassification): ?><form method="post" action="<?= app_url('/company/finance/bank-transactions/'.(int)$tx['id'].'/classification/delete') ?>" id="<?= e($clearFormId) ?>" class="is-hidden"><?= csrfField() ?></form><?php endif; ?>
+<?php if($canClearClassification): ?>
+<form method="post" action="<?= app_url('/company/finance/bank-transactions/'.(int)$tx['id'].'/classification/delete') ?>" id="<?= e($clearFormId) ?>" class="is-hidden"><?= csrfField() ?></form>
+<div id="<?= e($clearModalId) ?>" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="1" data-close-on-escape="1"><div class="modal modal-sm"><div class="modal-head"><span class="modal-title">Удалить разнесение</span><button type="button" class="modal-close" data-close-modal="<?= e($clearModalId) ?>">&times;</button></div><div class="modal-body"><div class="driver-delete-confirm-title">Удалить разнесение этой операции?</div><div class="driver-delete-confirm-text">ЦФУ и статья ДДС будут очищены. Операция вернётся в статус «Не разнесено».</div></div><div class="modal-foot"><button type="button" class="btn btn-ghost" data-close-modal="<?= e($clearModalId) ?>">Отмена</button><button type="submit" form="<?= e($clearFormId) ?>" class="btn btn-danger">Удалить разнесение</button></div></div></div>
+<?php endif; ?>
 <?php endif; ?>
