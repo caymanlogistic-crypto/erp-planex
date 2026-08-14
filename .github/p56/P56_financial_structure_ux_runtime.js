@@ -56,7 +56,8 @@ const must=(v,m)=>{if(!v)throw new Error(m)};
 
   const composition=pane.locator('[data-fs-links]').first(); must(await composition.count()===1,'composition button missing');
   await composition.click();
-  const linksModal=page.locator('#fs-links-modal'); await linksModal.waitFor({state:'visible'});
+  const linksModal=page.locator('#fs-links-modal');
+  must(await linksModal.evaluate(el=>el.classList.contains('is-open')),'composition modal did not open');
   must(await linksModal.locator('#fs-links-search').count()===1,'composition search missing');
   must(await linksModal.locator('#fs-link-list .fs-link-row').count()>0,'composition article rows missing');
   const selectedText=(await linksModal.locator('#fs-link-selected-count').innerText()).trim(); must(/^Выбрано:\s*\d+/.test(selectedText),'selected article count missing');
@@ -65,26 +66,21 @@ const must=(v,m)=>{if(!v)throw new Error(m)};
   await linksModal.locator('#fs-links-search').fill(linkName.slice(0,Math.min(6,linkName.length)));
   must(await linksModal.locator('#fs-link-list .fs-link-row:visible').count()>=1,'composition search failed');
   await linksModal.locator('[data-close-modal="fs-links-modal"]').first().click();
-  await linksModal.waitFor({state:'hidden'});
+  await page.waitForTimeout(180);
+  must(!(await linksModal.evaluate(el=>el.classList.contains('is-open'))),'composition modal did not close');
 
   const settings=pane.locator('[data-cfu-settings]').first(); must(await settings.count()===1,'CFU settings button missing');
   await settings.click();
-  const settingsModal=page.locator('#fs-cfu-settings-modal'); await settingsModal.waitFor({state:'visible'});
+  const settingsModal=page.locator('#fs-cfu-settings-modal');
+  must(await settingsModal.evaluate(el=>el.classList.contains('is-open')),'CFU settings modal did not open');
   must(await settingsModal.locator('#fs-settings-name').count()===1,'CFU settings name missing');
   must(await settingsModal.locator('#fs-settings-toggle').count()===1,'archive/restore action missing');
   await settingsModal.locator('[data-close-modal="fs-cfu-settings-modal"]').first().click();
-  await settingsModal.waitFor({state:'hidden'});
+  await page.waitForTimeout(180);
+  must(!(await settingsModal.evaluate(el=>el.classList.contains('is-open'))),'CFU settings modal did not close');
 
   await page.screenshot({path:'P56_financial_structure.png',fullPage:true});
-  const metrics={
-   cfuCount:await nav.count(),
-   visiblePanes:await page.locator('[data-cfu-pane]:visible').count(),
-   articleCount:await pane.locator('[data-article-row]').count(),
-   shellWidth:Math.round(shellBox.width),
-   workspaceWidth:Math.round(wsBox.width),
-   workspaceHeight:Math.round(wsBox.height),
-   selectedText
-  };
+  const metrics={cfuCount:await nav.count(),visiblePanes:await page.locator('[data-cfu-pane]:visible').count(),articleCount:await pane.locator('[data-article-row]').count(),shellWidth:Math.round(shellBox.width),workspaceWidth:Math.round(wsBox.width),workspaceHeight:Math.round(wsBox.height),selectedText};
   console.log('P56_METRICS='+JSON.stringify(metrics));
   console.log('P56_BAD_RESPONSES='+JSON.stringify(bad));
   console.log('P56_JS_ERRORS='+JSON.stringify(jsErrors));
