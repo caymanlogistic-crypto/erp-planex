@@ -70,7 +70,7 @@ const ok = (v, m) => { if (!v) throw new Error(m); };
       const footerButtons = (await modal.locator('.modal-foot .btn').allTextContents()).map(x => x.trim());
       ok(footerButtons[footerButtons.length - 1] === 'Отмена', 'modal cancel missing');
       await p.screenshot({ path: type === 'PAYMENT' ? 'P75_payment_modal.png' : 'P75_return_modal.png', fullPage: true });
-      await modal.locator('[data-close-modal="employee-payment-create-modal"]').click();
+      await modal.locator('.modal-close[data-close-modal="employee-payment-create-modal"]').first().click();
       await modal.waitFor({ state: 'hidden', timeout: 5000 });
     }
 
@@ -100,7 +100,6 @@ const ok = (v, m) => { if (!v) throw new Error(m); };
         }
         await detail.locator('.modal-close').first().click();
       } catch (_) {
-        // Try the next row; internal transfer/unsupported rows may not expose the block.
         if (await p.locator('#tx-detail-modal.is-open').count()) await p.locator('#tx-detail-modal.is-open .modal-close').first().click();
       }
     }
