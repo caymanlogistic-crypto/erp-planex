@@ -179,14 +179,25 @@ final class FinanceEmployeePaymentService
 
     public static function unlinkBankTransaction(PDO $pdo, int $bankTransactionId, array $user): bool
     {
-        $stmt = $pdo->prepare("SELECT * FROM finance_employee_movements WHERE bank_transaction_id = ? FOR UPDATE");
-        $stmt->execute([$bankTransactionId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$row) return false;
-        $del = $pdo->prepare('DELETE FROM finance_employee_movements WHERE id = ?');
-        $del->execute([(int)$row['id']]);
-        FinanceAuditLogService::log($pdo, 'finance_employee_movement', (int)$row['id'], 'unlink_bank', $row, ['removed'=>true], (int)($user['id'] ?? 0), (string)($user['role'] ?? 'company_owner'));
-        return true;
+        $started = !$pdo->inTransaction();
+        if ($started) $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM finance_employee_movements WHERE bank_transaction_id = ? FOR UPDATE");
+            $stmt->execute([$bankTransactionId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                if ($started) $pdo->commit();
+                return false;
+            }
+            $del = $pdo->prepare('DELETE FROM finance_employee_movements WHERE id = ?');
+            $del->execute([(int)$row['id']]);
+            FinanceAuditLogService::log($pdo, 'finance_employee_movement', (int)$row['id'], 'unlink_bank', $row, ['removed'=>true], (int)($user['id'] ?? 0), (string)($user['role'] ?? 'company_owner'));
+            if ($started) $pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            if ($started && $pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
     }
 
     public static function unlinkByBankTransactionIfExists(PDO $pdo, int $bankTransactionId, array $user): void
