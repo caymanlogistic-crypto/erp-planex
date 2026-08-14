@@ -131,9 +131,10 @@ trait FinanceMatchingRuleUtilityTrait
     public static function classificationBadgeClass(?string $status): string
     {
         return match (strtoupper((string)$status)) {
-            'AUTO', 'MANUAL' => 'badge badge-ok',
+            'AUTO' => 'badge badge-neutral',
+            'MANUAL' => 'badge badge-ok',
             'NEEDS_REVIEW' => 'badge badge-warning',
-            default => 'badge badge-neutral',
+            default => 'badge badge-danger',
         };
     }
 }
