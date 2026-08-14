@@ -22,6 +22,7 @@ trait FinanceMatchingRuleValidationTrait
         if($from!==null&&$to!==null&&self::cents($from)>self::cents($to))throw new \InvalidArgumentException('Сумма «от» больше суммы «до».');
         $cfu=self::nullableInt($pick('target_cash_flow_center_id'));$dds=self::nullableInt($pick('target_dds_category_id'));$cash=self::nullableInt($pick('target_cash_account_id'));
         if($cfu!==null)self::assertCfu($pdo,$cfu);if($dds!==null)self::assertDds($pdo,$dds,$direction);if($cash!==null)self::assertCashAccount($pdo,$cash);
+        if($cfu!==null&&$dds!==null)FinanceStructureService::assertLinkedPair($pdo,$cfu,$dds);
         if($action==='categorize'&&$cfu===null&&$dds===null)throw new \InvalidArgumentException('Для разнесения выберите ЦФУ и/или статью ДДС.');
         if($action==='transfer_to_cash'){
             if($cash===null)throw new \InvalidArgumentException('Для перевода выберите целевую кассу.');
