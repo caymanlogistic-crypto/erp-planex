@@ -4,6 +4,6 @@ $companyId=(int)(getSessionCompanyId()??0);if($companyId<=0){http_response_code(
 try{
  $central=$db->connection();$s=$central->prepare("SELECT * FROM companies WHERE id=? AND status='active'");$s->execute([$companyId]);$company=$s->fetch(PDO::FETCH_ASSOC);if(!$company)throw new RuntimeException('Компания не найдена или неактивна.');
  $local=(new \App\Core\Database(companyDatabaseConfig($config,$company)))->connection();$tx=\App\Service\FinanceMatchingRuleService::fetchBankTransactionForClassification($local,(int)$bankTransactionId);if(!$tx)throw new RuntimeException('Банковская операция не найдена.');
- $cfu=\App\Service\FinanceMatchingRuleService::fetchCashFlowCenters($local,true);$direction=((float)($tx['credit_amount']??0)>0)?'INCOME':'EXPENSE';$dds=\App\Service\FinanceDdsCategoryService::fetchActiveForDirection($local,$direction);
+ $cfu=\App\Service\FinanceMatchingRuleService::fetchCashFlowCenters($local,true);$direction=((float)($tx['credit_amount']??0)>0)?'INCOME':'EXPENSE';$dds=\App\Service\FinanceDdsCategoryService::fetchActiveForDirection($local,$direction);$ddsAllowedMap=\App\Service\FinanceStructureService::fetchAllowedMap($local,$direction);
  require base_path('app/View/partials/company_bank_transaction_classify_form.php');
 }catch(Throwable $e){http_response_code(422);echo '<div class="form-alert alert-error">'.e($e->getMessage()).'</div>';}
