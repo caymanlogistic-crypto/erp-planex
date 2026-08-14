@@ -103,7 +103,7 @@ if(($company['status']??'')==='active'&&$dbError===null){
         $rowEnd=strpos($content,'</tr>',$rowStart);
         if($rowEnd===false)continue;
         $status=(string)($tx['classification_status']??'UNALLOCATED');
-        $dds=trim((string)($tx['dds_category_code']??'').' '.(string)($tx['dds_category_name']??''));
+        $dds=trim((string)($tx['dds_category_name']??''));
         $cells='<td>'.e($tx['cash_flow_center_name']?:'—').'</td>';
         $cells.='<td>'.e($dds!==''?$dds:'—').'</td>';
         $cells.='<td><span class="'.e(\App\Service\FinanceMatchingRuleService::classificationBadgeClass($status)).'"><span class="dot"></span>'.e(\App\Service\FinanceMatchingRuleService::classificationStatusLabel($status)).'</span>';
