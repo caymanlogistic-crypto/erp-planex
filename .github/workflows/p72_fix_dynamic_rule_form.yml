@@ -1,0 +1,50 @@
+name: P72 Finalize Dynamic Rule Form
+on:
+  push:
+    branches: [chatgpt/p72-bank-rules-ux-counter-20260814]
+    paths: ['.github/workflows/p72_fix_dynamic_rule_form.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch dynamic form initialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          partial=Path('app/View/partials/company_finance_matching_rule_form.php')
+          s=partial.read_text()
+          s2=re.sub(r'\n<\?php if\(\$isCategorize\): \?>\n<script>.*?</script>\n<\?php endif; \?>\s*$', '\n', s, flags=re.S)
+          if s2==s:
+              raise SystemExit('P72 dynamic partial script block not found')
+          partial.write_text(s2)
+
+          page=Path('app/View/pages/company_finance_matching_rules.php')
+          p=page.read_text()
+          old=""" function loadForm(modalId,bodyId,url){const body=document.getElementById(bodyId);body.innerHTML='<div class=\"modal-body\"><div class=\"empty-state compact\"><p>Загрузка...</p></div></div>';window.openModal(modalId);fetch(base()+url).then(r=>r.text()).then(h=>body.innerHTML=h).catch(()=>body.innerHTML='<div class=\"modal-body\"><div class=\"form-alert alert-error\">Не удалось загрузить форму.</div></div>')}\n"""
+          new=""" function initRuleForm(scope){\n  const form=scope.querySelector('[data-matching-rule-form]');if(!form)return;const cfu=form.querySelector('#matching-rule-cfu'),dds=form.querySelector('#matching-rule-dds'),direction=form.querySelector('#matching-rule-direction');if(!cfu||!dds)return;let map={};try{map=JSON.parse(cfu.dataset.ddsMap||'{}')}catch(e){}\n  function syncDirection(){const opt=dds.selectedOptions[0];if(!direction||!opt)return;const d=(opt.dataset.direction||'').toUpperCase();direction.value=(d==='INCOME'||d==='EXPENSE')?d:''}\n  function refresh(){const id=String(cfu.value||''),hasMap=id!==''&&Object.prototype.hasOwnProperty.call(map,id),allowed=new Set((map[id]||[]).map(String)),current=String(dds.value||'');[...dds.options].forEach((o,i)=>{if(i===0)return;const show=!id||!hasMap||allowed.has(String(o.value));o.hidden=!show;o.disabled=!show});if(current&&dds.selectedOptions[0]&&dds.selectedOptions[0].disabled)dds.value='';syncDirection()}\n  cfu.addEventListener('change',refresh);dds.addEventListener('change',syncDirection);refresh();\n }\n function loadForm(modalId,bodyId,url){const body=document.getElementById(bodyId);body.innerHTML='<div class=\"modal-body\"><div class=\"empty-state compact\"><p>Загрузка...</p></div></div>';window.openModal(modalId);fetch(base()+url).then(r=>r.text()).then(h=>{body.innerHTML=h;initRuleForm(body)}).catch(()=>body.innerHTML='<div class=\"modal-body\"><div class=\"form-alert alert-error\">Не удалось загрузить форму.</div></div>')}\n"""
+          if old not in p:
+              raise SystemExit('P72 loadForm anchor not found')
+          page.write_text(p.replace(old,new,1))
+          PY
+          php -l app/View/partials/company_finance_matching_rule_form.php
+          php -l app/View/pages/company_finance_matching_rules.php
+          ! grep -q 'document.currentScript.previousElementSibling' app/View/partials/company_finance_matching_rule_form.php
+          grep -q 'function initRuleForm' app/View/pages/company_finance_matching_rules.php
+      - name: Commit patch and remove one-off workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/p72_fix_dynamic_rule_form.yml
+          git add app/View/partials/company_finance_matching_rule_form.php app/View/pages/company_finance_matching_rules.php
+          git commit -m 'ui: initialize dynamic rule form safely'
+          git push origin HEAD:chatgpt/p72-bank-rules-ux-counter-20260814
