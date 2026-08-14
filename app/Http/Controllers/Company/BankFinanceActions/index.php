@@ -59,6 +59,11 @@ ob_start();
 require base_path('app/View/pages/company_bank_accounts.php');
 $content=ob_get_clean();
 
+$replaceFirst=static function(string $haystack,string $needle,string $replacement):string{
+    $pos=strpos($haystack,$needle);
+    return $pos===false?$haystack:substr_replace($haystack,$replacement,$pos,strlen($needle));
+};
+
 if(($company['status']??'')==='active'&&$dbError===null){
     if($bankFinanceSuccess){$content='<div class="notice success">'.e($bankFinanceSuccess).'</div>'.$content;}
     if($bankFinanceError){$content='<div class="notice warn">'.e($bankFinanceError).'</div>'.$content;}
@@ -84,7 +89,7 @@ if(($company['status']??'')==='active'&&$dbError===null){
     $content=str_replace($creditHeader,'<th class="col-tight" style="text-align:right">Кредит</th>',$content);
     $creditHeaderRight='<th class="col-tight" style="text-align:right">Кредит</th>';
     $extraHeaders='<th>ЦФУ</th><th>Статья ДДС</th><th>Статус</th>';
-    $content=str_replace($creditHeaderRight,$creditHeaderRight.$extraHeaders,$content,1);
+    $content=$replaceFirst($content,$creditHeaderRight,$creditHeaderRight.$extraHeaders);
 
     foreach($transactions as $tx){
         $id=(int)($tx['id']??0);
@@ -125,7 +130,7 @@ if(($company['status']??'')==='active'&&$dbError===null){
             }
             window.openModal('tx-detail-modal');
 JS;
-    $content=str_replace("            window.openModal('tx-detail-modal');",$detailLoader,$content,1);
+    $content=$replaceFirst($content,"            window.openModal('tx-detail-modal');",$detailLoader);
 
     $detailClosing="                </div>\n            </div>\n        </div>\n    </div>\n</div>";
     $detailClosingPos=strrpos($content,$detailClosing);
@@ -147,7 +152,7 @@ JS;
     if(($reconSummary['mismatch']??0)>0){$reconBanner.='<div class="text-danger">Несовпадений оборотов: '.(int)$reconSummary['mismatch'].'</div>';}
     $reconBanner.='</div><div><button type="button" class="btn btn-secondary btn-toolbar" onclick="window.openModal(\'bank-reconciliation-modal\')">Детали сверки</button></div></div>';
     $tableAnchor='<div class="table-card table-card--standard bank-finance-card bank-transactions-card">';
-    $content=str_replace($tableAnchor,$tableAnchor.$reconBanner,$content,1);
+    $content=$replaceFirst($content,$tableAnchor,$tableAnchor.$reconBanner);
 
     $legacyReconStart=strpos($content,"<div class=\"panel-section\">\n    <div class=\"section-title\">Независимая сверка выписок</div>");
     if($legacyReconStart!==false){
