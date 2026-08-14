@@ -129,7 +129,42 @@ if(($company['status']??'')==='active'&&$dbError===null){
                                 return html;
                             });
                         })
-                        .then(function(html) { classificationBody.innerHTML = html; })
+                        .then(function(html) {
+                            classificationBody.innerHTML = html;
+                            var cfu = classificationBody.querySelector('#bank-cfu-select');
+                            var dds = classificationBody.querySelector('#bank-dds-select');
+                            if (!cfu || !dds) return;
+                            var map = {};
+                            try { map = JSON.parse(cfu.getAttribute('data-dds-map') || '{}'); } catch (e) { map = {}; }
+                            var selectedDds = Number(cfu.getAttribute('data-selected-dds') || 0);
+                            var original = Array.from(dds.querySelectorAll('option[data-dds-id]')).map(function(option) {
+                                return {id:Number(option.value), text:option.textContent};
+                            });
+                            var rebuildDds = function(preserveExisting) {
+                                var centerId = Number(cfu.value || 0);
+                                var previous = preserveExisting ? Number(dds.value || selectedDds || 0) : 0;
+                                var allowed = (map[centerId] || []).map(Number);
+                                dds.innerHTML = '';
+                                var placeholder = document.createElement('option');
+                                placeholder.value = '';
+                                placeholder.textContent = centerId
+                                    ? (allowed.length ? '— Выберите статью —' : '— Для этого ЦФУ статьи не настроены —')
+                                    : '— Сначала выберите ЦФУ —';
+                                dds.appendChild(placeholder);
+                                original.forEach(function(item) {
+                                    if (allowed.indexOf(item.id) === -1) return;
+                                    var option = document.createElement('option');
+                                    option.value = String(item.id);
+                                    option.textContent = item.text;
+                                    if (item.id === previous) option.selected = true;
+                                    dds.appendChild(option);
+                                });
+                                dds.disabled = !centerId || allowed.length === 0;
+                                if (previous && allowed.indexOf(previous) === -1) dds.value = '';
+                            };
+                            cfu.addEventListener('change', function() { rebuildDds(false); });
+                            rebuildDds(true);
+                        })
                         .catch(function(err) {
                             var message = String(err && err.message ? err.message : 'Не удалось загрузить разнесение.').replace(/<[^>]*>/g,'').trim();
                             classificationBody.innerHTML = '<div class="form-alert alert-error">' + (message || 'Не удалось загрузить разнесение.') + '</div>';
