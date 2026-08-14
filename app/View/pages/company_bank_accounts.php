@@ -200,7 +200,9 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
         <div class="bank-controls-summary">
             <span class="bank-summary-label">Статус:</span>
             <span class="bank-summary-balance">
-                <?php if ($reconSummary['all_ok'] ?? false): ?>
+                <?php if ($reconSummary['service_error'] ?? false): ?>
+                <span class="badge badge-danger"><span class="dot"></span> Ошибка проверки</span>
+                <?php elseif ($reconSummary['all_ok'] ?? false): ?>
                 <span class="badge badge-ok"><span class="dot"></span> OK</span>
                 <?php else: ?>
                 <span class="badge badge-danger"><span class="dot"></span> Есть расхождения</span>
@@ -215,6 +217,14 @@ $deleteImportUrl = app_url('/company/finance/bank-accounts/import/delete');
             <?php if (($reconSummary['gap'] ?? 0) > 0): ?>
             <span class="bank-summary-separator">·</span>
             <span class="text-danger">Разрывов: <?= (int)$reconSummary['gap'] ?></span>
+            <?php endif; ?>
+            <?php if (($reconSummary['duplicate'] ?? 0) > 0): ?>
+            <span class="bank-summary-separator">·</span>
+            <span class="text-danger">Дубликатов: <?= (int)$reconSummary['duplicate'] ?></span>
+            <?php endif; ?>
+            <?php if (($reconSummary['mismatch'] ?? 0) > 0): ?>
+            <span class="bank-summary-separator">·</span>
+            <span class="text-danger">Несовпадений оборотов: <?= (int)$reconSummary['mismatch'] ?></span>
             <?php endif; ?>
             <span class="bank-summary-separator">·</span>
             <span>Без выписок: <?= (int)($reconSummary['no_statement'] ?? 0) ?></span>

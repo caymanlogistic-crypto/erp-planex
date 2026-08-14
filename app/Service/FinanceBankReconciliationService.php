@@ -303,20 +303,28 @@ final class FinanceBankReconciliationService
 
     public static function checkDuplicates(PDO $localPdo, ?int $accountId = null): array
     {
-        $sql = 'SELECT duplicate_rows.* FROM (
-                    SELECT bt.id, bt.account_id, bt.operation_date, bt.document_number,
-                           bt.debit_amount, bt.credit_amount, bt.counterparty_name,
-                           bt.purpose, bt.dedupe_hash,
-                           COUNT(*) OVER (PARTITION BY bt.dedupe_hash) AS hash_count
-                    FROM bank_transactions bt';
+        $where = '';
         $params = [];
+        if ($accountId !== null) {
+            $where = ' WHERE account_id = ?';
+            $params[] = $accountId;
+        }
+
+        $sql = 'SELECT bt.id, bt.account_id, bt.operation_date, bt.document_number,
+                       bt.debit_amount, bt.credit_amount, bt.counterparty_name,
+                       bt.purpose, bt.dedupe_hash, dup.hash_count
+                FROM bank_transactions bt
+                JOIN (
+                    SELECT dedupe_hash, COUNT(*) AS hash_count
+                    FROM bank_transactions' . $where . '
+                    GROUP BY dedupe_hash
+                    HAVING COUNT(*) > 1
+                ) dup ON dup.dedupe_hash <=> bt.dedupe_hash';
         if ($accountId !== null) {
             $sql .= ' WHERE bt.account_id = ?';
             $params[] = $accountId;
         }
-        $sql .= ') AS duplicate_rows
-                 WHERE duplicate_rows.hash_count > 1
-                 ORDER BY duplicate_rows.account_id, duplicate_rows.operation_date';
+        $sql .= ' ORDER BY bt.account_id, bt.operation_date, bt.id';
 
         $stmt = $localPdo->prepare($sql);
         $stmt->execute($params);
