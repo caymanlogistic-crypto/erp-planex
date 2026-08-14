@@ -29,8 +29,11 @@ trait FinanceMatchingRuleCrudTrait
   $own=false;if(!$pdo->inTransaction()){$pdo->beginTransaction();$own=true;}
   try{
    $s=$pdo->prepare('SELECT * FROM finance_matching_rules WHERE id=? AND deleted_at IS NULL FOR UPDATE');$s->execute([$id]);$old=$s->fetch(PDO::FETCH_ASSOC);if(!$old)throw new \InvalidArgumentException('Правило не найдено.');
-   $bank=$pdo->prepare("UPDATE bank_transactions SET cash_flow_center_id=NULL,dds_category_id=NULL,classification_status='UNALLOCATED',classification_rule_id=NULL,classification_locked=0,classification_updated_at=NOW() WHERE classification_rule_id=? AND UPPER(COALESCE(classification_status,''))='AUTO' AND COALESCE(classification_locked,0)=0 AND COALESCE(is_internal_transfer,0)=0");$bank->execute([$id]);$bankReverted=$bank->rowCount();
-   $ops=$pdo->prepare("UPDATE finance_operations SET cash_flow_center_id=NULL,dds_category_id=NULL,classification_status='UNALLOCATED',classification_rule_id=NULL,classification_locked=0,classification_updated_at=NOW() WHERE classification_rule_id=? AND UPPER(COALESCE(classification_status,''))='AUTO' AND COALESCE(classification_locked,0)=0");$ops->execute([$id]);$operationsReverted=$ops->rowCount();
+   $bankReverted=0;$operationsReverted=0;
+   if(($old['action_type']??'categorize')==='categorize'){
+    $bank=$pdo->prepare("UPDATE bank_transactions SET cash_flow_center_id=NULL,dds_category_id=NULL,classification_status='UNALLOCATED',classification_rule_id=NULL,classification_locked=0,classification_updated_at=NOW() WHERE classification_rule_id=? AND UPPER(COALESCE(classification_status,''))='AUTO' AND COALESCE(classification_locked,0)=0 AND COALESCE(is_internal_transfer,0)=0");$bank->execute([$id]);$bankReverted=$bank->rowCount();
+    $ops=$pdo->prepare("UPDATE finance_operations SET cash_flow_center_id=NULL,dds_category_id=NULL,classification_status='UNALLOCATED',classification_rule_id=NULL,classification_locked=0,classification_updated_at=NOW() WHERE classification_rule_id=? AND UPPER(COALESCE(classification_status,''))='AUTO' AND COALESCE(classification_locked,0)=0");$ops->execute([$id]);$operationsReverted=$ops->rowCount();
+   }
    $s=$pdo->prepare('UPDATE finance_matching_rules SET active=0,deleted_at=NOW(),updated_by_user_id=?,updated_by_role=? WHERE id=? AND deleted_at IS NULL');$s->execute([$user['id']??null,$user['role']??null,$id]);
    self::auditRule($pdo,$id,'remove',['active'=>(int)$old['active']],['active'=>0,'removed'=>true,'auto_bank_reverted'=>$bankReverted,'auto_operations_reverted'=>$operationsReverted],$user);
    if($own)$pdo->commit();return ['bank_transactions'=>$bankReverted,'finance_operations'=>$operationsReverted];
