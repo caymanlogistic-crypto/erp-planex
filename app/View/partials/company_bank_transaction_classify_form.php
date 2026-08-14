@@ -7,7 +7,7 @@ $amount=(float)($tx['credit_amount']??0)>0?($tx['credit_amount']??'0.00'):($tx['
 <form method="post" action="<?= app_url('/company/finance/bank-transactions/'.(int)$tx['id'].'/classify') ?>">
  <?= csrfField() ?>
  <div class="modal-body">
-  <div class="section-title">Ручное разнесение операции #<?= (int)$tx['id'] ?></div>
+  <div class="section-title">Разнесение операции #<?= (int)$tx['id'] ?></div>
   <div class="page-summary"><span><?= e($tx['operation_date']??'') ?> · <?= e($tx['counterparty_name']??'—') ?> · <?= e($amount) ?> ₽</span></div>
   <div class="field mt-section"><label class="field-label">Назначение платежа</label><div class="field-note"><?= e($tx['purpose']??'—') ?></div></div>
   <div class="form-grid-2 mt-section">
@@ -18,6 +18,6 @@ $amount=(float)($tx['credit_amount']??0)>0?($tx['credit_amount']??'0.00'):($tx['
    <div class="form-grid-2 mt-section"><div class="field"><label class="field-label">Дополнительно: назначение содержит</label><input class="field-input" name="rule_purpose_contains" placeholder="Необязательно"></div><div class="field"><label class="field-label">Приоритет правила</label><input class="field-input" type="number" name="rule_priority" min="1" max="100000" value="100"></div></div>
   </div>
  </div>
- <div class="modal-foot is-spaced"><button type="button" class="btn btn-ghost" data-close-modal="bank-classify-modal">Отмена</button><button type="submit" class="btn btn-primary">Сохранить разнесение</button></div>
+ <div class="modal-foot is-spaced"><button type="button" class="btn btn-ghost" data-close-modal="tx-detail-modal">Отмена</button><button type="submit" class="btn btn-primary">Сохранить разнесение</button></div>
 </form>
 <?php endif; ?>
