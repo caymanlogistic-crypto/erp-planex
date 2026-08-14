@@ -1,0 +1,52 @@
+name: P45 Reconciliation Probe
+on:
+  push:
+    branches: [chatgpt/finance-bank-merge-recon-20260814]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p45_key
+            chmod 600 /tmp/p45_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p45_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Read-only reconciliation probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p45/P45_reconciliation_probe.js | tee P45_RECONCILIATION.txt
+          grep -q 'P45_RECONCILIATION_JSON_END' P45_RECONCILIATION.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P45_reconciliation_${{ github.sha }}
+          path: P45_RECONCILIATION.txt
+          if-no-files-found: warn
