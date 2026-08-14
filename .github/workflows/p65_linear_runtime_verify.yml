@@ -1,0 +1,72 @@
+name: P65 Linear Runtime Verify
+
+on:
+  push:
+    branches:
+      - chatgpt/p65-linear-runtime-verify-20260814
+    paths:
+      - '.github/p65/P65_linear_scroll_verify.js'
+      - '.github/workflows/p65_linear_runtime_verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load credential helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+          mkdir -p .github/p11 P65_runtime_output
+          git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+          git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+          node --check .github/p65/P65_linear_scroll_verify.js
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve runtime credentials
+        shell: bash
+        env:
+          SECRET_CREDENTIALS: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          credentials="${SECRET_CREDENTIALS:-}"
+          install -d -m 700 "${HOME}/.ssh"
+          if [ -z "${credentials}" ] && [ -n "${PRIVATE_KEY:-}" ]; then
+            python -m pip install --disable-pip-version-check --quiet 'cryptography==46.0.3'
+            printf '%s\n' "${PRIVATE_KEY}" > "${HOME}/.ssh/p65_credentials"
+            chmod 600 "${HOME}/.ssh/p65_credentials"
+            credentials="$(python .github/p11/P11_decrypt_credentials.py --key "${HOME}/.ssh/p65_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+            rm -f "${HOME}/.ssh/p65_credentials"
+          fi
+          test -n "${credentials}"
+          echo "::add-mask::${credentials}"
+          printf 'P12_CREDENTIALS_B64=%s\n' "${credentials}" >> "${GITHUB_ENV}"
+
+      - name: Verify Full HD no-scroll behavior
+        run: node .github/p65/P65_linear_scroll_verify.js
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P65_linear_runtime_evidence
+          path: P65_runtime_output/
+          if-no-files-found: error
