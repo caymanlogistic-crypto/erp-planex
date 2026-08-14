@@ -27,6 +27,39 @@ $formatCents = static function (int $cents): string {
     return number_format($rubles, 0, ',', ' ') . ' ₽';
 };
 
+$shortDriverName = static function (string $fullName): string {
+    $fullName = trim(preg_replace('/\s+/u', ' ', $fullName));
+    if ($fullName === '') {
+        return '';
+    }
+
+    $parts = preg_split('/\s+/u', $fullName) ?: [];
+    if (count($parts) < 2) {
+        return $fullName;
+    }
+
+    $surname = array_shift($parts);
+    $initials = [];
+    foreach (array_slice($parts, 0, 2) as $namePart) {
+        $namePart = trim((string) $namePart);
+        if ($namePart !== '') {
+            $initials[] = mb_substr($namePart, 0, 1, 'UTF-8') . '.';
+        }
+    }
+
+    return trim($surname . ($initials !== [] ? ' ' . implode(' ', $initials) : ''));
+};
+
+$shortDriverNames = static function (string $driverNames) use ($shortDriverName): string {
+    $driverNames = trim($driverNames);
+    if ($driverNames === '') {
+        return '';
+    }
+
+    $names = preg_split('/\s*\/\s*/u', $driverNames) ?: [$driverNames];
+    return implode(' / ', array_map($shortDriverName, $names));
+};
+
 $paymentDetail = static function (array $payment) use ($paymentAmountCents, $formatCents): string {
     $parts = [
         $formatCents($paymentAmountCents($payment['amount'] ?? 0)),
@@ -144,7 +177,7 @@ $paymentDetail = static function (array $payment) use ($paymentAmountCents, $for
                         if ($executorCarrier === '') {
                             $executorCarrier = trim((string) ($route['carrier_name'] ?? ''));
                         }
-                        $executorDrivers = trim((string) ($route['registry_driver_names'] ?? $route['executor_driver_name'] ?? ''));
+                        $executorDrivers = $shortDriverNames(trim((string) ($route['registry_driver_names'] ?? $route['executor_driver_name'] ?? '')));
                         $executorVehicle = trim((string) ($route['registry_vehicle_label'] ?? ''));
                         if ($executorVehicle === '') {
                             $plateParts = array_values(array_filter([
