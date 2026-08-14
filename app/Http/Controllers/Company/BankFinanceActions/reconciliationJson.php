@@ -3,6 +3,7 @@
     requireRole(['company_owner']);
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
+    $controlFromDate = '2026-07-24';
 
     header('Content-Type: application/json; charset=utf-8');
 
@@ -33,9 +34,8 @@
         $localDbConfig = companyDatabaseConfig($config, $company);
         $localDb = new \App\Core\Database($localDbConfig);
         $localPdo = $localDb->connection();
-        applyLocalMigrations($localPdo);
 
-        $reconciliation = \App\Service\FinanceBankReconciliationService::reconcileAll($localPdo);
+        $reconciliation = \App\Service\FinanceBankReconciliationCutoffService::reconcileAll($localPdo, $controlFromDate);
 
         echo json_encode([
             'status' => 'ok',
