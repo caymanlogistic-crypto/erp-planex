@@ -49,7 +49,7 @@ final class FinanceEmployeePaymentsController
         if (!in_array($movementType, ['PAYMENT','RETURN'], true)) $movementType = 'PAYMENT';
         $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo);
         $cashAccounts = FinanceCashService::fetchMoneyAccounts($pdo, 'CASH', true);
-        $bankCandidates = FinanceEmployeePaymentService::fetchBankCandidates($pdo, $movementType, 200);
+        $bankCandidates = FinanceEmployeePaymentService::fetchBankCandidates($pdo, $movementType, 500);
         require base_path('app/View/partials/company_finance_employee_payment_form.php');
     }
 
