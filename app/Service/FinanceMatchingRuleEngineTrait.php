@@ -20,7 +20,7 @@ trait FinanceMatchingRuleEngineTrait
   if($rule['amount_from']??null){if(self::cents($amount)<self::cents($rule['amount_from']))return self::noMatch('Сумма ниже диапазона.');$checks[]='сумма от';}
   if($rule['amount_to']??null){if(self::cents($amount)>self::cents($rule['amount_to']))return self::noMatch('Сумма выше диапазона.');$checks[]='сумма до';}
   if($checks===[])return self::noMatch('У правила нет условий.');
-  return ['matched'=>true,'result'=>!empty($rule['auto_apply'])?'auto_apply':'suggest','confidence'=>'high','reason'=>'Совпали все условия: '.implode(', ',$checks).'.','direction'=>$direction,'amount'=>$amount];
+  return ['matched'=>true,'result'=>'auto_apply','confidence'=>'high','reason'=>'Совпали все условия: '.implode(', ',$checks).'.','direction'=>$direction,'amount'=>$amount];
  }
  private static function noMatch(string $reason):array{return ['matched'=>false,'result'=>'no_match','confidence'=>'low','reason'=>$reason];}
 
