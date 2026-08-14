@@ -14,13 +14,13 @@ ep_ok(str_contains($migration,'UNIQUE KEY `uk_fem_bank_transaction`'),'one emplo
 ep_ok(str_contains($migration,'FOREIGN KEY (`employee_user_id`) REFERENCES `users`'),'employee references real system user');
 ep_ok(str_contains($service,"fo.status = 'POSTED'"),'balances only count posted money movements');
 ep_ok(str_contains($service,'FinanceCashService::createCashOperation'),'cash settlement uses real cash ledger');
-ep_ok(str_contains($service,"COALESCE(bt.is_internal_transfer,0)=0"),'internal bank transfers excluded');
-ep_ok(str_contains($service,"$actualType !== $movementType"),'bank direction must match payment/return');
+ep_ok(str_contains($service,'COALESCE(bt.is_internal_transfer,0)=0'),'internal bank transfers excluded');
+ep_ok(str_contains($service,'$actualType !== $movementType'),'bank direction must match payment/return');
 ep_ok(str_contains($service,"status='active' AND deleted_at IS NULL"),'new settlements only select active ERP accounts');
 ep_ok(str_contains($page,'Сотрудник')&&str_contains($page,'Выплачено')&&str_contains($page,'Возвращено')&&str_contains($page,'Сальдо'),'summary table has agreed columns');
 ep_ok(str_contains($page,'data-employee-payment-row')&&str_contains($page,"addEventListener('dblclick'"),'double click opens employee ledger');
 ep_ok(str_contains($form,'Касса')&&str_contains($form,'Расчётный счёт'),'create flow supports both money sources');
 ep_ok(str_contains($bankForm,'Взаиморасчёты с сотрудником'),'bank operation can be linked to employee');
-ep_ok(str_contains($routes,"/company/finance/employee-payments"),'employee payment routes registered');
+ep_ok(str_contains($routes,'/company/finance/employee-payments'),'employee payment routes registered');
 ep_ok(str_contains($runtimeUi,'Выплаты сотрудникам'),'finance navigation exposes employee payments');
 echo "FINANCE_EMPLOYEE_PAYMENTS_OK\n";
