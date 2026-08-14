@@ -1,0 +1,36 @@
+name: P63 Apply Wide Workspace UIUX
+on:
+  push:
+    branches: [chatgpt/p63-wide-workspaces-dashboard-20260814]
+    paths:
+      - '.github/p63/P63_apply_uiux.py'
+      - '.github/workflows/p63_apply_uiux.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply UI UX patch
+        run: python .github/p63/P63_apply_uiux.py
+      - name: Validate production files
+        run: |
+          php -l app/View/layouts/main.php
+          php -l app/View/pages/company_finance_dashboard.php
+          grep -q 'workspace-shell-1690' public/assets/css/workspace-benchmark.css
+          git diff -- app/View/pages/company_linear_trips.php > /tmp/linear.diff
+          test ! -s /tmp/linear.diff
+      - name: Commit generated files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'caymanlogistic-crypto'
+          git config user.email 'cayman.logistic@gmail.com'
+          git add app/View/layouts/main.php public/assets/css/workspace-benchmark.css app/View/pages/company_finance_dashboard.php
+          git diff --cached --quiet && { echo 'Nothing to commit'; exit 0; }
+          git commit -m 'feat: standardize 1690 workspaces and finance dashboard'
+          git push origin HEAD:chatgpt/p63-wide-workspaces-dashboard-20260814
