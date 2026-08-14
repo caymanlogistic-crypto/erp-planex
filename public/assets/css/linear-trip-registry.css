@@ -1,5 +1,7 @@
 .linear-trip-registry {
-    min-width: 1480px;
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
 }
 
 /* Body cells keep the dense multi-line registry layout. The header intentionally
@@ -37,7 +39,11 @@
 }
 
 .linear-trip-registry .registry-cargo {
-    width: 135px;
+    width: clamp(64px, 7vw, 112px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.32;
 }
 
 .linear-trip-registry .registry-rate {
