@@ -19,6 +19,10 @@ jobs:
           for f in app/Service/FinanceMatchingRule*Trait.php; do php -l "$f"; done
           php -l app/Http/Controllers/Company/BankFinanceActions/classifyForm.php
           php -l app/Http/Controllers/Company/BankFinanceActions/classifySubmit.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/clearClassification.php
+          php -l app/Http/Controllers/Company/FinanceMatchingRuleActions/archive.php
+          php -l app/View/pages/company_finance_matching_rules.php
+          php -l app/View/partials/company_bank_transaction_classify_form.php
           php -l tests/finance_matching_classification_test.php
       - name: Matching semantics
         run: php tests/finance_matching_classification_test.php
