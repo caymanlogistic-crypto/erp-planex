@@ -1,0 +1,68 @@
+name: P65 Apply Linear Registry Width
+on:
+  push:
+    branches: [chatgpt/p65-linear-no-horizontal-scroll-20260814]
+    paths:
+      - '.github/workflows/p65_apply_linear_width.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply CSS patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('public/assets/css/linear-trip-registry.css')
+          s = p.read_text(encoding='utf-8')
+          old = '''.linear-trip-registry {
+              min-width: 1480px;
+          }
+'''
+          new = '''.linear-trip-registry {
+              width: 100%;
+              min-width: 0;
+              table-layout: fixed;
+          }
+'''
+          if old not in s:
+              raise SystemExit('linear registry width anchor not found')
+          s = s.replace(old, new, 1)
+          old = '''.linear-trip-registry .registry-cargo {
+              width: 135px;
+          }
+'''
+          new = '''.linear-trip-registry .registry-cargo {
+              width: clamp(64px, 7vw, 112px);
+              white-space: normal;
+              overflow-wrap: anywhere;
+              word-break: normal;
+              line-height: 1.32;
+          }
+'''
+          if old not in s:
+              raise SystemExit('cargo width anchor not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validate
+        run: |
+          grep -Fq 'min-width: 0;' public/assets/css/linear-trip-registry.css
+          grep -Fq 'overflow-wrap: anywhere;' public/assets/css/linear-trip-registry.css
+          grep -Fq 'width: clamp(64px, 7vw, 112px);' public/assets/css/linear-trip-registry.css
+      - name: Commit generated change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'caymanlogistic-crypto'
+          git config user.email 'cayman.logistic@gmail.com'
+          git add public/assets/css/linear-trip-registry.css
+          git diff --cached --quiet && exit 0
+          git commit -m 'ui: fit linear trip registry without horizontal scroll'
+          git push origin HEAD:chatgpt/p65-linear-no-horizontal-scroll-20260814
