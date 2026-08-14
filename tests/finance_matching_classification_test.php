@@ -18,6 +18,12 @@ $suggest=$base;$suggest['auto_apply']=0;ok(S::applyRuleToTransaction(null,$sugge
 ok(S::isManualProtected(['classification_locked'=>1,'classification_status'=>'AUTO']),'manual lock protects');
 ok(S::isManualProtected(['classification_locked'=>0,'classification_status'=>'MANUAL']),'manual status protects');
 ok(S::classificationStatusLabel('NEEDS_REVIEW')==='Конфликт / требует проверки','Russian review label');
+ok(S::classificationBadgeClass('UNALLOCATED')==='badge badge-danger','unallocated is red');
+ok(S::classificationBadgeClass('AUTO')==='badge badge-neutral','automatic is blue-violet neutral');
+ok(S::classificationBadgeClass('MANUAL')==='badge badge-ok','manual is green');
+ok(S::classificationBadgeClass('NEEDS_REVIEW')==='badge badge-warning','review is warning');
 $migration=file_get_contents(__DIR__.'/../database/migrations-local/063_finance_matching_classification.sql');ok(str_contains($migration,'finance_cash_flow_centers')&&str_contains($migration,'classification_locked')&&str_contains($migration,'linked_cash_transaction_id'),'migration contains CFU, lock and transfer link');
 $transfer=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleTransferExecutionTrait.php');ok(str_contains($transfer,'rule_cash_transfer:')&&str_contains($transfer,"transfer_direction='out'")&&str_contains($transfer,"'in'"),'bank-to-cash uses idempotent paired transfer representation');
+$crud=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleCrudTrait.php');ok(str_contains($crud,"classification_rule_id=?")&&str_contains($crud,"classification_status='UNALLOCATED'")&&str_contains($crud,"='AUTO'"),'rule deletion reverts only rule-owned AUTO classifications');
+$manual=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleManualTrait.php');ok(str_contains($manual,'clearBankTransactionClassification')&&str_contains($manual,"['AUTO','MANUAL']")&&str_contains($manual,"classification_status='UNALLOCATED'")&&str_contains($manual,'is_internal_transfer'),'explicit classification removal is guarded and resets status');
 echo "FINANCE_MATCHING_CLASSIFICATION_OK\n";
