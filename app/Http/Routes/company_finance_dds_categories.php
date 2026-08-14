@@ -11,6 +11,8 @@ $router->post('/company/finance/settings/dds-categories/create', [$controller, '
 $router->get('/company/finance/settings/dds-categories/edit', [$controller, 'editForm']);
 $router->post('/company/finance/settings/dds-categories/edit', [$controller, 'editSubmit']);
 $router->post('/company/finance/settings/dds-categories/active-toggle', [$controller, 'activeToggle']);
+$router->post('/company/finance/settings/dds-categories/delete', [$controller, 'deleteSubmit']);
 $router->post('/company/finance/settings/dds-categories/cfu/save', [$controller, 'cfuSave']);
 $router->post('/company/finance/settings/dds-categories/cfu/toggle', [$controller, 'cfuToggle']);
+$router->post('/company/finance/settings/dds-categories/cfu/delete', [$controller, 'cfuDelete']);
 $router->post('/company/finance/settings/dds-categories/links/save', [$controller, 'linksSave']);

@@ -16,5 +16,6 @@ $action=$isEdit?app_url('/company/finance/settings/dds-categories/edit'):app_url
   </div>
   <div class="field-msg" style="margin-top:8px">ID и технический код ERP назначает автоматически. Вводить их вручную не нужно.</div>
  </div>
- <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close-modal="<?= $isEdit?'dds-category-edit-modal':'dds-category-create-modal' ?>">Отмена</button><button type="submit" class="btn btn-primary"><?= $isEdit?'Сохранить':'Создать' ?></button></div>
+ <div class="modal-foot"><?php if($isEdit): ?><button type="submit" class="btn btn-ghost fs-delete-action" form="dds-category-delete-form-<?= (int)$category['id'] ?>">Удалить статью</button><?php endif; ?><button type="button" class="btn btn-ghost<?= $isEdit?'':' modal-foot-spacer' ?>" data-close-modal="<?= $isEdit?'dds-category-edit-modal':'dds-category-create-modal' ?>">Отмена</button><button type="submit" class="btn btn-primary"><?= $isEdit?'Сохранить':'Создать' ?></button></div>
 </form>
+<?php if($isEdit): ?><form id="dds-category-delete-form-<?= (int)$category['id'] ?>" method="post" action="<?= app_url('/company/finance/settings/dds-categories/delete') ?>" onsubmit="return confirm('Удалить статью ДДС безвозвратно? Она будет удалена из всех ЦФУ. Если статья уже используется в операциях или правилах, ERP не позволит удалить её.');"><?= csrfField() ?><input type="hidden" name="id" value="<?= (int)$category['id'] ?>"></form><?php endif; ?>

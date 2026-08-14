@@ -14,7 +14,9 @@ final class FinanceDdsCategoryController
     public function editForm(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/edit_form.php'); }
     public function editSubmit(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/edit_submit.php'); }
     public function activeToggle(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/active_toggle.php'); }
+    public function deleteSubmit(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/delete_submit.php'); }
     public function cfuSave(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/cfu_save.php'); }
     public function cfuToggle(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/cfu_toggle.php'); }
+    public function cfuDelete(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/cfu_delete.php'); }
     public function linksSave(): void { $config=$this->config;$db=$this->db;require base_path('app/Http/Controllers/Company/FinanceDdsCategoryActions/links_save.php'); }
 }
