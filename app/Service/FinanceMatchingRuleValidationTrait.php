@@ -36,7 +36,9 @@ trait FinanceMatchingRuleValidationTrait
             'purpose_regex'=>self::validateRegex(self::nullableString($pick('purpose_regex'))),'amount_from'=>$from,'amount_to'=>$to,'action_type'=>$action,
             'target_dds_category_id'=>$dds,'target_cash_flow_center_id'=>$cfu,'target_cash_account_id'=>$cash,
             'target_counterparty_id'=>self::nullableInt($pick('target_counterparty_id')),'target_counterparty_type'=>self::nullableString($pick('target_counterparty_type')),
-            'auto_apply'=>(int)(bool)$pick('auto_apply',0),
+            // UI semantics: an active rule always applies automatically. The column
+            // remains for backward-compatible storage but is no longer a user choice.
+            'auto_apply'=>1,
         ];
     }
 
