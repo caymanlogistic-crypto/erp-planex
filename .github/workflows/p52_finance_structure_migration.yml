@@ -1,0 +1,57 @@
+name: P52 Finance Structure Migration
+
+on:
+  push:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths: ['.github/workflows/p52_finance_structure_migration.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p52-finance-structure-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Configure isolated SSH credentials
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p52_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p52_key" "$HOME/.ssh/known_hosts"
+
+      - name: Apply migration 064 through production CLI
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 7f21a864ba87da429f57d313d5b675719b4f41e0
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p52_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "EXPECTED_SHA='$EXPECTED_SHA' bash -se" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          test "$marker" = "$EXPECTED_SHA"
+          cd "$LIVE"
+          /usr/bin/php8.5 scripts/p52_apply_finance_structure_migration.php
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          grep -q '^P52_MIGRATION_OK ' <<< "$out"
+
+      - name: Cleanup SSH key
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.ssh/p52_key"
