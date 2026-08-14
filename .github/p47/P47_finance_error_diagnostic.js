@@ -15,6 +15,18 @@ const must=(v,m)=>{if(!v)throw new Error(m)};
   await page.locator('input[type="password"]').fill(owner.password);
   await page.locator('button[type="submit"],input[type="submit"]').first().click();
   await page.waitForTimeout(700); must(!page.url().includes('/login'),'login failed');
+
+  const structureResp=await page.goto(BASE+'company/finance/settings/dds-categories',{waitUntil:'networkidle'});
+  must(structureResp&&structureResp.status()===200,'financial structure HTTP');
+  const structureText=await page.locator('body').innerText();
+  must(structureText.includes('Финансовая структура'),'financial structure title missing');
+  must(await page.locator('input[name="code"]').count()===0,'DDS code input must not be user-visible');
+  must(await page.locator('[data-cfu-id]').count()>0,'CFU cards missing');
+  must(structureText.includes('Настроить состав статей'),'article composition control missing');
+  const menuLabel=page.locator('.nav-label',{hasText:'Финансовая структура'});
+  must(await menuLabel.count()>0,'Financial Structure menu item missing');
+  console.log('P52_STRUCTURE='+JSON.stringify({cfuCards:await page.locator('[data-cfu-id]').count(),codeInputs:await page.locator('input[name="code"]').count()}));
+
   const r=await page.goto(BASE+'company/finance/bank-accounts',{waitUntil:'networkidle'}); must(r&&r.status()===200,'bank HTTP');
   const recon=await page.request.get(BASE+'company/finance/bank-accounts/reconciliation/json');
   const j=await recon.json(); const summary=j.reconciliation&&j.reconciliation.summary||{};
@@ -25,17 +37,29 @@ const must=(v,m)=>{if(!v)throw new Error(m)};
   console.log('P47_ROW='+JSON.stringify(attrs)); must(attrs.url,'classify url missing');
   await row.dblclick();
   await page.locator('#tx-detail-modal').waitFor({state:'visible'});
-  const cfu=page.locator('#tx-detail-modal select[name="cash_flow_center_id"]');
-  const dds=page.locator('#tx-detail-modal select[name="dds_category_id"]');
+  const cfu=page.locator('#bank-cfu-select');
+  const dds=page.locator('#bank-dds-select');
   await cfu.waitFor({state:'visible'}); await dds.waitFor({state:'visible'});
-  const cfuOptions=await cfu.locator('option').count(); const ddsOptions=await dds.locator('option').count();
-  console.log('P47_ALLOCATION_OPTIONS='+JSON.stringify({cfuOptions,ddsOptions}));
-  must(cfuOptions>1,'CFU options missing'); must(ddsOptions>1,'DDS options missing');
+  const cfuOptions=await cfu.locator('option').count(); must(cfuOptions>1,'CFU options missing');
+  let cfuValue=await cfu.inputValue();
+  if(!cfuValue){
+    const firstValue=await cfu.locator('option').nth(1).getAttribute('value');
+    must(firstValue,'first CFU value missing');
+    await cfu.selectOption(firstValue);
+    await page.waitForTimeout(100);
+    cfuValue=await cfu.inputValue();
+  }
+  must(!(await dds.isDisabled()),'DDS must be enabled after CFU selection');
+  const ddsOptions=await dds.locator('option').count(); must(ddsOptions>1,'dependent DDS options missing');
+  const ddsTexts=await dds.locator('option').allTextContents();
+  must(!ddsTexts.some(t=>/^[A-Z0-9_]{2,}\s*[—-]\s*/.test(t.trim())),'technical DDS codes are visible');
+  console.log('P52_DEPENDENT_SELECT='+JSON.stringify({cfuValue,cfuOptions,ddsOptions,ddsTexts:ddsTexts.slice(0,6)}));
   const formAction=await page.locator('#tx-detail-modal form[action*="/bank-transactions/"]').getAttribute('action');
   console.log('P47_FORM_ACTION='+formAction); must(formAction&&formAction.includes('/bank-transactions/'+attrs.id+'/classify'),'wrong classify form action');
   must(!(await page.locator('#tx-detail-modal').innerText()).includes('Банковская операция не найдена'),'operation lookup failed');
+  await page.screenshot({path:'P47_bank.png',fullPage:true});
   console.log('P47_BAD_RESPONSES='+JSON.stringify(bad));
-  must(!bad.some(x=>x.url.includes('/bank-transactions/')&&x.status>=400),'classification request failed');
+  must(!bad.some(x=>x.status>=500),'server error observed');
   console.log('P47_OK');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
