@@ -1,2 +1,14 @@
 @import url('./app-base.css');
 @import url('./focus-trace-reset.css');
+
+/* System-wide select rendering: use the browser's native control only.
+   Custom SVG chevrons caused repeated brown marks in opened option lists. */
+select:not([multiple]) {
+    -webkit-appearance: auto !important;
+    appearance: auto !important;
+    background-image: none !important;
+}
+
+.field-select {
+    background-color: var(--surface-field) !important;
+}
