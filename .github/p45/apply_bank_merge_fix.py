@@ -102,3 +102,5 @@ const{chromium}=require('playwright');const B='https://plan-ex.ru/erpv2/';const 
 partial = Path('app/View/partials/company_bank_classification_register.php')
 if partial.exists():
     partial.unlink()
+
+# Trigger marker for the patch workflow.
