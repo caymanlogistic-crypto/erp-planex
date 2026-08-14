@@ -64,7 +64,7 @@ const must=(v,m)=>{if(!v)throw new Error(m)};
   const linkName=(await linkRows.first().locator('.fs-link-name').innerText()).trim();
   await linksModal.locator('#fs-links-search').fill(linkName.slice(0,Math.min(6,linkName.length)));
   must(await linksModal.locator('#fs-link-list .fs-link-row:visible').count()>=1,'composition search failed');
-  await linksModal.locator('[data-close-modal="fs-links-modal"]').click();
+  await linksModal.locator('[data-close-modal="fs-links-modal"]').first().click();
   await linksModal.waitFor({state:'hidden'});
 
   const settings=pane.locator('[data-cfu-settings]').first(); must(await settings.count()===1,'CFU settings button missing');
@@ -72,7 +72,7 @@ const must=(v,m)=>{if(!v)throw new Error(m)};
   const settingsModal=page.locator('#fs-cfu-settings-modal'); await settingsModal.waitFor({state:'visible'});
   must(await settingsModal.locator('#fs-settings-name').count()===1,'CFU settings name missing');
   must(await settingsModal.locator('#fs-settings-toggle').count()===1,'archive/restore action missing');
-  await settingsModal.locator('[data-close-modal="fs-cfu-settings-modal"]').click();
+  await settingsModal.locator('[data-close-modal="fs-cfu-settings-modal"]').first().click();
   await settingsModal.waitFor({state:'hidden'});
 
   await page.screenshot({path:'P56_financial_structure.png',fullPage:true});
