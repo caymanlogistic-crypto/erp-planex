@@ -209,6 +209,54 @@ JS;
         }
     }
 
+    $nativeApplyConfirm=' onsubmit="return confirm(\'Применить действующие правила ко всем неразнесённым банковским операциям? Ручные разнесения не изменятся.\');"';
+    $content=str_replace($nativeApplyConfirm,' data-apply-rules-form',$content);
+
+    $applyRulesModal=<<<'HTML'
+<div id="bank-apply-rules-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="1" data-close-on-escape="1">
+    <div class="modal modal-sm">
+        <div class="modal-head">
+            <span class="modal-title">Разнести по правилам</span>
+            <button type="button" class="modal-close" data-close-modal="bank-apply-rules-confirm-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="driver-delete-confirm-title">Применить действующие правила ко всем неразнесённым банковским операциям?</div>
+            <div class="driver-delete-confirm-text">Ручные разнесения не изменятся.</div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" data-close-modal="bank-apply-rules-confirm-modal">Отмена</button>
+            <button type="button" class="btn btn-primary" id="bank-apply-rules-confirm-btn">Разнести</button>
+        </div>
+    </div>
+</div>
+HTML;
+
+    $applyRulesScript=<<<'HTML'
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var pendingApplyRulesForm = null;
+    document.querySelectorAll('form[data-apply-rules-form]').forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            pendingApplyRulesForm = form;
+            window.openModal('bank-apply-rules-confirm-modal');
+        });
+    });
+
+    var confirmButton = document.getElementById('bank-apply-rules-confirm-btn');
+    if (confirmButton) {
+        confirmButton.addEventListener('click', function() {
+            if (!pendingApplyRulesForm) return;
+            var form = pendingApplyRulesForm;
+            pendingApplyRulesForm = null;
+            confirmButton.disabled = true;
+            form.submit();
+        });
+    }
+});
+</script>
+HTML;
+    $content.=$applyRulesModal.$applyRulesScript;
 }
 
 require base_path('app/View/layouts/main.php');
