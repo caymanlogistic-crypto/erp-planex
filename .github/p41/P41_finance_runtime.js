@@ -104,8 +104,31 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     response = await page.goto(B + 'company/finance/employee-payments', { waitUntil: 'domcontentloaded' });
     ok(response && response.status() === 200, 'employee payments HTTP');
     ok((await page.locator('h1.page-title').first().innerText()).trim() === 'Выплаты сотрудникам', 'employee payments title');
-    ok(await page.getByRole('button', { name: '+ Выплата', exact: true }).count() === 1, 'employee payment button');
+    const paymentButton = page.getByRole('button', { name: '+ Выплата', exact: true });
+    ok(await paymentButton.count() === 1, 'employee payment button');
     ok(await page.getByRole('button', { name: '+ Возврат', exact: true }).count() === 1, 'employee return button');
+    ok((await page.locator('.page-summary').innerText()).includes('все активные пользователи ERP'), 'employee definition is visible');
+
+    await paymentButton.click();
+    const employeeCreate = page.locator('#employee-payment-create-modal.is-open');
+    await employeeCreate.waitFor({ state: 'visible', timeout: 10000 });
+    await employeeCreate.locator('form').waitFor({ state: 'visible', timeout: 10000 });
+    const employeeOptions = employeeCreate.locator('select[name="employee_user_id"] option');
+    ok(await employeeOptions.count() > 1, 'active employee selector is populated');
+    const sourceValues = await employeeCreate.locator('select[name="source_type"] option').evaluateAll(options => options.map(o => o.value));
+    ok(sourceValues.includes('CASH') && sourceValues.includes('BANK'), 'employee payment supports CASH and BANK');
+    ok((await employeeCreate.innerText()).includes('руководители, логисты и другие роли'), 'employee roles are not hard-filtered');
+    await employeeCreate.locator('.modal-close').first().click();
+
+    const employeeRows = page.locator('tr[data-employee-payment-row]');
+    if (await employeeRows.count() > 0) {
+      await employeeRows.first().dblclick();
+      const ledger = page.locator('#employee-payment-ledger-modal.is-open');
+      await ledger.waitFor({ state: 'visible', timeout: 10000 });
+      ok((await ledger.innerText()).includes('Исправить'), 'employee ledger exposes safe reassignment');
+      ok(await ledger.locator('form[action*="/employee-payments/movements/"][action$="/reassign"]').count() > 0, 'employee reassignment is POST form');
+      await ledger.locator('.modal-close').first().click();
+    }
 
     ok(!/(Fatal error|Parse error|Uncaught TypeError)/i.test(await page.locator('body').innerText()), 'fatal runtime error');
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
