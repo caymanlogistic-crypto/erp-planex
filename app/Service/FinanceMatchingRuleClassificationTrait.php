@@ -16,7 +16,6 @@ trait FinanceMatchingRuleClassificationTrait
   $resolved=self::resolveRulesForTransaction(self::fetchRules($pdo,['active'=>true]),$tx);if($resolved['status']==='no_match')return ['matched'=>false,'reason'=>'Нет подходящего правила.'];
   if($resolved['status']==='conflict'){self::setClassificationState($pdo,(int)$op['bank_tx_id'],$operationId,'NEEDS_REVIEW',null,self::nullableInt($op['cash_flow_center_id']??null),self::nullableInt($op['dds_category_id']??null));self::persistMatchingOutcome($pdo,$operationId,null,'conflict','low','Конфликт правил максимального приоритета.',null,'system');return ['matched'=>false,'conflict'=>true,'candidate_rule_ids'=>$resolved['candidate_rule_ids']];}
   $rule=$resolved['winner']['rule'];$evaluation=$resolved['winner']['evaluation'];
-  if(empty($rule['auto_apply'])){self::setClassificationState($pdo,(int)$op['bank_tx_id'],$operationId,'NEEDS_REVIEW',(int)$rule['id'],self::nullableInt($op['cash_flow_center_id']??null),self::nullableInt($op['dds_category_id']??null));self::persistMatchingOutcome($pdo,$operationId,(int)$rule['id'],'suggest','high',$evaluation['reason'],null,'system');return ['matched'=>true,'result'=>'suggest','rule_id'=>(int)$rule['id']];}
   $action=(string)$rule['action_type'];
   if($action==='transfer_to_cash'){$result=self::convertBankOperationToCashTransfer($pdo,$op,$rule);self::persistMatchingOutcome($pdo,$operationId,(int)$rule['id'],'auto_apply','high',$evaluation['reason'],date('Y-m-d H:i:s'),'system');return $result+['matched'=>true,'result'=>'auto_apply'];}
   if($action==='categorize'){
