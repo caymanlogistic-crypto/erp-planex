@@ -1,7 +1,7 @@
 .linear-trip-registry {
-    width: 100%;
-    min-width: 0;
-    table-layout: fixed;
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
 }
 
 /* Body cells keep the dense multi-line registry layout. The header intentionally
@@ -16,38 +16,44 @@
     vertical-align: middle;
 }
 
+/* Responsive 9-column grid. Percentages deliberately total 100%, so the
+   registry always stays inside its workspace instead of creating an x-scroll. */
 .linear-trip-registry .registry-id {
-    width: 46px;
+    width: 3%;
     white-space: nowrap;
 }
 
 .linear-trip-registry .registry-date {
-    width: 92px;
+    width: 7.5%;
     white-space: nowrap;
 }
 
 .linear-trip-registry .registry-client {
-    width: 150px;
+    width: 10%;
 }
 
 .linear-trip-registry .registry-executor {
-    width: 250px;
+    width: 16.5%;
 }
 
 .linear-trip-registry .registry-route {
-    width: 320px;
+    width: 21%;
 }
 
+/* Cargo is the elastic text column: long names wrap instead of widening the
+   whole registry. Other cells keep their established compact rendering. */
 .linear-trip-registry .registry-cargo {
-    width: clamp(64px, 7vw, 112px);
-    white-space: normal;
+    width: 7%;
+    white-space: normal !important;
+    overflow: hidden;
+    text-overflow: clip;
     overflow-wrap: anywhere;
     word-break: normal;
     line-height: 1.32;
 }
 
 .linear-trip-registry .registry-rate {
-    width: 220px;
+    width: 13.75%;
 }
 
 .registry-date-planned {
