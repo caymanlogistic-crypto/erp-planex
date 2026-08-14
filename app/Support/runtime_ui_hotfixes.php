@@ -45,6 +45,17 @@ if (PHP_SAPI !== 'cli') {
         // The old menu slot is now the unified financial-structure editor.
         $html = str_replace('<span class="nav-label">Статьи ДДС</span>', '<span class="nav-label">Финансовая структура</span>', $html);
 
+        // Employee settlements are a first-class finance workspace. Inject next
+        // to Cash without duplicating the large legacy layout template.
+        if (str_contains($html, '<span class="nav-label">Касса</span>') && !str_contains($html, '<span class="nav-label">Выплаты сотрудникам</span>')) {
+            $employeeActive = str_starts_with(current_app_path(), '/company/finance/employee-payments') ? ' is-active' : '';
+            $employeeHref = e(app_url('/company/finance/employee-payments'));
+            $employeeItem = '<a class="nav-item' . $employeeActive . '" href="' . $employeeHref . '">' .
+                '<svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5C1.5 10.8 3.5 8.8 5.5 8.8C7.5 8.8 9.5 10.8 9.5 13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 5.5H14M12 3.5V7.5M10 11.5H14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' .
+                '<span class="nav-label">Выплаты сотрудникам</span></a>';
+            $html = preg_replace('~(<a class="nav-item[^"]*" href="[^"]*/company/finance/cash">)~', $employeeItem . '$1', $html, 1) ?? $html;
+        }
+
         // ERPv2 lives below /erpv2. A few legacy partials still emit root-relative
         // document links; scope the compatibility rewrite to ERPv2 so /erp is untouched.
         if (app_base_path() === '/erpv2') {
