@@ -29,6 +29,7 @@ const must=(v,m)=>{if(!v)throw new Error(m)};
   console.log('P47_RECON_HTTP='+recon.status());
   const j=await recon.json();
   console.log('P47_RECON_STATUS='+j.status);
+  console.log('P47_RECON_MESSAGE='+String(j.message||''));
   console.log('P47_RECON_SUMMARY='+JSON.stringify(j.reconciliation&&j.reconciliation.summary||{}));
   for(const a of (j.reconciliation&&j.reconciliation.accounts||[])){
    const badArithmetic=(a.statement_arithmetic||[]).filter(x=>x.status!=='OK');
