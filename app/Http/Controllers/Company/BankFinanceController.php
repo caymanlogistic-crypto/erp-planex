@@ -14,4 +14,5 @@ final class BankFinanceController{
  public function reconciliationJson():void{$this->action('reconciliationJson');}
  public function classifyForm(int $id):void{$this->action('classifyForm',['bankTransactionId'=>$id]);}
  public function classifySubmit(int $id):void{$this->action('classifySubmit',['bankTransactionId'=>$id]);}
+ public function clearClassification(int $id):void{$this->action('clearClassification',['bankTransactionId'=>$id]);}
 }
