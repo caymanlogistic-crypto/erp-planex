@@ -28,14 +28,15 @@ trait FinanceMatchingRuleBatchTrait
         ];
 
         foreach ($operationIds as $operationId) {
-            $savepoint = 'batch_rule_' . $operationId;
+            $ownTransaction = !$pdo->inTransaction();
             try {
-                if (!$pdo->inTransaction()) {
+                if ($ownTransaction) {
                     $pdo->beginTransaction();
                 }
-                $pdo->exec('SAVEPOINT ' . $savepoint);
                 $result = self::applyAutoMatchToOperation($pdo, $operationId);
-                $pdo->exec('RELEASE SAVEPOINT ' . $savepoint);
+                if ($ownTransaction) {
+                    $pdo->commit();
+                }
 
                 if (!empty($result['protected'])) {
                     $summary['protected']++;
@@ -51,20 +52,14 @@ trait FinanceMatchingRuleBatchTrait
                     $summary['unmatched']++;
                 }
             } catch (\Throwable $e) {
-                try {
-                    if ($pdo->inTransaction()) {
-                        $pdo->exec('ROLLBACK TO SAVEPOINT ' . $savepoint);
-                    }
-                } catch (\Throwable) {
+                if ($ownTransaction && $pdo->inTransaction()) {
+                    $pdo->rollBack();
                 }
                 $summary['errors']++;
                 error_log('Batch finance matching failed for operation #' . $operationId . ': ' . $e->getMessage());
             }
         }
 
-        if ($pdo->inTransaction()) {
-            $pdo->commit();
-        }
         return $summary;
     }
 }
