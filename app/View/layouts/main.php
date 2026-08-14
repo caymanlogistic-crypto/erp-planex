@@ -36,6 +36,17 @@ $matchingRulesActive = str_starts_with($requestPath, '/company/finance/settings/
 $financeDashboardActive = str_starts_with($requestPath, '/company/finance/dashboard');
 $operationsActive = str_starts_with($requestPath, '/company/finance/operations');
 $bankStatementSettingsActive = str_starts_with($requestPath, '/company/bank-statement-settings');
+
+$navigationCounters = ['bank_attention' => 0];
+if ($roleCode === 'company_owner' && (int)$companyId > 0) {
+    $navigationCounters = \App\Service\NavigationCounterService::forCompany(
+        $config,
+        $db,
+        (int)$companyId,
+        (isset($company) && is_array($company)) ? $company : null
+    );
+}
+$bankAttentionCount = max(0, (int)($navigationCounters['bank_attention'] ?? 0));
 $wideWorkspacePrefixes = [
     '/company/clients',
     '/company/trips/linear',
@@ -256,6 +267,7 @@ if (empty($topbarCrumbs)) {
                         <path d="M4 4V2.5C4 2.2 4.2 2 4.5 2H11.5C11.8 2 12 2.2 12 2.5V4" stroke="currentColor" stroke-width="1.4"/>
                     </svg>
                     <span class="nav-label">Выписки со счёта</span>
+                    <?php if ($bankAttentionCount > 0): ?><span class="nav-count is-alert" title="Требуют разнесения"><?= $bankAttentionCount > 999 ? '999+' : $bankAttentionCount ?></span><?php endif; ?>
                 </a>
                 <a class="nav-item<?= $cashActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/cash') ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">

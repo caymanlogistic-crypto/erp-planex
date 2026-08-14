@@ -1734,3 +1734,16 @@ td.is-dash {
         padding-bottom: 8px;
     }
 }
+
+
+/* P72 — persistent navigation attention counters and muted bank summary bar. */
+.nav-item.is-active .nav-count.is-alert,
+.nav-item.is-parent .nav-count.is-alert,
+.nav-item.is-parent.is-open .nav-count.is-alert {
+  background:rgba(153,46,38,.22) !important;
+  border-color:rgba(153,46,38,.38) !important;
+  color:rgba(220,100,90,.88) !important;
+}
+.bank-transactions-card > .bank-controls {
+  background:var(--surface-muted);
+}
