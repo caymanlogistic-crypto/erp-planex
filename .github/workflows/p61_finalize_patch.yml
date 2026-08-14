@@ -1,0 +1,32 @@
+name: P61 Finalize Finance Structure Patch
+on:
+  push:
+    branches: [chatgpt/p61-financial-structure-delete-reset-20260814]
+    paths:
+      - '.github/p61/P61_finalize_patch.py'
+      - '.github/workflows/p61_finalize_patch.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python .github/p61/P61_finalize_patch.py
+      - name: Validate syntax
+        run: |
+          php -l app/Support/entrypoint_dependencies.php
+          php -l app/View/pages/company_finance_dds_categories.php
+      - name: Commit generated patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'caymanlogistic-crypto'
+          git config user.email 'cayman.logistic@gmail.com'
+          git add app/Support/entrypoint_dependencies.php app/View/pages/company_finance_dds_categories.php
+          git diff --cached --quiet && { echo 'Nothing to commit'; exit 0; }
+          git commit -m 'fix: wire finance deletion service and modal actions'
+          git push origin HEAD:chatgpt/p61-financial-structure-delete-reset-20260814
