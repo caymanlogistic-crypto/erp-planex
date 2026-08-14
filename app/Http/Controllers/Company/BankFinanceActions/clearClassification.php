@@ -10,7 +10,12 @@ try{
  $company=$s->fetch(PDO::FETCH_ASSOC);
  if(!$company)throw new RuntimeException('Компания не найдена или неактивна.');
  $local=(new \App\Core\Database(companyDatabaseConfig($config,$company)))->connection();
- \App\Service\FinanceMatchingRuleService::clearBankTransactionClassification($local,(int)$bankTransactionId,['id'=>$_SESSION['user_id']??0,'role'=>$_SESSION['role_code']??'company_owner']);
+ $started=!$local->inTransaction();if($started)$local->beginTransaction();
+ try{
+  \App\Service\FinanceMatchingRuleService::clearBankTransactionClassification($local,(int)$bankTransactionId,['id'=>$_SESSION['user_id']??0,'role'=>$_SESSION['role_code']??'company_owner']);
+  \App\Service\FinanceEmployeePaymentService::unlinkByBankTransactionIfExists($local,(int)$bankTransactionId,['id'=>$_SESSION['user_id']??0,'role'=>$_SESSION['role_code']??'company_owner']);
+  if($started)$local->commit();
+ }catch(Throwable $inner){if($started&&$local->inTransaction())$local->rollBack();throw $inner;}
  $_SESSION['bank_finance_success']='Разнесение удалено. Операция возвращена в статус «Не разнесено».';
 }catch(Throwable $e){
  $_SESSION['bank_finance_error']=$e->getMessage();
