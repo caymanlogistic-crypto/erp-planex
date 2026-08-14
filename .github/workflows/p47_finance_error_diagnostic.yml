@@ -1,0 +1,53 @@
+name: P47 Finance Error Diagnostic
+on:
+  push:
+    branches:
+      - chatgpt/p47-finance-error-diagnostic-20260814
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        shell: bash
+        env:
+          CRED: ${{ secrets.P12_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.P11_RUNTIME_KEY }}
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p47_key
+            chmod 600 /tmp/p47_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p47_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Read-only production diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p47/P47_finance_error_diagnostic.js | tee P47_DIAGNOSTIC.txt
+          grep -q 'P47_OK' P47_DIAGNOSTIC.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P47_finance_error_diagnostic
+          path: |
+            P47_DIAGNOSTIC.txt
+            P47_bank.png
