@@ -7,6 +7,7 @@ final class BankFinanceController{
  public function index():void{$this->action('index');}
  public function import():void{$this->action('import');}
  public function refreshFromMail():void{$this->action('refreshFromMail');}
+ public function applyRules():void{$this->action('applyRules');}
  public function settings():void{$this->action('settings');}
  public function bankStatementSettings():void{$this->action('bankStatementSettings');}
  public function deleteImport():void{$this->action('deleteImport');}
