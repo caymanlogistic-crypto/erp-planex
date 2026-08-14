@@ -1,0 +1,39 @@
+name: P67 Apply Bank Statements Flow Patch
+on:
+  push:
+    branches: [chatgpt/p67-bank-statements-rules-flow-20260814]
+    paths:
+      - '.github/p67/P67_patch_bank_flow.py'
+      - '.github/workflows/p67_patch_bank_flow.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply patch
+        run: python .github/p67/P67_patch_bank_flow.py
+      - name: Validate PHP
+        run: |
+          php -l app/View/pages/company_bank_accounts.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/index.php
+          php -l app/View/pages/company_finance_matching_rules.php
+          php -l app/View/layouts/main.php
+          php -l app/View/components/breadcrumbs.php
+          php -l app/Service/FinanceMatchingRuleBatchTrait.php
+          php -l app/Service/FinanceMatchingRuleService.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/applyRules.php
+      - name: Commit generated patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'caymanlogistic-crypto'
+          git config user.email 'cayman.logistic@gmail.com'
+          git add app/View/pages/company_bank_accounts.php app/Http/Controllers/Company/BankFinanceActions/index.php app/View/pages/company_finance_matching_rules.php app/View/layouts/main.php app/View/components/breadcrumbs.php
+          git diff --cached --quiet && { echo 'Nothing to commit'; exit 0; }
+          git commit -m 'ui: make bank statements the entry point for matching rules'
+          git push origin HEAD:chatgpt/p67-bank-statements-rules-flow-20260814
