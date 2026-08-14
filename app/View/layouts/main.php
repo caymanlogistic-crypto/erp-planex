@@ -36,6 +36,27 @@ $matchingRulesActive = str_starts_with($requestPath, '/company/finance/settings/
 $financeDashboardActive = str_starts_with($requestPath, '/company/finance/dashboard');
 $operationsActive = str_starts_with($requestPath, '/company/finance/operations');
 $bankStatementSettingsActive = str_starts_with($requestPath, '/company/bank-statement-settings');
+$wideWorkspacePrefixes = [
+    '/company/clients',
+    '/company/trips/linear',
+    '/company/trips/departures',
+    '/company/route-executors',
+    '/company/contractors',
+    '/company/drivers',
+    '/company/vehicle-sets',
+    '/company/finance/operations',
+    '/company/finance/invoices',
+    '/company/finance/cash',
+    '/company/finance/bank-accounts',
+    '/company/finance/dashboard',
+];
+$wideWorkspaceActive = false;
+foreach ($wideWorkspacePrefixes as $wideWorkspacePrefix) {
+    if (str_starts_with($requestPath, $wideWorkspacePrefix)) {
+        $wideWorkspaceActive = true;
+        break;
+    }
+}
 
 // Вычисление — раскрыта ли группа «Справочники» (любой подпункт активен)
 $directoriesOpen = ($roleCode !== 'superadmin') && (
@@ -406,8 +427,14 @@ if (empty($topbarCrumbs)) {
 
         </aside>
 
-        <main class="content">
+        <main class="content<?= $wideWorkspaceActive ? ' content--wide-workspace' : '' ?>">
+            <?php if ($wideWorkspaceActive): ?>
+            <div class="workspace-shell-1690">
+                <?= $content ?>
+            </div>
+            <?php else: ?>
             <?= $content ?>
+            <?php endif; ?>
         </main>
     </div>
 

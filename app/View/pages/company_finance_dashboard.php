@@ -2,105 +2,70 @@
 
 use App\Service\FinanceDashboardService;
 
+$money = static fn(mixed $v): string => FinanceDashboardService::formatAmount($v ?? '0.00');
+$totalCash = (float)($dashboard['total_cash'] ?? 0);
+$bankTotal = (float)($dashboard['bank_total'] ?? 0);
+$cashTotal = (float)($dashboard['cash_total'] ?? 0);
+$expectedIn = (float)($dashboard['expected_inflow'] ?? 0);
+$expectedOut = (float)($dashboard['expected_outflow'] ?? 0);
+$plannedNet = $expectedIn - $expectedOut;
+$forecastCash = $totalCash + $plannedNet;
+$overdueReceivables = (float)($dashboard['overdue_receivables'] ?? 0);
+$overduePayables = (float)($dashboard['overdue_payables'] ?? 0);
+$unallocated = (int)($dashboard['unallocated_count'] ?? 0);
+$hasGap = !empty($dashboard['cash_gap_date']);
+$attentionCount = ($overdueReceivables > 0 ? 1 : 0) + ($overduePayables > 0 ? 1 : 0) + ($unallocated > 0 ? 1 : 0) + ($hasGap ? 1 : 0);
 ?>
+<style>
+.fd-shell{min-width:0}.fd-head-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.fd-status-strip{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:8px 0 12px;padding:9px 12px;border:1px solid var(--line-soft);background:var(--surface-form);font-size:10.5px;color:var(--text-muted)}.fd-status-main{display:flex;align-items:center;gap:8px}.fd-status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);flex:0 0 auto}.fd-status-dot.is-warn{background:var(--warning)}.fd-status-dot.is-bad{background:var(--danger)}.fd-status-strip strong{color:var(--text-main)}.fd-kpis{display:grid;grid-template-columns:1.25fr repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.fd-kpi{position:relative;min-width:0;min-height:102px;padding:13px 14px;border:1px solid var(--line-soft);background:var(--surface-strong);text-decoration:none;color:inherit}.fd-kpi:hover{border-color:var(--accent-line);background:var(--surface-form)}.fd-kpi.is-main{box-shadow:inset 3px 0 0 var(--accent)}.fd-kpi.is-good{box-shadow:inset 3px 0 0 var(--success)}.fd-kpi.is-bad{box-shadow:inset 3px 0 0 var(--danger)}.fd-kpi-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-faint)}.fd-kpi-value{margin-top:8px;font-size:21px;font-weight:700;line-height:1.05;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fd-kpi-note{margin-top:7px;font-size:9.5px;color:var(--text-muted)}.fd-command-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.7fr);gap:10px;margin-bottom:12px}.fd-section{border:1px solid var(--line-soft);background:var(--surface-strong)}.fd-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:46px;padding:10px 13px;border-bottom:1px solid var(--line-soft);background:var(--surface-form)}.fd-section-title{font-size:12px;font-weight:700;color:var(--text-main)}.fd-section-sub{margin-top:2px;font-size:9.5px;color:var(--text-faint)}.fd-section-body{padding:0}.fd-alert-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:10px;align-items:center;min-height:52px;padding:8px 12px;border-bottom:1px solid var(--line-hair);text-decoration:none;color:inherit}.fd-alert-row:last-child{border-bottom:0}.fd-alert-row:hover{background:var(--surface-form)}.fd-alert-mark{width:7px;height:7px;border-radius:50%;background:var(--success)}.fd-alert-mark.warn{background:var(--warning)}.fd-alert-mark.bad{background:var(--danger)}.fd-alert-copy strong{display:block;font-size:11px;color:var(--text-main)}.fd-alert-copy span{display:block;margin-top:2px;font-size:9.5px;color:var(--text-faint)}.fd-alert-value{font-size:12px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}.fd-alert-open{font-size:9.5px;color:var(--accent);font-weight:700}.fd-quick{display:grid;grid-template-columns:1fr 1fr}.fd-quick a{min-height:64px;padding:11px 12px;border-right:1px solid var(--line-hair);border-bottom:1px solid var(--line-hair);text-decoration:none;color:inherit}.fd-quick a:nth-child(2n){border-right:0}.fd-quick a:nth-last-child(-n+2){border-bottom:0}.fd-quick a:hover{background:var(--surface-form)}.fd-quick strong{display:block;font-size:10.5px;color:var(--text-main)}.fd-quick span{display:block;margin-top:4px;font-size:9.5px;line-height:1.35;color:var(--text-faint)}.fd-balance-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.fd-account-row{display:grid;grid-template-columns:minmax(0,1fr) 145px;gap:12px;align-items:center;min-height:42px;padding:7px 12px;border-bottom:1px solid var(--line-hair)}.fd-account-row:last-child{border-bottom:0}.fd-account-name{font-size:10.5px;font-weight:600;color:var(--text-main)}.fd-account-amount{text-align:right;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}.fd-empty{padding:22px 12px;color:var(--text-faint);font-size:10px}.fd-plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.fd-plan-item{min-height:80px;padding:12px;border-right:1px solid var(--line-hair);text-decoration:none;color:inherit}.fd-plan-item:last-child{border-right:0}.fd-plan-item:hover{background:var(--surface-form)}.fd-plan-label{font-size:9.5px;color:var(--text-faint)}.fd-plan-value{margin-top:7px;font-size:16px;font-weight:700;color:var(--text-main)}.fd-plan-note{margin-top:5px;font-size:9px;color:var(--text-muted)}.fd-reports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.fd-report{padding:11px 12px;min-height:65px;border-right:1px solid var(--line-hair);text-decoration:none;color:inherit}.fd-report:last-child{border-right:0}.fd-report:hover{background:var(--surface-form)}.fd-report strong{display:block;font-size:10.5px}.fd-report span{display:block;margin-top:4px;font-size:9.5px;color:var(--text-faint);line-height:1.35}
+@media(max-width:1450px){.fd-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.fd-command-grid{grid-template-columns:1fr}.fd-plan-grid,.fd-reports{grid-template-columns:1fr 1fr}.fd-plan-item:nth-child(2){border-right:0}.fd-plan-item:nth-child(-n+2){border-bottom:1px solid var(--line-hair)}.fd-report:nth-child(2){border-right:0}.fd-report:nth-child(-n+2){border-bottom:1px solid var(--line-hair)}}
+@media(max-width:900px){.fd-kpis{grid-template-columns:1fr 1fr}.fd-balance-grid{grid-template-columns:1fr}.fd-status-strip{align-items:flex-start;flex-direction:column}.fd-alert-row{grid-template-columns:10px minmax(0,1fr) auto}.fd-alert-open{display:none}}
+</style>
 <?php if ($company === null): ?>
 <div class="notice warn">Компания не найдена. Укажите корректный company_id.</div>
 <?php elseif (($company['status'] ?? '') !== 'active'): ?>
-<div class="page-head">
-    <div class="page-head-left">
-        <h1 class="page-title">Финансовый дашборд</h1>
-        <div class="page-summary"><span>Компания находится в неактивном статусе.</span></div>
-    </div>
-</div>
-<div class="notice warn">Работа с финансовым дашбордом недоступна.</div>
+<div class="page-head"><div class="page-head-left"><h1 class="page-title">Финансовый дашборд</h1><div class="page-summary"><span>Компания находится в неактивном статусе.</span></div></div></div><div class="notice warn">Работа с финансовым дашбордом недоступна.</div>
 <?php elseif ($dbError !== null): ?>
-<div class="page-head">
-    <div class="page-head-left">
-        <h1 class="page-title">Финансовый дашборд</h1>
-        <div class="page-summary"><span>Сводка финансового состояния компании.</span></div>
-    </div>
-</div>
-<div class="notice warn"><?= e($dbError) ?></div>
+<div class="page-head"><div class="page-head-left"><h1 class="page-title">Финансовый дашборд</h1><div class="page-summary"><span>Сводка финансового состояния компании.</span></div></div></div><div class="notice warn"><?= e($dbError) ?></div>
 <?php else: ?>
-<div class="page-head">
-    <div class="page-head-left">
-        <h1 class="page-title">Финансовый дашборд</h1>
-        <div class="page-summary"><span>Сводка финансового состояния компании.</span></div>
-    </div>
-</div>
+<div class="fd-shell">
+ <div class="page-head">
+  <div class="page-head-left"><h1 class="page-title">Финансовый дашборд</h1><div class="page-summary"><span>Деньги, обязательства и точки внимания — на одном экране.</span></div></div>
+  <div class="page-head-right fd-head-actions"><a class="btn btn-ghost" href="<?= app_url('/company/finance/operations') ?>">Операции</a><a class="btn btn-ghost" href="<?= app_url('/company/finance/payment-calendar') ?>">Платёжный календарь</a><a class="btn btn-primary" href="<?= app_url('/company/finance/bank-accounts') ?>">Банк</a></div>
+ </div>
 
-<div class="panel-section">
-    <div class="section-title">Денежные средства</div>
-    <div class="dashboard-grid">
-        <a href="<?= app_url('/company/finance/bank-accounts') ?>" class="dashboard-card">
-            <div class="dashboard-card-label">Остатки по банкам</div>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['bank_total'] ?? '0.00') ?></div>
-            <?php if (!empty($dashboard['bank_accounts'])): ?>
-            <div class="dashboard-card-meta">
-                <?php foreach ($dashboard['bank_accounts'] as $ba): ?>
-                <span><?= e($ba['name']) ?>: <?= FinanceDashboardService::formatAmount($ba['balance']) ?></span>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-        </a>
-        <a href="<?= app_url('/company/finance/cash') ?>" class="dashboard-card">
-            <div class="dashboard-card-label">Остатки по кассам</div>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['cash_total'] ?? '0.00') ?></div>
-            <?php if (!empty($dashboard['cash_accounts'])): ?>
-            <div class="dashboard-card-meta">
-                <?php foreach ($dashboard['cash_accounts'] as $ca): ?>
-                <span><?= e($ca['name']) ?>: <?= FinanceDashboardService::formatAmount($ca['balance']) ?></span>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-        </a>
-        <a href="<?= app_url('/company/finance/bank-accounts') ?>" class="dashboard-card dashboard-card--accent">
-            <div class="dashboard-card-label">Общая сумма денег</div>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['total_cash'] ?? '0.00') ?></div>
-        </a>
-    </div>
-</div>
+ <div class="fd-status-strip">
+  <div class="fd-status-main"><span class="fd-status-dot<?= $hasGap ? ' is-bad' : ($attentionCount > 0 ? ' is-warn' : '') ?>"></span><div><strong><?= $hasGap ? 'Есть риск кассового разрыва' : ($attentionCount > 0 ? 'Есть задачи, требующие внимания' : 'Критичных финансовых сигналов нет') ?></strong> · данные собраны из банковских/кассовых остатков, счетов и плановых оплат.</div></div>
+  <div><?= $attentionCount ?> <?= $attentionCount === 1 ? 'сигнал' : 'сигнала' ?> · <?= count($dashboard['bank_accounts'] ?? []) ?> банковских сч. · <?= count($dashboard['cash_accounts'] ?? []) ?> касс</div>
+ </div>
 
-<div class="panel-section">
-    <div class="section-title">Планирование</div>
-    <div class="dashboard-grid">
-        <a href="<?= app_url('/company/finance/payment-calendar') ?>?direction=INCOME" class="dashboard-card">
-            <div class="dashboard-card-label">Ожидаемые поступления</div>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['expected_inflow'] ?? '0.00') ?></div>
-        </a>
-        <a href="<?= app_url('/company/finance/payment-calendar') ?>?direction=EXPENSE" class="dashboard-card dashboard-card--outflow">
-            <div class="dashboard-card-label">Предстоящие платежи</div>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['expected_outflow'] ?? '0.00') ?></div>
-        </a>
-        <a href="<?= app_url('/company/finance/payment-calendar') ?>?status=overdue&direction=INCOME" class="dashboard-card dashboard-card--danger">
-            <div class="dashboard-card-label">Просроченная дебиторка</div>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['overdue_receivables'] ?? '0.00') ?></div>
-        </a>
-        <a href="<?= app_url('/company/finance/payment-calendar') ?>?status=overdue&direction=EXPENSE" class="dashboard-card dashboard-card--danger">
-            <div class="dashboard-card-label">Просроченная кредиторка</div>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['overdue_payables'] ?? '0.00') ?></div>
-        </a>
-    </div>
-</div>
+ <div class="fd-kpis">
+  <a class="fd-kpi is-main" href="<?= app_url('/company/finance/bank-accounts') ?>"><div class="fd-kpi-label">Денег сейчас</div><div class="fd-kpi-value"><?= $money($totalCash) ?></div><div class="fd-kpi-note">Банк + касса</div></a>
+  <a class="fd-kpi" href="<?= app_url('/company/finance/bank-accounts') ?>"><div class="fd-kpi-label">На банковских счетах</div><div class="fd-kpi-value"><?= $money($bankTotal) ?></div><div class="fd-kpi-note"><?= count($dashboard['bank_accounts'] ?? []) ?> активных счетов</div></a>
+  <a class="fd-kpi" href="<?= app_url('/company/finance/cash') ?>"><div class="fd-kpi-label">В кассе</div><div class="fd-kpi-value"><?= $money($cashTotal) ?></div><div class="fd-kpi-note"><?= count($dashboard['cash_accounts'] ?? []) ?> касс</div></a>
+  <a class="fd-kpi<?= $plannedNet < 0 ? ' is-bad' : ' is-good' ?>" href="<?= app_url('/company/finance/payment-calendar') ?>"><div class="fd-kpi-label">Плановый денежный поток</div><div class="fd-kpi-value"><?= $money($plannedNet) ?></div><div class="fd-kpi-note">Поступления − платежи</div></a>
+  <a class="fd-kpi<?= $forecastCash < 0 ? ' is-bad' : ' is-good' ?>" href="<?= app_url('/company/finance/payment-calendar') ?>"><div class="fd-kpi-label">Остаток после плана</div><div class="fd-kpi-value"><?= $money($forecastCash) ?></div><div class="fd-kpi-note">Текущие деньги + плановый поток</div></a>
+ </div>
 
-<div class="panel-section">
-    <div class="section-title">Операции и риски</div>
-    <div class="dashboard-grid">
-        <a href="<?= app_url('/company/finance/operations') ?>" class="dashboard-card">
-            <div class="dashboard-card-label">Неразобранные операции</div>
-            <div class="dashboard-card-value"><?= (int)($dashboard['unallocated_count'] ?? 0) ?></div>
-            <div class="dashboard-card-meta">операций без разнесения</div>
-        </a>
-        <a href="<?= app_url('/company/finance/payment-calendar') ?>" class="dashboard-card <?= ($dashboard['cash_gap_date'] ?? null) ? 'dashboard-card--danger' : 'dashboard-card--ok' ?>">
-            <div class="dashboard-card-label">Кассовый разрыв</div>
-            <?php if ($dashboard['cash_gap_date'] ?? null): ?>
-            <div class="dashboard-card-value"><?= FinanceDashboardService::formatAmount($dashboard['cash_gap_amount']) ?></div>
-            <div class="dashboard-card-meta">на <?= date('d.m.Y', strtotime($dashboard['cash_gap_date'])) ?></div>
-            <?php else: ?>
-            <div class="dashboard-card-value">—</div>
-            <div class="dashboard-card-meta">не прогнозируется</div>
-            <?php endif; ?>
-        </a>
-    </div>
+ <div class="fd-command-grid">
+  <section class="fd-section"><div class="fd-section-head"><div><div class="fd-section-title">Требует внимания</div><div class="fd-section-sub">Проблемные места, которые могут повлиять на деньги.</div></div><a class="btn btn-ghost btn-sm" href="<?= app_url('/company/finance/payment-calendar') ?>">Открыть календарь</a></div><div class="fd-section-body">
+   <a class="fd-alert-row" href="<?= app_url('/company/finance/payment-calendar') ?>?status=overdue&direction=INCOME"><span class="fd-alert-mark<?= $overdueReceivables > 0 ? ' bad' : '' ?>"></span><div class="fd-alert-copy"><strong>Просроченная дебиторская задолженность</strong><span>Деньги, которые уже должны были поступить.</span></div><div class="fd-alert-value"><?= $money($overdueReceivables) ?></div><div class="fd-alert-open">Открыть →</div></a>
+   <a class="fd-alert-row" href="<?= app_url('/company/finance/payment-calendar') ?>?status=overdue&direction=EXPENSE"><span class="fd-alert-mark<?= $overduePayables > 0 ? ' warn' : '' ?>"></span><div class="fd-alert-copy"><strong>Просроченная кредиторская задолженность</strong><span>Платежи, срок которых уже наступил.</span></div><div class="fd-alert-value"><?= $money($overduePayables) ?></div><div class="fd-alert-open">Открыть →</div></a>
+   <a class="fd-alert-row" href="<?= app_url('/company/finance/operations') ?>"><span class="fd-alert-mark<?= $unallocated > 0 ? ' warn' : '' ?>"></span><div class="fd-alert-copy"><strong>Операции без распределения</strong><span>Проведённые движения без привязки к финансовым объектам.</span></div><div class="fd-alert-value"><?= $unallocated ?></div><div class="fd-alert-open">Разобрать →</div></a>
+   <a class="fd-alert-row" href="<?= app_url('/company/finance/payment-calendar') ?>"><span class="fd-alert-mark<?= $hasGap ? ' bad' : '' ?>"></span><div class="fd-alert-copy"><strong>Ближайший кассовый разрыв</strong><span><?= $hasGap ? 'Прогнозируемая дата: '.date('d.m.Y', strtotime((string)$dashboard['cash_gap_date'])) : 'По текущему плану не прогнозируется.' ?></span></div><div class="fd-alert-value"><?= $hasGap ? $money($dashboard['cash_gap_amount']) : '—' ?></div><div class="fd-alert-open">Проверить →</div></a>
+  </div></section>
+  <section class="fd-section"><div class="fd-section-head"><div><div class="fd-section-title">Быстрый доступ</div><div class="fd-section-sub">Основные ежедневные финансовые действия.</div></div></div><div class="fd-quick">
+   <a href="<?= app_url('/company/finance/bank-accounts') ?>"><strong>Банк</strong><span>Выписки, остатки и разнесение.</span></a><a href="<?= app_url('/company/finance/operations') ?>"><strong>Операции</strong><span>Все движения денежных средств.</span></a><a href="<?= app_url('/company/finance/invoices') ?>"><strong>Счета</strong><span>Выставленные и полученные счета.</span></a><a href="<?= app_url('/company/finance/cash') ?>"><strong>Касса</strong><span>Наличные и внутренние движения.</span></a><a href="<?= app_url('/company/finance/settings/dds-categories') ?>"><strong>Финансовая структура</strong><span>ЦФУ и статьи ДДС.</span></a><a href="<?= app_url('/company/finance/settings/matching-rules') ?>"><strong>Правила</strong><span>Автоматическое разнесение банка.</span></a>
+  </div></section>
+ </div>
+
+ <div class="fd-balance-grid">
+  <section class="fd-section"><div class="fd-section-head"><div><div class="fd-section-title">Банковские счета</div><div class="fd-section-sub">Фактические расчётные остатки.</div></div><strong><?= $money($bankTotal) ?></strong></div><div class="fd-section-body"><?php if (empty($dashboard['bank_accounts'])): ?><div class="fd-empty">Банковские счета с остатками не найдены.</div><?php else: ?><?php foreach ($dashboard['bank_accounts'] as $a): ?><div class="fd-account-row"><div class="fd-account-name"><?= e($a['name']) ?></div><div class="fd-account-amount"><?= $money($a['balance']) ?></div></div><?php endforeach; ?><?php endif; ?></div></section>
+  <section class="fd-section"><div class="fd-section-head"><div><div class="fd-section-title">Кассы</div><div class="fd-section-sub">Наличные и прочие кассовые счета.</div></div><strong><?= $money($cashTotal) ?></strong></div><div class="fd-section-body"><?php if (empty($dashboard['cash_accounts'])): ?><div class="fd-empty">Кассы с остатками не найдены.</div><?php else: ?><?php foreach ($dashboard['cash_accounts'] as $a): ?><div class="fd-account-row"><div class="fd-account-name"><?= e($a['name']) ?></div><div class="fd-account-amount"><?= $money($a['balance']) ?></div></div><?php endforeach; ?><?php endif; ?></div></section>
+ </div>
+
+ <section class="fd-section" style="margin-bottom:12px"><div class="fd-section-head"><div><div class="fd-section-title">План платежей</div><div class="fd-section-sub">Открытые обязательства по счетам и рейсам.</div></div><a class="btn btn-ghost btn-sm" href="<?= app_url('/company/finance/payment-calendar') ?>">Все платежи</a></div><div class="fd-plan-grid"><a class="fd-plan-item" href="<?= app_url('/company/finance/payment-calendar') ?>?direction=INCOME"><div class="fd-plan-label">Ожидается получить</div><div class="fd-plan-value"><?= $money($expectedIn) ?></div><div class="fd-plan-note">Непогашенные требования к клиентам</div></a><a class="fd-plan-item" href="<?= app_url('/company/finance/payment-calendar') ?>?direction=EXPENSE"><div class="fd-plan-label">Предстоит заплатить</div><div class="fd-plan-value"><?= $money($expectedOut) ?></div><div class="fd-plan-note">Непогашенные обязательства компании</div></a><a class="fd-plan-item" href="<?= app_url('/company/finance/payment-calendar') ?>?status=overdue&direction=INCOME"><div class="fd-plan-label">Просрочено к получению</div><div class="fd-plan-value"><?= $money($overdueReceivables) ?></div><div class="fd-plan-note">Часть ожидаемых поступлений</div></a><a class="fd-plan-item" href="<?= app_url('/company/finance/payment-calendar') ?>?status=overdue&direction=EXPENSE"><div class="fd-plan-label">Просрочено к оплате</div><div class="fd-plan-value"><?= $money($overduePayables) ?></div><div class="fd-plan-note">Часть предстоящих платежей</div></a></div></section>
+
+ <section class="fd-section"><div class="fd-section-head"><div><div class="fd-section-title">Управленческие отчёты</div><div class="fd-section-sub">Переход к ключевой финансовой аналитике.</div></div></div><div class="fd-reports"><a class="fd-report" href="<?= app_url('/company/finance/reports/cash-flow') ?>"><strong>БДДС</strong><span>Поступления, списания и денежный поток.</span></a><a class="fd-report" href="<?= app_url('/company/finance/reports/management-balance') ?>"><strong>Управленческий баланс</strong><span>Активы и обязательства компании.</span></a><a class="fd-report" href="<?= app_url('/company/finance/reports/payment-plan-fact') ?>"><strong>План-факт оплаты</strong><span>Плановые даты против фактических оплат.</span></a><a class="fd-report" href="<?= app_url('/company/finance/payment-calendar') ?>"><strong>Платёжный календарь</strong><span>Очередь входящих и исходящих платежей.</span></a></div></section>
 </div>
 <?php endif; ?>
