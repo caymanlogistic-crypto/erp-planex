@@ -1,0 +1,59 @@
+name: P75 Employee Payments Browser Acceptance
+on:
+  push:
+    branches: [chatgpt/p75-employee-payments-browser-20260815]
+    paths:
+      - '.github/p75/P75_employee_payments_browser.js'
+      - '.github/workflows/p75_employee_payments_browser.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p75_key
+            chmod 600 /tmp/p75_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p75_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Read-only production browser acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p75/P75_employee_payments_browser.js | tee P75_RUNTIME.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P75_employee_payments_browser
+          path: |
+            P75_RUNTIME.txt
+            P75_employee_payments.png
+            P75_payment_modal.png
+            P75_return_modal.png
+            P75_bank_employee_link.png
+          if-no-files-found: warn
