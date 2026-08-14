@@ -71,6 +71,21 @@ final class FinanceStructureService
         return $map;
     }
 
+    public static function isLinkedPair(PDO $pdo, int $centerId, int $ddsId): bool
+    {
+        if (!self::tableExists($pdo)) return true;
+        $stmt = $pdo->prepare('SELECT 1 FROM finance_cash_flow_center_dds_categories WHERE cash_flow_center_id=? AND dds_category_id=? AND is_active=1');
+        $stmt->execute([$centerId, $ddsId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    public static function assertLinkedPair(PDO $pdo, int $centerId, int $ddsId): void
+    {
+        if (!self::isLinkedPair($pdo, $centerId, $ddsId)) {
+            throw new \InvalidArgumentException('Статья ДДС не входит в выбранный ЦФУ. Измените «Финансовую структуру».');
+        }
+    }
+
     public static function assertAllowedPair(PDO $pdo, int $centerId, int $ddsId, string $operationType): void
     {
         $allowed = self::fetchAllowedDds($pdo, $centerId, $operationType);
@@ -83,9 +98,7 @@ final class FinanceStructureService
     public static function link(PDO $pdo, int $centerId, int $ddsId, bool $active = true, int $sortOrder = 100): void
     {
         self::assertCenterExists($pdo, $centerId);
-        if (!FinanceDdsCategoryService::findCategory($pdo, $ddsId)) {
-            throw new \InvalidArgumentException('Статья ДДС не найдена.');
-        }
+        if (!FinanceDdsCategoryService::findCategory($pdo, $ddsId)) throw new \InvalidArgumentException('Статья ДДС не найдена.');
         $stmt = $pdo->prepare(
             "INSERT INTO finance_cash_flow_center_dds_categories
                 (cash_flow_center_id,dds_category_id,sort_order,is_active)
@@ -99,13 +112,14 @@ final class FinanceStructureService
     {
         self::assertCenterExists($pdo, $centerId);
         $ids = array_values(array_unique(array_filter(array_map('intval', $ddsIds), static fn(int $v): bool => $v > 0)));
-        $pdo->beginTransaction();
+        $own = !$pdo->inTransaction();
+        if ($own) $pdo->beginTransaction();
         try {
             $pdo->prepare('UPDATE finance_cash_flow_center_dds_categories SET is_active=0,updated_at=NOW() WHERE cash_flow_center_id=?')->execute([$centerId]);
             foreach ($ids as $id) self::link($pdo, $centerId, $id, true, 100);
-            $pdo->commit();
+            if ($own) $pdo->commit();
         } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($own && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
     }
