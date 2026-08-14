@@ -1,0 +1,55 @@
+name: P59 Multi Page UI UX Fast Runtime
+on:
+  push:
+    branches:
+      - chatgpt/p59-multipage-uiux-fast-runtime-20260814
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright library
+        run: npm install --no-save playwright@1.54.2
+      - name: Resolve OWNER credentials
+        shell: bash
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p59_key
+            chmod 600 /tmp/p59_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p59_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Run production UI UX gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p59/P59_multi_page_uiux_runtime.js | tee P59_RUNTIME.txt
+          grep -q 'P59_OK' P59_RUNTIME.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P59_multi_page_uiux_runtime
+          path: |
+            P59_RUNTIME.txt
+            P59_*.png
+          if-no-files-found: warn
