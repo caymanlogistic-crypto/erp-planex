@@ -8,7 +8,20 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: erp_employee_payments_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - name: PHP syntax
@@ -33,8 +46,19 @@ jobs:
           php -l tests/finance_employee_payments_test.php
       - name: Matching semantics
         run: php tests/finance_matching_classification_test.php
-      - name: Employee settlement semantics
-        run: php tests/finance_employee_payments_test.php
+      - name: Employee settlement behavioral regression
+        env:
+          EMPLOYEE_PAYMENTS_DB_HOST: 127.0.0.1
+          EMPLOYEE_PAYMENTS_DB_PORT: 3306
+          EMPLOYEE_PAYMENTS_DB_NAME: erp_employee_payments_test
+          EMPLOYEE_PAYMENTS_DB_USER: root
+          EMPLOYEE_PAYMENTS_DB_PASSWORD: root
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -m | grep -qi pdo_mysql
+          php tests/finance_employee_payments_test.php | tee employee_payments_regression.txt
+          grep -q 'FINANCE_EMPLOYEE_PAYMENTS_BEHAVIOR_OK' employee_payments_regression.txt
       - name: Migration shape
         shell: bash
         run: |
@@ -44,4 +68,11 @@ jobs:
           grep -q 'linked_cash_transaction_id' database/migrations-local/063_finance_matching_classification.sql
           grep -q 'finance_employee_movements' database/migrations-local/065_finance_employee_movements.sql
           grep -q 'uk_fem_finance_operation' database/migrations-local/065_finance_employee_movements.sql
+          grep -q 'uk_fem_bank_transaction' database/migrations-local/065_finance_employee_movements.sql
           grep -q 'fk_fem_employee' database/migrations-local/065_finance_employee_movements.sql
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: employee_payments_regression_${{ github.sha }}
+          path: employee_payments_regression.txt
+          if-no-files-found: warn
