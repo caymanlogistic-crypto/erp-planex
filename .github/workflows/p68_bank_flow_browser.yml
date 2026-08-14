@@ -1,0 +1,54 @@
+name: P68 Bank Flow Browser Acceptance
+on:
+  push:
+    branches: [chatgpt/p68-bank-flow-browser-20260814]
+    paths:
+      - '.github/p68/P68_bank_flow.js'
+      - '.github/workflows/p68_bank_flow_browser.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p68_key
+            chmod 600 /tmp/p68_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p68_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Read-only browser acceptance
+        run: node .github/p68/P68_bank_flow.js | tee P68_RUNTIME.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P68_bank_flow
+          path: |
+            P68_RUNTIME.txt
+            P68_bank.png
+            P68_rules.png
+          if-no-files-found: warn
