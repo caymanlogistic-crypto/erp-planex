@@ -96,6 +96,7 @@ require_once base_path('app/Http/Routes/company_bank_finance.php');
 require_once base_path('app/Http/Routes/company_finance_invoices.php');
 require_once base_path('app/Http/Routes/company_finance_operations.php');
 require_once base_path('app/Http/Routes/company_finance_cash.php');
+require_once base_path('app/Http/Routes/company_finance_employee_payments.php');
 require_once base_path('app/Http/Routes/company_finance_dds_categories.php');
 require_once base_path('app/Http/Routes/company_finance_payment_calendar.php');
 require_once base_path('app/Http/Routes/company_finance_cash_flow_report.php');
