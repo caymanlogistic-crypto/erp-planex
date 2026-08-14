@@ -9,6 +9,7 @@ unset($_SESSION['bank_finance_success'],$_SESSION['bank_finance_error']);
 
 $company=null;$accounts=[];$imports=[];$transactions=[];$dailyBalances=[];$bankSettings=[];$reconciliation=[];$dbError=null;
 $txTotal=0;$txPages=1;$txPage=1;$search='';$classificationStatus='';
+$reconciliationControlDate='2026-07-24';
 
 if($companyId>0){
     try{
@@ -42,10 +43,10 @@ if($companyId>0){
             $txPages=max(1,$txResult['pages']);
             $dailyBalances=\App\Service\BankFinanceService::getDailyBalances($localPdo,null,1,100,$dateFrom,$dateTo)['data'];
             try{
-                $reconciliation=\App\Service\FinanceBankReconciliationService::reconcileAll($localPdo);
+                $reconciliation=\App\Service\FinanceBankReconciliationCutoffService::reconcileAll($localPdo,$reconciliationControlDate);
             }catch(Throwable $e){
                 error_log('Bank reconciliation read error: '.$e->getMessage());
-                $reconciliation=['accounts'=>[],'summary'=>['all_ok'=>false,'service_error'=>true]];
+                $reconciliation=['accounts'=>[],'control_from_date'=>$reconciliationControlDate,'summary'=>['all_ok'=>false,'service_error'=>true]];
             }
         }
     }catch(Throwable $e){
@@ -77,15 +78,23 @@ if(($company['status']??'')==='active'&&$dbError===null){
     $toolbarReplacement=$hasFilters?'<a href="'.e(app_url('/company/finance/bank-accounts')).'" class="btn btn-ghost btn-toolbar">Сбросить фильтры</a>':'';
     $content=str_replace($toolbarSearch,$toolbarReplacement,$content);
 
+    $debitHeader='<th class="col-tight">Дебет</th>';
     $creditHeader='<th class="col-tight">Кредит</th>';
-    $extraHeaders='<th>ЦФУ</th><th>Статья ДДС</th><th>Статус</th><th></th>';
-    $content=str_replace($creditHeader,$creditHeader.$extraHeaders,$content);
+    $content=str_replace($debitHeader,'<th class="col-tight" style="text-align:right">Дебет</th>',$content);
+    $content=str_replace($creditHeader,'<th class="col-tight" style="text-align:right">Кредит</th>',$content);
+    $creditHeaderRight='<th class="col-tight" style="text-align:right">Кредит</th>';
+    $extraHeaders='<th>ЦФУ</th><th>Статья ДДС</th><th>Статус</th>';
+    $content=str_replace($creditHeaderRight,$creditHeaderRight.$extraHeaders,$content,1);
 
     foreach($transactions as $tx){
         $id=(int)($tx['id']??0);
         if($id<=0)continue;
         $rowStart=strpos($content,'<tr data-tx-id="'.$id.'"');
         if($rowStart===false)continue;
+        $rowTagEnd=strpos($content,'>',$rowStart);
+        if($rowTagEnd===false)continue;
+        $classifyUrl=e(app_url('/company/finance/bank-transactions/'.$id.'/classify'));
+        $content=substr_replace($content,' data-classify-url="'.$classifyUrl.'"',$rowTagEnd,0);
         $rowEnd=strpos($content,'</tr>',$rowStart);
         if($rowEnd===false)continue;
         $status=(string)($tx['classification_status']??'UNALLOCATED');
@@ -95,13 +104,58 @@ if(($company['status']??'')==='active'&&$dbError===null){
         $cells.='<td><span class="'.e(\App\Service\FinanceMatchingRuleService::classificationBadgeClass($status)).'"><span class="dot"></span>'.e(\App\Service\FinanceMatchingRuleService::classificationStatusLabel($status)).'</span>';
         if(!empty($tx['is_internal_transfer'])){$cells.='<div class="field-note">Внутренний перевод</div>';}
         $cells.='</td>';
-        $cells.='<td><button type="button" class="btn btn-secondary btn-sm" data-classify-url="'.e(app_url('/company/finance/bank-transactions/'.$id.'/classify')).'">'.(!empty($tx['is_internal_transfer'])?'Открыть':'Разнести').'</button></td>';
         $content=substr_replace($content,$cells,$rowEnd,0);
     }
 
-    $classificationModal='<div id="bank-classify-modal" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="0" data-close-on-escape="0"><div class="modal modal-lg"><div class="modal-head"><span class="modal-title">Разнести банковскую операцию</span><button type="button" class="modal-close" data-close-modal="bank-classify-modal">&times;</button></div><div id="bank-classify-modal-body"><div class="modal-body"><div class="empty-state compact"><p>Загрузка...</p></div></div></div></div></div>';
-    $classificationModal.='<script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("[data-classify-url]").forEach(function(btn){btn.addEventListener("click",function(){var body=document.getElementById("bank-classify-modal-body");body.innerHTML="<div class=\"modal-body\"><div class=\"empty-state compact\"><p>Загрузка...</p></div></div>";window.openModal("bank-classify-modal");fetch(this.dataset.classifyUrl,{credentials:"same-origin"}).then(function(r){return r.text()}).then(function(html){body.innerHTML=html}).catch(function(){body.innerHTML="<div class=\"modal-body\"><div class=\"form-alert alert-error\">Не удалось загрузить форму.</div></div>";});});});});</script>';
-    $content.=$classificationModal;
+    $content=str_replace('class="col-mono text-danger col-tight','style="text-align:right" class="col-mono text-danger col-tight',$content);
+    $content=str_replace('class="col-mono text-success col-tight','style="text-align:right" class="col-mono text-success col-tight',$content);
+
+    $content=str_replace("row.addEventListener('click', function() {","row.addEventListener('dblclick', function() {",$content);
+    $detailLoader=<<<'JS'
+            var classificationBody = modal.querySelector('[data-tx-detail-classification]');
+            if (classificationBody) {
+                classificationBody.innerHTML = '<div class="empty-state compact"><p>Загрузка разнесения...</p></div>';
+                var classificationUrl = this.getAttribute('data-classify-url');
+                if (classificationUrl) {
+                    fetch(classificationUrl, {credentials:'same-origin'})
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) { classificationBody.innerHTML = html; })
+                        .catch(function() { classificationBody.innerHTML = '<div class="form-alert alert-error">Не удалось загрузить разнесение.</div>'; });
+                }
+            }
+            window.openModal('tx-detail-modal');
+JS;
+    $content=str_replace("            window.openModal('tx-detail-modal');",$detailLoader,$content,1);
+
+    $detailClosing="                </div>\n            </div>\n        </div>\n    </div>\n</div>";
+    $detailClosingPos=strrpos($content,$detailClosing);
+    if($detailClosingPos!==false){
+        $detailReplacement="                </div>\n            </div>\n            <div class=\"tx-detail-classification mt-section\" data-tx-detail-classification><div class=\"empty-state compact\"><p>Двойной щелчок по операции загружает разнесение.</p></div></div>\n        </div>\n    </div>\n</div>";
+        $content=substr_replace($content,$detailReplacement,$detailClosingPos,strlen($detailClosing));
+    }
+
+    $reconSummary=$reconciliation['summary']??[];
+    $controlDateLabel=date('d.m.Y',strtotime($reconciliationControlDate));
+    $reconHasError=!($reconSummary['all_ok']??false);
+    $reconBanner='<div class="notice '.($reconHasError?'warn':'success').' bank-reconciliation-banner" data-reconciliation-banner>';
+    $reconBanner.='<div><b>Независимая сверка: '.($reconHasError?'есть расхождения':'расхождений нет').'</b>';
+    $reconBanner.=' <span class="field-note">Строгий контроль с '.$controlDateLabel.'. История до этой даты сохранена, но не влияет на текущий статус.</span>';
+    if($reconSummary['service_error']??false){$reconBanner.='<div class="text-danger">Ошибка выполнения проверки.</div>';}
+    if(($reconSummary['invalid_arithmetic']??0)>0){$reconBanner.='<div class="text-danger">Ошибок арифметики: '.(int)$reconSummary['invalid_arithmetic'].'</div>';}
+    if(($reconSummary['gap']??0)>0){$reconBanner.='<div class="text-danger">Разрывов: '.(int)$reconSummary['gap'].'</div>';}
+    if(($reconSummary['duplicate']??0)>0){$reconBanner.='<div class="text-danger">Дубликатов: '.(int)$reconSummary['duplicate'].'</div>';}
+    if(($reconSummary['mismatch']??0)>0){$reconBanner.='<div class="text-danger">Несовпадений оборотов: '.(int)$reconSummary['mismatch'].'</div>';}
+    $reconBanner.='</div><div><button type="button" class="btn btn-secondary btn-toolbar" onclick="window.openModal(\'bank-reconciliation-modal\')">Детали сверки</button></div></div>';
+    $tableAnchor='<div class="table-card table-card--standard bank-finance-card bank-transactions-card">';
+    $content=str_replace($tableAnchor,$tableAnchor.$reconBanner,$content,1);
+
+    $legacyReconStart=strpos($content,"<div class=\"panel-section\">\n    <div class=\"section-title\">Независимая сверка выписок</div>");
+    if($legacyReconStart!==false){
+        $legacyReconEnd=strpos($content,'<div id="bank-statement-upload-modal"',$legacyReconStart);
+        if($legacyReconEnd!==false){
+            $content=substr_replace($content,'',$legacyReconStart,$legacyReconEnd-$legacyReconStart);
+        }
+    }
 
     $b='<button type="button" class="btn btn-secondary" data-open-modal="bank-statements-modal">Просмотр выписок</button>';
     $f='<form method="post" action="'.e(app_url('/company/finance/bank-accounts/refresh-from-mail')).'" class="inline-form">'.csrfField().'<button type="submit" class="btn btn-secondary">Обновить из почты</button></form>';
