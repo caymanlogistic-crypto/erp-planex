@@ -66,18 +66,3 @@ if($allowedMapJson===false)$allowedMapJson='{}';
  <div class="matching-rule-foot-right"><button type="submit" class="btn btn-ghost"><?= $isEdit?'Сохранить':'Создать правило' ?></button><button type="button" class="btn btn-ghost" data-close-modal="<?= $isEdit?'matching-rule-edit-modal':'matching-rule-create-modal' ?>">Отмена</button></div>
 </div>
 </form>
-<?php if($isCategorize): ?>
-<script>
-(function(){
- const form=document.currentScript.previousElementSibling;
- if(!form)return;
- const cfu=form.querySelector('#matching-rule-cfu'),dds=form.querySelector('#matching-rule-dds'),direction=form.querySelector('#matching-rule-direction');
- if(!cfu||!dds)return;
- let map={};try{map=JSON.parse(cfu.dataset.ddsMap||'{}')}catch(e){}
- const selected=String(dds.value||'');
- function refresh(){const id=String(cfu.value||''),allowed=new Set((map[id]||[]).map(String));let first='';[...dds.options].forEach((o,i)=>{if(i===0)return;const show=!id||allowed.size===0||allowed.has(String(o.value));o.hidden=!show;o.disabled=!show;if(show&&!first)first=o.value});if(dds.value&&dds.selectedOptions[0]&&dds.selectedOptions[0].disabled)dds.value='';if(!dds.value&&selected&&[...dds.options].some(o=>o.value===selected&&!o.disabled))dds.value=selected;syncDirection()}
- function syncDirection(){const opt=dds.selectedOptions[0];if(!direction||!opt)return;const d=(opt.dataset.direction||'').toUpperCase();direction.value=(d==='INCOME'||d==='EXPENSE')?d:''}
- cfu.addEventListener('change',refresh);dds.addEventListener('change',syncDirection);refresh();
-})();
-</script>
-<?php endif; ?>
