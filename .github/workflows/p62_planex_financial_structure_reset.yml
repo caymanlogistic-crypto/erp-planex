@@ -1,0 +1,53 @@
+name: P62 PLANEX Financial Structure Reset
+on:
+  push:
+    branches: [chatgpt/p62-planex-financial-structure-reset-20260814]
+    paths:
+      - '.github/p62/P62_reset_financial_structure.php'
+      - '.github/workflows/p62_planex_financial_structure_reset.yml'
+permissions:
+  contents: read
+jobs:
+  reset:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: php -l .github/p62/P62_reset_financial_structure.php
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p62_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p62_key" "$HOME/.ssh/known_hosts"
+      - name: Reset PLANEX financial structure only
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote="/tmp/P62_reset_${GITHUB_RUN_ID}.php"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/p62_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes .github/p62/P62_reset_financial_structure.php "$SSH_USER@$SSH_HOST:$remote"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p62_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "ERPV2_ROOT=/home/s/spugovxsim/planexp/public_html/erpv2 /usr/bin/php8.5 '$remote'" | tee P62_RESET.txt
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/p62_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '$remote'"
+          grep -q 'P62_PLANEX_FINANCIAL_STRUCTURE_RESET_OK' P62_RESET.txt
+          grep -q '"cfu_count":0' P62_RESET.txt
+          grep -q '"dds_count":0' P62_RESET.txt
+          grep -q '"link_count":0' P62_RESET.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P62_PLANEX_financial_structure_reset_evidence
+          path: P62_RESET.txt
+          if-no-files-found: warn
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p62_key"
