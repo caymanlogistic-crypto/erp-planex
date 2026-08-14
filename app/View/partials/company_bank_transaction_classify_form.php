@@ -5,6 +5,8 @@ $directionLabel=(float)($tx['credit_amount']??0)>0?'Поступление':'С�
 $selectedCfu=(int)($tx['cash_flow_center_id']??0);
 $selectedDds=(int)($tx['dds_category_id']??0);
 $allowedMap=$ddsAllowedMap??[];
+$allowedMapJson=json_encode($allowedMap,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+if($allowedMapJson===false)$allowedMapJson='{}';
 ?>
 <style>
 #tx-detail-modal .modal{width:880px;max-height:88vh;}#tx-detail-modal .modal-body{padding:0;}
@@ -20,20 +22,11 @@ $allowedMap=$ddsAllowedMap??[];
  <section class="tx-allocation" aria-label="Разнесение банковской операции">
   <div class="tx-allocation-head"><div><div class="tx-allocation-title">Разнесение</div><div class="tx-allocation-meta">Операция #<?= (int)$tx['id'] ?> · <?= e($directionLabel) ?></div></div><div class="tx-allocation-amount"><?= e($amountFormatted) ?> ₽</div></div>
   <div class="tx-allocation-fields">
-   <div class="field"><label class="field-label">ЦФУ <span class="field-required">*</span></label><select class="field-select" name="cash_flow_center_id" id="bank-cfu-select" required><option value="">— Выберите ЦФУ —</option><?php foreach($cfu as $row): ?><option value="<?= (int)$row['id'] ?>" <?= $selectedCfu===(int)$row['id']?'selected':'' ?>><?= e($row['name']) ?></option><?php endforeach; ?></select></div>
+   <div class="field"><label class="field-label">ЦФУ <span class="field-required">*</span></label><select class="field-select" name="cash_flow_center_id" id="bank-cfu-select" required data-dds-map="<?= e($allowedMapJson) ?>" data-selected-dds="<?= $selectedDds ?>"><option value="">— Выберите ЦФУ —</option><?php foreach($cfu as $row): ?><option value="<?= (int)$row['id'] ?>" <?= $selectedCfu===(int)$row['id']?'selected':'' ?>><?= e($row['name']) ?></option><?php endforeach; ?></select></div>
    <div class="field"><label class="field-label">Статья ДДС <span class="field-required">*</span></label><select class="field-select" name="dds_category_id" id="bank-dds-select" required <?= $selectedCfu<=0?'disabled':'' ?>><option value=""><?= $selectedCfu>0?'— Выберите статью —':'— Сначала выберите ЦФУ —' ?></option><?php foreach($dds as $row): ?><option value="<?= (int)$row['id'] ?>" data-dds-id="<?= (int)$row['id'] ?>" <?= $selectedDds===(int)$row['id']?'selected':'' ?>><?= e($row['name']) ?></option><?php endforeach; ?></select><div class="tx-allocation-hint" id="bank-dds-hint">Показываются только статьи, разрешённые для выбранного ЦФУ.</div></div>
   </div>
   <div class="tx-rule-card"><label class="tx-rule-toggle"><input type="checkbox" name="create_rule" value="1" checked><span>Создать правило для будущих операций этого контрагента</span></label><div class="tx-rule-note">Базовое условие: ИНН <?= e($tx['counterparty_inn']??'не указан') ?>. Дополнительные условия применяются вместе по строгой AND-логике.</div><div class="tx-rule-fields"><div class="field"><label class="field-label">Назначение содержит</label><input class="field-input" name="rule_purpose_contains" placeholder="Необязательно"></div><div class="field"><label class="field-label">Приоритет</label><input class="field-input" type="number" name="rule_priority" min="1" max="100000" value="100"></div></div></div>
   <div class="tx-allocation-actions"><button type="button" class="btn btn-ghost" data-close-modal="tx-detail-modal">Отмена</button><button type="submit" class="btn btn-primary">Сохранить</button></div>
  </section>
 </form>
-<script>
-(function(){
- var cfu=document.getElementById('bank-cfu-select'),dds=document.getElementById('bank-dds-select');if(!cfu||!dds)return;
- var map=<?= json_encode($allowedMap,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
- var original=Array.from(dds.querySelectorAll('option[data-dds-id]')).map(function(o){return {id:Number(o.value),text:o.textContent,selected:o.selected};});
- function rebuild(){var id=Number(cfu.value||0),previous=Number(dds.value||<?= (int)$selectedDds ?>),allowed=(map[id]||[]).map(Number);dds.innerHTML='';var p=document.createElement('option');p.value='';p.textContent=id?(allowed.length?'— Выберите статью —':'— Для этого ЦФУ статьи не настроены —'):'— Сначала выберите ЦФУ —';dds.appendChild(p);dds.disabled=!id||!allowed.length;original.forEach(function(item){if(allowed.indexOf(item.id)===-1)return;var o=document.createElement('option');o.value=String(item.id);o.textContent=item.text;if(item.id===previous)o.selected=true;dds.appendChild(o);});if(previous&&allowed.indexOf(previous)===-1)dds.value='';}
- cfu.addEventListener('change',function(){var old=dds.value;dds.value='';rebuild();});rebuild();
-}());
-</script>
 <?php endif; ?>
