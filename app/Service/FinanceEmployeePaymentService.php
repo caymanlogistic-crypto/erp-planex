@@ -17,7 +17,7 @@ final class FinanceEmployeePaymentService
 
     public static function fetchEmployeeSummaries(PDO $pdo, array $filters = []): array
     {
-        $where = ["fo.status = 'POSTED'"];
+        $where = ['1=1'];
         $params = [];
         if (!empty($filters['employee_user_id'])) {
             $where[] = 'fem.employee_user_id = :employee_user_id';
@@ -35,17 +35,20 @@ final class FinanceEmployeePaymentService
             $where[] = 'fo.operation_date <= :date_to';
             $params[':date_to'] = $filters['date_to'];
         }
-        $sql = "SELECT u.id AS employee_user_id, u.full_name, u.login, u.status,
-                       SUM(CASE WHEN fem.movement_type='PAYMENT' THEN fo.amount ELSE 0 END) AS paid_amount,
-                       SUM(CASE WHEN fem.movement_type='RETURN' THEN fo.amount ELSE 0 END) AS returned_amount,
-                       SUM(CASE WHEN fem.movement_type='PAYMENT' THEN fo.amount ELSE -fo.amount END) AS balance_amount,
+        $sql = "SELECT u.id AS employee_user_id, u.full_name, u.login, u.role_code, u.status,
+                       SUM(CASE WHEN fo.status='POSTED' AND fem.movement_type='PAYMENT' THEN fo.amount ELSE 0 END) AS paid_amount,
+                       SUM(CASE WHEN fo.status='POSTED' AND fem.movement_type='RETURN' THEN fo.amount ELSE 0 END) AS returned_amount,
+                       SUM(CASE WHEN fo.status='POSTED' AND fem.movement_type='PAYMENT' THEN fo.amount
+                                WHEN fo.status='POSTED' AND fem.movement_type='RETURN' THEN -fo.amount ELSE 0 END) AS balance_amount,
                        MAX(fo.operation_date) AS last_operation_date,
-                       COUNT(*) AS movement_count
+                       COUNT(*) AS movement_count,
+                       SUM(CASE WHEN fo.status='POSTED' THEN 1 ELSE 0 END) AS posted_movement_count,
+                       SUM(CASE WHEN fo.status='CANCELLED' THEN 1 ELSE 0 END) AS cancelled_movement_count
                   FROM finance_employee_movements fem
                   JOIN finance_operations fo ON fo.id = fem.finance_operation_id
                   JOIN users u ON u.id = fem.employee_user_id
                  WHERE ".implode(' AND ', $where)."
-                 GROUP BY u.id, u.full_name, u.login, u.status
+                 GROUP BY u.id, u.full_name, u.login, u.role_code, u.status
                  ORDER BY last_operation_date DESC, u.full_name ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -68,13 +71,13 @@ final class FinanceEmployeePaymentService
                             ORDER BY fo.operation_date ASC, fem.id ASC");
         $stmt->execute([$employeeUserId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $balance = 0.0;
+        $balanceCents = 0;
         foreach ($rows as &$row) {
             if (($row['status'] ?? '') === 'POSTED') {
-                $amount = (float)$row['amount'];
-                $balance += ($row['movement_type'] === 'PAYMENT') ? $amount : -$amount;
+                $amountCents = self::toCents((string)$row['amount']);
+                $balanceCents += ($row['movement_type'] === 'PAYMENT') ? $amountCents : -$amountCents;
             }
-            $row['running_balance'] = $balance;
+            $row['running_balance'] = self::fromCents($balanceCents);
         }
         unset($row);
         return array_reverse($rows);
@@ -151,7 +154,9 @@ final class FinanceEmployeePaymentService
             if (!$tx) throw new \RuntimeException('Банковская операция не найдена или не связана с финансовой операцией.');
             if (($tx['finance_operation_status'] ?? '') !== 'POSTED') throw new \RuntimeException('Можно связать только проведённую банковскую операцию.');
             if (!empty($tx['is_internal_transfer'])) throw new \RuntimeException('Внутренний перевод нельзя оформить как выплату сотруднику.');
-            $actualType = (float)$tx['debit_amount'] > 0 ? 'PAYMENT' : ((float)$tx['credit_amount'] > 0 ? 'RETURN' : null);
+            $debitPositive = self::toCents((string)($tx['debit_amount'] ?? '0.00')) > 0;
+            $creditPositive = self::toCents((string)($tx['credit_amount'] ?? '0.00')) > 0;
+            $actualType = $debitPositive && !$creditPositive ? 'PAYMENT' : ($creditPositive && !$debitPositive ? 'RETURN' : null);
             if ($actualType !== $movementType) throw new \RuntimeException('Направление банковской операции не соответствует типу взаиморасчёта.');
             $check = $pdo->prepare('SELECT id FROM finance_employee_movements WHERE bank_transaction_id = ? OR finance_operation_id = ? LIMIT 1');
             $check->execute([$bankTransactionId, (int)$tx['finance_operation_id']]);
@@ -159,6 +164,39 @@ final class FinanceEmployeePaymentService
             $movementId = self::insertMovement($pdo, (int)$employee['id'], $movementType, 'BANK', (int)$tx['finance_operation_id'], $bankTransactionId, $data['comment'] ?? null, $user);
             if ($started) $pdo->commit();
             return ['movement_id'=>$movementId,'finance_operation_id'=>(int)$tx['finance_operation_id'],'bank_transaction_id'=>$bankTransactionId];
+        } catch (\Throwable $e) {
+            if ($started && $pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public static function reassignMovement(PDO $pdo, int $movementId, int $employeeUserId, array $user): array
+    {
+        if ($movementId <= 0) throw new \InvalidArgumentException('Движение сотрудника не найдено.');
+        $employee = self::requireActiveEmployee($pdo, $employeeUserId);
+        $started = !$pdo->inTransaction();
+        if ($started) $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('SELECT * FROM finance_employee_movements WHERE id=? FOR UPDATE');
+            $stmt->execute([$movementId]);
+            $movement = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$movement) throw new \InvalidArgumentException('Движение сотрудника не найдено.');
+            $oldEmployeeId = (int)$movement['employee_user_id'];
+            if ($oldEmployeeId !== (int)$employee['id']) {
+                $pdo->prepare('UPDATE finance_employee_movements SET employee_user_id=? WHERE id=?')->execute([(int)$employee['id'], $movementId]);
+                FinanceAuditLogService::log(
+                    $pdo,
+                    'finance_employee_movement',
+                    $movementId,
+                    'reassign_employee',
+                    ['employee_user_id'=>$oldEmployeeId],
+                    ['employee_user_id'=>(int)$employee['id']],
+                    (int)($user['id'] ?? 0),
+                    (string)($user['role'] ?? 'company_owner')
+                );
+            }
+            if ($started) $pdo->commit();
+            return ['movement_id'=>$movementId,'old_employee_user_id'=>$oldEmployeeId,'employee_user_id'=>(int)$employee['id']];
         } catch (\Throwable $e) {
             if ($started && $pdo->inTransaction()) $pdo->rollBack();
             throw $e;
@@ -205,6 +243,21 @@ final class FinanceEmployeePaymentService
         self::unlinkBankTransaction($pdo, $bankTransactionId, $user);
     }
 
+    public static function formatMoney(mixed $value): string
+    {
+        $cents = self::toCents((string)($value ?? '0.00'));
+        $negative = $cents < 0;
+        $abs = abs($cents);
+        $rubles = intdiv($abs, 100);
+        $kopecks = $abs % 100;
+        return ($negative ? '-' : '') . number_format($rubles, 0, '', ' ') . ',' . str_pad((string)$kopecks, 2, '0', STR_PAD_LEFT);
+    }
+
+    public static function moneySign(mixed $value): int
+    {
+        return self::toCents((string)($value ?? '0.00')) <=> 0;
+    }
+
     private static function insertMovement(PDO $pdo, int $employeeId, string $movementType, string $sourceType, int $operationId, ?int $bankTxId, mixed $note, array $user): int
     {
         $stmt = $pdo->prepare("INSERT INTO finance_employee_movements
@@ -222,7 +275,7 @@ final class FinanceEmployeePaymentService
     private static function requireActiveEmployee(PDO $pdo, int $employeeId): array
     {
         if ($employeeId <= 0) throw new \InvalidArgumentException('Выберите сотрудника.');
-        $stmt = $pdo->prepare("SELECT id,full_name,login,status FROM users WHERE id=? AND status='active' AND deleted_at IS NULL");
+        $stmt = $pdo->prepare("SELECT id,full_name,login,role_code,status FROM users WHERE id=? AND status='active' AND deleted_at IS NULL");
         $stmt->execute([$employeeId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) throw new \InvalidArgumentException('Сотрудник не найден или его аккаунт неактивен.');
@@ -240,5 +293,26 @@ final class FinanceEmployeePaymentService
     {
         $value = trim((string)($value ?? ''));
         return $value === '' ? null : mb_substr($value, 0, 1000);
+    }
+
+    private static function toCents(string $value): int
+    {
+        $normalized = str_replace([' ', ','], ['', '.'], trim($value));
+        if ($normalized === '' || !preg_match('/^-?\d+(?:\.\d{1,2})?$/D', $normalized)) {
+            return 0;
+        }
+        $negative = str_starts_with($normalized, '-');
+        if ($negative) $normalized = substr($normalized, 1);
+        [$rubles, $kopecks] = array_pad(explode('.', $normalized, 2), 2, '');
+        $kopecks = str_pad(substr($kopecks, 0, 2), 2, '0');
+        $cents = ((int)$rubles * 100) + (int)$kopecks;
+        return $negative ? -$cents : $cents;
+    }
+
+    private static function fromCents(int $cents): string
+    {
+        $negative = $cents < 0;
+        $abs = abs($cents);
+        return ($negative ? '-' : '') . intdiv($abs, 100) . '.' . str_pad((string)($abs % 100), 2, '0', STR_PAD_LEFT);
     }
 }
