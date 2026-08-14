@@ -14,9 +14,9 @@ final class NavigationCounterService
     /**
      * Return lightweight navigation counters for one tenant.
      *
-     * The method deliberately performs one tenant query per request and keeps
-     * the result in request-local memory. New counters should be added to the
-     * same aggregate query instead of issuing one query per menu item.
+     * The method deliberately performs one indexed tenant aggregate per request
+     * and keeps the result in request-local memory. New counters should be added
+     * to the same aggregate query instead of issuing one query per menu item.
      *
      * @return array{bank_attention:int}
      */
