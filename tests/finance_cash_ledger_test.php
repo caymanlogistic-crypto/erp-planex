@@ -54,7 +54,7 @@ VALUES
     (12,'EXPENSE','POSTED','CASH',2,NULL,NULL,NULL,'2026-08-14',5000.00,'RUR','Выдано под отчёт',NULL,'2026-08-14 09:00:00'),
     (13,'INCOME','POSTED','CASH',2,NULL,NULL,NULL,'2026-08-14',1250.00,'RUR','Возврат подотчёта',NULL,'2026-08-14 10:00:00'),
     (14,'TRANSFER','POSTED','TRANSFER',2,1,'TRF_CASH_BANK','out','2026-08-15',700.00,'RUR','Возврат на расчётный счёт',NULL,'2026-08-15 11:00:00'),
-    (15,'EXPENSE','POSTED','CASH',2,NULL,NULL,NULL,'2026-08-13',549.97,'RUR','Передано сотруднику: Иванов Иван Иванович · Покупка 13.08.2026','Старое ошибочное отображение','2026-08-15 14:00:00'),
+    (15,'EXPENSE','POSTED','CASH',2,NULL,NULL,NULL,'2026-08-15',549.97,'RUR','Передано сотруднику: Иванов Иван Иванович · Покупка 13.08.2026','Старое дублирующее списание','2026-08-15 14:00:00'),
     (16,'INCOME','POSTED','CASH',2,NULL,NULL,NULL,'2026-08-15',99.00,'RUR','Неразнесённый источник',NULL,'2026-08-15 15:00:00')");
 $pdo->exec("INSERT INTO finance_employee_movements(id,finance_operation_id,employee_name_snapshot,movement_type) VALUES
     (1,12,'Петров Пётр Петрович','PAYMENT'),
@@ -64,8 +64,8 @@ $pdo->exec("INSERT INTO finance_cash_resolutions(id,source_finance_operation_id,
     VALUES(1,11,'EMPLOYEE','Иванов Иван Иванович',15,'2026-08-15 14:00:01')");
 
 $result = FinanceCashLedgerService::fetchRecentMovements($pdo, 1, 20);
-assertCashLedger($result['total'] === 6, 'cash ledger must count only CASH-side operations');
-assertCashLedger(count($result['data']) === 6, 'cash ledger must return all CASH-side rows');
+assertCashLedger($result['total'] === 5, 'resolved cash lifecycle must count once, not receipt plus outflow');
+assertCashLedger(count($result['data']) === 5, 'cash ledger must render lifecycle rows without duplicate outflow');
 
 $byId = [];
 foreach ($result['data'] as $row) {
@@ -73,10 +73,17 @@ foreach ($result['data'] as $row) {
     assertCashLedger(($row['account_type'] ?? '') === 'CASH', 'every ledger row must belong to a CASH account');
 }
 assertCashLedger(!isset($byId[10]), 'bank-side half of Bank → Cash transfer must be hidden');
-assertCashLedger(($byId[11]['source_label'] ?? '') === 'Расчётный счёт 40702810000000000001', 'Bank → Cash source must be company bank account');
-assertCashLedger(FinanceCashLedgerService::movementLabel($byId[11]) === 'Поступление', 'Bank → Cash labelled as receipt');
+assertCashLedger(!isset($byId[15]), 'resolution outflow must be folded into its source row');
+assertCashLedger(isset($byId[11]), 'canonical receipt row must remain visible after handoff');
+assertCashLedger(($byId[11]['source_label'] ?? '') === 'Расчётный счёт 40702810000000000001', 'lifecycle row keeps original funding source');
+assertCashLedger(($byId[11]['display_purpose'] ?? '') === 'Покупка 13.08.2026', 'lifecycle row keeps original purpose');
+assertCashLedger(($byId[11]['handoff_recipient_label'] ?? '') === 'Иванов Иван Иванович', 'lifecycle row attaches employee recipient');
+assertCashLedger(($byId[11]['handoff_date'] ?? '') === '2026-08-15', 'lifecycle row attaches factual handoff date');
+assertCashLedger(!empty($byId[11]['is_resolved_cash_lifecycle']), 'resolved receipt is marked as lifecycle row');
+assertCashLedger(FinanceCashLedgerService::movementLabel($byId[11]) === 'Получено → передано', 'resolved employee receipt has lifecycle label');
 assertCashLedger(empty($byId[11]['is_unresolved_cash_source']), 'resolved source must not remain selectable');
 assertCashLedger(!empty($byId[16]['is_unresolved_cash_source']), 'unresolved technical source remains selectable');
+assertCashLedger(FinanceCashLedgerService::movementLabel($byId[16]) === 'Получено', 'unresolved technical source has receipt label');
 
 assertCashLedger(($byId[12]['handoff_recipient_label'] ?? '') === 'Петров Пётр Петрович', 'ordinary cash payment has separate employee recipient');
 assertCashLedger(($byId[12]['source_label'] ?? '') === '—', 'ordinary employee payment does not fake a source');
@@ -85,28 +92,24 @@ assertCashLedger(($byId[13]['source_label'] ?? '') === 'Иванов Иван И
 assertCashLedger(($byId[13]['handoff_recipient_label'] ?? '') === '—', 'employee return is not displayed as handoff recipient');
 assertCashLedger(($byId[14]['source_label'] ?? '') === 'Расчётный счёт 40702810000000000001', 'cash transfer counterpart remains visible');
 
-assertCashLedger(FinanceCashLedgerService::movementLabel($byId[15]) === 'Передача сотруднику', 'resolved employee outflow has factual movement label');
-assertCashLedger(($byId[15]['journal_date'] ?? '') === '2026-08-15', 'handoff journal date comes from resolution event, not historical source date');
-assertCashLedger(($byId[15]['source_label'] ?? '') === 'Расчётный счёт 40702810000000000001', 'handoff keeps original funding source');
-assertCashLedger(($byId[15]['handoff_recipient_label'] ?? '') === 'Иванов Иван Иванович', 'handoff recipient is a separate column');
-assertCashLedger(($byId[15]['display_purpose'] ?? '') === 'Покупка 13.08.2026', 'handoff purpose is restored from source and does not repeat employee name');
-assertCashLedger(!str_contains((string)$byId[15]['display_purpose'], 'Передано сотруднику:'), 'polluted legacy outflow purpose is hidden');
-
 $page1 = FinanceCashLedgerService::fetchRecentMovements($pdo, 1, 2);
 $page2 = FinanceCashLedgerService::fetchRecentMovements($pdo, 2, 2);
 $page3 = FinanceCashLedgerService::fetchRecentMovements($pdo, 3, 2);
-assertCashLedger($page1['total'] === 6 && $page1['pages'] === 3, 'cash-only pagination total/pages');
-assertCashLedger(count($page1['data']) === 2 && count($page2['data']) === 2 && count($page3['data']) === 2, 'pagination never drops overflow rows');
+assertCashLedger($page1['total'] === 5 && $page1['pages'] === 3, 'single-row lifecycle pagination total/pages');
+assertCashLedger(count($page1['data']) === 2 && count($page2['data']) === 2 && count($page3['data']) === 1, 'pagination covers all projected lifecycle rows');
 $seen = [];
 foreach ([$page1,$page2,$page3] as $page) foreach ($page['data'] as $row) $seen[(int)$row['id']] = true;
-assertCashLedger(count($seen) === 6, 'all cash rows remain reachable across pages');
+assertCashLedger(count($seen) === 5 && !isset($seen[15]), 'pagination never reintroduces folded resolution outflow');
 
 $view = file_get_contents(__DIR__ . '/../app/View/pages/company_finance_cash.php');
 assertCashLedger(!str_contains($view, 'Источник / Получатель'), 'mixed source/recipient column removed');
-assertCashLedger(str_contains($view, '<th>Источник</th>'), 'source column exists');
-assertCashLedger(str_contains($view, 'Кому передано'), 'recipient column exists');
-assertCashLedger(str_contains($view, 'display_purpose'), 'view uses cleaned purpose projection');
-assertCashLedger(str_contains($view, 'journal_date'), 'view uses factual journal date projection');
+assertCashLedger(str_contains($view, '<th>Получено от</th>'), 'lifecycle source column exists');
+assertCashLedger(str_contains($view, '<th class="cash-col-purpose">Назначение</th>'), 'purpose follows source in lifecycle row');
+assertCashLedger(str_contains($view, '<th>Сумма</th>'), 'amount column exists in lifecycle row');
+assertCashLedger(str_contains($view, '<th class="cash-col-recipient">Передано</th>'), 'handoff recipient is the final lifecycle column');
+assertCashLedger(str_contains($view, 'handoff_date'), 'handoff date is shown without a duplicate outflow row');
+assertCashLedger(str_contains($view, 'cash-row-unresolved') && str_contains($view, 'var(--color-danger-bg)'), 'unresolved rows use light-red system danger background');
+assertCashLedger(str_contains($view, 'accent-color:var(--accent)'), 'native cash checkboxes use ERP brown accent');
 assertCashLedger(str_contains($view, 'cash-pagination') && str_contains($view, 'Вперёд →'), 'visible pagination exists');
 assertCashLedger(str_contains($view, 'cash-source-select'), 'unresolved source checkbox present');
 assertCashLedger(str_contains($view, 'Передать сотруднику'), 'employee batch action present');
