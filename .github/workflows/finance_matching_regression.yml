@@ -40,12 +40,14 @@ jobs:
           php -l app/Http/Controllers/Company/BankFinanceActions/clearClassification.php
           php -l app/Http/Controllers/Company/FinanceMatchingRuleActions/archive.php
           php -l app/View/pages/company_finance_matching_rules.php
+          php -l app/View/partials/company_finance_matching_rule_form.php
           php -l app/View/pages/company_finance_employee_payments.php
           php -l app/View/partials/company_finance_employee_payment_form.php
           php -l app/View/partials/company_finance_employee_payment_ledger.php
           php -l app/View/partials/company_bank_transaction_classify_form.php
           php -l scripts/p41_apply_finance_matching_migration.php
           php -l tests/finance_matching_classification_test.php
+          php -l tests/finance_matching_cash_transfer_test.php
           php -l tests/finance_employee_payments_test.php
           php -l tests/finance_bank_register_filters_test.php
       - name: Matching semantics
@@ -75,6 +77,18 @@ jobs:
           set -euo pipefail
           php tests/finance_bank_register_filters_test.php 2>&1 | tee bank_register_filters_regression.txt
           grep -q 'FINANCE_BANK_REGISTER_FILTERS_OK' bank_register_filters_regression.txt
+      - name: Classification plus bank-to-cash behavioral regression
+        env:
+          EMPLOYEE_PAYMENTS_DB_HOST: 127.0.0.1
+          EMPLOYEE_PAYMENTS_DB_PORT: 3306
+          EMPLOYEE_PAYMENTS_DB_NAME: erp_employee_payments_test
+          EMPLOYEE_PAYMENTS_DB_USER: root
+          EMPLOYEE_PAYMENTS_DB_PASSWORD: root
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/finance_matching_cash_transfer_test.php 2>&1 | tee matching_cash_transfer_regression.txt
+          grep -q 'FINANCE_MATCHING_CASH_TRANSFER_OK' matching_cash_transfer_regression.txt
       - name: Migration shape
         shell: bash
         run: |
@@ -98,4 +112,5 @@ jobs:
           path: |
             employee_payments_regression.txt
             bank_register_filters_regression.txt
+            matching_cash_transfer_regression.txt
           if-no-files-found: warn
