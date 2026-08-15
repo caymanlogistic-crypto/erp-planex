@@ -48,20 +48,12 @@ jobs:
           echo "CLI_RC=$rc"
           echo '--- STDERR'; cat /tmp/failed_stderr
           echo '--- STDOUT'; head -c 10000 /tmp/failed_stdout; echo
-          echo '=== BOOTSTRAP REQUIRE PROBE ==='
-          php -d display_errors=1 -d display_startup_errors=1 -d error_reporting=E_ALL -r '
-            chdir(getenv("FAILED_DIR"));
-            $_SERVER["REQUEST_METHOD"]="GET";
-            $_SERVER["REQUEST_URI"]="/erpv2/login";
-            $_SERVER["HTTP_HOST"]="planexp.ru";
-            require "public/index.php";
-          ' 2>&1 | head -200
+          echo '=== LOGIN ROUTE/DEPENDENCY PROBE ==='
+          grep -R "'/login'\|\"/login\"" -n app/Http/Routes app/Http 2>/dev/null | head -50
           echo '=== SEARCH SERVER LOGS AROUND DEPLOY ==='
           for f in "$ROOT/public_html/error_log" "$ROOT/error_log" "$FAILED/error_log"; do if [ -f "$f" ]; then echo "--- $f"; tail -n 200 "$f"; fi; done
           rm -f /tmp/failed_stdout /tmp/failed_stderr
           REMOTE
-        env:
-          FAILED_DIR: ignored
       - uses: actions/upload-artifact@v4
         if: always()
         with:
