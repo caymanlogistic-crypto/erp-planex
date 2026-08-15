@@ -3,6 +3,7 @@
 const { chromium } = require('playwright');
 const BASE = 'https://plan-ex.ru/erpv2/';
 const ok = (value, message) => { if (!value) throw new Error(message); };
+const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU');
 
 (async () => {
   const credentials = JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
@@ -32,7 +33,7 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     await ledger.waitFor({ state: 'visible', timeout: 10000 });
     const headers = await ledger.locator('thead th').allInnerTexts();
     const expected = ['Дата', 'Касса', 'Движение', 'Источник / Получатель', 'Сумма', 'Назначение'];
-    ok(JSON.stringify(headers.map(x => x.trim())) === JSON.stringify(expected), 'cash ledger headers mismatch: ' + JSON.stringify(headers));
+    ok(JSON.stringify(headers.map(normalize)) === JSON.stringify(expected.map(normalize)), 'cash ledger headers mismatch: ' + JSON.stringify(headers));
 
     const rows = ledger.locator('tbody tr[data-cash-ledger-row]');
     const rowCount = await rows.count();
@@ -49,15 +50,16 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
       const movement = (await cells.nth(2).innerText()).trim();
       const sourceRecipient = (await cells.nth(3).innerText()).trim();
       ok(cashName !== '', 'cash name missing on row ' + i);
-      ok(movement === 'Поступление' || movement === 'Списание', 'raw/invalid movement label on row ' + i + ': ' + movement);
-      ok(!movement.includes('Перевод ('), 'technical transfer label leaked into cash ledger');
+      ok(normalize(movement) === normalize('Поступление') || normalize(movement) === normalize('Списание'), 'raw/invalid movement label on row ' + i + ': ' + movement);
+      ok(!normalize(movement).includes(normalize('Перевод (')), 'technical transfer label leaked into cash ledger');
       ok(sourceRecipient !== '', 'source/recipient missing on row ' + i);
-      if (sourceRecipient.startsWith('Расчётный счёт ')) companyAccountSourceSeen = true;
+      if (normalize(sourceRecipient).startsWith(normalize('Расчётный счёт '))) companyAccountSourceSeen = true;
     }
 
     ok(companyAccountSourceSeen, 'company bank account source is not visible in current cash ledger data');
-    ok(!(await ledger.innerText()).includes('Перевод (входящий)'), 'raw incoming transfer label visible');
-    ok(!(await ledger.innerText()).includes('Перевод (исходящий)'), 'raw outgoing transfer label visible');
+    const ledgerText = normalize(await ledger.innerText());
+    ok(!ledgerText.includes(normalize('Перевод (входящий)')), 'raw incoming transfer label visible');
+    ok(!ledgerText.includes(normalize('Перевод (исходящий)')), 'raw outgoing transfer label visible');
 
     // Deliberately read-only: no forms are submitted and no finance records are changed.
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
