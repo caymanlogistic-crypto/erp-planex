@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           php -m | grep -qi pdo_mysql
-          php tests/finance_employee_payments_test.php | tee employee_payments_regression.txt
+          php tests/finance_employee_payments_test.php 2>&1 | tee employee_payments_regression.txt
           grep -q 'FINANCE_EMPLOYEE_PAYMENTS_BEHAVIOR_OK' employee_payments_regression.txt
       - name: Bank register filter behavioral regression
         env:
@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          php tests/finance_bank_register_filters_test.php | tee bank_register_filters_regression.txt
+          php tests/finance_bank_register_filters_test.php 2>&1 | tee bank_register_filters_regression.txt
           grep -q 'FINANCE_BANK_REGISTER_FILTERS_OK' bank_register_filters_regression.txt
       - name: Migration shape
         shell: bash
