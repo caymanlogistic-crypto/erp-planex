@@ -32,27 +32,40 @@ jobs:
           ssh -p "$PORT" -i "$HOME/.ssh/diag" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -se' <<'REMOTE' | tee FAILED_SNAPSHOT_DIAG.txt
           set +e
           ROOT=/home/s/spugovxsim/planexp
-          echo '=== FAILED SNAPSHOTS ==='
-          find "$ROOT/deploy" -maxdepth 1 -type d \( -name 'P07_failed_*_89785c8e2a3a' -o -name 'P07_failed_*_72144410c3ee' \) -printf '%T@ %p\n' | sort -nr
+          LIVE="$ROOT/public_html/erpv2"
           FAILED="$(find "$ROOT/deploy" -maxdepth 1 -type d -name 'P07_failed_*_89785c8e2a3a' -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
           echo "FAILED=$FAILED"
           test -n "$FAILED" || exit 0
-          echo '=== SNAPSHOT ENV/PATH ==='
-          ls -la "$FAILED" | head -40
-          test -f "$FAILED/.env" && echo ENV_PRESENT || echo ENV_MISSING
-          echo '=== CLI LOGIN REQUEST ==='
-          cd "$FAILED"
-          APP_BASE_PATH=/erpv2 REQUEST_METHOD=GET REQUEST_URI=/erpv2/login SCRIPT_NAME=/erpv2/index.php HTTP_HOST=planexp.ru \
-            php -d display_errors=1 -d display_startup_errors=1 -d error_reporting=E_ALL public/index.php > /tmp/failed_stdout 2> /tmp/failed_stderr
-          rc=$?
-          echo "CLI_RC=$rc"
-          echo '--- STDERR'; cat /tmp/failed_stderr
-          echo '--- STDOUT'; head -c 10000 /tmp/failed_stdout; echo
-          echo '=== LOGIN ROUTE/DEPENDENCY PROBE ==='
-          grep -R "'/login'\|\"/login\"" -n app/Http/Routes app/Http 2>/dev/null | head -50
-          echo '=== SEARCH SERVER LOGS AROUND DEPLOY ==='
-          for f in "$ROOT/public_html/error_log" "$ROOT/error_log" "$FAILED/error_log"; do if [ -f "$f" ]; then echo "--- $f"; tail -n 200 "$f"; fi; done
-          rm -f /tmp/failed_stdout /tmp/failed_stderr
+
+          echo '=== PHP BINARIES ==='
+          for p in php php8.0 php8.1 php8.2 php8.3 php8.4 php8.5; do if command -v "$p" >/dev/null 2>&1; then printf '%s: ' "$p"; "$p" -v | head -1; fi; done
+
+          echo '=== PRODUCTION CONFIG INTO FAILED SNAPSHOT TEMPORARILY ==='
+          cp "$LIVE/.env" "$FAILED/.env"
+          for d in storage logs uploads; do
+            if [ ! -e "$FAILED/$d" ] && [ -e "$LIVE/$d" ]; then ln -s "$LIVE/$d" "$FAILED/$d"; fi
+          done
+
+          echo '=== CLI REQUEST BY AVAILABLE MODERN PHP ==='
+          for p in php8.5 php8.4 php8.3 php8.2 php8.1 php8.0; do
+            command -v "$p" >/dev/null 2>&1 || continue
+            echo "--- $p"
+            cd "$FAILED"
+            APP_BASE_PATH=/erpv2 REQUEST_METHOD=GET REQUEST_URI=/erpv2/login SCRIPT_NAME=/erpv2/index.php HTTP_HOST=planexp.ru HTTPS=off \
+              "$p" -d display_errors=1 -d display_startup_errors=1 -d error_reporting=E_ALL public/index.php > "/tmp/${p}_out" 2> "/tmp/${p}_err"
+            echo "RC=$?"
+            echo 'STDERR:'; cat "/tmp/${p}_err"
+            echo 'STDOUT HEAD:'; head -c 3000 "/tmp/${p}_out"; echo
+          done
+
+          echo '=== PHP/FPM/WEB ERROR LOG CANDIDATES ==='
+          find /home/s/spugovxsim -maxdepth 6 -type f \( -iname '*error*log*' -o -iname 'php*.log' -o -iname '*fpm*.log' \) -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -30 | while read -r ts f; do echo "--- $f"; tail -n 120 "$f" 2>/dev/null; done
+
+          echo '=== LOG DIRECTORIES ==='
+          find /home/s/spugovxsim -maxdepth 4 -type d \( -iname '*log*' -o -iname '.logs' \) -print 2>/dev/null | head -50
+
+          rm -f "$FAILED/.env" /tmp/php8.*_out /tmp/php8.*_err
+          for d in storage logs uploads; do if [ -L "$FAILED/$d" ]; then rm -f "$FAILED/$d"; fi; done
           REMOTE
       - uses: actions/upload-artifact@v4
         if: always()
