@@ -1,0 +1,68 @@
+'use strict';
+
+const { chromium } = require('playwright');
+const BASE = 'https://plan-ex.ru/erpv2/';
+const ok = (value, message) => { if (!value) throw new Error(message); };
+
+(async () => {
+  const credentials = JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+  const owner = credentials.find(x => String(x.role).toUpperCase() === 'OWNER');
+  ok(owner, 'OWNER credentials missing');
+
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, locale: 'ru-RU', timezoneId: 'Europe/Moscow' });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('console', msg => { if (msg.type() === 'error') errors.push('console:' + msg.text()); });
+  page.on('pageerror', err => errors.push('page:' + err.message));
+
+  try {
+    await page.goto(BASE + 'login', { waitUntil: 'domcontentloaded' });
+    await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+    await page.locator('input[type="password"]').fill(owner.password);
+    await page.locator('button[type="submit"],input[type="submit"]').first().click();
+    await page.waitForTimeout(700);
+    ok(!page.url().includes('/login'), 'OWNER login failed');
+
+    const response = await page.goto(BASE + 'company/finance/cash', { waitUntil: 'domcontentloaded' });
+    ok(response && response.status() === 200, 'cash page HTTP 200');
+    ok((await page.locator('h1').first().innerText()).includes('Касса'), 'cash title missing');
+
+    const ledger = page.locator('#cash-ledger-table');
+    await ledger.waitFor({ state: 'visible', timeout: 10000 });
+    const headers = await ledger.locator('thead th').allInnerTexts();
+    const expected = ['Дата', 'Касса', 'Движение', 'Источник / Получатель', 'Сумма', 'Назначение'];
+    ok(JSON.stringify(headers.map(x => x.trim())) === JSON.stringify(expected), 'cash ledger headers mismatch: ' + JSON.stringify(headers));
+
+    const rows = ledger.locator('tbody tr[data-cash-ledger-row]');
+    const rowCount = await rows.count();
+    ok(rowCount > 0, 'cash ledger has no rows for runtime acceptance');
+
+    let companyAccountSourceSeen = false;
+    for (let i = 0; i < rowCount; i++) {
+      const row = rows.nth(i);
+      const direction = await row.getAttribute('data-cash-direction');
+      ok(direction === 'in' || direction === 'out', 'invalid cash direction on row ' + i + ': ' + direction);
+      const cells = row.locator('td');
+      ok(await cells.count() === 6, 'cash ledger row must have six cells');
+      const cashName = (await cells.nth(1).innerText()).trim();
+      const movement = (await cells.nth(2).innerText()).trim();
+      const sourceRecipient = (await cells.nth(3).innerText()).trim();
+      ok(cashName !== '', 'cash name missing on row ' + i);
+      ok(movement === 'Поступление' || movement === 'Списание', 'raw/invalid movement label on row ' + i + ': ' + movement);
+      ok(!movement.includes('Перевод ('), 'technical transfer label leaked into cash ledger');
+      ok(sourceRecipient !== '', 'source/recipient missing on row ' + i);
+      if (sourceRecipient.startsWith('Расчётный счёт ')) companyAccountSourceSeen = true;
+    }
+
+    ok(companyAccountSourceSeen, 'company bank account source is not visible in current cash ledger data');
+    ok(!(await ledger.innerText()).includes('Перевод (входящий)'), 'raw incoming transfer label visible');
+    ok(!(await ledger.innerText()).includes('Перевод (исходящий)'), 'raw outgoing transfer label visible');
+
+    // Deliberately read-only: no forms are submitted and no finance records are changed.
+    ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
+    console.log('P48_CASH_LEDGER_RUNTIME_OK');
+  } finally {
+    await browser.close();
+  }
+})().catch(err => { console.error(err); process.exit(1); });
