@@ -5,6 +5,8 @@
     $pageContext = 'Финансы › Касса';
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
+    $cashEmployees = [];
+    $unresolvedCash = ['count' => 0, 'amount' => '0.00', 'account_id' => null];
 
     if ($companyId <= 0) {
         $company = null;
@@ -58,6 +60,9 @@
         applyLocalMigrations($localPdo);
 
         $cashAccounts = \App\Service\FinanceCashService::fetchMoneyAccounts($localPdo, 'CASH', true);
+        $unresolvedCash = \App\Service\FinanceCashResolutionService::unresolvedSummary($localPdo);
+        $cashEmployees = \App\Service\FinanceEmployeePaymentService::fetchActiveEmployees($localPdo, $pdo, $companyId);
+
         $cashPage = max(1, (int) ($_GET['page'] ?? 1));
         $cashPerPage = max(1, min(500, (int) ($_GET['per_page'] ?? 20)));
         $cashResult = \App\Service\FinanceCashLedgerService::fetchRecentMovements($localPdo, $cashPage, $cashPerPage);
@@ -75,6 +80,8 @@
         $company = $company ?? null;
         $cashAccounts = [];
         $recentOperations = [];
+        $cashEmployees = [];
+        $unresolvedCash = ['count' => 0, 'amount' => '0.00', 'account_id' => null];
         $dbError = 'Ошибка при загрузке данных: ' . $e->getMessage();
         $successFlash = null;
         $errorFlash = null;
