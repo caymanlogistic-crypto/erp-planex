@@ -1,0 +1,69 @@
+<?php
+namespace App\Service {
+    require_once __DIR__ . '/../app/Service/BankFinanceService.php';
+    require_once __DIR__ . '/../app/Service/FinanceMatchingRuleRegisterTrait.php';
+
+    if (!class_exists(__NAMESPACE__ . '\\FinanceDdsCategoryService', false)) {
+        final class FinanceDdsCategoryService { public static function fetchCategories(\PDO $pdo): array { return []; } }
+    }
+    final class BankRegisterFilterHarness {
+        use FinanceMatchingRuleRegisterTrait;
+        public static function fetchCashFlowCenters(\PDO $pdo, bool $activeOnly = false): array { return []; }
+        public static function lower(string $value): string { return mb_strtolower($value, 'UTF-8'); }
+    }
+}
+
+namespace {
+use App\Service\BankRegisterFilterHarness as R;
+
+function assertTrue(bool $condition, string $message): void {
+    if (!$condition) throw new RuntimeException('FAIL: ' . $message);
+}
+
+$pdo = new PDO(
+    'mysql:host=' . (getenv('EMPLOYEE_PAYMENTS_DB_HOST') ?: '127.0.0.1') . ';port=' . (getenv('EMPLOYEE_PAYMENTS_DB_PORT') ?: '3306') . ';dbname=' . (getenv('EMPLOYEE_PAYMENTS_DB_NAME') ?: 'erp_employee_payments_test') . ';charset=utf8mb4',
+    getenv('EMPLOYEE_PAYMENTS_DB_USER') ?: 'root',
+    getenv('EMPLOYEE_PAYMENTS_DB_PASSWORD') ?: 'root',
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+);
+$pdo->exec('DROP TABLE IF EXISTS bank_transactions');
+$pdo->exec('DROP TABLE IF EXISTS bank_accounts');
+$pdo->exec("CREATE TABLE bank_accounts(id INT UNSIGNED PRIMARY KEY, account_number VARCHAR(64) NOT NULL) ENGINE=InnoDB");
+$pdo->exec("CREATE TABLE bank_transactions(
+ id INT UNSIGNED PRIMARY KEY, account_id INT UNSIGNED NOT NULL, operation_date DATE NOT NULL,
+ document_number VARCHAR(100) NULL, operation_type VARCHAR(50) NULL, counterparty_name VARCHAR(255) NULL,
+ counterparty_inn VARCHAR(20) NULL, counterparty_bank_bik VARCHAR(20) NULL, counterparty_account VARCHAR(64) NULL,
+ debit_amount DECIMAL(15,2) NOT NULL DEFAULT 0, credit_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+ purpose TEXT NULL, classification_status VARCHAR(30) NULL, cash_flow_center_id INT UNSIGNED NULL, dds_category_id INT UNSIGNED NULL
+) ENGINE=InnoDB");
+$pdo->exec("INSERT INTO bank_accounts(id,account_number) VALUES(1,'40702810000000000001')");
+$pdo->exec("INSERT INTO bank_transactions(id,account_id,operation_date,document_number,counterparty_name,counterparty_inn,debit_amount,credit_amount,purpose,classification_status) VALUES
+ (1,1,'2026-08-10','101','АЛЬФА','7701000001',100,0,'Оплата аренды','AUTO'),
+ (2,1,'2026-08-11','102','БЕТА','7702000002',200,0,'Покупка топлива','UNALLOCATED'),
+ (3,1,'2026-08-12','103','ГАММА','7703000003',0,300,'Возврат средств','MANUAL'),
+ (4,1,'2026-08-13','104','ДЕЛЬТА','7704000004',400,0,'Комиссия банка','NEEDS_REVIEW')");
+
+// Empty date fields are sent by the browser together with status/search. They must mean "no date filter".
+$r = R::fetchBankRegister($pdo, ['date_from'=>'', 'date_to'=>'', 'classification_status'=>'UNALLOCATED', 'page'=>1, 'per_page'=>100]);
+assertTrue($r['total'] === 1 && (int)$r['data'][0]['id'] === 2, 'empty dates must not break status filter');
+
+$r = R::fetchBankRegister($pdo, ['date_from'=>'', 'date_to'=>'', 'search'=>'топлива', 'page'=>1, 'per_page'=>100]);
+assertTrue($r['total'] === 1 && (int)$r['data'][0]['id'] === 2, 'empty dates must not break search filter');
+
+$r = R::fetchBankRegister($pdo, ['date_from'=>'2026-08-11', 'date_to'=>'2026-08-12', 'page'=>1, 'per_page'=>100]);
+assertTrue($r['total'] === 2, 'date range must filter inclusively');
+assertTrue(array_column($r['data'], 'id') === [3,2], 'date range order/result');
+
+$r = R::fetchBankRegister($pdo, ['date_from'=>'2026-08-10', 'date_to'=>'2026-08-13', 'search'=>'7704', 'classification_status'=>'NEEDS_REVIEW', 'page'=>9, 'per_page'=>100]);
+assertTrue($r['total'] === 1 && $r['page'] === 1 && (int)$r['data'][0]['id'] === 4, 'combined filters and stale page reset');
+
+$wrapper = file_get_contents(__DIR__ . '/../app/Http/Controllers/Company/BankFinanceActions/indexAutoFilters.php');
+assertTrue(str_contains($wrapper, "[name=\"classification_status\"]") || str_contains($wrapper, "'classification_status'"), 'status auto-filter hook');
+assertTrue(str_contains($wrapper, "[name=\"q\"]") || str_contains($wrapper, "'[name=\"q\"]'"), 'search auto-filter hook');
+assertTrue(str_contains($wrapper, 'setTimeout(submitNow,350)'), 'search debounce');
+assertTrue(str_contains($wrapper, "textContent||'').trim()==='Применить'"), 'Apply button removal');
+assertTrue(str_contains($wrapper, '.bank-transactions-table th:nth-child(2)'), 'account column hidden');
+assertTrue(str_contains($wrapper, 'width:38%'), 'purpose column widened');
+
+echo "FINANCE_BANK_REGISTER_FILTERS_OK\n";
+}
