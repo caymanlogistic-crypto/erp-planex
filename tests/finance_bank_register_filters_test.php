@@ -43,7 +43,6 @@ $pdo->exec("INSERT INTO bank_transactions(id,account_id,operation_date,document_
  (3,1,'2026-08-12','103','ГАММА','7703000003',0,300,'Возврат средств','MANUAL'),
  (4,1,'2026-08-13','104','ДЕЛЬТА','7704000004',400,0,'Комиссия банка','NEEDS_REVIEW')");
 
-// Empty date fields are sent by the browser together with status/search. They must mean "no date filter".
 $r = R::fetchBankRegister($pdo, ['date_from'=>'', 'date_to'=>'', 'classification_status'=>'UNALLOCATED', 'page'=>1, 'per_page'=>100]);
 assertTrue($r['total'] === 1 && (int)$r['data'][0]['id'] === 2, 'empty dates must not break status filter');
 
@@ -52,14 +51,14 @@ assertTrue($r['total'] === 1 && (int)$r['data'][0]['id'] === 2, 'empty dates mus
 
 $r = R::fetchBankRegister($pdo, ['date_from'=>'2026-08-11', 'date_to'=>'2026-08-12', 'page'=>1, 'per_page'=>100]);
 assertTrue($r['total'] === 2, 'date range must filter inclusively');
-assertTrue(array_column($r['data'], 'id') === [3,2], 'date range order/result');
+assertTrue(array_map('intval', array_column($r['data'], 'id')) === [3,2], 'date range order/result');
 
 $r = R::fetchBankRegister($pdo, ['date_from'=>'2026-08-10', 'date_to'=>'2026-08-13', 'search'=>'7704', 'classification_status'=>'NEEDS_REVIEW', 'page'=>9, 'per_page'=>100]);
 assertTrue($r['total'] === 1 && $r['page'] === 1 && (int)$r['data'][0]['id'] === 4, 'combined filters and stale page reset');
 
 $wrapper = file_get_contents(__DIR__ . '/../app/Http/Controllers/Company/BankFinanceActions/indexAutoFilters.php');
-assertTrue(str_contains($wrapper, "[name=\"classification_status\"]") || str_contains($wrapper, "'classification_status'"), 'status auto-filter hook');
-assertTrue(str_contains($wrapper, "[name=\"q\"]") || str_contains($wrapper, "'[name=\"q\"]'"), 'search auto-filter hook');
+assertTrue(str_contains($wrapper, "'classification_status'"), 'status auto-filter hook');
+assertTrue(str_contains($wrapper, "'[name=\"q\"]'"), 'search auto-filter hook');
 assertTrue(str_contains($wrapper, 'setTimeout(submitNow,350)'), 'search debounce');
 assertTrue(str_contains($wrapper, "textContent||'').trim()==='Применить'"), 'Apply button removal');
 assertTrue(str_contains($wrapper, '.bank-transactions-table th:nth-child(2)'), 'account column hidden');
