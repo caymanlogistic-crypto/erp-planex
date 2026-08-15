@@ -31,6 +31,7 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     await page.getByRole('button', { name: '+ Правило', exact: true }).click();
     const modal = page.locator('#matching-rule-create-modal.is-open');
     await modal.waitFor({ state: 'visible', timeout: 10000 });
+    await modal.locator('form[data-matching-rule-form]').waitFor({ state: 'visible', timeout: 10000 });
 
     const cfu = modal.locator('#matching-rule-cfu');
     const dds = modal.locator('#matching-rule-dds');
