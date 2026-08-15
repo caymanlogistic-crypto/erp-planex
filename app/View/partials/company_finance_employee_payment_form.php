@@ -6,7 +6,7 @@ $today = date('Y-m-d');
  <?= csrfField() ?><input type="hidden" name="movement_type" value="<?= e($movementType) ?>">
  <div class="modal-body">
   <div class="form-grid two-cols">
-   <div class="field"><label class="field-label">Сотрудник <span class="field-required">*</span></label><select class="field-select" name="employee_user_id" required><option value="">— Выберите сотрудника —</option><?php foreach($employees as $employee): ?><option value="<?= (int)$employee['id'] ?>"><?= e($employee['full_name']) ?></option><?php endforeach; ?></select><div class="field-note">Все активные пользователи ERP текущей компании: руководители, логисты и другие роли.</div></div>
+   <div class="field"><label class="field-label">Сотрудник <span class="field-required">*</span></label><select class="field-select" name="employee_ref" required><option value="">— Выберите сотрудника —</option><?php foreach($employees as $employee): ?><option value="<?= e($employee['ref']) ?>"><?= e($employee['full_name']) ?></option><?php endforeach; ?></select><div class="field-note">Все активные пользователи ERP текущей компании: руководители, логисты и другие роли.</div></div>
    <div class="field"><label class="field-label">Источник <span class="field-required">*</span></label><select class="field-select" name="source_type" required><option value="CASH">Касса</option><option value="BANK">Расчётный счёт</option></select></div>
   </div>
   <div data-source-panel="CASH">
