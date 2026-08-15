@@ -60,7 +60,7 @@
         $cashAccounts = \App\Service\FinanceCashService::fetchMoneyAccounts($localPdo, 'CASH', true);
         $cashPage = max(1, (int) ($_GET['page'] ?? 1));
         $cashPerPage = max(1, min(500, (int) ($_GET['per_page'] ?? 20)));
-        $cashResult = \App\Service\FinanceCashService::fetchRecentOperations($localPdo, $cashPage, $cashPerPage);
+        $cashResult = \App\Service\FinanceCashLedgerService::fetchRecentMovements($localPdo, $cashPage, $cashPerPage);
         $recentOperations = $cashResult['data'];
         $cashTotal = $cashResult['total'];
         $cashPages = $cashResult['pages'];
