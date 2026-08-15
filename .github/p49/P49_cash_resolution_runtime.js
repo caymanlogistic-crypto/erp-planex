@@ -34,6 +34,29 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     const sourceCount = await sources.count();
     ok(sourceCount > 0, 'current technical cash data has no selectable unresolved rows');
 
+    const firstSource = sources.first();
+    const visual = await firstSource.evaluate(el => {
+      const row = el.closest('tr');
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--accent)';
+      probe.style.backgroundColor = 'var(--color-danger-bg)';
+      document.body.appendChild(probe);
+      const probeStyle = getComputedStyle(probe);
+      const expectedAccent = probeStyle.color;
+      const expectedDangerBg = probeStyle.backgroundColor;
+      probe.remove();
+      return {
+        accentColor: getComputedStyle(el).accentColor,
+        expectedAccent,
+        rowBackground: row && row.cells.length ? getComputedStyle(row.cells[0]).backgroundColor : '',
+        expectedDangerBg,
+        rowClass: row ? row.className : '',
+      };
+    });
+    ok(visual.rowClass.includes('cash-row-unresolved'), 'selectable technical cash row lacks unresolved visual class');
+    ok(visual.rowBackground === visual.expectedDangerBg, 'unresolved row is not using system light-red danger background: ' + JSON.stringify(visual));
+    ok(visual.accentColor === visual.expectedAccent, 'cash checkbox is not using ERP brown accent: ' + JSON.stringify(visual));
+
     const employeeAction = page.locator('#cash-dispatch-employee-btn');
     const carrierAction = page.locator('#cash-dispatch-carrier-btn');
     ok(await employeeAction.isDisabled(), 'employee action must start disabled before selection');
@@ -54,9 +77,10 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     const technicalStatus = page.locator('.cash-technical-status.is-alert');
     ok(await technicalStatus.count() === 1, 'Main Cash must visibly require allocation while unresolved positions exist');
 
-    await sources.first().check();
+    await firstSource.check();
     ok(!(await employeeAction.isDisabled()), 'employee action did not enable after selecting a source');
     ok((await page.locator('#cash-selected-count').innerText()).trim() === '1', 'selected counter did not update');
+    await page.screenshot({ path: 'P49_cash_checkbox.png', fullPage: true });
 
     await employeeAction.click();
     const modal = page.locator('#cash-dispatch-employee-modal');
