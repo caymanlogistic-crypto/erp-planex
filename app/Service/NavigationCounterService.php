@@ -13,7 +13,9 @@ final class NavigationCounterService
 
     /**
      * Return lightweight navigation counters for one tenant.
-     * One aggregate statement covers all finance attention badges.
+     *
+     * Every counter is intentionally isolated. A missing/temporarily unavailable
+     * schema object for one finance module must never suppress unrelated badges.
      *
      * @return array{bank_attention:int,cash_attention:int}
      */
@@ -34,36 +36,47 @@ final class NavigationCounterService
             if (!$company) return self::$requestCache[$cacheKey] = self::emptyCounters();
 
             $tenant = (new Database(companyDatabaseConfig($config, $company)))->connection();
-            $stmt = $tenant->query(
-                "SELECT
-                    (SELECT COUNT(*)
-                       FROM bank_transactions
-                      WHERE classification_status IN ('UNALLOCATED','NEEDS_REVIEW')
-                        AND COALESCE(is_internal_transfer, 0) = 0) AS bank_attention,
-                    (SELECT COUNT(*)
-                       FROM finance_operations fo
-                       JOIN finance_money_accounts fma
-                         ON fma.id = fo.money_account_id
-                        AND fma.type = 'CASH'
-                        AND fma.is_active = 1
-                        AND fma.name = 'Основная касса'
-                  LEFT JOIN finance_cash_resolutions fcr
-                         ON fcr.source_finance_operation_id = fo.id
-                      WHERE fo.status = 'POSTED'
-                        AND (fo.operation_type = 'INCOME'
-                             OR (fo.operation_type = 'TRANSFER' AND fo.transfer_direction = 'in'))
-                        AND fcr.id IS NULL) AS cash_attention"
-            );
-            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-
-            return self::$requestCache[$cacheKey] = [
-                'bank_attention' => max(0, (int)($row['bank_attention'] ?? 0)),
-                'cash_attention' => max(0, (int)($row['cash_attention'] ?? 0)),
-            ];
         } catch (Throwable) {
-            // Navigation must never make an otherwise healthy ERP page fail.
+            // Tenant resolution itself failed, so no finance counter can be trusted.
             return self::$requestCache[$cacheKey] = self::emptyCounters();
         }
+
+        $counters = self::emptyCounters();
+
+        try {
+            $counters['bank_attention'] = max(0, (int)$tenant->query(
+                "SELECT COUNT(*)
+                   FROM bank_transactions
+                  WHERE classification_status IN ('UNALLOCATED','NEEDS_REVIEW')
+                    AND COALESCE(is_internal_transfer, 0) = 0"
+            )->fetchColumn());
+        } catch (Throwable) {
+            // Keep the bank badge at zero only; other counters remain independent.
+            $counters['bank_attention'] = 0;
+        }
+
+        try {
+            $counters['cash_attention'] = max(0, (int)$tenant->query(
+                "SELECT COUNT(*)
+                   FROM finance_operations fo
+                   JOIN finance_money_accounts fma
+                     ON fma.id = fo.money_account_id
+                    AND fma.type = 'CASH'
+                    AND fma.is_active = 1
+                    AND fma.name = 'Основная касса'
+              LEFT JOIN finance_cash_resolutions fcr
+                     ON fcr.source_finance_operation_id = fo.id
+                  WHERE fo.status = 'POSTED'
+                    AND (fo.operation_type = 'INCOME'
+                         OR (fo.operation_type = 'TRANSFER' AND fo.transfer_direction = 'in'))
+                    AND fcr.id IS NULL"
+            )->fetchColumn());
+        } catch (Throwable) {
+            // A cash-schema rollout issue must not hide the bank attention badge.
+            $counters['cash_attention'] = 0;
+        }
+
+        return self::$requestCache[$cacheKey] = $counters;
     }
 
     /** @return array{bank_attention:int,cash_attention:int} */
