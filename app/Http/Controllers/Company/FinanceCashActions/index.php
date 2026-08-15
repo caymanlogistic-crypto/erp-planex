@@ -64,7 +64,7 @@
         $cashEmployees = \App\Service\FinanceEmployeePaymentService::fetchActiveEmployees($localPdo, $pdo, $companyId);
 
         $cashPage = max(1, (int) ($_GET['page'] ?? 1));
-        $cashPerPage = max(1, min(500, (int) ($_GET['per_page'] ?? 20)));
+        $cashPerPage = max(1, min(500, (int) ($_GET['per_page'] ?? 50)));
         $cashResult = \App\Service\FinanceCashLedgerService::fetchRecentMovements($localPdo, $cashPage, $cashPerPage);
         $recentOperations = $cashResult['data'];
         $cashTotal = $cashResult['total'];
