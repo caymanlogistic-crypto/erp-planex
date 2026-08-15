@@ -35,28 +35,19 @@ jobs:
           LIVE="$ROOT/public_html/erpv2"
           echo '=== MARKER ==='
           cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt" 2>&1
+          echo '=== P07 DEPLOY ENGINE ==='
+          sed -n '1,320p' "$ROOT/deploy/P07_deploy_erpv2.sh" 2>&1
           echo '=== HTTP LOGIN ==='
           curl -sS -D - -o /tmp/erpv2_diag_body --max-time 20 https://plan-ex.ru/erpv2/login 2>&1 | head -80
           echo '=== HTTP BODY ==='
-          head -c 5000 /tmp/erpv2_diag_body 2>&1; echo
-          echo '=== PHP LINT ==='
-          for f in \
-            app/Service/FinanceCashResolutionService.php \
-            app/Service/FinanceCashLedgerService.php \
-            app/Service/NavigationCounterService.php \
-            app/View/layouts/main.php \
-            app/View/pages/company_finance_cash.php \
-            app/Support/entrypoint_dependencies.php; do
-              echo "--- $f"; php -l "$LIVE/$f" 2>&1
-          done
-          echo '=== RECENT RUNTIME LOGS ==='
-          if [ -d "$LIVE/logs" ]; then
-            find "$LIVE/logs" -maxdepth 2 -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -10 | while read -r ts f; do echo "--- $f"; tail -n 80 "$f" 2>&1; done
-          else echo 'NO LIVE LOGS DIR'; fi
+          head -c 3000 /tmp/erpv2_diag_body 2>&1; echo
+          echo '=== LIVE FILE FIRST LINES ==='
+          for f in app/Service/FinanceCashLedgerService.php app/Service/NavigationCounterService.php app/View/layouts/main.php app/View/pages/company_finance_cash.php; do echo "--- $f"; sed -n '1,12p' "$LIVE/$f" 2>&1 | cat -vet; done
+          echo '=== PHP LINT ENTRYPOINT ==='
+          php -l "$LIVE/public/index.php" 2>&1
+          php -l "$LIVE/app/Support/entrypoint_dependencies.php" 2>&1
           echo '=== ERROR LOG CANDIDATES ==='
           for f in "$LIVE/error_log" "$ROOT/error_log" "$ROOT/public_html/error_log"; do if [ -f "$f" ]; then echo "--- $f"; tail -n 100 "$f" 2>&1; fi; done
-          echo '=== NEW MIGRATION ==='
-          ls -l "$LIVE/database/migrations-local/067_finance_cash_resolutions.sql" 2>&1
           rm -f /tmp/erpv2_diag_body 2>/dev/null
           REMOTE
       - uses: actions/upload-artifact@v4
