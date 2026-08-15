@@ -3,12 +3,7 @@
 const { chromium } = require('playwright');
 const BASE = 'https://plan-ex.ru/erpv2/';
 const ok = (value, message) => { if (!value) throw new Error(message); };
-const statusMap = {
-  'Не разнесено': 'UNALLOCATED',
-  'Разнесено автоматически': 'AUTO',
-  'Разнесено вручную': 'MANUAL',
-  'Конфликт / требует проверки': 'NEEDS_REVIEW'
-};
+const allowedStatuses = ['UNALLOCATED', 'AUTO', 'MANUAL', 'NEEDS_REVIEW'];
 
 async function waitForUrlParam(page, name, expected) {
   await page.waitForURL(url => {
@@ -16,6 +11,24 @@ async function waitForUrlParam(page, name, expected) {
     return expected === null ? v === null : v === expected;
   }, { timeout: 10000 });
   await page.waitForLoadState('domcontentloaded');
+}
+
+async function assertRowPresentation(row, label) {
+  const status = await row.getAttribute('data-classification-status');
+  ok(allowedStatuses.includes(status), `${label}: missing/invalid classification status ${status}`);
+  const className = await row.getAttribute('class') || '';
+  const bg = await row.locator('td').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  if (status === 'MANUAL') {
+    ok(className.includes('bank-row-manual'), `${label}: manual row class missing`);
+    ok(bg === 'rgb(239, 248, 237)', `${label}: manual row must be light green, got ${bg}`);
+  } else if (status === 'AUTO') {
+    ok(className.includes('bank-row-auto'), `${label}: auto row class missing`);
+    ok(bg === 'rgb(255, 255, 255)', `${label}: auto row must be white, got ${bg}`);
+  } else {
+    ok(className.includes('bank-row-unallocated'), `${label}: unresolved/review row class missing`);
+    ok(bg === 'rgb(255, 240, 237)', `${label}: unresolved/review row must be light red, got ${bg}`);
+  }
+  return status;
 }
 
 (async () => {
@@ -57,6 +70,7 @@ async function waitForUrlParam(page, name, expected) {
     const accountIndex = headerTexts.indexOf('Счёт');
     const purposeIndex = headerTexts.indexOf('Назначение');
     ok(accountIndex >= 0 && purposeIndex >= 0, 'expected underlying headers missing');
+    ok(!headerTexts.includes('Статус'), 'Status column must be removed from bank register');
     ok((await headers.nth(accountIndex).evaluate(el => getComputedStyle(el).display)) === 'none', 'Account column is still visible');
     const purposeWidth = await headers.nth(purposeIndex).evaluate(el => el.getBoundingClientRect().width);
     ok(purposeWidth >= 300, 'Purpose column not widened enough: ' + purposeWidth);
@@ -64,16 +78,14 @@ async function waitForUrlParam(page, name, expected) {
     let rows = table.locator('tbody tr[data-tx-id]');
     ok(await rows.count() > 0, 'no production bank rows available for read-only filter acceptance');
 
-    const firstStatusText = (await rows.first().locator('td').last().innerText()).split('\n')[0].trim();
-    const statusValue = statusMap[firstStatusText];
-    ok(statusValue, 'cannot map first row status: ' + firstStatusText);
+    const statusValue = await assertRowPresentation(rows.first(), 'first bank row');
     await filterForm.locator('[name="classification_status"]').selectOption(statusValue);
     await waitForUrlParam(page, 'classification_status', statusValue);
     rows = page.locator('table.bank-transactions-table tbody tr[data-tx-id]');
     ok(await rows.count() > 0, 'status filter returned no rows for existing status');
     for (let i = 0; i < Math.min(await rows.count(), 100); i++) {
-      const text = (await rows.nth(i).locator('td').last().innerText()).split('\n')[0].trim();
-      ok(statusMap[text] === statusValue, `status filter mismatch row ${i}: ${text}`);
+      const rowStatus = await assertRowPresentation(rows.nth(i), `status-filter row ${i}`);
+      ok(rowStatus === statusValue, `status filter mismatch row ${i}: ${rowStatus}`);
     }
 
     await page.locator('form.bank-controls-filter [name="classification_status"]').selectOption('');
