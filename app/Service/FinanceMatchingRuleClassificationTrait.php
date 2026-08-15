@@ -18,14 +18,25 @@ trait FinanceMatchingRuleClassificationTrait
   $rule=$resolved['winner']['rule'];$evaluation=$resolved['winner']['evaluation'];
   $action=(string)$rule['action_type'];
   if($action==='transfer_to_cash'){$result=self::convertBankOperationToCashTransfer($pdo,$op,$rule);self::persistMatchingOutcome($pdo,$operationId,(int)$rule['id'],'auto_apply','high',$evaluation['reason'],date('Y-m-d H:i:s'),'system');return $result+['matched'=>true,'result'=>'auto_apply'];}
-  if($action==='categorize'){
+  if(in_array($action,['categorize','categorize_to_cash'],true)){
    $cfu=self::nullableInt($rule['target_cash_flow_center_id']??null);$dds=self::nullableInt($rule['target_dds_category_id']??null);
    if($cfu!==null&&$dds!==null){
     $txDirection=self::directionForTransaction($tx);
     try{if($txDirection===null)throw new \InvalidArgumentException('Не удалось определить направление операции.');FinanceStructureService::assertAllowedPair($pdo,$cfu,$dds,$txDirection);}
     catch(\Throwable $e){self::setClassificationState($pdo,(int)$op['bank_tx_id'],$operationId,'NEEDS_REVIEW',(int)$rule['id'],null,null);self::persistMatchingOutcome($pdo,$operationId,(int)$rule['id'],'invalid_structure','low',$e->getMessage(),null,'system');return ['matched'=>false,'needs_review'=>true,'rule_id'=>(int)$rule['id'],'reason'=>$e->getMessage()];}
    }
-   self::setClassificationState($pdo,(int)$op['bank_tx_id'],$operationId,'AUTO',(int)$rule['id'],$cfu,$dds);self::persistMatchingOutcome($pdo,$operationId,(int)$rule['id'],'auto_apply','high',$evaluation['reason'],date('Y-m-d H:i:s'),'system');FinanceAuditLogService::log($pdo,'finance_operation',$operationId,'classification_auto',null,['cash_flow_center_id'=>$cfu,'dds_category_id'=>$dds,'rule_id'=>(int)$rule['id']],0,'system');return ['matched'=>true,'result'=>'auto_apply','rule_id'=>(int)$rule['id'],'updates'=>['cash_flow_center_id'=>$cfu,'dds_category_id'=>$dds]];
+   $combined=$action==='categorize_to_cash';
+   $own=false;if($combined&&!$pdo->inTransaction()){$pdo->beginTransaction();$own=true;}
+   try{
+    self::setClassificationState($pdo,(int)$op['bank_tx_id'],$operationId,'AUTO',(int)$rule['id'],$cfu,$dds);
+    $transfer=null;if($combined)$transfer=self::convertBankOperationToCashTransfer($pdo,$op,$rule);
+    self::persistMatchingOutcome($pdo,$operationId,(int)$rule['id'],'auto_apply','high',$evaluation['reason'],date('Y-m-d H:i:s'),'system');
+    FinanceAuditLogService::log($pdo,'finance_operation',$operationId,$combined?'classification_auto_cash_transfer':'classification_auto',null,['cash_flow_center_id'=>$cfu,'dds_category_id'=>$dds,'rule_id'=>(int)$rule['id'],'target_cash_account_id'=>$combined?self::nullableInt($rule['target_cash_account_id']??null):null],0,'system');
+    if($own)$pdo->commit();
+    $result=['matched'=>true,'result'=>'auto_apply','rule_id'=>(int)$rule['id'],'updates'=>['cash_flow_center_id'=>$cfu,'dds_category_id'=>$dds]];
+    if($combined&&is_array($transfer))$result+=['transferred_to_cash'=>true,'cash_operation_id'=>(int)($transfer['cash_operation_id']??0),'transfer_group_id'=>$transfer['transfer_group_id']??null];
+    return $result;
+   }catch(\Throwable $e){if($own&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
   }
   if($action==='match_counterparty'&&!empty($rule['target_counterparty_id'])){$q=$pdo->prepare('UPDATE finance_operations SET counterparty_entity_id=?,counterparty_entity_type=? WHERE id=?');$q->execute([(int)$rule['target_counterparty_id'],$rule['target_counterparty_type']??null,$operationId]);}
   self::persistMatchingOutcome($pdo,$operationId,(int)$rule['id'],'auto_apply','high',$evaluation['reason'],date('Y-m-d H:i:s'),'system');return ['matched'=>true,'result'=>'auto_apply','rule_id'=>(int)$rule['id'],'updates'=>[]];
