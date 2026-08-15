@@ -69,8 +69,7 @@ final class FinanceEmployeePaymentsController
             } else {
                 throw new \InvalidArgumentException('Выберите источник денежных средств.');
             }
-            $_SESSION['employee_payments_success'] = strtoupper((string)($_POST['movement_type'] ?? '')) === 'RETURN'
-                ? 'Возврат сотрудника сохранён.' : 'Выплата сотруднику сохранена.';
+            $_SESSION['employee_payments_success'] = strtoupper((string)($_POST['movement_type'] ?? '')) === 'RETURN' ? 'Возврат сотрудника сохранён.' : 'Выплата сотруднику сохранена.';
         } catch (\Throwable $e) {
             $_SESSION['employee_payments_error'] = $e->getMessage();
         }
@@ -116,7 +115,15 @@ final class FinanceEmployeePaymentsController
         verifyCsrfRequest();
         try {
             [$company, $pdo, $central] = $this->tenant();
-            $employee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], trim((string)($_POST['employee_ref'] ?? '')));
+            $employeeRef = trim((string)($_POST['employee_ref'] ?? ''));
+            if ($employeeRef === '') {
+                $legacyId = (int)($_POST['employee_user_id'] ?? 0);
+                if ($legacyId === 0) throw new \InvalidArgumentException('Выберите сотрудника.');
+                $employeeRef = $legacyId < 0
+                    ? FinanceEmployeePaymentService::makeEmployeeRef(FinanceEmployeePaymentService::IDENTITY_COMPANY_USER, abs($legacyId))
+                    : FinanceEmployeePaymentService::makeEmployeeRef(FinanceEmployeePaymentService::IDENTITY_TENANT_USER, $legacyId);
+            }
+            $employee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], $employeeRef);
             FinanceEmployeePaymentService::linkBankTransaction($pdo, $_POST, ['id'=>$_SESSION['user_id'] ?? 0,'role'=>$_SESSION['role_code'] ?? 'company_owner'], $employee);
             $_SESSION['bank_finance_success'] = 'Банковская операция связана с сотрудником.';
         } catch (\Throwable $e) {
