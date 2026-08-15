@@ -85,5 +85,7 @@ jobs:
         if: always()
         with:
           name: P48_cash_ledger_runtime_${{ steps.sha.outputs.sha }}
-          path: P48_RUNTIME.txt
+          path: |
+            P48_RUNTIME.txt
+            P48_cash_lifecycle.png
           if-no-files-found: warn
