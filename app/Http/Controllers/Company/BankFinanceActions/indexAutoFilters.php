@@ -7,7 +7,8 @@
  * - all GET filters apply automatically;
  * - no Apply/Reset action button is required;
  * - account column is visually removed;
- * - purpose column receives the freed width.
+ * - purpose column receives the freed width;
+ * - classification status is conveyed by row background instead of a dedicated column.
  */
 ob_start();
 require base_path('app/Http/Controllers/Company/BankFinanceActions/index.php');
@@ -17,11 +18,20 @@ $style = <<<'HTML'
 <style id="bank-register-auto-filter-style">
 .bank-transactions-table th:nth-child(2),
 .bank-transactions-table td:nth-child(2){display:none!important}
+/* Status is removed from the DOM by the runtime below; hide it immediately to avoid a flash. */
+.bank-transactions-table th:nth-child(10),
+.bank-transactions-table td:nth-child(10){display:none!important}
 .bank-transactions-table{table-layout:fixed;width:100%}
 .bank-transactions-table th:nth-child(1),.bank-transactions-table td:nth-child(1){width:82px}
 .bank-transactions-table th:nth-child(3),.bank-transactions-table td:nth-child(3){width:17%}
 .bank-transactions-table th:nth-child(4),.bank-transactions-table td:nth-child(4){width:112px}
 .bank-transactions-table th:nth-child(5),.bank-transactions-table td:nth-child(5){width:38%;min-width:390px;white-space:normal;overflow-wrap:anywhere}
+.bank-transactions-table tbody tr.bank-row-unallocated>td{background:#fff0ed!important}
+.bank-transactions-table tbody tr.bank-row-unallocated:hover>td{background:#fce8e4!important}
+.bank-transactions-table tbody tr.bank-row-manual>td{background:#eff8ed!important}
+.bank-transactions-table tbody tr.bank-row-manual:hover>td{background:#e7f3e4!important}
+.bank-transactions-table tbody tr.bank-row-auto>td{background:#fff!important}
+.bank-transactions-table tbody tr.bank-row-auto:hover>td{background:#f8f6f1!important}
 .bank-controls-filter button[type="submit"],
 .bank-controls-filter a.btn,
 .bank-controls-right>a.btn[data-bank-filter-reset]{display:none!important}
@@ -33,7 +43,39 @@ HTML;
 $script = <<<'HTML'
 <script id="bank-register-auto-filter-script">
 (function(){
+  function classificationFromLabel(value){
+    var text=String(value||'').trim().toLocaleLowerCase('ru-RU');
+    if(text.indexOf('вручную')!==-1) return 'MANUAL';
+    if(text.indexOf('автоматически')!==-1) return 'AUTO';
+    if(text.indexOf('не разнесено')!==-1) return 'UNALLOCATED';
+    if(text.indexOf('конфликт')!==-1||text.indexOf('провер')!==-1) return 'NEEDS_REVIEW';
+    return 'NEEDS_REVIEW';
+  }
+
+  function initClassificationPresentation(){
+    var table=document.querySelector('.bank-transactions-table');
+    if(!table||table.dataset.classificationPresentationReady==='1') return;
+    table.dataset.classificationPresentationReady='1';
+    var headers=Array.from(table.querySelectorAll('thead th'));
+    var statusHeader=headers.find(function(th){return (th.textContent||'').trim()==='Статус';});
+    if(!statusHeader) return;
+    var statusIndex=statusHeader.cellIndex;
+    Array.from(table.querySelectorAll('tbody tr[data-tx-id]')).forEach(function(row){
+      var statusCell=row.cells[statusIndex];
+      if(!statusCell) return;
+      var status=classificationFromLabel(statusCell.textContent||'');
+      row.dataset.classificationStatus=status;
+      row.classList.remove('bank-row-unallocated','bank-row-manual','bank-row-auto');
+      if(status==='MANUAL') row.classList.add('bank-row-manual');
+      else if(status==='AUTO') row.classList.add('bank-row-auto');
+      else row.classList.add('bank-row-unallocated');
+      statusCell.remove();
+    });
+    statusHeader.remove();
+  }
+
   function initBankRegisterFilters(){
+    initClassificationPresentation();
     var form=document.querySelector('form.bank-controls-filter');
     if(!form||form.dataset.autoFiltersReady==='1') return;
     form.dataset.autoFiltersReady='1';
