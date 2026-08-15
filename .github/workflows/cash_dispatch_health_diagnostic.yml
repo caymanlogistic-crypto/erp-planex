@@ -1,0 +1,67 @@
+name: Cash Dispatch Health Diagnostic
+on:
+  push:
+    branches: [agent/cash-dispatch-health-diagnostic-20260815]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/diag"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/diag" "$HOME/.ssh/known_hosts"
+      - name: Read-only server diagnostics
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$PORT" -i "$HOME/.ssh/diag" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -se' <<'REMOTE' | tee CASH_DISPATCH_HEALTH_DIAG.txt
+          set +e
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          echo '=== MARKER ==='
+          cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt" 2>&1
+          echo '=== HTTP LOGIN ==='
+          curl -sS -D - -o /tmp/erpv2_diag_body --max-time 20 https://plan-ex.ru/erpv2/login 2>&1 | head -80
+          echo '=== HTTP BODY ==='
+          head -c 5000 /tmp/erpv2_diag_body 2>&1; echo
+          echo '=== PHP LINT ==='
+          for f in \
+            app/Service/FinanceCashResolutionService.php \
+            app/Service/FinanceCashLedgerService.php \
+            app/Service/NavigationCounterService.php \
+            app/View/layouts/main.php \
+            app/View/pages/company_finance_cash.php \
+            app/Support/entrypoint_dependencies.php; do
+              echo "--- $f"; php -l "$LIVE/$f" 2>&1
+          done
+          echo '=== RECENT RUNTIME LOGS ==='
+          if [ -d "$LIVE/logs" ]; then
+            find "$LIVE/logs" -maxdepth 2 -type f -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -10 | while read -r ts f; do echo "--- $f"; tail -n 80 "$f" 2>&1; done
+          else echo 'NO LIVE LOGS DIR'; fi
+          echo '=== ERROR LOG CANDIDATES ==='
+          for f in "$LIVE/error_log" "$ROOT/error_log" "$ROOT/public_html/error_log"; do if [ -f "$f" ]; then echo "--- $f"; tail -n 100 "$f" 2>&1; fi; done
+          echo '=== NEW MIGRATION ==='
+          ls -l "$LIVE/database/migrations-local/067_finance_cash_resolutions.sql" 2>&1
+          rm -f /tmp/erpv2_diag_body 2>/dev/null
+          REMOTE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cash_dispatch_health_diag_${{ github.sha }}
+          path: CASH_DISPATCH_HEALTH_DIAG.txt
+          if-no-files-found: warn
