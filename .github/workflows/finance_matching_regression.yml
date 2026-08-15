@@ -55,12 +55,14 @@ jobs:
           php -l app/View/partials/company_finance_employee_payment_ledger.php
           php -l app/View/partials/company_bank_transaction_classify_form.php
           php -l scripts/p41_apply_finance_matching_migration.php
+          php -l scripts/p80_apply_finance_cash_resolution_migration.php
           php -l tests/finance_matching_classification_test.php
           php -l tests/finance_matching_cash_transfer_test.php
           php -l tests/finance_employee_payments_test.php
           php -l tests/finance_bank_register_filters_test.php
           php -l tests/finance_cash_ledger_test.php
           php -l tests/finance_cash_resolution_test.php
+          php -l tests/navigation_counter_isolation_test.php
           php -l tests/cash_dispatch_opcache_route_test.php
       - name: Matching semantics
         run: php tests/finance_matching_classification_test.php
@@ -90,6 +92,13 @@ jobs:
           set -euo pipefail
           php tests/finance_bank_register_filters_test.php 2>&1 | tee bank_register_filters_regression.txt
           grep -q 'FINANCE_BANK_REGISTER_FILTERS_OK' bank_register_filters_regression.txt
+      - name: Navigation counter isolation regression
+        env: *db_env
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/navigation_counter_isolation_test.php 2>&1 | tee navigation_counter_isolation.txt
+          grep -q 'NAVIGATION_COUNTER_ISOLATION_OK bank=2 cash=0' navigation_counter_isolation.txt
       - name: Classification plus bank-to-cash behavioral regression
         env: *db_env
         shell: bash
@@ -124,6 +133,9 @@ jobs:
           grep -q 'uk_fcr_source_operation' database/migrations-local/067_finance_cash_resolutions.sql
           grep -q 'outflow_finance_operation_id' database/migrations-local/067_finance_cash_resolutions.sql
           grep -q 'employee_movement_id' database/migrations-local/067_finance_cash_resolutions.sql
+          grep -q "067_finance_cash_resolutions.sql" scripts/p80_apply_finance_cash_resolution_migration.php
+          grep -q 'companyDatabaseConfig' scripts/p80_apply_finance_cash_resolution_migration.php
+          grep -q 'P80_MIGRATION_OK' scripts/p80_apply_finance_cash_resolution_migration.php
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -132,6 +144,7 @@ jobs:
             cash_dispatch_opcache_route.txt
             employee_payments_regression.txt
             bank_register_filters_regression.txt
+            navigation_counter_isolation.txt
             matching_cash_transfer_regression.txt
             cash_ledger_regression.txt
             cash_resolution_regression.txt
