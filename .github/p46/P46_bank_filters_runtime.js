@@ -64,7 +64,6 @@ async function waitForUrlParam(page, name, expected) {
     let rows = table.locator('tbody tr[data-tx-id]');
     ok(await rows.count() > 0, 'no production bank rows available for read-only filter acceptance');
 
-    // Status: pick the first real row's current status, then select it from All statuses.
     const firstStatusText = (await rows.first().locator('td').last().innerText()).split('\n')[0].trim();
     const statusValue = statusMap[firstStatusText];
     ok(statusValue, 'cannot map first row status: ' + firstStatusText);
@@ -77,11 +76,9 @@ async function waitForUrlParam(page, name, expected) {
       ok(statusMap[text] === statusValue, `status filter mismatch row ${i}: ${text}`);
     }
 
-    // Clear status automatically.
     await page.locator('form.bank-controls-filter [name="classification_status"]').selectOption('');
     await waitForUrlParam(page, 'classification_status', null);
 
-    // Search: take a concrete existing row value. Search must navigate after debounce without Enter/button.
     rows = page.locator('table.bank-transactions-table tbody tr[data-tx-id]');
     const row = rows.first();
     const inn = (await row.getAttribute('data-tx-inn') || '').trim();
@@ -105,11 +102,9 @@ async function waitForUrlParam(page, name, expected) {
       ok(hay.includes(termLower), `search mismatch row ${i}`);
     }
 
-    // Clear search automatically using the input event.
     await page.locator('form.bank-controls-filter [name="q"]').fill('');
     await waitForUrlParam(page, 'q', null);
 
-    // Date range: take an existing operation date and set both edges. Each change must navigate on its own.
     rows = page.locator('table.bank-transactions-table tbody tr[data-tx-id]');
     const date = await rows.first().getAttribute('data-tx-date');
     ok(/^\d{4}-\d{2}-\d{2}$/.test(date || ''), 'invalid row date: ' + date);
@@ -125,7 +120,6 @@ async function waitForUrlParam(page, name, expected) {
       ok((await rows.nth(i).getAttribute('data-tx-date')) === date, `date filter mismatch row ${i}`);
     }
 
-    // Clear dates automatically.
     await page.locator('form.bank-controls-filter [name="date_from"]').fill('');
     await page.locator('form.bank-controls-filter [name="date_from"]').dispatchEvent('change');
     await waitForUrlParam(page, 'date_from', null);
@@ -133,13 +127,13 @@ async function waitForUrlParam(page, name, expected) {
     await page.locator('form.bank-controls-filter [name="date_to"]').dispatchEvent('change');
     await waitForUrlParam(page, 'date_to', null);
 
-    // Employee directory regression: owner + tenant user, and obsolete hint absent.
     response = await page.goto(BASE + 'company/finance/employee-payments', { waitUntil: 'domcontentloaded' });
     ok(response && response.status() === 200, 'employee payments HTTP 200');
     ok(!(await page.locator('body').innerText()).includes('Двойной клик — полный журнал'), 'obsolete employee hint is visible');
     await page.getByRole('button', { name: '+ Выплата', exact: true }).click();
     const modal = page.locator('#employee-payment-create-modal.is-open');
     await modal.waitFor({ state: 'visible', timeout: 10000 });
+    await modal.locator('form').waitFor({ state: 'visible', timeout: 10000 });
     const values = await modal.locator('select[name="employee_ref"] option').evaluateAll(opts => opts.map(o => o.value));
     ok(values.some(v => v.startsWith('COMPANY_USER:')), 'company owner missing from employee selector');
     ok(values.some(v => v.startsWith('TENANT_USER:')), 'tenant logist/user missing from employee selector');
