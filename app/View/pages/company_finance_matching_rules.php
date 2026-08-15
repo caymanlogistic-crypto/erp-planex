@@ -2,8 +2,9 @@
 $cfuNames=[];foreach($cashFlowCenters??[] as $row){$cfuNames[(int)$row['id']]=(string)$row['name'];}
 $ddsNames=[];foreach($ddsCategories??[] as $row){$ddsNames[(int)$row['id']]=(string)$row['name'];}
 $bankNames=[];foreach($bankAccounts??[] as $row){$bankNames[(int)$row['id']]=(string)($row['account_number']??'');}
+$cashNames=[];foreach($cashAccounts??[] as $row){$cashNames[(int)$row['id']]=(string)($row['name']??('Касса #'.(int)$row['id']));}
 $directionLabel=static fn($d):string=>match($d){'INCOME'=>'Поступление','EXPENSE'=>'Расход',default=>''};
-$ruleCondition=static function(array $r)use($bankNames,$directionLabel):string{
+$ruleCondition=static function(array $r)use($bankNames,$cashNames,$directionLabel):string{
  $parts=[];
  $direction=$directionLabel($r['direction']??'');if($direction!=='')$parts[]=$direction;
  if(!empty($r['purpose_contains']))$parts[]='Назначение содержит «'.(string)$r['purpose_contains'].'»';
@@ -12,6 +13,7 @@ $ruleCondition=static function(array $r)use($bankNames,$directionLabel):string{
  if(!empty($r['bank_account_id']))$parts[]='Счёт '.($bankNames[(int)$r['bank_account_id']]??('#'.(int)$r['bank_account_id']));
  if($r['amount_from']!==null&&$r['amount_from']!=='')$parts[]='Сумма от '.number_format((float)$r['amount_from'],2,',',' ').' ₽';
  if($r['amount_to']!==null&&$r['amount_to']!=='')$parts[]='Сумма до '.number_format((float)$r['amount_to'],2,',',' ').' ₽';
+ if(!empty($r['target_cash_account_id']))$parts[]='После разнесения → касса «'.($cashNames[(int)$r['target_cash_account_id']]??('#'.(int)$r['target_cash_account_id'])).'»';
  return $parts?implode(' · ',$parts):'—';
 };
 ?>
@@ -60,7 +62,7 @@ $ruleCondition=static function(array $r)use($bankNames,$directionLabel):string{
 <form method="post" action="<?= app_url('/company/finance/settings/matching-rules/toggle') ?>" id="matching-rule-toggle-form" class="is-hidden"><?= csrfField() ?><input type="hidden" name="id" id="matching-rule-toggle-id"></form>
 <form method="post" action="<?= app_url('/company/finance/settings/matching-rules/remove') ?>" id="matching-rule-delete-form" class="is-hidden"><?= csrfField() ?><input type="hidden" name="id" id="matching-rule-delete-id"></form>
 <div id="matching-rule-toggle-modal" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="1" data-close-on-escape="1"><div class="modal modal-sm"><div class="modal-head"><span class="modal-title" id="matching-rule-toggle-modal-title">Изменить статус правила</span><button type="button" class="modal-close" data-close-modal="matching-rule-toggle-modal">&times;</button></div><div class="modal-body"><div class="rule-confirm-title" id="matching-rule-toggle-title"></div><div class="rule-confirm-copy" id="matching-rule-toggle-copy"></div></div><div class="modal-foot"><button type="button" class="btn btn-ghost" data-close-modal="matching-rule-toggle-modal">Отмена</button><button type="submit" form="matching-rule-toggle-form" class="btn btn-secondary" id="matching-rule-toggle-confirm">Продолжить</button></div></div></div>
-<div id="matching-rule-delete-modal" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="1" data-close-on-escape="1"><div class="modal modal-sm"><div class="modal-head"><span class="modal-title">Удалить правило</span><button type="button" class="modal-close" data-close-modal="matching-rule-delete-modal">&times;</button></div><div class="modal-body"><div class="rule-confirm-title">Удалить это правило?</div><div class="rule-confirm-copy">Автоматическое разнесение, выполненное именно этим правилом, будет снято. Операции вернутся в статус «Не разнесено». Ручные разнесения и другие правила не изменятся.</div></div><div class="modal-foot"><button type="button" class="btn btn-ghost" data-close-modal="matching-rule-delete-modal">Отмена</button><button type="submit" form="matching-rule-delete-form" class="btn btn-danger">Удалить</button></div></div></div>
+<div id="matching-rule-delete-modal" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="1" data-close-on-escape="1"><div class="modal modal-sm"><div class="modal-head"><span class="modal-title">Удалить правило</span><button type="button" class="modal-close" data-close-modal="matching-rule-delete-modal">&times;</button></div><div class="modal-body"><div class="rule-confirm-title">Удалить это правило?</div><div class="rule-confirm-copy">Для обычного правила автоматическое разнесение будет снято. Уже выполненные внутренние переводы Банк → Касса не отменяются автоматически. Ручные разнесения и другие правила не изменяются.</div></div><div class="modal-foot"><button type="button" class="btn btn-ghost" data-close-modal="matching-rule-delete-modal">Отмена</button><button type="submit" form="matching-rule-delete-form" class="btn btn-danger">Удалить</button></div></div></div>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
  const base=()=>window.getErpBasePath();
@@ -68,8 +70,8 @@ document.addEventListener('DOMContentLoaded',function(){
  function filterRules(){let q=(search?search.value:'').trim().toLowerCase(),st=status?status.value:'all',shown=0;rows.forEach(r=>{let ok=(!q||(r.dataset.search||'').includes(q))&&(st==='all'||r.dataset.status===st);r.classList.toggle('ux-hidden',!ok);if(ok)shown++});if(empty)empty.classList.toggle('ux-hidden',shown!==0)}
  if(search)search.addEventListener('input',filterRules);if(status)status.addEventListener('change',filterRules);
  function initRuleForm(scope){
-  const form=scope.querySelector('[data-matching-rule-form]');if(!form)return;const cfu=form.querySelector('#matching-rule-cfu'),dds=form.querySelector('#matching-rule-dds'),direction=form.querySelector('#matching-rule-direction');if(!cfu||!dds)return;let map={};try{map=JSON.parse(cfu.dataset.ddsMap||'{}')}catch(e){}
-  function syncDirection(){const opt=dds.selectedOptions[0];if(!direction||!opt)return;const d=(opt.dataset.direction||'').toUpperCase();direction.value=(d==='INCOME'||d==='EXPENSE')?d:''}
+  const form=scope.querySelector('[data-matching-rule-form]');if(!form)return;const cfu=form.querySelector('#matching-rule-cfu'),dds=form.querySelector('#matching-rule-dds'),direction=form.querySelector('#matching-rule-direction'),cash=form.querySelector('#matching-rule-cash'),cashField=form.querySelector('#matching-rule-cash-field'),cashNote=form.querySelector('#matching-rule-cash-note');if(!cfu||!dds)return;let map={};try{map=JSON.parse(cfu.dataset.ddsMap||'{}')}catch(e){}
+  function syncDirection(){const opt=dds.selectedOptions[0];if(!opt)return;const d=(opt.dataset.direction||'').toUpperCase();if(direction)direction.value=(d==='INCOME'||d==='EXPENSE')?d:'';if(cash){const enabled=d==='EXPENSE';cash.disabled=!enabled;if(!enabled)cash.value='';if(cashField)cashField.classList.toggle('is-disabled',!enabled);if(cashNote)cashNote.textContent=enabled?'Для расходной статьи можно автоматически создать внутренний перевод Банк → Касса. Повторный перевод не создаётся.':'Перевод в кассу доступен только после выбора расходной статьи ДДС.'}}
   function refresh(){const id=String(cfu.value||''),hasMap=id!==''&&Object.prototype.hasOwnProperty.call(map,id),allowed=new Set((map[id]||[]).map(String)),current=String(dds.value||'');[...dds.options].forEach((o,i)=>{if(i===0)return;const show=!id||!hasMap||allowed.has(String(o.value));o.hidden=!show;o.disabled=!show});if(current&&dds.selectedOptions[0]&&dds.selectedOptions[0].disabled)dds.value='';syncDirection()}
   cfu.addEventListener('change',refresh);dds.addEventListener('change',syncDirection);refresh();
  }
