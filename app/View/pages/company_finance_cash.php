@@ -18,7 +18,7 @@ $unresolvedAmount = (string)($unresolvedCash['amount'] ?? '0.00');
 <div class="notice warn"><?= e($dbError) ?></div>
 <?php else: ?>
 <style>
-.cash-clearing-alert{display:flex;align-items:center;gap:8px;margin:8px 0 0;padding:7px 9px;border:1px solid #cdbca5;background:#f3ede3;font-size:11px;color:#514536}.cash-clearing-alert strong{color:#7c3f12}.cash-batch-bar{display:flex;align-items:center;gap:8px;min-height:34px;padding:6px 8px;border:1px solid #c9c2b8;border-bottom:0;background:#ece8e0}.cash-batch-summary{font-size:11px;color:#514c45;margin-right:auto}.cash-batch-summary strong{color:#25221e}.cash-select-cell{width:28px;text-align:center}.cash-select-cell input{width:14px;height:14px;margin:0;vertical-align:middle}.cash-row-resolved{color:#777168}.cash-row-resolved .cash-resolved-note{font-size:9px;color:#8b847a}.cash-dispatch-total{padding:7px 9px;background:#f3f0ea;border:1px solid #d3cdc3;font-size:11px}.cash-dispatch-total strong{font-size:13px}.cash-action-disabled{opacity:.5;cursor:not-allowed}.cash-technical-status{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:2px;font-size:9px;font-weight:700}.cash-technical-status.is-alert{background:#f3dfd1;color:#843b12;border:1px solid #dab69d}.cash-technical-status.is-ok{background:#dcebe7;color:#1f6358;border:1px solid #b8d3cc}
+.cash-clearing-alert{display:flex;align-items:center;gap:8px;margin:8px 0 0;padding:7px 9px;border:1px solid #cdbca5;background:#f3ede3;font-size:11px;color:#514536}.cash-clearing-alert strong{color:#7c3f12}.cash-batch-bar{display:flex;align-items:center;gap:8px;min-height:34px;padding:6px 8px;border:1px solid #c9c2b8;border-bottom:0;background:#ece8e0}.cash-batch-summary{font-size:11px;color:#514c45;margin-right:auto}.cash-batch-summary strong{color:#25221e}.cash-select-cell{width:28px;text-align:center}.cash-select-cell input{width:14px;height:14px;margin:0;vertical-align:middle}.cash-row-resolved{color:#777168}.cash-row-resolved .cash-resolved-note{font-size:9px;color:#8b847a}.cash-dispatch-total{padding:7px 9px;background:#f3f0ea;border:1px solid #d3cdc3;font-size:11px}.cash-dispatch-total strong{font-size:13px}.cash-action-disabled{opacity:.5;cursor:not-allowed}.cash-technical-status{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:2px;font-size:9px;font-weight:700}.cash-technical-status.is-alert{background:#f3dfd1;color:#843b12;border:1px solid #dab69d}.cash-technical-status.is-ok{background:#dcebe7;color:#1f6358;border:1px solid #b8d3cc}.cash-pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:8px;font-size:11px}.cash-pagination__meta{color:#6b655d}.cash-pagination .btn[aria-disabled="true"]{opacity:.45;pointer-events:none}.cash-col-recipient{min-width:180px}.cash-col-purpose{min-width:340px}
 </style>
 <div class="page-head">
     <div class="page-head-left">
@@ -56,7 +56,7 @@ $unresolvedAmount = (string)($unresolvedCash['amount'] ?? '0.00');
 </tbody></table></div></div>
 <?php endif; ?>
 
-<div class="section-title mt-section">Движения по кассе<?php if (isset($cashTotal)): ?><span class="section-title-meta">— <?= count($recentOperations) ?> из <?= $cashTotal ?> (стр. <?= $cashPage ?>/<?= $cashPages ?>)</span><?php endif; ?></div>
+<div class="section-title mt-section">Движения по кассе<?php if (isset($cashTotal)): ?><span class="section-title-meta">— <?= count($recentOperations) ?> из <?= $cashTotal ?> (стр. <?= $cashPage ?>/<?= max(1, $cashPages) ?>)</span><?php endif; ?></div>
 <?php if (empty($recentOperations)): ?>
 <div class="panel"><div class="panel-body"><div class="empty-state"><p class="empty-title">Движений нет.</p><p class="empty-desc">Проведите приход, расход или внутренний перевод.</p></div></div></div>
 <?php else: ?>
@@ -65,14 +65,31 @@ $unresolvedAmount = (string)($unresolvedCash['amount'] ?? '0.00');
     <button type="button" class="btn btn-primary btn--toolbar" id="cash-dispatch-employee-btn" disabled>Передать сотруднику</button>
     <button type="button" class="btn btn-secondary btn--toolbar cash-action-disabled" id="cash-dispatch-carrier-btn" disabled title="Следующий этап реализации">Перевозчику</button>
 </div>
-<div class="table-card table-card--standard"><div class="table-scroll"><table class="table" id="cash-ledger-table"><thead><tr><th class="cash-select-cell"><input type="checkbox" id="cash-select-all" aria-label="Выбрать все неразнесённые позиции на странице"></th><th>Дата</th><th>Касса</th><th>Движение</th><th>Источник / Получатель</th><th>Сумма</th><th>Назначение</th></tr></thead><tbody>
+<div class="table-card table-card--standard"><div class="table-scroll"><table class="table" id="cash-ledger-table"><thead><tr><th class="cash-select-cell"><input type="checkbox" id="cash-select-all" aria-label="Выбрать все неразнесённые позиции на странице"></th><th>Дата</th><th>Касса</th><th>Движение</th><th>Источник</th><th class="cash-col-recipient">Кому передано</th><th>Сумма</th><th class="cash-col-purpose">Назначение</th></tr></thead><tbody>
 <?php foreach ($recentOperations as $op): $movementLabel = FinanceCashLedgerService::movementLabel($op); $selectable = !empty($op['is_unresolved_cash_source']); ?>
 <tr data-cash-ledger-row data-cash-direction="<?= e($op['cash_direction'] ?? '') ?>" data-cash-selectable="<?= $selectable ? '1' : '0' ?>" class="<?= (!$selectable && !empty($op['cash_resolution_id'])) ? 'cash-row-resolved' : '' ?>">
 <td class="cash-select-cell"><?php if ($selectable): ?><input type="checkbox" class="cash-source-select" name="source_operation_ids[]" value="<?= (int)$op['id'] ?>" data-amount="<?= e((string)($op['amount'] ?? '0.00')) ?>" aria-label="Выбрать позицию #<?= (int)$op['id'] ?>"><?php elseif (!empty($op['cash_resolution_id'])): ?><span class="cash-resolved-note" title="Уже разнесено">✓</span><?php endif; ?></td>
-<td class="col-mono"><?= $fmtDate($op['operation_date'] ?? '') ?></td><td><?= e($op['account_name'] ?? '—') ?></td><td><strong><?= e($movementLabel) ?></strong></td><td><?= e($op['source_recipient_label'] ?? '—') ?></td><td class="col-mono"><?= FinanceCashService::formatAmount($op['amount'] ?? null) ?></td><td><?= e($op['purpose'] ?? ($op['comment'] ?? '—')) ?></td>
+<td class="col-mono"><?= $fmtDate($op['journal_date'] ?? ($op['operation_date'] ?? '')) ?></td>
+<td><?= e($op['account_name'] ?? '—') ?></td>
+<td><strong><?= e($movementLabel) ?></strong></td>
+<td><?= e($op['source_label'] ?? '—') ?></td>
+<td><?= e($op['handoff_recipient_label'] ?? '—') ?></td>
+<td class="col-mono"><?= FinanceCashService::formatAmount($op['amount'] ?? null) ?></td>
+<td><?= e($op['display_purpose'] ?? '—') ?></td>
 </tr>
 <?php endforeach; ?>
 </tbody></table></div></div>
+<?php if (($cashPages ?? 0) > 1):
+    $cashBaseUrl = app_url('/company/finance/cash');
+    $prevPage = max(1, $cashPage - 1);
+    $nextPage = min($cashPages, $cashPage + 1);
+?>
+<div class="cash-pagination" aria-label="Навигация по движениям кассы">
+    <a class="btn btn-secondary btn--toolbar" href="<?= e($cashBaseUrl.'?page='.$prevPage.'&per_page='.$cashPerPage) ?>" <?= $cashPage <= 1 ? 'aria-disabled="true" tabindex="-1"' : '' ?>>← Назад</a>
+    <span class="cash-pagination__meta">Страница <?= (int)$cashPage ?> из <?= (int)$cashPages ?> · всего <?= (int)$cashTotal ?> движений</span>
+    <a class="btn btn-secondary btn--toolbar" href="<?= e($cashBaseUrl.'?page='.$nextPage.'&per_page='.$cashPerPage) ?>" <?= $cashPage >= $cashPages ? 'aria-disabled="true" tabindex="-1"' : '' ?>>Вперёд →</a>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <div id="cash-dispatch-employee-modal" class="modal-overlay" role="dialog" aria-modal="true" data-close-on-overlay="0" data-close-on-escape="0"><div class="modal modal-md"><div class="modal-head"><span class="modal-title">Передать сотруднику</span><button type="button" class="modal-close" data-close-modal="cash-dispatch-employee-modal">&times;</button></div><form method="post" action="<?= app_url('/company/finance/cash/dispatch-employee') ?>" id="cash-dispatch-employee-form"><?= csrfField() ?><div class="modal-body"><div class="cash-dispatch-total">Будет разнесено: <strong id="cash-dispatch-modal-count">0 поз.</strong> на <strong id="cash-dispatch-modal-total">0,00 ₽</strong></div><div class="field mt-12"><label class="field-label" for="cash-employee-ref">Сотрудник</label><select class="field-select" id="cash-employee-ref" name="employee_ref" required><option value="">Выберите сотрудника</option><?php foreach ($cashEmployees as $employee): ?><option value="<?= e($employee['ref']) ?>"><?= e($employee['full_name']) ?><?= !empty($employee['role_code']) ? ' · '.e($employee['role_code']) : '' ?></option><?php endforeach; ?></select><div class="field-hint">Каждая выбранная позиция будет списана из технической кассы и отражена во взаиморасчётах выбранного сотрудника.</div></div><div id="cash-dispatch-source-inputs"></div></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close-modal="cash-dispatch-employee-modal">Отмена</button><button type="submit" class="btn btn-primary" id="cash-dispatch-confirm">Передать</button></div></form></div></div>
