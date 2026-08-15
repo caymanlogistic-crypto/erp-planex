@@ -37,7 +37,7 @@ $financeDashboardActive = str_starts_with($requestPath, '/company/finance/dashbo
 $operationsActive = str_starts_with($requestPath, '/company/finance/operations');
 $bankStatementSettingsActive = str_starts_with($requestPath, '/company/bank-statement-settings');
 
-$navigationCounters = ['bank_attention' => 0];
+$navigationCounters = ['bank_attention' => 0, 'cash_attention' => 0];
 if ($roleCode === 'company_owner' && (int)$companyId > 0) {
     $navigationCounters = \App\Service\NavigationCounterService::forCompany(
         $config,
@@ -47,6 +47,7 @@ if ($roleCode === 'company_owner' && (int)$companyId > 0) {
     );
 }
 $bankAttentionCount = max(0, (int)($navigationCounters['bank_attention'] ?? 0));
+$cashAttentionCount = max(0, (int)($navigationCounters['cash_attention'] ?? 0));
 $wideWorkspacePrefixes = [
     '/company/clients',
     '/company/trips/linear',
@@ -278,6 +279,7 @@ if (empty($topbarCrumbs)) {
                         <path d="M4 4V2.5C4 2.2 4.2 2 4.5 2H11.5C11.8 2 12 2.2 12 2.5V4" stroke="currentColor" stroke-width="1.4"/>
                     </svg>
                     <span class="nav-label">Касса</span>
+                    <?php if ($cashAttentionCount > 0): ?><span class="nav-count is-alert" title="Неразнесённые позиции технической кассы"><?= $cashAttentionCount > 999 ? '999+' : $cashAttentionCount ?></span><?php endif; ?>
                 </a>
                 <a class="nav-item<?= $invoicesActive ? ' is-active' : '' ?>" href="<?= app_url('/company/finance/invoices') ?>">
                     <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
