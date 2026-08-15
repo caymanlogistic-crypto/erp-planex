@@ -26,8 +26,10 @@ $pdo = new PDO(
     getenv('EMPLOYEE_PAYMENTS_DB_PASSWORD') ?: 'root',
     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
 );
+$pdo->exec('SET FOREIGN_KEY_CHECKS=0');
 $pdo->exec('DROP TABLE IF EXISTS bank_transactions');
 $pdo->exec('DROP TABLE IF EXISTS bank_accounts');
+$pdo->exec('SET FOREIGN_KEY_CHECKS=1');
 $pdo->exec("CREATE TABLE bank_accounts(id INT UNSIGNED PRIMARY KEY, account_number VARCHAR(64) NOT NULL) ENGINE=InnoDB");
 $pdo->exec("CREATE TABLE bank_transactions(
  id INT UNSIGNED PRIMARY KEY, account_id INT UNSIGNED NOT NULL, operation_date DATE NOT NULL,
