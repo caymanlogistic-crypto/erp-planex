@@ -1,7 +1,7 @@
 <?php
 
+use App\Service\FinanceCashLedgerService;
 use App\Service\FinanceCashService;
-use App\Service\FinanceOperationService;
 
 $fmtDate = function ($d) { return ($d && $d !== '—') ? date('d.m.Y', is_numeric(strtotime($d)) ? strtotime($d) : time()) : '—'; };
 ?>
@@ -87,7 +87,7 @@ $fmtDate = function ($d) { return ($d && $d !== '—') ? date('d.m.Y', is_numeri
 </div>
 <?php endif; ?>
 
-<div class="section-title mt-section">Последние операции и переводы
+<div class="section-title mt-section">Движения по кассе
     <?php if (isset($cashTotal)): ?>
     <span class="section-title-meta">— <?= count($recentOperations) ?> из <?= $cashTotal ?> (стр. <?= $cashPage ?>/<?= $cashPages ?>)</span>
     <?php endif; ?>
@@ -96,7 +96,7 @@ $fmtDate = function ($d) { return ($d && $d !== '—') ? date('d.m.Y', is_numeri
 <div class="panel">
     <div class="panel-body">
         <div class="empty-state">
-            <p class="empty-title">Операций нет.</p>
+            <p class="empty-title">Движений нет.</p>
             <p class="empty-desc">Проведите приход, расход или внутренний перевод.</p>
         </div>
     </div>
@@ -104,28 +104,25 @@ $fmtDate = function ($d) { return ($d && $d !== '—') ? date('d.m.Y', is_numeri
 <?php else: ?>
 <div class="table-card table-card--standard">
     <div class="table-scroll">
-        <table class="table">
+        <table class="table" id="cash-ledger-table">
             <thead>
                 <tr>
                     <th>Дата</th>
-                    <th>Счёт</th>
-                    <th>Тип</th>
+                    <th>Касса</th>
+                    <th>Движение</th>
+                    <th>Источник / Получатель</th>
                     <th>Сумма</th>
                     <th>Назначение</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($recentOperations as $op): ?>
-                <tr>
+                <?php $movementLabel = FinanceCashLedgerService::movementLabel($op); ?>
+                <tr data-cash-ledger-row data-cash-direction="<?= e($op['cash_direction'] ?? '') ?>">
                     <td class="col-mono"><?= $fmtDate($op['operation_date'] ?? '') ?></td>
                     <td><?= e($op['account_name'] ?? '—') ?></td>
-                    <td>
-                        <?php if (($op['operation_type'] ?? '') === 'TRANSFER'): ?>
-                            <?= ($op['transfer_direction'] ?? '') === 'out' ? 'Перевод (исходящий)' : 'Перевод (входящий)' ?>
-                        <?php else: ?>
-                            <?= e(FinanceOperationService::operationTypeLabel($op['operation_type'] ?? null)) ?>
-                        <?php endif; ?>
-                    </td>
+                    <td><strong><?= e($movementLabel) ?></strong></td>
+                    <td><?= e($op['source_recipient_label'] ?? '—') ?></td>
                     <td class="col-mono"><?= FinanceCashService::formatAmount($op['amount'] ?? null) ?></td>
                     <td><?= e($op['purpose'] ?? ($op['comment'] ?? '—')) ?></td>
                 </tr>
