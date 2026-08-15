@@ -21,14 +21,27 @@ trait FinanceMatchingRuleValidationTrait
         $from=self::moneyOrNull($pick('amount_from'));$to=self::moneyOrNull($pick('amount_to'));
         if($from!==null&&$to!==null&&self::cents($from)>self::cents($to))throw new \InvalidArgumentException('Сумма «от» больше суммы «до».');
         $cfu=self::nullableInt($pick('target_cash_flow_center_id'));$dds=self::nullableInt($pick('target_dds_category_id'));$cash=self::nullableInt($pick('target_cash_account_id'));
-        if($cfu!==null)self::assertCfu($pdo,$cfu);if($dds!==null)self::assertDds($pdo,$dds,$direction);if($cash!==null)self::assertCashAccount($pdo,$cash);
-        if($cfu!==null&&$dds!==null)FinanceStructureService::assertLinkedPair($pdo,$cfu,$dds);
-        if($action==='categorize'&&$cfu===null&&$dds===null)throw new \InvalidArgumentException('Для разнесения выберите ЦФУ и/или статью ДДС.');
-        if($action==='transfer_to_cash'){
-            if($cash===null)throw new \InvalidArgumentException('Для перевода выберите целевую кассу.');
+
+        // A normal categorization rule becomes a combined rule only when the user
+        // explicitly selects a target cash account. Clearing the cash account on edit
+        // converts it back to an ordinary categorization rule.
+        if($action==='categorize'&&$cash!==null)$action='categorize_to_cash';
+        if($action==='categorize_to_cash'&&$cash===null)$action='categorize';
+
+        if(in_array($action,['transfer_to_cash','categorize_to_cash'],true)){
             if($direction!==null&&$direction!=='EXPENSE')throw new \InvalidArgumentException('Перевод Банк → Касса применим только к расходу.');
             $direction='EXPENSE';
         }
+
+        if($cfu!==null)self::assertCfu($pdo,$cfu);if($dds!==null)self::assertDds($pdo,$dds,$direction);if($cash!==null)self::assertCashAccount($pdo,$cash);
+        if($cfu!==null&&$dds!==null)FinanceStructureService::assertLinkedPair($pdo,$cfu,$dds);
+        if($action==='categorize'&&$cfu===null&&$dds===null)throw new \InvalidArgumentException('Для разнесения выберите ЦФУ и/или статью ДДС.');
+        if($action==='categorize_to_cash'){
+            if($cfu===null||$dds===null)throw new \InvalidArgumentException('Для разнесения с переводом в кассу выберите ЦФУ и статью ДДС.');
+            if($cash===null)throw new \InvalidArgumentException('Для перевода выберите целевую кассу.');
+        }
+        if($action==='transfer_to_cash'&&$cash===null)throw new \InvalidArgumentException('Для перевода выберите целевую кассу.');
+
         return [
             'name'=>$name,'priority'=>$priority,'direction'=>$direction,'bank_account_id'=>self::nullableInt($pick('bank_account_id')),
             'counterparty_inn'=>$inn,'counterparty_id'=>self::nullableInt($pick('counterparty_id')),'counterparty_type'=>self::nullableString($pick('counterparty_type')),
