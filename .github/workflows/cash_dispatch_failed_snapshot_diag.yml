@@ -1,0 +1,70 @@
+name: Cash Dispatch Failed Snapshot Diagnostic
+on:
+  push:
+    branches: [agent/cash-dispatch-failed-snapshot-diag-20260815]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/diag"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/diag" "$HOME/.ssh/known_hosts"
+      - name: Execute failed snapshot read-only
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$PORT" -i "$HOME/.ssh/diag" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -se' <<'REMOTE' | tee FAILED_SNAPSHOT_DIAG.txt
+          set +e
+          ROOT=/home/s/spugovxsim/planexp
+          echo '=== FAILED SNAPSHOTS ==='
+          find "$ROOT/deploy" -maxdepth 1 -type d \( -name 'P07_failed_*_89785c8e2a3a' -o -name 'P07_failed_*_72144410c3ee' \) -printf '%T@ %p\n' | sort -nr
+          FAILED="$(find "$ROOT/deploy" -maxdepth 1 -type d -name 'P07_failed_*_89785c8e2a3a' -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
+          echo "FAILED=$FAILED"
+          test -n "$FAILED" || exit 0
+          echo '=== SNAPSHOT ENV/PATH ==='
+          ls -la "$FAILED" | head -40
+          test -f "$FAILED/.env" && echo ENV_PRESENT || echo ENV_MISSING
+          echo '=== CLI LOGIN REQUEST ==='
+          cd "$FAILED"
+          APP_BASE_PATH=/erpv2 REQUEST_METHOD=GET REQUEST_URI=/erpv2/login SCRIPT_NAME=/erpv2/index.php HTTP_HOST=planexp.ru \
+            php -d display_errors=1 -d display_startup_errors=1 -d error_reporting=E_ALL public/index.php > /tmp/failed_stdout 2> /tmp/failed_stderr
+          rc=$?
+          echo "CLI_RC=$rc"
+          echo '--- STDERR'; cat /tmp/failed_stderr
+          echo '--- STDOUT'; head -c 10000 /tmp/failed_stdout; echo
+          echo '=== BOOTSTRAP REQUIRE PROBE ==='
+          php -d display_errors=1 -d display_startup_errors=1 -d error_reporting=E_ALL -r '
+            chdir(getenv("FAILED_DIR"));
+            $_SERVER["REQUEST_METHOD"]="GET";
+            $_SERVER["REQUEST_URI"]="/erpv2/login";
+            $_SERVER["HTTP_HOST"]="planexp.ru";
+            require "public/index.php";
+          ' 2>&1 | head -200
+          echo '=== SEARCH SERVER LOGS AROUND DEPLOY ==='
+          for f in "$ROOT/public_html/error_log" "$ROOT/error_log" "$FAILED/error_log"; do if [ -f "$f" ]; then echo "--- $f"; tail -n 200 "$f"; fi; done
+          rm -f /tmp/failed_stdout /tmp/failed_stderr
+          REMOTE
+        env:
+          FAILED_DIR: ignored
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: failed_snapshot_diag_${{ github.sha }}
+          path: FAILED_SNAPSHOT_DIAG.txt
+          if-no-files-found: warn
