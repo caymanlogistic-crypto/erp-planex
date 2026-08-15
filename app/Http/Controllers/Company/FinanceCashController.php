@@ -60,11 +60,4 @@ final class FinanceCashController
         $db = $this->db;
         require base_path('app/Http/Controllers/Company/FinanceCashActions/transfer_create_submit.php');
     }
-
-    public function dispatchEmployeeSubmit(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/FinanceCashActions/dispatch_employee_submit.php');
-    }
 }
