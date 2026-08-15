@@ -140,14 +140,17 @@ final class FinanceCashResolutionService
                 $totalCents += self::toCents((string)($source['amount'] ?? '0'));
             }
 
+            // The cash outflow represents the handoff event itself, not the date
+            // of the historical bank/card purchase that funded the transit cash.
+            // Capture once so an entire batch always has one factual handoff date.
+            $dispatchDate = date('Y-m-d');
+
             foreach ($sources as $source) {
                 $sourceId = (int)$source['id'];
                 $sourcePurpose = trim((string)($source['purpose'] ?? ''));
-                $purpose = 'Передано сотруднику: ' . (string)$employee['full_name'];
-                if ($sourcePurpose !== '') {
-                    $purpose .= ' · ' . $sourcePurpose;
-                }
-                $purpose = mb_substr($purpose, 0, 950);
+                $purpose = $sourcePurpose !== ''
+                    ? mb_substr($sourcePurpose, 0, 950)
+                    : 'Разнесение технической кассы';
 
                 $movement = FinanceEmployeePaymentService::createCashMovement(
                     $localPdo,
@@ -155,7 +158,7 @@ final class FinanceCashResolutionService
                         'movement_type' => 'PAYMENT',
                         'money_account_id' => $mainCashId,
                         'amount' => (string)$source['amount'],
-                        'operation_date' => (string)$source['operation_date'],
+                        'operation_date' => $dispatchDate,
                         'purpose' => $purpose,
                         'comment' => 'Разнесение технической кассы. Источник finance_operation #' . $sourceId . '.',
                     ],
