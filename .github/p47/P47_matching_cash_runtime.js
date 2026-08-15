@@ -36,12 +36,14 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     const cfu = modal.locator('#matching-rule-cfu');
     const dds = modal.locator('#matching-rule-dds');
     const cash = modal.locator('#matching-rule-cash');
+    const cashNote = modal.locator('#matching-rule-cash-note');
     ok(await cfu.count() === 1, 'CFU selector missing');
     ok(await dds.count() === 1, 'DDS selector missing');
     ok(await cash.count() === 1, 'cash transfer selector missing');
+    ok(await cashNote.count() === 1, 'cash transfer helper missing');
     ok((await modal.innerText()).includes('После разнесения'), 'cash transfer UX label missing');
-    ok((await modal.innerText()).includes('Повторный перевод не создаётся'), 'idempotency hint missing');
     ok(await cash.isDisabled(), 'cash selector must be disabled until an expense DDS is selected');
+    ok((await cashNote.innerText()).includes('только после выбора расходной статьи'), 'initial cash helper state is incorrect');
 
     const options = dds.locator('option');
     const optionData = await options.evaluateAll(opts => opts.map(o => ({ value: o.value, direction: (o.dataset.direction || '').toUpperCase(), disabled: o.disabled })));
@@ -49,6 +51,7 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     ok(expense, 'no active expense DDS available for runtime UI acceptance');
     await dds.selectOption(expense.value);
     ok(!(await cash.isDisabled()), 'cash selector did not enable for expense DDS');
+    ok((await cashNote.innerText()).includes('Повторный перевод не создаётся'), 'idempotency hint missing after expense DDS selection');
 
     const cashOptions = await cash.locator('option').count();
     ok(cashOptions >= 2, 'no active cash account available in selector');
