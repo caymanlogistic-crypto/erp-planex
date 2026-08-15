@@ -4,7 +4,7 @@ use App\Core\Database;
 final class BankFinanceController{
  public function __construct(private readonly array $config,private readonly Database $db){}
  private function action(string $name,array $vars=[]):void{$config=$this->config;$db=$this->db;if($vars){extract($vars,EXTR_SKIP);}require base_path('app/Http/Controllers/Company/BankFinanceActions/'.$name.'.php');}
- public function index():void{$this->action('index');}
+ public function index():void{$this->action('indexAutoFilters');}
  public function import():void{$this->action('import');}
  public function refreshFromMail():void{$this->action('refreshFromMail');}
  public function applyRules():void{$this->action('applyRules');}
