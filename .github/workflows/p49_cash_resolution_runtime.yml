@@ -85,5 +85,7 @@ jobs:
         if: always()
         with:
           name: P49_cash_resolution_runtime_${{ steps.sha.outputs.sha }}
-          path: P49_RUNTIME.txt
+          path: |
+            P49_RUNTIME.txt
+            P49_cash_checkbox.png
           if-no-files-found: warn
