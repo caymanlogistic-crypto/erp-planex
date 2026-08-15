@@ -32,34 +32,66 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     const ledger = page.locator('#cash-ledger-table');
     await ledger.waitFor({ state: 'visible', timeout: 10000 });
     const headers = await ledger.locator('thead th').allInnerTexts();
-    const expected = ['Дата', 'Касса', 'Движение', 'Источник / Получатель', 'Сумма', 'Назначение'];
-    ok(JSON.stringify(headers.map(normalize)) === JSON.stringify(expected.map(normalize)), 'cash ledger headers mismatch: ' + JSON.stringify(headers));
+    const expected = ['', 'Дата', 'Касса', 'Движение', 'Получено от', 'Назначение', 'Сумма', 'Передано'];
+    ok(JSON.stringify(headers.map(normalize)) === JSON.stringify(expected.map(normalize)), 'cash lifecycle headers mismatch: ' + JSON.stringify(headers));
 
     const rows = ledger.locator('tbody tr[data-cash-ledger-row]');
     const rowCount = await rows.count();
     ok(rowCount > 0, 'cash ledger has no rows for runtime acceptance');
 
     let companyAccountSourceSeen = false;
+    let resolvedLifecycleSeen = false;
+    let unresolvedSeen = false;
+    const allowedMovements = [
+      'Поступление',
+      'Списание',
+      'Получено',
+      'Получено → передано',
+      'Получено → разнесено',
+    ].map(normalize);
+
     for (let i = 0; i < rowCount; i++) {
       const row = rows.nth(i);
       const direction = await row.getAttribute('data-cash-direction');
       ok(direction === 'in' || direction === 'out', 'invalid cash direction on row ' + i + ': ' + direction);
       const cells = row.locator('td');
-      ok(await cells.count() === 6, 'cash ledger row must have six cells');
-      const cashName = (await cells.nth(1).innerText()).trim();
-      const movement = (await cells.nth(2).innerText()).trim();
-      const sourceRecipient = (await cells.nth(3).innerText()).trim();
+      ok(await cells.count() === 8, 'cash lifecycle row must have eight cells');
+
+      const cashName = (await cells.nth(2).innerText()).trim();
+      const movement = (await cells.nth(3).innerText()).trim();
+      const source = (await cells.nth(4).innerText()).trim();
+      const purpose = (await cells.nth(5).innerText()).trim();
+      const amount = (await cells.nth(6).innerText()).trim();
+      const handedTo = (await cells.nth(7).innerText()).trim();
+
       ok(cashName !== '', 'cash name missing on row ' + i);
-      ok(normalize(movement) === normalize('Поступление') || normalize(movement) === normalize('Списание'), 'raw/invalid movement label on row ' + i + ': ' + movement);
+      ok(allowedMovements.includes(normalize(movement)), 'raw/invalid lifecycle movement label on row ' + i + ': ' + movement);
       ok(!normalize(movement).includes(normalize('Перевод (')), 'technical transfer label leaked into cash ledger');
-      ok(sourceRecipient !== '', 'source/recipient missing on row ' + i);
-      if (normalize(sourceRecipient).startsWith(normalize('Расчётный счёт '))) companyAccountSourceSeen = true;
+      ok(purpose !== '', 'purpose missing on row ' + i);
+      ok(amount !== '', 'amount missing on row ' + i);
+      ok(source !== '', 'source missing on row ' + i);
+      if (normalize(source).startsWith(normalize('Расчётный счёт '))) companyAccountSourceSeen = true;
+
+      if (normalize(movement) === normalize('Получено → передано') || normalize(movement) === normalize('Получено → разнесено')) {
+        resolvedLifecycleSeen = true;
+        ok(handedTo !== '' && handedTo !== '—', 'resolved lifecycle recipient missing on row ' + i);
+        ok(/\d{2}\.\d{2}\.\d{4}/.test(handedTo), 'resolved lifecycle handoff date missing on row ' + i + ': ' + handedTo);
+      }
+
+      if ((await row.getAttribute('data-cash-selectable')) === '1') unresolvedSeen = true;
     }
 
-    ok(companyAccountSourceSeen, 'company bank account source is not visible in current cash ledger data');
+    ok(companyAccountSourceSeen, 'company bank account source is not visible in current cash lifecycle data');
+    ok(resolvedLifecycleSeen, 'current production data has no visible resolved lifecycle row');
+    ok(unresolvedSeen, 'current production data has no visible unresolved lifecycle row');
+
     const ledgerText = normalize(await ledger.innerText());
+    ok(!ledgerText.includes(normalize('Передача сотруднику')), 'duplicate employee handoff outflow is still visible');
+    ok(!ledgerText.includes(normalize('Источник / Получатель')), 'legacy mixed source/recipient column is still visible');
     ok(!ledgerText.includes(normalize('Перевод (входящий)')), 'raw incoming transfer label visible');
     ok(!ledgerText.includes(normalize('Перевод (исходящий)')), 'raw outgoing transfer label visible');
+
+    await page.screenshot({ path: 'P48_cash_lifecycle.png', fullPage: true });
 
     // Deliberately read-only: no forms are submitted and no finance records are changed.
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
