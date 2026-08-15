@@ -42,6 +42,7 @@ jobs:
           php -l app/View/partials/company_finance_employee_payment_form.php
           php -l app/View/partials/company_finance_employee_payment_ledger.php
           php -l app/View/partials/company_bank_transaction_classify_form.php
+          php -l scripts/p41_apply_finance_matching_migration.php
           php -l tests/finance_matching_classification_test.php
           php -l tests/finance_employee_payments_test.php
       - name: Matching semantics
@@ -70,6 +71,11 @@ jobs:
           grep -q 'uk_fem_finance_operation' database/migrations-local/065_finance_employee_movements.sql
           grep -q 'uk_fem_bank_transaction' database/migrations-local/065_finance_employee_movements.sql
           grep -q 'fk_fem_employee' database/migrations-local/065_finance_employee_movements.sql
+          grep -q 'employee_identity_type' database/migrations-local/066_finance_employee_identity.sql
+          grep -q 'employee_identity_id' database/migrations-local/066_finance_employee_identity.sql
+          grep -q 'employee_name_snapshot' database/migrations-local/066_finance_employee_identity.sql
+          grep -q 'employee_role_snapshot' database/migrations-local/066_finance_employee_identity.sql
+          grep -q 'DROP FOREIGN KEY `fk_fem_employee`' database/migrations-local/066_finance_employee_identity.sql
       - uses: actions/upload-artifact@v4
         if: always()
         with:
