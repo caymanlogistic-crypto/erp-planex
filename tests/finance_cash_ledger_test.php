@@ -111,4 +111,7 @@ assertCashLedger(str_contains($view, 'FinanceCashLedgerService::movementLabel'),
 assertCashLedger(!str_contains($view, 'Перевод (исходящий)'), 'raw outgoing transfer label must not be shown in cash journal');
 assertCashLedger(!str_contains($view, 'Перевод (входящий)'), 'raw incoming transfer label must not be shown in cash journal');
 
+$runtimeDependencies = file_get_contents(__DIR__ . '/../app/Support/entrypoint_dependencies.php');
+assertCashLedger(str_contains($runtimeDependencies, "app/Service/FinanceCashLedgerService.php"), 'public runtime must load FinanceCashLedgerService');
+
 echo "FINANCE_CASH_LEDGER_OK\n";
