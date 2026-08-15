@@ -8,9 +8,10 @@ use PDO;
  * Read-only projection for the cash journal.
  *
  * Finance transfers are stored as two linked finance_operations rows. The cash
- * journal exposes only the CASH side and describes the real counterpart. It
- * also marks unresolved incoming rows of the technical "Основная касса" so the
- * UI can use them as the work queue without mutating the source history.
+ * journal exposes only the CASH side. Technical-cash resolutions are projected
+ * as one lifecycle row: the original receipt remains the canonical row and the
+ * later handoff is attached to it instead of being rendered as a duplicate
+ * outflow row.
  */
 final class FinanceCashLedgerService
 {
@@ -24,7 +25,10 @@ final class FinanceCashLedgerService
                        FROM finance_operations fo
                        JOIN finance_money_accounts cash_account
                          ON cash_account.id = fo.money_account_id
-                        AND cash_account.type = 'CASH'";
+                        AND cash_account.type = 'CASH'
+                  LEFT JOIN finance_cash_resolutions outflow_resolution
+                         ON outflow_resolution.outflow_finance_operation_id = fo.id
+                      WHERE outflow_resolution.id IS NULL";
         $countStmt = $pdo->query($countSql);
         $total = (int) $countStmt->fetchColumn();
 
@@ -38,13 +42,9 @@ final class FinanceCashLedgerService
                        source_resolution.id AS cash_resolution_id,
                        source_resolution.resolution_type AS cash_resolution_type,
                        source_resolution.target_name_snapshot AS cash_resolution_target,
-                       outflow_resolution.id AS cash_outflow_resolution_id,
-                       outflow_resolution.resolution_type AS cash_outflow_resolution_type,
-                       outflow_resolution.target_name_snapshot AS cash_handoff_target,
-                       outflow_resolution.created_at AS cash_handoff_created_at,
-                       resolution_source.operation_date AS cash_handoff_source_date,
-                       resolution_source.purpose AS cash_handoff_source_purpose,
-                       resolution_source_counterpart.name AS cash_handoff_source_account
+                       source_resolution.created_at AS cash_resolution_created_at,
+                       source_resolution.outflow_finance_operation_id AS cash_resolution_outflow_id,
+                       outflow_resolution.id AS cash_outflow_resolution_id
                   FROM finance_operations fo
                   JOIN finance_money_accounts cash_account
                     ON cash_account.id = fo.money_account_id
@@ -63,10 +63,7 @@ final class FinanceCashLedgerService
                     ON source_resolution.source_finance_operation_id = fo.id
              LEFT JOIN finance_cash_resolutions outflow_resolution
                     ON outflow_resolution.outflow_finance_operation_id = fo.id
-             LEFT JOIN finance_operations resolution_source
-                    ON resolution_source.id = outflow_resolution.source_finance_operation_id
-             LEFT JOIN finance_money_accounts resolution_source_counterpart
-                    ON resolution_source_counterpart.id = resolution_source.transfer_account_id
+                 WHERE outflow_resolution.id IS NULL
               ORDER BY fo.created_at DESC, fo.id DESC
                  LIMIT :limit OFFSET :offset";
 
@@ -79,11 +76,13 @@ final class FinanceCashLedgerService
         foreach ($rows as &$row) {
             $row['cash_direction'] = self::cashDirection($row);
             $row['source_recipient_label'] = self::legacySourceRecipientLabel($row);
-            $row['journal_date'] = self::journalDate($row);
+            $row['journal_date'] = (string)($row['operation_date'] ?? '');
             $row['source_label'] = self::sourceLabel($row);
             $row['handoff_recipient_label'] = self::handoffRecipientLabel($row);
+            $row['handoff_date'] = self::handoffDate($row);
             $row['display_purpose'] = self::displayPurpose($row);
             $row['is_unresolved_cash_source'] = self::isUnresolvedTechnicalSource($row);
+            $row['is_resolved_cash_lifecycle'] = self::isResolvedCashLifecycle($row);
         }
         unset($row);
 
@@ -98,8 +97,14 @@ final class FinanceCashLedgerService
 
     public static function movementLabel(array $row): string
     {
-        if (self::isEmployeeHandoffOutflow($row)) {
-            return 'Передача сотруднику';
+        if (self::isResolvedCashLifecycle($row)) {
+            if (strtoupper((string)($row['cash_resolution_type'] ?? '')) === FinanceCashResolutionService::RESOLUTION_EMPLOYEE) {
+                return 'Получено → передано';
+            }
+            return 'Получено → разнесено';
+        }
+        if (self::isUnresolvedTechnicalSource($row)) {
+            return 'Получено';
         }
         return self::cashDirection($row) === 'out' ? 'Списание' : 'Поступление';
     }
@@ -121,30 +126,16 @@ final class FinanceCashLedgerService
         return FinanceCashResolutionService::isIncomingSource($row);
     }
 
-    private static function isEmployeeHandoffOutflow(array $row): bool
+    private static function isResolvedCashLifecycle(array $row): bool
     {
-        return !empty($row['cash_outflow_resolution_id'])
-            && strtoupper((string)($row['cash_outflow_resolution_type'] ?? '')) === FinanceCashResolutionService::RESOLUTION_EMPLOYEE;
-    }
-
-    private static function journalDate(array $row): string
-    {
-        if (self::isEmployeeHandoffOutflow($row)) {
-            $createdAt = trim((string)($row['cash_handoff_created_at'] ?? ''));
-            if ($createdAt !== '') {
-                return substr($createdAt, 0, 10);
-            }
-        }
-        return (string)($row['operation_date'] ?? '');
+        if (empty($row['cash_resolution_id'])) return false;
+        if (($row['status'] ?? '') !== 'POSTED') return false;
+        if (trim((string)($row['account_name'] ?? '')) !== FinanceCashResolutionService::MAIN_CASH_NAME) return false;
+        return FinanceCashResolutionService::isIncomingSource($row);
     }
 
     private static function sourceLabel(array $row): string
     {
-        if (self::isEmployeeHandoffOutflow($row)) {
-            $sourceAccount = trim((string)($row['cash_handoff_source_account'] ?? ''));
-            return $sourceAccount !== '' ? $sourceAccount : '—';
-        }
-
         $employeeName = trim((string)($row['employee_name'] ?? ''));
         $movementType = strtoupper((string)($row['employee_movement_type'] ?? ''));
         if ($employeeName !== '' && $movementType === 'RETURN') {
@@ -157,8 +148,8 @@ final class FinanceCashLedgerService
 
     private static function handoffRecipientLabel(array $row): string
     {
-        if (self::isEmployeeHandoffOutflow($row)) {
-            $target = trim((string)($row['cash_handoff_target'] ?? ''));
+        if (self::isResolvedCashLifecycle($row)) {
+            $target = trim((string)($row['cash_resolution_target'] ?? ''));
             if ($target !== '') return $target;
         }
 
@@ -171,13 +162,15 @@ final class FinanceCashLedgerService
         return '—';
     }
 
+    private static function handoffDate(array $row): string
+    {
+        if (!self::isResolvedCashLifecycle($row)) return '';
+        $createdAt = trim((string)($row['cash_resolution_created_at'] ?? ''));
+        return $createdAt !== '' ? substr($createdAt, 0, 10) : '';
+    }
+
     private static function displayPurpose(array $row): string
     {
-        if (self::isEmployeeHandoffOutflow($row)) {
-            $sourcePurpose = trim((string)($row['cash_handoff_source_purpose'] ?? ''));
-            return $sourcePurpose !== '' ? $sourcePurpose : '—';
-        }
-
         $purpose = trim((string)($row['purpose'] ?? ''));
         if ($purpose !== '') return $purpose;
         $comment = trim((string)($row['comment'] ?? ''));
