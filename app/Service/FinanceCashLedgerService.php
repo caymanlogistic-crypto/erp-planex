@@ -35,9 +35,16 @@ final class FinanceCashLedgerService
                        counterpart.type AS counterpart_account_type,
                        employee.employee_name_snapshot AS employee_name,
                        employee.movement_type AS employee_movement_type,
-                       resolution.id AS cash_resolution_id,
-                       resolution.resolution_type AS cash_resolution_type,
-                       resolution.target_name_snapshot AS cash_resolution_target
+                       source_resolution.id AS cash_resolution_id,
+                       source_resolution.resolution_type AS cash_resolution_type,
+                       source_resolution.target_name_snapshot AS cash_resolution_target,
+                       outflow_resolution.id AS cash_outflow_resolution_id,
+                       outflow_resolution.resolution_type AS cash_outflow_resolution_type,
+                       outflow_resolution.target_name_snapshot AS cash_handoff_target,
+                       outflow_resolution.created_at AS cash_handoff_created_at,
+                       resolution_source.operation_date AS cash_handoff_source_date,
+                       resolution_source.purpose AS cash_handoff_source_purpose,
+                       resolution_source_counterpart.name AS cash_handoff_source_account
                   FROM finance_operations fo
                   JOIN finance_money_accounts cash_account
                     ON cash_account.id = fo.money_account_id
@@ -52,8 +59,14 @@ final class FinanceCashLedgerService
                         GROUP BY finance_operation_id
                        ) employee
                     ON employee.finance_operation_id = fo.id
-             LEFT JOIN finance_cash_resolutions resolution
-                    ON resolution.source_finance_operation_id = fo.id
+             LEFT JOIN finance_cash_resolutions source_resolution
+                    ON source_resolution.source_finance_operation_id = fo.id
+             LEFT JOIN finance_cash_resolutions outflow_resolution
+                    ON outflow_resolution.outflow_finance_operation_id = fo.id
+             LEFT JOIN finance_operations resolution_source
+                    ON resolution_source.id = outflow_resolution.source_finance_operation_id
+             LEFT JOIN finance_money_accounts resolution_source_counterpart
+                    ON resolution_source_counterpart.id = resolution_source.transfer_account_id
               ORDER BY fo.created_at DESC, fo.id DESC
                  LIMIT :limit OFFSET :offset";
 
@@ -65,7 +78,11 @@ final class FinanceCashLedgerService
 
         foreach ($rows as &$row) {
             $row['cash_direction'] = self::cashDirection($row);
-            $row['source_recipient_label'] = self::sourceRecipientLabel($row);
+            $row['source_recipient_label'] = self::legacySourceRecipientLabel($row);
+            $row['journal_date'] = self::journalDate($row);
+            $row['source_label'] = self::sourceLabel($row);
+            $row['handoff_recipient_label'] = self::handoffRecipientLabel($row);
+            $row['display_purpose'] = self::displayPurpose($row);
             $row['is_unresolved_cash_source'] = self::isUnresolvedTechnicalSource($row);
         }
         unset($row);
@@ -81,6 +98,9 @@ final class FinanceCashLedgerService
 
     public static function movementLabel(array $row): string
     {
+        if (self::isEmployeeHandoffOutflow($row)) {
+            return 'Передача сотруднику';
+        }
         return self::cashDirection($row) === 'out' ? 'Списание' : 'Поступление';
     }
 
@@ -101,7 +121,74 @@ final class FinanceCashLedgerService
         return FinanceCashResolutionService::isIncomingSource($row);
     }
 
-    private static function sourceRecipientLabel(array $row): string
+    private static function isEmployeeHandoffOutflow(array $row): bool
+    {
+        return !empty($row['cash_outflow_resolution_id'])
+            && strtoupper((string)($row['cash_outflow_resolution_type'] ?? '')) === FinanceCashResolutionService::RESOLUTION_EMPLOYEE;
+    }
+
+    private static function journalDate(array $row): string
+    {
+        if (self::isEmployeeHandoffOutflow($row)) {
+            $createdAt = trim((string)($row['cash_handoff_created_at'] ?? ''));
+            if ($createdAt !== '') {
+                return substr($createdAt, 0, 10);
+            }
+        }
+        return (string)($row['operation_date'] ?? '');
+    }
+
+    private static function sourceLabel(array $row): string
+    {
+        if (self::isEmployeeHandoffOutflow($row)) {
+            $sourceAccount = trim((string)($row['cash_handoff_source_account'] ?? ''));
+            return $sourceAccount !== '' ? $sourceAccount : '—';
+        }
+
+        $employeeName = trim((string)($row['employee_name'] ?? ''));
+        $movementType = strtoupper((string)($row['employee_movement_type'] ?? ''));
+        if ($employeeName !== '' && $movementType === 'RETURN') {
+            return $employeeName;
+        }
+
+        $counterpart = trim((string)($row['counterpart_account_name'] ?? ''));
+        return $counterpart !== '' ? $counterpart : '—';
+    }
+
+    private static function handoffRecipientLabel(array $row): string
+    {
+        if (self::isEmployeeHandoffOutflow($row)) {
+            $target = trim((string)($row['cash_handoff_target'] ?? ''));
+            if ($target !== '') return $target;
+        }
+
+        $employeeName = trim((string)($row['employee_name'] ?? ''));
+        $movementType = strtoupper((string)($row['employee_movement_type'] ?? ''));
+        if ($employeeName !== '' && $movementType === 'PAYMENT') {
+            return $employeeName;
+        }
+
+        return '—';
+    }
+
+    private static function displayPurpose(array $row): string
+    {
+        if (self::isEmployeeHandoffOutflow($row)) {
+            $sourcePurpose = trim((string)($row['cash_handoff_source_purpose'] ?? ''));
+            return $sourcePurpose !== '' ? $sourcePurpose : '—';
+        }
+
+        $purpose = trim((string)($row['purpose'] ?? ''));
+        if ($purpose !== '') return $purpose;
+        $comment = trim((string)($row['comment'] ?? ''));
+        return $comment !== '' ? $comment : '—';
+    }
+
+    /**
+     * Backward-compatible projection kept for callers outside the cash table.
+     * New UI uses source_label + handoff_recipient_label instead.
+     */
+    private static function legacySourceRecipientLabel(array $row): string
     {
         $employeeName = trim((string) ($row['employee_name'] ?? ''));
         if ($employeeName !== '') {
