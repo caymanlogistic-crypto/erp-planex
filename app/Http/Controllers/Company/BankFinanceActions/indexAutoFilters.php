@@ -31,7 +31,7 @@ $style = <<<'HTML'
 .bank-transactions-table tbody tr.bank-row-manual>td{background:#eff8ed!important}
 .bank-transactions-table tbody tr.bank-row-manual:hover>td{background:#e7f3e4!important}
 .bank-transactions-table tbody tr.bank-row-auto>td{background:#fff!important}
-.bank-transactions-table tbody tr.bank-row-auto:hover>td{background:#f8f6f1!important}
+.bank-transactions-table tbody tr.bank-row-auto:hover>td{background:#fff!important}
 .bank-controls-filter button[type="submit"],
 .bank-controls-filter a.btn,
 .bank-controls-right>a.btn[data-bank-filter-reset]{display:none!important}
