@@ -1,0 +1,64 @@
+name: P80 Cash Resolution Migration
+
+on:
+  push:
+    branches: [chatgpt/production-stabilization-20260802]
+    paths: ['.github/workflows/p80_cash_resolution_migration.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p80-cash-resolution-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Configure isolated SSH credentials
+        shell: bash
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/p80_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p80_key" "$HOME/.ssh/known_hosts"
+
+      - name: Apply migration 067 through exact deployed production CLI
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 7cad9c32020e9208686c9a86617cae3a6e0625e7
+        run: |
+          set -euo pipefail
+          out="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/p80_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "EXPECTED_SHA='$EXPECTED_SHA' bash -se" <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html""/erpv2"
+          marker="$(cat "$ROOT/deploy/P07_erpv2_deployed_commit.txt")"
+          test "$marker" = "$EXPECTED_SHA"
+          cd "$LIVE"
+          /usr/bin/php8.5 scripts/p80_apply_finance_cash_resolution_migration.php
+          REMOTE
+          )"
+          printf '%s\n' "$out"
+          grep -q '^P80_MIGRATION_OK ' <<< "$out"
+
+      - name: Verify public health after migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /tmp/p80_health_body.txt -w '%{http_code}' https://plan-ex.ru/erpv2/login)"
+          test "$code" = "200"
+
+      - name: Cleanup SSH key
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.ssh/p80_key"
