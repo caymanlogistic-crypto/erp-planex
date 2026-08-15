@@ -32,6 +32,8 @@ jobs:
           for f in app/Service/FinanceMatchingRule*Trait.php; do php -l "$f"; done
           php -l app/Service/FinanceEmployeePaymentService.php
           php -l app/Http/Controllers/Company/FinanceEmployeePaymentsController.php
+          php -l app/Http/Controllers/Company/BankFinanceController.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/indexAutoFilters.php
           php -l app/Http/Routes/company_finance_employee_payments.php
           php -l app/Http/Controllers/Company/BankFinanceActions/classifyForm.php
           php -l app/Http/Controllers/Company/BankFinanceActions/classifySubmit.php
@@ -45,6 +47,7 @@ jobs:
           php -l scripts/p41_apply_finance_matching_migration.php
           php -l tests/finance_matching_classification_test.php
           php -l tests/finance_employee_payments_test.php
+          php -l tests/finance_bank_register_filters_test.php
       - name: Matching semantics
         run: php tests/finance_matching_classification_test.php
       - name: Employee settlement behavioral regression
@@ -60,6 +63,18 @@ jobs:
           php -m | grep -qi pdo_mysql
           php tests/finance_employee_payments_test.php | tee employee_payments_regression.txt
           grep -q 'FINANCE_EMPLOYEE_PAYMENTS_BEHAVIOR_OK' employee_payments_regression.txt
+      - name: Bank register filter behavioral regression
+        env:
+          EMPLOYEE_PAYMENTS_DB_HOST: 127.0.0.1
+          EMPLOYEE_PAYMENTS_DB_PORT: 3306
+          EMPLOYEE_PAYMENTS_DB_NAME: erp_employee_payments_test
+          EMPLOYEE_PAYMENTS_DB_USER: root
+          EMPLOYEE_PAYMENTS_DB_PASSWORD: root
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/finance_bank_register_filters_test.php | tee bank_register_filters_regression.txt
+          grep -q 'FINANCE_BANK_REGISTER_FILTERS_OK' bank_register_filters_regression.txt
       - name: Migration shape
         shell: bash
         run: |
@@ -79,6 +94,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: employee_payments_regression_${{ github.sha }}
-          path: employee_payments_regression.txt
+          name: finance_regression_${{ github.sha }}
+          path: |
+            employee_payments_regression.txt
+            bank_register_filters_regression.txt
           if-no-files-found: warn
