@@ -65,6 +65,17 @@ assertTrue(str_contains($wrapper, 'setTimeout(submitNow,350)'), 'search debounce
 assertTrue(str_contains($wrapper, "textContent||'').trim()==='Применить'"), 'Apply button removal');
 assertTrue(str_contains($wrapper, '.bank-transactions-table th:nth-child(2)'), 'account column hidden');
 assertTrue(str_contains($wrapper, 'width:38%'), 'purpose column widened');
+assertTrue(str_contains($wrapper, '.bank-transactions-table th:nth-child(10)'), 'status column hidden before DOM cleanup');
+assertTrue(str_contains($wrapper, "(th.textContent||'').trim()==='Статус'"), 'status header located by semantic label');
+assertTrue(str_contains($wrapper, 'statusCell.remove()') && str_contains($wrapper, 'statusHeader.remove()'), 'status column removed from DOM');
+assertTrue(str_contains($wrapper, 'row.dataset.classificationStatus=status'), 'classification source preserved on row after status column removal');
+assertTrue(str_contains($wrapper, 'bank-row-unallocated') && str_contains($wrapper, '#fff0ed'), 'unallocated/review rows use light red background');
+assertTrue(str_contains($wrapper, 'bank-row-manual') && str_contains($wrapper, '#eff8ed'), 'manual rows use light green background');
+assertTrue(str_contains($wrapper, 'bank-row-auto') && str_contains($wrapper, 'background:#fff!important'), 'automatic rows use white background');
+assertTrue(str_contains($wrapper, "if(text.indexOf('вручную')!==-1) return 'MANUAL'"), 'manual classification maps to manual row state');
+assertTrue(str_contains($wrapper, "if(text.indexOf('автоматически')!==-1) return 'AUTO'"), 'automatic classification maps to auto row state');
+assertTrue(str_contains($wrapper, "if(text.indexOf('не разнесено')!==-1) return 'UNALLOCATED'"), 'unallocated classification maps to warning row state');
+assertTrue(str_contains($wrapper, "return 'NEEDS_REVIEW'"), 'conflict/unknown classification remains warning state');
 
 echo "FINANCE_BANK_REGISTER_FILTERS_OK\n";
 }
