@@ -8,9 +8,9 @@ use PDO;
  * Read-only projection for the cash journal.
  *
  * Finance transfers are stored as two linked finance_operations rows. The cash
- * journal must expose only the side whose money account is CASH and describe
- * the real counterpart (company account or employee) instead of leaking the
- * technical double-entry representation into the UI.
+ * journal exposes only the CASH side and describes the real counterpart. It
+ * also marks unresolved incoming rows of the technical "Основная касса" so the
+ * UI can use them as the work queue without mutating the source history.
  */
 final class FinanceCashLedgerService
 {
@@ -34,7 +34,10 @@ final class FinanceCashLedgerService
                        counterpart.name AS counterpart_account_name,
                        counterpart.type AS counterpart_account_type,
                        employee.employee_name_snapshot AS employee_name,
-                       employee.movement_type AS employee_movement_type
+                       employee.movement_type AS employee_movement_type,
+                       resolution.id AS cash_resolution_id,
+                       resolution.resolution_type AS cash_resolution_type,
+                       resolution.target_name_snapshot AS cash_resolution_target
                   FROM finance_operations fo
                   JOIN finance_money_accounts cash_account
                     ON cash_account.id = fo.money_account_id
@@ -49,6 +52,8 @@ final class FinanceCashLedgerService
                         GROUP BY finance_operation_id
                        ) employee
                     ON employee.finance_operation_id = fo.id
+             LEFT JOIN finance_cash_resolutions resolution
+                    ON resolution.source_finance_operation_id = fo.id
               ORDER BY fo.created_at DESC, fo.id DESC
                  LIMIT :limit OFFSET :offset";
 
@@ -61,6 +66,7 @@ final class FinanceCashLedgerService
         foreach ($rows as &$row) {
             $row['cash_direction'] = self::cashDirection($row);
             $row['source_recipient_label'] = self::sourceRecipientLabel($row);
+            $row['is_unresolved_cash_source'] = self::isUnresolvedTechnicalSource($row);
         }
         unset($row);
 
@@ -85,6 +91,14 @@ final class FinanceCashLedgerService
             return strtolower((string) ($row['transfer_direction'] ?? '')) === 'out' ? 'out' : 'in';
         }
         return $operationType === 'EXPENSE' ? 'out' : 'in';
+    }
+
+    private static function isUnresolvedTechnicalSource(array $row): bool
+    {
+        if (($row['status'] ?? '') !== 'POSTED') return false;
+        if (trim((string)($row['account_name'] ?? '')) !== FinanceCashResolutionService::MAIN_CASH_NAME) return false;
+        if (!empty($row['cash_resolution_id'])) return false;
+        return FinanceCashResolutionService::isIncomingSource($row);
     }
 
     private static function sourceRecipientLabel(array $row): string
