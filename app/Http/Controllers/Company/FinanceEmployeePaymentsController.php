@@ -14,14 +14,14 @@ final class FinanceEmployeePaymentsController
     public function index(): void
     {
         requireRole(['company_owner']);
-        [$company, $pdo] = $this->tenant();
+        [$company, $pdo, $central] = $this->tenant();
         $filters = [
-            'employee_user_id' => (int)($_GET['employee_user_id'] ?? 0),
+            'employee_ref' => trim((string)($_GET['employee_ref'] ?? '')),
             'source_type' => strtoupper(trim((string)($_GET['source_type'] ?? ''))),
             'date_from' => trim((string)($_GET['date_from'] ?? '')),
             'date_to' => trim((string)($_GET['date_to'] ?? '')),
         ];
-        $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo);
+        $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo, $central, (int)$company['id']);
         $summaries = FinanceEmployeePaymentService::fetchEmployeeSummaries($pdo, $filters);
         $successFlash = $_SESSION['employee_payments_success'] ?? null;
         $errorFlash = $_SESSION['employee_payments_error'] ?? null;
@@ -44,10 +44,10 @@ final class FinanceEmployeePaymentsController
     public function createForm(): void
     {
         requireRole(['company_owner']);
-        [, $pdo] = $this->tenant();
+        [$company, $pdo, $central] = $this->tenant();
         $movementType = strtoupper(trim((string)($_GET['type'] ?? 'PAYMENT')));
         if (!in_array($movementType, ['PAYMENT','RETURN'], true)) $movementType = 'PAYMENT';
-        $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo);
+        $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo, $central, (int)$company['id']);
         $cashAccounts = FinanceCashService::fetchMoneyAccounts($pdo, 'CASH', true);
         $bankCandidates = FinanceEmployeePaymentService::fetchBankCandidates($pdo, $movementType, 500);
         require base_path('app/View/partials/company_finance_employee_payment_form.php');
@@ -58,13 +58,14 @@ final class FinanceEmployeePaymentsController
         requireRole(['company_owner']);
         verifyCsrfRequest();
         try {
-            [, $pdo] = $this->tenant();
+            [$company, $pdo, $central] = $this->tenant();
+            $employee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], trim((string)($_POST['employee_ref'] ?? '')));
             $sourceType = strtoupper(trim((string)($_POST['source_type'] ?? '')));
             $user = ['id'=>$_SESSION['user_id'] ?? 0, 'role'=>$_SESSION['role_code'] ?? 'company_owner'];
             if ($sourceType === 'CASH') {
-                FinanceEmployeePaymentService::createCashMovement($pdo, $_POST, $user);
+                FinanceEmployeePaymentService::createCashMovement($pdo, $_POST, $user, $employee);
             } elseif ($sourceType === 'BANK') {
-                FinanceEmployeePaymentService::linkBankTransaction($pdo, $_POST, $user);
+                FinanceEmployeePaymentService::linkBankTransaction($pdo, $_POST, $user, $employee);
             } else {
                 throw new \InvalidArgumentException('Выберите источник денежных средств.');
             }
@@ -76,16 +77,21 @@ final class FinanceEmployeePaymentsController
         redirect_to('/company/finance/employee-payments');
     }
 
-    public function employeeDetail(int $id): void
+    public function employeeDetail(string $type, string $id): void
     {
         requireRole(['company_owner']);
-        [, $pdo] = $this->tenant();
-        $stmt = $pdo->prepare('SELECT id,full_name,login,role_code,status FROM users WHERE id=?');
-        $stmt->execute([$id]);
-        $employee = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$employee) { http_response_code(404); echo '<div class="form-alert alert-error">Сотрудник не найден.</div>'; return; }
-        $ledger = FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, $id);
-        $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo);
+        [$company, $pdo, $central] = $this->tenant();
+        try {
+            $employeeRef = FinanceEmployeePaymentService::makeEmployeeRef(strtoupper($type), (int)$id);
+            $employee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], $employeeRef);
+        } catch (\Throwable $e) {
+            $employeeRef = FinanceEmployeePaymentService::makeEmployeeRef(strtoupper($type), (int)$id);
+            $ledger = FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, $employeeRef);
+            if (empty($ledger)) { http_response_code(404); echo '<div class="form-alert alert-error">Сотрудник не найден.</div>'; return; }
+            $employee = ['ref'=>$employeeRef,'full_name'=>(string)$ledger[0]['full_name'],'status'=>'inactive'];
+        }
+        $ledger = $ledger ?? FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, $employeeRef);
+        $employees = FinanceEmployeePaymentService::fetchActiveEmployees($pdo, $central, (int)$company['id']);
         require base_path('app/View/partials/company_finance_employee_payment_ledger.php');
     }
 
@@ -94,14 +100,9 @@ final class FinanceEmployeePaymentsController
         requireRole(['company_owner']);
         verifyCsrfRequest();
         try {
-            [, $pdo] = $this->tenant();
-            $employeeUserId = (int)($_POST['employee_user_id'] ?? 0);
-            FinanceEmployeePaymentService::reassignMovement(
-                $pdo,
-                $id,
-                $employeeUserId,
-                ['id'=>$_SESSION['user_id'] ?? 0,'role'=>$_SESSION['role_code'] ?? 'company_owner']
-            );
+            [$company, $pdo, $central] = $this->tenant();
+            $employee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], trim((string)($_POST['employee_ref'] ?? '')));
+            FinanceEmployeePaymentService::reassignMovement($pdo, $id, $employee, ['id'=>$_SESSION['user_id'] ?? 0,'role'=>$_SESSION['role_code'] ?? 'company_owner']);
             $_SESSION['employee_payments_success'] = 'Сотрудник для операции изменён. Денежная операция не изменялась.';
         } catch (\Throwable $e) {
             $_SESSION['employee_payments_error'] = $e->getMessage();
@@ -114,8 +115,9 @@ final class FinanceEmployeePaymentsController
         requireRole(['company_owner']);
         verifyCsrfRequest();
         try {
-            [, $pdo] = $this->tenant();
-            FinanceEmployeePaymentService::linkBankTransaction($pdo, $_POST, ['id'=>$_SESSION['user_id'] ?? 0,'role'=>$_SESSION['role_code'] ?? 'company_owner']);
+            [$company, $pdo, $central] = $this->tenant();
+            $employee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], trim((string)($_POST['employee_ref'] ?? '')));
+            FinanceEmployeePaymentService::linkBankTransaction($pdo, $_POST, ['id'=>$_SESSION['user_id'] ?? 0,'role'=>$_SESSION['role_code'] ?? 'company_owner'], $employee);
             $_SESSION['bank_finance_success'] = 'Банковская операция связана с сотрудником.';
         } catch (\Throwable $e) {
             $_SESSION['bank_finance_error'] = $e->getMessage();
@@ -149,6 +151,6 @@ final class FinanceEmployeePaymentsController
         $company = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$company) throw new \RuntimeException('Компания не найдена или неактивна.');
         $pdo = (new Database(companyDatabaseConfig($this->config, $company)))->connection();
-        return [$company, $pdo];
+        return [$company, $pdo, $central];
     }
 }
