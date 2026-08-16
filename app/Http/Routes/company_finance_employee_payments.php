@@ -4,6 +4,7 @@ $controller = new \App\Http\Controllers\Company\FinanceEmployeePaymentsControlle
 $router->get('/company/finance/employee-payments', [$controller, 'index']);
 $router->get('/company/finance/employee-payments/create', [$controller, 'createForm']);
 $router->post('/company/finance/employee-payments/create', [$controller, 'createSubmit']);
+$router->post('/company/finance/employee-payments/transfer', [$controller, 'transferSubmit']);
 $router->get('/company/finance/employee-payments/employee/{type}/{id}', [$controller, 'employeeDetail']);
 $router->post('/company/finance/employee-payments/movements/{id}/reassign', [$controller, 'reassignMovement']);
 $router->post('/company/finance/employee-payments/bank-link', [$controller, 'bankLink']);
