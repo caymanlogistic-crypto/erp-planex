@@ -11,7 +11,6 @@ $router->get('/company/finance/invoices/{id}/modal-view', [$controller, 'modalVi
 $router->get('/company/finance/invoices/{id}/modal-edit', [$controller, 'modalEditForm']);
 $router->post('/company/finance/invoices/{id}/modal-edit', [$controller, 'modalEditSubmit']);
 $router->post('/company/finance/invoices/{id}/modal-delete', [$controller, 'modalDelete']);
-$router->get('/company/finance/invoices/counterparty-list', [$controller, 'counterpartyList']);
 $router->get('/company/finance/invoices/obligations', [$controller, 'obligations']);
 $router->get('/company/finance/invoices/{id}/history', [$controller, 'history']);
 $router->get('/company/finance/invoices/route-payments', [$controller, 'routePayments']);
