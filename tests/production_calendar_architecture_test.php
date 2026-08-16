@@ -37,7 +37,7 @@ $assert(str_contains($content['entrypoint'], "company_production_calendar.php"),
 $assert(str_contains($content['route'], '/company/misc/production-calendar'), 'calendar route must be registered in MISC namespace');
 $assert(str_contains($content['controller'], "requireRole(['company_owner'])"), 'calendar management must be owner-only');
 
-$assert(str_contains($content['hotfix'], '<div class=\"nav-section-label\">ПРОЧЕЕ</div>'), 'sidebar must contain separate MISC group');
+$assert(str_contains($content['hotfix'], 'nav-section-label') && str_contains($content['hotfix'], 'ПРОЧЕЕ'), 'sidebar must contain separate MISC group');
 $assert(str_contains($content['hotfix'], 'Производственный календарь'), 'sidebar must contain production calendar item');
 $assert(str_contains($content['hotfix'], 'nav-count is-alert'), 'sidebar reminder must use standard red alert badge');
 $assert(str_contains($content['hotfix'], 'warningYearForCompany'), 'sidebar reminder must be driven by calendar readiness');
