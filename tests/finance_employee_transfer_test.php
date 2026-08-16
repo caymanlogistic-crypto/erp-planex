@@ -44,7 +44,8 @@ $assert(str_contains($route, '/company/finance/employee-payments/transfer'), 'tr
 $assert(str_contains($controller, 'FinanceEmployeeTransferService::transfer'), 'controller must delegate to transfer service');
 $assert(str_contains($view, 'id="employee-transfer-open"'), 'page header must expose the transfer button');
 $assert(str_contains($view, 'btn btn-primary btn--toolbar'), 'transfer button must use the standard primary toolbar style');
-$assert(str_contains($view, 'сотрудник → Основная касса → сотрудник'), 'UI must explain the main cash route');
+$assert(!str_contains($view, 'Перевод проводится как внутреннее движение'), 'transfer modal must not show the removed technical hint block');
+$assert(!str_contains($view, 'employee-transfer-note'), 'removed transfer hint wrapper must not remain in the view');
 $assert(str_contains($view, 'Сальдо отправителя после перевода может стать отрицательным.'), 'UI must explicitly allow negative sender balance');
 
 fwrite(STDOUT, "Employee transfer architecture: OK\n");
