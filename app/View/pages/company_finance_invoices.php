@@ -127,6 +127,16 @@ require base_path('app/View/partials/company_finance_cancel_modal.php');
 ?>
 
 <script>
+window.planexSetHtmlAndRunScripts = window.planexSetHtmlAndRunScripts || function(container, html) {
+    container.innerHTML = html;
+    Array.from(container.querySelectorAll('script')).forEach(function(oldScript) {
+        var script = document.createElement('script');
+        Array.from(oldScript.attributes).forEach(function(attr) { script.setAttribute(attr.name, attr.value); });
+        script.textContent = oldScript.textContent;
+        oldScript.replaceWith(script);
+    });
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('[data-invoice-id]').forEach(function(row) {
         row.addEventListener('dblclick', function() {
@@ -136,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
             window.openModal('invoice-view-modal');
             fetch(window.getErpBasePath() + '/company/finance/invoices/' + id + '/modal-view')
                 .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-                .then(function(html) { body.innerHTML = html; })
+                .then(function(html) { window.planexSetHtmlAndRunScripts(body, html); })
                 .catch(function() { body.innerHTML = '<div class="form-alert alert-error">Не удалось загрузить данные счёта.</div>'; });
         });
     });
