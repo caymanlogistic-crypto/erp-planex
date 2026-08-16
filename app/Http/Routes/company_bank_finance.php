@@ -9,6 +9,8 @@ $router->post('/company/finance/bank-accounts/apply-rules',[$controller,'applyRu
 $router->post('/company/finance/bank-accounts/settings',[$controller,'settings']);
 $router->post('/company/finance/bank-accounts/import/delete',[$controller,'deleteImport']);
 $router->get('/company/finance/bank-accounts/reconciliation/json',[$controller,'reconciliationJson']);
+$router->get('/company/finance/bank-transactions/{id}/settlement',[$controller,'settlementForm']);
+$router->post('/company/finance/bank-transactions/{id}/settlement',[$controller,'settlementSubmit']);
 $router->get('/company/finance/bank-transactions/{id}/classify',[$controller,'classifyForm']);
 $router->post('/company/finance/bank-transactions/{id}/classify',[$controller,'classifySubmit']);
 $router->post('/company/finance/bank-transactions/{id}/classification/delete',[$controller,'clearClassification']);
