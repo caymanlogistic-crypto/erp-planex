@@ -164,9 +164,46 @@ const cents = value => {
     await inspect('company/trips/linear', 'linear_trips', 'main.content');
     await inspect('company/finance/bank-accounts', 'bank_accounts', 'main.content');
 
+    const settlementCandidate = await page.locator('.bank-transactions-table tbody tr[data-tx-id]').evaluateAll(async rows => {
+      for (const row of rows) {
+        const classify = row.dataset.classifyUrl || '';
+        const url = classify.replace(/\/classify(?:\?.*)?$/, '/settlement');
+        if (!url || url === classify) continue;
+        try {
+          const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+          if (response.status === 200) return { id: row.dataset.txId, url };
+        } catch (_) {}
+      }
+      return null;
+    });
+    ok(settlementCandidate, 'production has a known client/carrier bank row for settlement popup');
+    const settlementRow = page.locator(`.bank-transactions-table tbody tr[data-tx-id="${settlementCandidate.id}"]`);
+    await settlementRow.dblclick();
+    const settlementModal = page.locator('#bank-invoice-settlement-modal.is-open');
+    await settlementModal.waitFor({ state: 'visible', timeout: 10000 });
+    ok(await settlementModal.locator('[data-bank-settlement-form]').count() === 1, 'specialized settlement form opened');
+    ok(await settlementModal.getByText('Открытые счета', { exact: true }).count() === 1, 'open invoices section visible');
+    ok(await settlementModal.getByText('ЦФУ *', { exact: true }).count() === 0, 'generic CFU classification is not mixed into settlement popup');
+    const settlementBox = await settlementModal.locator('.modal').boundingBox();
+    ok(settlementBox && settlementBox.width > 700 && settlementBox.height > 250, `bank settlement modal collapsed ${JSON.stringify(settlementBox)}`);
+    ok(settlementBox.x >= 0 && settlementBox.x + settlementBox.width <= 1920, 'bank settlement modal horizontal overflow');
+    const settlementChecks = settlementModal.locator('.js-settlement-check');
+    if (await settlementChecks.count() > 0) {
+      const cb = await settlementChecks.first().boundingBox();
+      ok(cb && cb.width >= 13 && cb.width <= 18 && cb.height >= 13 && cb.height <= 18, `bank settlement checkbox geometry ${JSON.stringify(cb)}`);
+    }
+    evidence.bank_invoice_settlement_modal = {
+      transactionId: settlementCandidate.id,
+      box: settlementBox,
+      invoices: await settlementModal.locator('[data-settlement-invoice-row]').count()
+    };
+    await page.screenshot({ path: 'P92_screens/bank_invoice_settlement_modal.png', fullPage: true });
+    await settlementModal.locator('.modal-close').click();
+
     ok(pageErrors.length === 0, 'page errors: ' + JSON.stringify(pageErrors));
     fs.writeFileSync('P92_VISUAL.json', JSON.stringify({ ok: true, pageErrors, evidence }, null, 2));
     console.log('P92_FINANCE_OBLIGATIONS_VISUAL_OK');
+    console.log('P92_BANK_INVOICE_SETTLEMENT_VISUAL_OK');
   } finally {
     await browser.close();
   }
