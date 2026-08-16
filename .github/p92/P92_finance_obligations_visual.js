@@ -42,8 +42,8 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
     ok(!page.url().includes('/login'), 'login failed');
 
     await inspect('company/finance/invoices', 'invoices', 'main.content');
-    const create = page.getByRole('button', { name: 'Создать счёт', exact: true });
-    ok(await create.count() === 1, 'create invoice button');
+    const create = page.locator('[data-open-modal="invoice-create-modal"]');
+    ok(await create.count() === 1, 'create invoice control');
     await create.click();
     const modal = page.locator('#invoice-create-modal.is-open');
     await modal.waitFor({ state: 'visible', timeout: 10000 });
