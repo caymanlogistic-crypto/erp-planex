@@ -47,5 +47,15 @@ $assert(str_contains($view, 'btn btn-primary btn--toolbar'), 'transfer button mu
 $assert(!str_contains($view, 'Перевод проводится как внутреннее движение'), 'transfer modal must not show the removed technical hint block');
 $assert(!str_contains($view, 'employee-transfer-note'), 'removed transfer hint wrapper must not remain in the view');
 $assert(str_contains($view, 'Сальдо отправителя после перевода может стать отрицательным.'), 'UI must explicitly allow negative sender balance');
+$assert(str_contains($view, 'Передача денежных средств:'), 'transfer basis must recognize the generated employee handoff label');
+$assert(str_contains($view, "implode(' ',\$initials)"), 'transfer participant names must render with spaced initials');
+$assert(str_contains($view, 'Поступление: <strong>'), 'all-time incoming label must use Поступление');
+$assert(str_contains($view, 'Расход: <strong>'), 'all-time outgoing label must use Расход');
+$assert(str_contains($view, 'За месяц: Поступление'), 'monthly incoming label must use Поступление');
+$assert(str_contains($view, '· Расход <strong>'), 'monthly outgoing label must use Расход');
+$assert(str_contains($view, '>Поступление</th>'), 'incoming table heading must use Поступление');
+$assert(str_contains($view, '>Расход</th>'), 'outgoing table heading must use Расход');
+$assert(!str_contains($view, 'Получено от компании:'), 'old all-time incoming wording must be removed');
+$assert(!str_contains($view, 'Возвращено компании:'), 'old all-time outgoing wording must be removed');
 
 fwrite(STDOUT, "Employee transfer architecture: OK\n");
