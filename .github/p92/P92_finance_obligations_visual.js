@@ -1,0 +1,82 @@
+'use strict';
+
+const fs = require('fs');
+const { chromium } = require('playwright');
+const B = 'https://plan-ex.ru/erpv2/';
+const ok = (v, m) => { if (!v) throw new Error(m); };
+const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|Class ".+" not found)/i;
+
+(async () => {
+  const credentials = JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
+  const owner = credentials.find(x => String(x.role).toUpperCase() === 'OWNER');
+  ok(owner, 'OWNER credentials');
+  fs.mkdirSync('P92_screens', { recursive: true });
+
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, locale: 'ru-RU', timezoneId: 'Europe/Moscow' });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', e => pageErrors.push(e.message));
+  const evidence = {};
+
+  async function inspect(path, name, selector) {
+    const response = await page.goto(B + path, { waitUntil: 'networkidle', timeout: 30000 });
+    ok(response && response.status() === 200, `${name} HTTP ${response ? response.status() : 'none'}`);
+    const body = await page.locator('body').innerText();
+    ok(!fatal.test(body), `${name} fatal runtime text`);
+    if (selector) ok(await page.locator(selector).count() > 0, `${name} selector ${selector}`);
+    const viewport = page.viewportSize();
+    const root = selector ? page.locator(selector).first() : page.locator('main.content').first();
+    const box = await root.boundingBox();
+    ok(box && box.width > 300 && box.height > 60, `${name} collapsed geometry ${JSON.stringify(box)}`);
+    evidence[name] = { url: page.url(), viewport, box, bodyLength: body.length };
+    await page.screenshot({ path: `P92_screens/${name}.png`, fullPage: true });
+  }
+
+  try {
+    await page.goto(B + 'login', { waitUntil: 'domcontentloaded' });
+    await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+    await page.locator('input[type="password"]').fill(owner.password);
+    await page.locator('button[type="submit"],input[type="submit"]').first().click();
+    await page.waitForTimeout(700);
+    ok(!page.url().includes('/login'), 'login failed');
+
+    await inspect('company/finance/invoices', 'invoices', 'main.content');
+    const create = page.getByRole('button', { name: 'Создать счёт', exact: true });
+    ok(await create.count() === 1, 'create invoice button');
+    await create.click();
+    const modal = page.locator('#invoice-create-modal.is-open');
+    await modal.waitFor({ state: 'visible', timeout: 10000 });
+    ok(await modal.getByText('Платёжные обязательства', { exact: true }).count() === 1, 'obligation block visible');
+    const mbox = await modal.locator('.modal').boundingBox();
+    ok(mbox && mbox.width > 700 && mbox.height > 350, 'invoice modal collapsed ' + JSON.stringify(mbox));
+    ok(mbox.x >= 0 && mbox.x + mbox.width <= 1920, 'invoice modal horizontal overflow');
+    evidence.invoice_create_modal = { box: mbox, scrollHeight: await modal.locator('.modal').evaluate(el => el.scrollHeight), clientHeight: await modal.locator('.modal').evaluate(el => el.clientHeight) };
+    await page.screenshot({ path: 'P92_screens/invoice_create_modal.png', fullPage: true });
+    await modal.locator('.modal-close').first().click();
+
+    await inspect('company/finance/receivables', 'receivables', '.receivables-page');
+    ok(await page.getByText('Дебиторская задолженность', { exact: true }).count() >= 1, 'receivables title');
+    ok(await page.getByText('Просрочено', { exact: true }).count() >= 1, 'overdue summary visible');
+    const summaryBox = await page.locator('.receivables-summary').boundingBox();
+    const tableBox = await page.locator('.receivables-table-wrap').boundingBox();
+    ok(summaryBox && summaryBox.height > 50, 'receivables summary collapsed');
+    ok(tableBox && tableBox.height > 50, 'receivables table collapsed');
+    ok(tableBox.y >= summaryBox.y + summaryBox.height - 2, 'receivables blocks overlap');
+    evidence.receivables.summaryBox = summaryBox;
+    evidence.receivables.tableBox = tableBox;
+
+    await inspect('company/trips/linear', 'linear_trips', 'main.content');
+    await inspect('company/finance/bank-accounts', 'bank_accounts', 'main.content');
+
+    ok(pageErrors.length === 0, 'page errors: ' + JSON.stringify(pageErrors));
+    fs.writeFileSync('P92_VISUAL.json', JSON.stringify({ ok: true, pageErrors, evidence }, null, 2));
+    console.log('P92_FINANCE_OBLIGATIONS_VISUAL_OK');
+  } finally {
+    await browser.close();
+  }
+})().catch(e => {
+  fs.writeFileSync('P92_VISUAL.json', JSON.stringify({ ok: false, error: e.message, stack: e.stack }, null, 2));
+  console.error(e);
+  process.exit(1);
+});
