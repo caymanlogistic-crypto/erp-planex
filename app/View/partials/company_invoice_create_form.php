@@ -7,6 +7,7 @@ $isEdit = $isEdit ?? false;
 $formAction = $isEdit
     ? app_url('/company/finance/invoices/' . (int)($invoice['id'] ?? 0) . '/modal-edit')
     : app_url('/company/finance/invoices/create');
+$obligationsEndpoint = app_url('/company/finance/invoices/obligations');
 
 $invDirection = (string)($invoice['direction'] ?? ($_POST['direction'] ?? FinanceInvoiceService::DIRECTION_OUTGOING));
 if (!in_array($invDirection, [FinanceInvoiceService::DIRECTION_OUTGOING, FinanceInvoiceService::DIRECTION_INCOMING], true)) {
@@ -98,12 +99,12 @@ $catalogsJson = json_encode([
     if (!form || !form.classList.contains('invoice-form')) return;
 
     var catalogs = <?= $catalogsJson ?: '{"client":[],"contractor":[]}' ?>;
+    var obligationsEndpoint = <?= json_encode($obligationsEndpoint, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     var type = form.querySelector('.js-inv-cparty-type');
     var cp = form.querySelector('.js-inv-cparty-select');
     var inn = form.querySelector('.js-inv-cparty-inn');
     var dir = form.querySelector('.js-inv-direction');
     var box = form.querySelector('.js-obligations-box');
-    var base = window.getErpBasePath ? window.getErpBasePath() : '';
     var initialId = <?= json_encode((string)$invCpartyId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     var obligationRequestSeq = 0;
     var obligationController = null;
@@ -182,7 +183,7 @@ $catalogsJson = json_encode([
         if (!id){ emptyObligations(); return; }
         var seq = obligationRequestSeq;
         var invoiceId = form.dataset.invoiceId || '';
-        var url = base + '/company/finance/invoices/obligations?direction=' + encodeURIComponent(dir.value) + '&counterparty=' + encodeURIComponent(t + ':' + id) + (invoiceId ? '&invoice_id=' + encodeURIComponent(invoiceId) : '');
+        var url = obligationsEndpoint + '?direction=' + encodeURIComponent(dir.value) + '&counterparty=' + encodeURIComponent(t + ':' + id) + (invoiceId && invoiceId !== '0' ? '&invoice_id=' + encodeURIComponent(invoiceId) : '');
         obligationController = typeof AbortController !== 'undefined' ? new AbortController() : null;
         var signal = obligationController ? obligationController.signal : undefined;
         box.innerHTML = '<div style="padding:12px">Загрузка…</div>';
