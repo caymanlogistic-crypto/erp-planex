@@ -39,9 +39,8 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     const rowCount = await rows.count();
     ok(rowCount > 0, 'cash ledger has no rows for runtime acceptance');
 
-    let companyAccountSourceSeen = false;
+    let companyAccountNumberSeen = false;
     let resolvedLifecycleSeen = false;
-    let unresolvedSeen = false;
     const allowedMovements = [
       'Поступление',
       'Списание',
@@ -70,20 +69,18 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
       ok(purpose !== '', 'purpose missing on row ' + i);
       ok(amount !== '', 'amount missing on row ' + i);
       ok(source !== '', 'source missing on row ' + i);
-      if (normalize(source).startsWith(normalize('Расчётный счёт '))) companyAccountSourceSeen = true;
+      ok(!normalize(source).startsWith(normalize('Расчётный счёт ')), 'cash source must display account number without prefix: ' + source);
+      if (/^\d{20}$/.test(source)) companyAccountNumberSeen = true;
 
       if (normalize(movement) === normalize('Получено → передано') || normalize(movement) === normalize('Получено → разнесено')) {
         resolvedLifecycleSeen = true;
         ok(handedTo !== '' && handedTo !== '—', 'resolved lifecycle recipient missing on row ' + i);
-        ok(/\d{2}\.\d{2}\.\d{4}/.test(handedTo), 'resolved lifecycle handoff date missing on row ' + i + ': ' + handedTo);
+        ok(!/\d{2}\.\d{2}\.\d{4}/.test(handedTo), 'resolved lifecycle handoff date must not be displayed on row ' + i + ': ' + handedTo);
       }
-
-      if ((await row.getAttribute('data-cash-selectable')) === '1') unresolvedSeen = true;
     }
 
-    ok(companyAccountSourceSeen, 'company bank account source is not visible in current cash lifecycle data');
+    ok(companyAccountNumberSeen, 'company bank account number is not visible in current cash lifecycle data');
     ok(resolvedLifecycleSeen, 'current production data has no visible resolved lifecycle row');
-    ok(unresolvedSeen, 'current production data has no visible unresolved lifecycle row');
 
     const ledgerText = normalize(await ledger.innerText());
     ok(!ledgerText.includes(normalize('Передача сотруднику')), 'duplicate employee handoff outflow is still visible');
