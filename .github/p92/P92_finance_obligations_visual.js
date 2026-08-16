@@ -37,6 +37,22 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
     await page.screenshot({ path: `P92_screens/${name}.png`, fullPage: true });
   }
 
+  async function waitObligationsSettled(modal, label) {
+    const box = modal.locator('.js-obligations-box');
+    await page.waitForFunction(
+      ({ selector }) => {
+        const el = document.querySelector(selector);
+        return !!el && !el.textContent.includes('Загрузка…');
+      },
+      { selector: '#invoice-create-modal.is-open .js-obligations-box' },
+      { timeout: 10000 }
+    );
+    const text = (await box.innerText()).trim();
+    ok(!text.includes('Не удалось загрузить платёжные обязательства.'), `${label} obligations load failed: ${text}`);
+    ok(text.includes('Открытых обязательств для этого контрагента нет.') || text.includes('Рейс #'), `${label} obligations unexpected state: ${text}`);
+    return text;
+  }
+
   try {
     await page.goto(B + 'login', { waitUntil: 'domcontentloaded' });
     await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
@@ -65,21 +81,18 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
     const firstClient = await counterparty.locator('option:not([value=""])').first().getAttribute('value');
     ok(firstClient, 'client option available');
     await counterparty.selectOption(firstClient);
-    await page.waitForTimeout(500);
     ok((await inn.inputValue()).trim().length > 0, 'client INN populated');
-    ok(await modal.getByText('Не удалось загрузить платёжные обязательства.', { exact: true }).count() === 0, 'outgoing obligations load without error');
+    const outgoingObligations = await waitObligationsSettled(modal, 'outgoing');
     await page.screenshot({ path: 'P92_screens/invoice_create_outgoing.png', fullPage: true });
 
     await direction.selectOption('INCOMING');
-    await page.waitForTimeout(100);
     ok(await counterparty.locator('option').count() > 1, 'incoming contractors loaded');
     const firstContractor = await counterparty.locator('option:not([value=""])').first().getAttribute('value');
     ok(firstContractor, 'contractor option available');
     await counterparty.selectOption(firstContractor);
-    await page.waitForTimeout(500);
     ok((await inn.inputValue()).trim().length > 0, 'contractor INN populated');
+    const incomingObligations = await waitObligationsSettled(modal, 'incoming');
     ok(await modal.getByText('— Ошибка загрузки —', { exact: true }).count() === 0, 'incoming counterparty load error absent');
-    ok(await modal.getByText('Не удалось загрузить платёжные обязательства.', { exact: true }).count() === 0, 'incoming obligations load without error');
 
     const mbox = await modal.locator('.modal').boundingBox();
     ok(mbox && mbox.width > 700 && mbox.height > 350, 'invoice modal collapsed ' + JSON.stringify(mbox));
@@ -89,7 +102,9 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
       scrollHeight: await modal.locator('.modal').evaluate(el => el.scrollHeight),
       clientHeight: await modal.locator('.modal').evaluate(el => el.clientHeight),
       outgoingClients: true,
-      incomingContractors: true
+      incomingContractors: true,
+      outgoingObligations,
+      incomingObligations
     };
     await page.screenshot({ path: 'P92_screens/invoice_create_modal.png', fullPage: true });
     await modal.locator('.modal-close').first().click();
