@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+$servicePath = dirname(__DIR__) . '/app/Service/FinanceEmployeeTransferService.php';
+$controllerPath = dirname(__DIR__) . '/app/Http/Controllers/Company/FinanceEmployeePaymentsController.php';
+$routePath = dirname(__DIR__) . '/app/Http/Routes/company_finance_employee_payments.php';
+$viewPath = dirname(__DIR__) . '/app/View/pages/company_finance_employee_payments.php';
+
+foreach ([$servicePath, $controllerPath, $routePath, $viewPath] as $path) {
+    if (!is_file($path)) {
+        fwrite(STDERR, "Missing file: {$path}\n");
+        exit(1);
+    }
+}
+
+$service = file_get_contents($servicePath);
+$controller = file_get_contents($controllerPath);
+$route = file_get_contents($routePath);
+$view = file_get_contents($viewPath);
+
+$assert = static function (bool $condition, string $message): void {
+    if (!$condition) {
+        fwrite(STDERR, "FAIL: {$message}\n");
+        exit(1);
+    }
+};
+
+$assert(str_contains($service, "'movement_type' => 'RETURN'"), 'sender must be recorded as RETURN');
+$assert(str_contains($service, "'movement_type' => 'PAYMENT'"), 'recipient must be recorded as PAYMENT');
+$assert(str_contains($service, "FinanceCashResolutionService::MAIN_CASH_NAME"), 'transfer must use the technical main cash');
+$assert(str_contains($service, "operation_type = 'TRANSFER'"), 'employee handoff cash legs must be technical transfers');
+$assert(str_contains($service, "transfer_direction = ?"), 'technical transfer direction must be explicit');
+$assert(str_contains($service, "INSERT INTO finance_cash_resolutions"), 'employee handoff must create a cash resolution');
+$assert(str_contains($service, "beginTransaction()"), 'employee handoff must be atomic');
+$assert(str_contains($service, "rollBack()"), 'employee handoff must roll back both legs on failure');
+$assert(!str_contains($service, 'Недостаточно средств у сотрудника'), 'sender balance must not limit transfer amount');
+$assert(!str_contains($service, 'lockAndReadEmployeeBalance'), 'sender balance gate must not exist');
+
+$assert(str_contains($route, '/company/finance/employee-payments/transfer'), 'transfer route must be registered');
+$assert(str_contains($controller, 'FinanceEmployeeTransferService::transfer'), 'controller must delegate to transfer service');
+$assert(str_contains($view, 'id="employee-transfer-open"'), 'page header must expose the transfer button');
+$assert(str_contains($view, 'btn btn-primary btn--toolbar'), 'transfer button must use the standard primary toolbar style');
+$assert(str_contains($view, 'сотрудник → Основная касса → сотрудник'), 'UI must explain the main cash route');
+$assert(str_contains($view, 'Сальдо отправителя после перевода может стать отрицательным.'), 'UI must explicitly allow negative sender balance');
+
+fwrite(STDOUT, "Employee transfer architecture: OK\n");
