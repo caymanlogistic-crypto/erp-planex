@@ -13,7 +13,6 @@ require_once base_path('app/Support/entrypoint_dependencies.php');
 
 use App\Core\Database;
 use App\Service\ProductionCalendarService;
-use PDO;
 
 $migrationName = '070_production_calendar.sql';
 $migrationPath = base_path('database/migrations-local/' . $migrationName);
@@ -25,7 +24,7 @@ $checksum = hash('sha256', $sql);
 
 $db = new Database($config['database']);
 $central = $db->connection();
-$companies = $central->query("SELECT * FROM companies WHERE status='active' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+$companies = $central->query("SELECT * FROM companies WHERE status='active' ORDER BY id")->fetchAll(\PDO::FETCH_ASSOC);
 $count = 0;
 $appliedCount = 0;
 $existingCount = 0;
@@ -110,7 +109,7 @@ foreach ($companies as $company) {
                         SUM(CASE WHEN is_working_day=1 THEN 1 ELSE 0 END) AS working,
                         SUM(CASE WHEN is_working_day=0 THEN 1 ELSE 0 END) AS non_working
                    FROM production_calendar_days WHERE calendar_year=2026"
-            )->fetch(PDO::FETCH_ASSOC);
+            )->fetch(\PDO::FETCH_ASSOC);
             if ((int)$check['total'] !== 365 || (int)$check['working'] !== 247 || (int)$check['non_working'] !== 118) {
                 throw new RuntimeException('P90 2026 calendar control totals failed for company ' . $companyId);
             }
