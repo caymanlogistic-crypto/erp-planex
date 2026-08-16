@@ -99,7 +99,10 @@ if (($links ?? []) === []) {
         window.openModal('invoice-edit-modal');
         fetch(window.getErpBasePath() + '/company/finance/invoices/' + id + '/modal-edit')
             .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-            .then(function(html) { editBody.innerHTML = html; })
+            .then(function(html) {
+                if (window.planexSetHtmlAndRunScripts) window.planexSetHtmlAndRunScripts(editBody, html);
+                else editBody.innerHTML = html;
+            })
             .catch(function() { editBody.innerHTML = '<div class="form-alert alert-error">Не удалось загрузить форму редактирования.</div>'; });
     });
     var historyBtn = modal.querySelector('[data-invoice-history-btn]');
