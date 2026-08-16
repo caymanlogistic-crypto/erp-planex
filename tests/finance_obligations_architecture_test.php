@@ -8,6 +8,7 @@ $service=file_get_contents($root.'/app/Service/FinanceObligationService.php');
 $migration=file_get_contents($root.'/database/migrations-local/071_finance_obligations.sql');
 $manifest=file_get_contents($root.'/app/Support/entrypoint_dependencies.php');
 $invoiceForm=file_get_contents($root.'/app/View/partials/company_invoice_create_form.php');
+$invoicePage=file_get_contents($root.'/app/View/pages/company_finance_invoices.php');
 $invoiceCreate=file_get_contents($root.'/app/Http/Controllers/Company/InvoiceActions/create_submit.php');
 $invoiceEdit=file_get_contents($root.'/app/Http/Controllers/Company/InvoiceActions/modal_edit_submit.php');
 $bankImport=file_get_contents($root.'/app/Http/Controllers/Company/BankFinanceActions/import.php');
@@ -28,6 +29,9 @@ guard(str_contains($invoiceForm, 'obligation_id[]') && str_contains($invoiceForm
 guard(str_contains($invoiceForm, 'syncInvoiceAmount') && str_contains($invoiceForm, 'data-auto-amount') === false, 'invoice total is synchronized from selected obligations in JS');
 guard(str_contains($invoiceForm, 'width:16px;height:16px;min-width:16px;min-height:16px'), 'obligation checkbox has compact explicit dimensions');
 guard(str_contains($invoiceForm, 'autocomplete="off"') && str_contains($invoiceForm, 'inputmode="decimal"'), 'invoice form prevents stale autofill and uses decimal input mode');
+guard(str_contains($invoicePage, "querySelectorAll('table.table tbody tr[data-invoice-id]')"), 'invoice double-click handler is scoped to registry rows');
+guard(!str_contains($invoicePage, "querySelectorAll('[data-invoice-id]')"), 'invoice form is not bound to registry double-click handler');
+guard(str_contains($invoicePage, "id <= 0) return"), 'invoice double-click ignores invalid invoice identifiers');
 guard(str_contains($invoiceCreate, '$obligationTotalCents') && str_contains($invoiceCreate, '$centsToMoney($obligationTotalCents)'), 'create action derives invoice amount from selected obligations');
 guard(str_contains($invoiceEdit, '$obligationTotalCents') && str_contains($invoiceEdit, '$centsToMoney($obligationTotalCents)'), 'edit action derives invoice amount from selected obligations');
 guard(str_contains($bankImport, 'autoAllocateIncomingCustomerReceipts'), 'bank import invokes obligation auto-allocation');
