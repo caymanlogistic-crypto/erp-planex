@@ -33,6 +33,7 @@ jobs:
           php -l app/Http/Controllers/Company/InvoiceActions/receivables.php
           php -l app/View/pages/company_finance_receivables.php
           php -l tests/finance_obligations_architecture_test.php
+          php -l tests/finance_obligations_behavioral_test.php
           php tests/finance_obligations_architecture_test.php
       - name: Migration execution
         shell: bash
@@ -47,3 +48,15 @@ jobs:
           mysql -h127.0.0.1 -uroot -proot erp_obligations_test < database/migrations-local/071_finance_obligations.sql
           mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='erp_obligations_test' AND table_name='finance_operation_allocations' AND column_name='obligation_id'" | grep -qx '1'
           mysql -h127.0.0.1 -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='erp_obligations_test' AND table_name='finance_invoice_links' AND column_name='obligation_id'" | grep -qx '1'
+      - name: Obligation behavioral regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/finance_obligations_behavioral_test.php 2>&1 | tee finance_obligations_behavior.txt
+          grep -q 'FINANCE_OBLIGATIONS_BEHAVIOR_OK' finance_obligations_behavior.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: finance_obligations_${{ github.sha }}
+          path: finance_obligations_behavior.txt
+          if-no-files-found: warn
