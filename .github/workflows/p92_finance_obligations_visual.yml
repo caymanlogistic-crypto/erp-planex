@@ -37,6 +37,7 @@ jobs:
             git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
             git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
             python -m pip install --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
             printf '%s\n' "$KEY" > "$HOME/.ssh/p92_credentials"
             chmod 600 "$HOME/.ssh/p92_credentials"
             cred="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p92_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
