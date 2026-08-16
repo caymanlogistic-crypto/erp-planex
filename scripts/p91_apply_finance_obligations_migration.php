@@ -91,13 +91,37 @@ foreach ($companies as $company) {
               WHERE a.obligation_id IS NOT NULL
                 AND NOT EXISTS (SELECT 1 FROM finance_obligations o WHERE o.id=a.obligation_id)"
         )->fetchColumn();
-        if ($orphanInvoiceLinks !== 0 || $orphanAllocations !== 0) {
-            throw new RuntimeException('P91 found orphan obligation references for company ' . $companyId);
+        $unresolvedInvoiceLinks = (int)$local->query(
+            "SELECT COUNT(*)
+               FROM finance_invoice_links l
+               JOIN finance_invoices i ON i.id=l.invoice_id
+              WHERE l.linear_route_payment_id IS NOT NULL
+                AND l.obligation_id IS NULL
+                AND i.status<>'cancelled'"
+        )->fetchColumn();
+        $unresolvedAllocations = (int)$local->query(
+            "SELECT COUNT(*)
+               FROM finance_operation_allocations a
+               JOIN finance_operations op ON op.id=a.operation_id
+              WHERE a.linear_route_payment_id IS NOT NULL
+                AND a.obligation_id IS NULL
+                AND a.cancelled_at IS NULL
+                AND op.status='POSTED'"
+        )->fetchColumn();
+        if ($orphanInvoiceLinks !== 0 || $orphanAllocations !== 0 || $unresolvedInvoiceLinks !== 0 || $unresolvedAllocations !== 0) {
+            throw new RuntimeException(sprintf(
+                'P91 finance link integrity failure for company %d: orphan_invoice=%d orphan_alloc=%d unresolved_invoice=%d unresolved_alloc=%d',
+                $companyId,
+                $orphanInvoiceLinks,
+                $orphanAllocations,
+                $unresolvedInvoiceLinks,
+                $unresolvedAllocations
+            ));
         }
 
         $activeObligations = (int)$local->query("SELECT COUNT(*) FROM finance_obligations WHERE cancelled_at IS NULL")->fetchColumn();
         printf(
-            "P91_COMPANY_OK id=%d db=%s migration=%s routes=%d synced=%d active=%d orphan_invoice_links=%d orphan_allocations=%d\n",
+            "P91_COMPANY_OK id=%d db=%s migration=%s routes=%d synced=%d active=%d orphan_invoice_links=%d orphan_allocations=%d unresolved_invoice_links=%d unresolved_allocations=%d\n",
             $companyId,
             $databaseName,
             $migrationState,
@@ -105,7 +129,9 @@ foreach ($companies as $company) {
             (int)($sync['obligations'] ?? 0),
             $activeObligations,
             $orphanInvoiceLinks,
-            $orphanAllocations
+            $orphanAllocations,
+            $unresolvedInvoiceLinks,
+            $unresolvedAllocations
         );
     } finally {
         $local->prepare('SELECT RELEASE_LOCK(?)')->execute([$lockName]);
