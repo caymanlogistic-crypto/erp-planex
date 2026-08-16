@@ -88,13 +88,9 @@ final class FinanceEmployeeTransferService
             }
             $mainCashId = (int)$mainCash['id'];
 
-            $sourceBalanceCents = self::lockAndReadEmployeeBalance($localPdo, $sourceEmployee);
-            if ($sourceBalanceCents < $amountCents) {
-                throw new \RuntimeException(
-                    'Недостаточно средств у сотрудника «' . $sourceEmployee['full_name'] . '». Доступно: '
-                    . FinanceEmployeePaymentService::formatMoney(self::fromCents($sourceBalanceCents)) . ' ₽.'
-                );
-            }
+            // Deliberately do not limit the transfer by the sender's current balance.
+            // Employee settlements are allowed to become negative: the transfer is an
+            // accounting responsibility handoff, not a physical cash availability check.
 
             // First leg: employee A returns the money into the technical main cash.
             $sourceMovement = FinanceEmployeePaymentService::createCashMovement(
@@ -226,36 +222,6 @@ final class FinanceEmployeeTransferService
             }
             throw $e;
         }
-    }
-
-    private static function lockAndReadEmployeeBalance(PDO $pdo, array $employee): int
-    {
-        $stmt = $pdo->prepare(
-            "SELECT fem.movement_type, fo.amount
-               FROM finance_employee_movements fem
-               JOIN finance_operations fo ON fo.id = fem.finance_operation_id
-              WHERE fem.employee_identity_type = ?
-                AND fem.employee_identity_id = ?
-                AND fo.status = 'POSTED'
-              ORDER BY fem.id ASC
-              FOR UPDATE"
-        );
-        $stmt->execute([
-            (string)$employee['identity_type'],
-            (int)$employee['identity_id'],
-        ]);
-
-        $balance = 0;
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $amount = self::toCents((string)($row['amount'] ?? '0'));
-            $type = strtoupper((string)($row['movement_type'] ?? ''));
-            if ($type === 'PAYMENT') {
-                $balance += $amount;
-            } elseif ($type === 'RETURN') {
-                $balance -= $amount;
-            }
-        }
-        return $balance;
     }
 
     private static function toCents(string $value): int
