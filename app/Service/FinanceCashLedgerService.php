@@ -19,6 +19,7 @@ final class FinanceCashLedgerService
         $page = max(1, $page);
         $perPage = max(1, min(500, $perPage));
         $offset = ($page - 1) * $perPage;
+        $legacyResolutionSql = FinanceCashResolutionService::legacyResolutionProjectionSql();
 
         $countSql = "SELECT COUNT(*)
                        FROM finance_operations fo
@@ -27,7 +28,10 @@ final class FinanceCashLedgerService
                         AND cash_account.type = 'CASH'
                   LEFT JOIN finance_cash_resolutions outflow_resolution
                          ON outflow_resolution.outflow_finance_operation_id = fo.id
-                      WHERE outflow_resolution.id IS NULL";
+                  LEFT JOIN ({$legacyResolutionSql}) legacy_outflow_resolution
+                         ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id
+                      WHERE outflow_resolution.id IS NULL
+                        AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL";
         $countStmt = $pdo->query($countSql);
         $total = (int) $countStmt->fetchColumn();
 
@@ -38,12 +42,22 @@ final class FinanceCashLedgerService
                        counterpart.type AS counterpart_account_type,
                        employee.employee_name_snapshot AS employee_name,
                        employee.movement_type AS employee_movement_type,
-                       source_resolution.id AS cash_resolution_id,
-                       source_resolution.resolution_type AS cash_resolution_type,
-                       source_resolution.target_name_snapshot AS cash_resolution_target,
-                       source_resolution.created_at AS cash_resolution_created_at,
-                       source_resolution.outflow_finance_operation_id AS cash_resolution_outflow_id,
-                       outflow_resolution.id AS cash_outflow_resolution_id
+                       CASE
+                           WHEN source_resolution.id IS NOT NULL THEN source_resolution.id
+                           WHEN legacy_source_resolution.source_finance_operation_id IS NOT NULL
+                               THEN -legacy_source_resolution.source_finance_operation_id
+                           ELSE NULL
+                       END AS cash_resolution_id,
+                       COALESCE(source_resolution.resolution_type, legacy_source_resolution.resolution_type) AS cash_resolution_type,
+                       COALESCE(source_resolution.target_name_snapshot, legacy_source_resolution.target_name_snapshot) AS cash_resolution_target,
+                       COALESCE(source_resolution.created_at, legacy_source_resolution.created_at) AS cash_resolution_created_at,
+                       COALESCE(source_resolution.outflow_finance_operation_id, legacy_source_resolution.outflow_finance_operation_id) AS cash_resolution_outflow_id,
+                       CASE
+                           WHEN outflow_resolution.id IS NOT NULL THEN outflow_resolution.id
+                           WHEN legacy_outflow_resolution.outflow_finance_operation_id IS NOT NULL
+                               THEN -legacy_outflow_resolution.outflow_finance_operation_id
+                           ELSE NULL
+                       END AS cash_outflow_resolution_id
                   FROM finance_operations fo
                   JOIN finance_money_accounts cash_account
                     ON cash_account.id = fo.money_account_id
@@ -62,7 +76,12 @@ final class FinanceCashLedgerService
                     ON source_resolution.source_finance_operation_id = fo.id
              LEFT JOIN finance_cash_resolutions outflow_resolution
                     ON outflow_resolution.outflow_finance_operation_id = fo.id
+             LEFT JOIN ({$legacyResolutionSql}) legacy_source_resolution
+                    ON legacy_source_resolution.source_finance_operation_id = fo.id
+             LEFT JOIN ({$legacyResolutionSql}) legacy_outflow_resolution
+                    ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id
                  WHERE outflow_resolution.id IS NULL
+                   AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL
               ORDER BY fo.created_at DESC, fo.id DESC
                  LIMIT :limit OFFSET :offset";
 
