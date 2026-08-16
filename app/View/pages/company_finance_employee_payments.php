@@ -35,8 +35,18 @@ $cleanBasis=static function(?string $purpose,?string $note)use($compactName):str
 $monthNames=[1=>'Январь',2=>'Февраль',3=>'Март',4=>'Апрель',5=>'Май',6=>'Июнь',7=>'Июль',8=>'Август',9=>'Сентябрь',10=>'Октябрь',11=>'Ноябрь',12=>'Декабрь'];
 $monthTitle=static function(string $month)use($monthNames):string{$ts=strtotime($month.'-01');if($ts===false)return $month;$n=(int)date('n',$ts);return ($monthNames[$n]??date('m',$ts)).' '.date('Y',$ts);};
 $resultClass=static fn(int $value):string=>$value>0?'is-positive':($value<0?'is-negative':'');
-$months=[];$totalPaid=0;$totalReturned=0;
-foreach($ledger??[] as $row){$month=substr((string)$row['operation_date'],0,7);$months[$month]??=['paid'=>0,'returned'=>0,'rows'=>[]];$months[$month]['rows'][]=$row;if(($row['status']??'')==='POSTED'){$c=$toCents($row['amount']);if(($row['movement_type']??'')==='PAYMENT'){$months[$month]['paid']+=$c;$totalPaid+=$c;}else{$months[$month]['returned']+=$c;$totalReturned+=$c;}}}
+$months=[];$totalPaid=0;$totalReturned=0;$hasEditableTransfers=false;
+foreach($ledger??[] as $row){
+    $month=substr((string)$row['operation_date'],0,7);
+    $months[$month]??=['paid'=>0,'returned'=>0,'rows'=>[]];
+    $months[$month]['rows'][]=$row;
+    if(!empty($row['employee_transfer']))$hasEditableTransfers=true;
+    if(($row['status']??'')==='POSTED'){
+        $c=$toCents($row['amount']);
+        if(($row['movement_type']??'')==='PAYMENT'){$months[$month]['paid']+=$c;$totalPaid+=$c;}
+        else{$months[$month]['returned']+=$c;$totalReturned+=$c;}
+    }
+}
 krsort($months);$net=$totalPaid-$totalReturned;
 $transferEnabled=count($employees??[])>=2;
 ?>
@@ -67,6 +77,7 @@ $transferEnabled=count($employees??[])>=2;
 .employee-report-table .balance-sign{flex:0 0 auto;text-align:left}
 .employee-report-table .balance-amount{margin-left:auto;text-align:right}
 .employee-transfer-modal .field-note{margin-top:4px}
+.employee-transfer-row{cursor:pointer}
 </style>
 <div class="employee-report">
     <div class="page-head">
@@ -127,8 +138,11 @@ $transferEnabled=count($employees??[])>=2;
                                 $employeeFullName=(string)($row['full_name']??($row['employee_name_snapshot']??($selectedEmployee['full_name']??'')));
                                 $basis=$cleanBasis($row['purpose']??null,$row['note']??null);
                                 $runningBalanceCents=$toCents($row['running_balance']??'0.00');
+                                $employeeTransfer=$row['employee_transfer']??null;
+                                $employeeTransferJson=$employeeTransfer?(string)json_encode($employeeTransfer,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES):'';
+                                $rowClass=trim(($cancelled?'is-muted ':'').($employeeTransfer?'employee-transfer-row':''));
                             ?>
-                                <tr class="<?= $cancelled?'is-muted':'' ?>">
+                                <tr class="<?= e($rowClass) ?>"<?= $employeeTransfer?' data-employee-transfer="'.e($employeeTransferJson).'" title="Двойной щелчок — редактировать передачу денег"':'' ?>>
                                     <td><?= e(date('d.m.Y',strtotime($row['operation_date']))) ?></td>
                                     <td><?= $payment?'Выплата':'Возврат' ?></td>
                                     <td><?= ($row['source_type']??'')==='BANK'?'Расчётный счёт':'Касса' ?></td>
@@ -240,6 +254,136 @@ $transferEnabled=count($employees??[])>=2;
     modal.addEventListener('click',(event)=>{if(event.target===modal)close();});
     document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&modal.classList.contains('is-open'))close();});
     syncTarget();
+})();
+</script>
+<?php endif; ?>
+
+<?php if($hasEditableTransfers): ?>
+<div id="employee-transfer-edit-modal" class="modal-overlay employee-transfer-modal" role="dialog" aria-modal="true" aria-labelledby="employee-transfer-edit-title">
+    <div class="modal modal-md">
+        <div class="modal-head">
+            <span class="modal-title" id="employee-transfer-edit-title">Редактирование передачи денег</span>
+            <button type="button" class="modal-close" data-employee-transfer-edit-close>&times;</button>
+        </div>
+        <form method="post" action="<?= app_url('/company/finance/employee-payments/transfer/update') ?>" id="employee-transfer-edit-form">
+            <?= csrfField() ?>
+            <input type="hidden" name="transfer_group_id" id="employee-transfer-edit-group">
+            <input type="hidden" name="return_employee_ref" value="<?= e($selectedRef??'') ?>">
+            <div class="modal-body">
+                <div class="section-title" id="employee-transfer-edit-section">Передача денежных средств</div>
+                <div class="form-grid two-cols">
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-edit-source">От сотрудника <span class="field-required">*</span></label>
+                        <select class="field-select" id="employee-transfer-edit-source" name="source_employee_ref" required>
+                            <option value="">— Выберите сотрудника —</option>
+                            <?php foreach($employees as $employee): ?>
+                                <option value="<?= e($employee['ref']) ?>"><?= e($employee['full_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-edit-target">Кому <span class="field-required">*</span></label>
+                        <select class="field-select" id="employee-transfer-edit-target" name="target_employee_ref" required>
+                            <option value="">— Выберите сотрудника —</option>
+                            <?php foreach($employees as $employee): ?>
+                                <option value="<?= e($employee['ref']) ?>"><?= e($employee['full_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid two-cols">
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-edit-date">Дата <span class="field-required">*</span></label>
+                        <input class="field-input" id="employee-transfer-edit-date" type="date" name="operation_date" required>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-edit-amount">Сумма <span class="field-required">*</span></label>
+                        <input class="field-input" id="employee-transfer-edit-amount" name="amount" inputmode="decimal" autocomplete="off" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label" for="employee-transfer-edit-purpose">Основание</label>
+                    <input class="field-input" id="employee-transfer-edit-purpose" name="purpose" placeholder="Например: передача подотчётных средств">
+                </div>
+                <div class="field">
+                    <label class="field-label" for="employee-transfer-edit-comment">Комментарий</label>
+                    <textarea class="field-input" id="employee-transfer-edit-comment" name="comment" rows="3" placeholder="Необязательно"></textarea>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button type="submit" class="btn btn-ghost fs-delete-action" form="employee-transfer-delete-form">Удалить передачу</button>
+                <button type="button" class="btn btn-ghost" data-employee-transfer-edit-close>Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+        <form id="employee-transfer-delete-form" method="post" action="<?= app_url('/company/finance/employee-payments/transfer/delete') ?>" onsubmit="return confirm('Удалить передачу денег между сотрудниками?');">
+            <?= csrfField() ?>
+            <input type="hidden" name="transfer_group_id" id="employee-transfer-delete-group">
+            <input type="hidden" name="return_employee_ref" value="<?= e($selectedRef??'') ?>">
+        </form>
+    </div>
+</div>
+<script>
+(function(){
+    const modal=document.getElementById('employee-transfer-edit-modal');
+    const source=document.getElementById('employee-transfer-edit-source');
+    const target=document.getElementById('employee-transfer-edit-target');
+    const groupInput=document.getElementById('employee-transfer-edit-group');
+    const deleteGroupInput=document.getElementById('employee-transfer-delete-group');
+    const section=document.getElementById('employee-transfer-edit-section');
+    const dateInput=document.getElementById('employee-transfer-edit-date');
+    const amountInput=document.getElementById('employee-transfer-edit-amount');
+    const purposeInput=document.getElementById('employee-transfer-edit-purpose');
+    const commentInput=document.getElementById('employee-transfer-edit-comment');
+    if(!modal||!source||!target||!groupInput||!deleteGroupInput||!section||!dateInput||!amountInput||!purposeInput||!commentInput)return;
+
+    const ensureOption=(select,value,label)=>{
+        if(!value)return;
+        let option=Array.from(select.options).find((item)=>item.value===value);
+        if(!option){
+            option=document.createElement('option');
+            option.value=value;
+            option.textContent=label||value;
+            select.appendChild(option);
+        }
+    };
+    const syncTarget=()=>{
+        const sourceValue=source.value;
+        let selectedStillValid=target.value!==sourceValue;
+        Array.from(target.options).forEach((option)=>{
+            if(!option.value)return;
+            option.disabled=option.value===sourceValue;
+            if(option.disabled&&option.selected)selectedStillValid=false;
+        });
+        if(!selectedStillValid)target.value='';
+    };
+    const open=(data)=>{
+        ensureOption(source,data.source_employee_ref,data.source_employee_name);
+        ensureOption(target,data.target_employee_ref,data.target_employee_name);
+        source.value=data.source_employee_ref||'';
+        target.value=data.target_employee_ref||'';
+        groupInput.value=data.transfer_group_id||'';
+        deleteGroupInput.value=data.transfer_group_id||'';
+        section.textContent='ПЕРЕДАЧА ДЕНЕЖНЫХ СРЕДСТВ #'+String(data.display_id||'');
+        dateInput.value=data.operation_date||'';
+        amountInput.value=String(data.amount||'').replace('.',',');
+        purposeInput.value=data.purpose||'';
+        commentInput.value=data.comment||'';
+        syncTarget();
+        modal.classList.add('is-open');
+        setTimeout(()=>source.focus(),0);
+    };
+    const close=()=>modal.classList.remove('is-open');
+
+    document.querySelectorAll('.employee-transfer-row[data-employee-transfer]').forEach((row)=>{
+        row.addEventListener('dblclick',()=>{
+            try{open(JSON.parse(row.dataset.employeeTransfer||'{}'));}catch(error){console.error(error);}
+        });
+    });
+    source.addEventListener('change',syncTarget);
+    modal.querySelectorAll('[data-employee-transfer-edit-close]').forEach((button)=>button.addEventListener('click',close));
+    modal.addEventListener('click',(event)=>{if(event.target===modal)close();});
+    document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&modal.classList.contains('is-open'))close();});
 })();
 </script>
 <?php endif; ?>
