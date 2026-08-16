@@ -53,6 +53,9 @@ $assert(str_contains($controller, 'FinanceEmployeeTransferService::transfer'), '
 $assert(str_contains($controller, 'FinanceEmployeeTransferService::updateTransfer'), 'controller must delegate edits to transfer service');
 $assert(str_contains($controller, 'FinanceEmployeeTransferService::deleteTransfer'), 'controller must delegate deletion to transfer service');
 $assert(str_contains($controller, 'FinanceEmployeeTransferService::decorateLedger'), 'main employee report must decorate transfer rows');
+$assert(str_contains($controller, "\$_SESSION['employee_payments_filter_employee_ref'] = \$selectedRef;"), 'current employee filter must be remembered');
+$assert(str_contains($controller, "\$_SESSION['employee_payments_filter_employee_ref'] ?? \$_POST['source_employee_ref']"), 'new transfer redirect must prefer remembered filter over sender');
+$assert(str_contains($controller, "if (\$redirectRef === '') {\n                \$redirectRef = (string)\$result['source_employee']['ref'];"), 'sender may only be redirect fallback when no filter is remembered');
 $assert(str_contains($view, 'id="employee-transfer-open"'), 'page header must expose the transfer button');
 $assert(str_contains($view, 'btn btn-primary btn--toolbar'), 'transfer button must use the standard primary toolbar style');
 $assert(!str_contains($view, 'Перевод проводится как внутреннее движение'), 'transfer modal must not show the removed technical hint block');
