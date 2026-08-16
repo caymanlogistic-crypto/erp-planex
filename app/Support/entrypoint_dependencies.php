@@ -37,6 +37,7 @@ require_once base_path('app/Service/BankStatementSettingsService.php');
 require_once base_path('app/Service/CompanyDeletionService.php');
 require_once base_path('app/Service/FinanceAllocationService.php');
 require_once base_path('app/Service/FinanceInvoiceService.php');
+require_once base_path('app/Service/FinanceObligationService.php');
 require_once base_path('app/Service/FinanceBalanceService.php');
 require_once base_path('app/Service/FinanceBankReconciliationService.php');
 require_once base_path('app/Service/FinanceBankReconciliationCutoffService.php');
