@@ -53,8 +53,6 @@ $transferEnabled=count($employees??[])>=2;
 .employee-report-table .balance-line.is-negative{justify-content:space-between;color:var(--danger)}
 .employee-report-table .balance-sign{flex:0 0 auto;text-align:left}
 .employee-report-table .balance-amount{margin-left:auto;text-align:right}
-.employee-transfer-note{padding:8px 10px;border:1px solid var(--line-soft);background:var(--surface-form);font-size:11px;color:var(--text-muted);line-height:1.4}
-.employee-transfer-route{font-weight:700;color:var(--accent-deep)}
 .employee-transfer-modal .field-note{margin-top:4px}
 </style>
 <div class="employee-report">
@@ -155,10 +153,7 @@ $transferEnabled=count($employees??[])>=2;
         <form method="post" action="<?= app_url('/company/finance/employee-payments/transfer') ?>" id="employee-transfer-form">
             <?= csrfField() ?>
             <div class="modal-body">
-                <div class="employee-transfer-note">
-                    Перевод проводится как внутреннее движение <span class="employee-transfer-route">сотрудник → Основная касса → сотрудник</span>. Остаток Основной кассы и ДДС компании после операции не изменяются.
-                </div>
-                <div class="form-grid two-cols mt-12">
+                <div class="form-grid two-cols">
                     <div class="field">
                         <label class="field-label" for="employee-transfer-source">От сотрудника <span class="field-required">*</span></label>
                         <select class="field-select" id="employee-transfer-source" name="source_employee_ref" required>
