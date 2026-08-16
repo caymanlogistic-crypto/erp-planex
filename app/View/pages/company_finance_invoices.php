@@ -138,9 +138,10 @@ window.planexSetHtmlAndRunScripts = window.planexSetHtmlAndRunScripts || functio
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('[data-invoice-id]').forEach(function(row) {
+    document.querySelectorAll('table.table tbody tr[data-invoice-id]').forEach(function(row) {
         row.addEventListener('dblclick', function() {
-            var id = this.dataset.invoiceId;
+            var id = parseInt(this.dataset.invoiceId || '0', 10);
+            if (!Number.isInteger(id) || id <= 0) return;
             var body = document.getElementById('invoice-view-modal-body');
             body.innerHTML = '<div class="empty-state compact"><p>Загрузка...</p></div>';
             window.openModal('invoice-view-modal');
