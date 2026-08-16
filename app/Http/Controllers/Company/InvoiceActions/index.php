@@ -2,6 +2,7 @@
 
 use App\Core\Database;
 use App\Service\FinanceInvoiceService;
+use App\Service\FinanceObligationService;
 
 requireRole(['company_owner']);
 
@@ -42,6 +43,7 @@ try {
         $localDb = new Database($localConfig);
         $localPdo = $localDb->connection();
         applyLocalMigrations($localPdo);
+        FinanceObligationService::syncAllLinearRoutes($localPdo);
 
         $user = $_SESSION['user'] ?? [];
         $allowedDirection = in_array($direction, [FinanceInvoiceService::DIRECTION_OUTGOING, FinanceInvoiceService::DIRECTION_INCOMING], true) ? $direction : null;
