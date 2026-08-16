@@ -31,6 +31,7 @@ jobs:
           php -l app/Service/FinanceMatchingRuleService.php
           for f in app/Service/FinanceMatchingRule*Trait.php; do php -l "$f"; done
           php -l app/Service/FinanceEmployeePaymentService.php
+          php -l app/Service/FinanceEmployeeTransferService.php
           php -l app/Service/FinanceCashLedgerService.php
           php -l app/Service/FinanceCashResolutionService.php
           php -l app/Service/NavigationCounterService.php
@@ -59,6 +60,7 @@ jobs:
           php -l tests/finance_matching_classification_test.php
           php -l tests/finance_matching_cash_transfer_test.php
           php -l tests/finance_employee_payments_test.php
+          php -l tests/finance_employee_transfer_behavioral_test.php
           php -l tests/finance_bank_register_filters_test.php
           php -l tests/finance_cash_ledger_test.php
           php -l tests/finance_cash_resolution_test.php
@@ -86,6 +88,13 @@ jobs:
           php -m | grep -qi pdo_mysql
           php tests/finance_employee_payments_test.php 2>&1 | tee employee_payments_regression.txt
           grep -q 'FINANCE_EMPLOYEE_PAYMENTS_BEHAVIOR_OK' employee_payments_regression.txt
+      - name: Employee transfer behavioral regression
+        env: *db_env
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/finance_employee_transfer_behavioral_test.php 2>&1 | tee employee_transfer_regression.txt
+          grep -q 'FINANCE_EMPLOYEE_TRANSFER_BEHAVIOR_OK' employee_transfer_regression.txt
       - name: Bank register filter behavioral regression
         env: *db_env
         shell: bash
@@ -153,6 +162,7 @@ jobs:
           path: |
             cash_dispatch_opcache_route.txt
             employee_payments_regression.txt
+            employee_transfer_regression.txt
             bank_register_filters_regression.txt
             navigation_counter_isolation.txt
             matching_cash_transfer_regression.txt
