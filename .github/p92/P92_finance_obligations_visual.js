@@ -5,6 +5,12 @@ const { chromium } = require('playwright');
 const B = 'https://plan-ex.ru/erpv2/';
 const ok = (v, m) => { if (!v) throw new Error(m); };
 const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|Class ".+" not found)/i;
+const cents = value => {
+  const normalized = String(value ?? '').trim().replace(/\s+/g, '').replace(',', '.');
+  if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) return 0;
+  const [whole, fraction = ''] = normalized.split('.');
+  return Number(whole) * 100 + Number((fraction + '00').slice(0, 2));
+};
 
 (async () => {
   const credentials = JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64 || '', 'base64').toString('utf8'));
@@ -52,6 +58,18 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
     return text;
   }
 
+  async function chooseCounterpartyWithObligations(modal, select, label) {
+    const count = await select.locator('option:not([value=""])').count();
+    for (let i = 0; i < count; i++) {
+      const value = await select.locator('option:not([value=""])').nth(i).getAttribute('value');
+      if (!value) continue;
+      await select.selectOption(value);
+      const text = await waitObligationsSettled(modal, `${label}-${value}`);
+      if (text.includes('Рейс #')) return { value, text };
+    }
+    return null;
+  }
+
   try {
     await page.goto(B + 'login', { waitUntil: 'domcontentloaded' });
     await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
@@ -76,12 +94,32 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
     const direction = modal.locator('select[name="direction"]');
     const counterparty = modal.locator('select[name="counterparty_entity_id"]');
     const inn = modal.locator('.js-inv-cparty-inn');
+    const invoiceAmount = modal.locator('input[name="amount"]');
     ok(await counterparty.locator('option').count() > 1, 'outgoing clients loaded');
-    const firstClient = await counterparty.locator('option:not([value=""])').first().getAttribute('value');
-    ok(firstClient, 'client option available');
-    await counterparty.selectOption(firstClient);
+
+    const outgoing = await chooseCounterpartyWithObligations(modal, counterparty, 'outgoing');
+    ok(outgoing, 'at least one outgoing client has open obligations');
     ok((await inn.inputValue()).trim().length > 0, 'client INN populated');
-    const outgoingObligations = await waitObligationsSettled(modal, 'outgoing');
+
+    const checks = modal.locator('.js-ob-check');
+    ok(await checks.count() > 0, 'obligation checkboxes rendered');
+    const firstCheck = checks.first();
+    const checkBox = await firstCheck.boundingBox();
+    ok(checkBox && checkBox.width >= 14 && checkBox.width <= 18 && checkBox.height >= 14 && checkBox.height <= 18, `compact checkbox geometry ${JSON.stringify(checkBox)}`);
+    if (!(await firstCheck.isChecked())) await firstCheck.check();
+    const secondCheck = checks.nth(1);
+    if (await checks.count() > 1 && !(await secondCheck.isChecked())) await secondCheck.check();
+
+    const selectedAmounts = await modal.locator('.js-ob-check:checked').evaluateAll(nodes => nodes.map(node => {
+      const input = node.closest('tr').querySelector('.js-ob-amount');
+      return input ? input.value : '0';
+    }));
+    const expectedTotal = selectedAmounts.reduce((sum, value) => sum + cents(value), 0);
+    const actualTotal = cents(await invoiceAmount.inputValue());
+    ok(expectedTotal > 0, 'selected obligations have positive total');
+    ok(actualTotal === expectedTotal, `invoice total follows obligations expected=${expectedTotal} actual=${actualTotal}`);
+    ok(await invoiceAmount.getAttribute('readonly') !== null, 'invoice amount becomes read-only while obligations selected');
+    ok((await modal.locator('.js-inv-amount-hint').innerText()).includes('Рассчитано'), 'auto-total hint visible');
     await page.screenshot({ path: 'P92_screens/invoice_create_outgoing.png', fullPage: true });
 
     await direction.selectOption('INCOMING');
@@ -102,7 +140,10 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
       clientHeight: await modal.locator('.modal').evaluate(el => el.clientHeight),
       outgoingClients: true,
       incomingContractors: true,
-      outgoingObligations,
+      checkbox: checkBox,
+      outgoingObligations: outgoing.text,
+      invoiceTotalCents: actualTotal,
+      expectedTotalCents: expectedTotal,
       incomingObligations
     };
     await page.screenshot({ path: 'P92_screens/invoice_create_modal.png', fullPage: true });
