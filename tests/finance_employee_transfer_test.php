@@ -6,8 +6,9 @@ $servicePath = dirname(__DIR__) . '/app/Service/FinanceEmployeeTransferService.p
 $controllerPath = dirname(__DIR__) . '/app/Http/Controllers/Company/FinanceEmployeePaymentsController.php';
 $routePath = dirname(__DIR__) . '/app/Http/Routes/company_finance_employee_payments.php';
 $viewPath = dirname(__DIR__) . '/app/View/pages/company_finance_employee_payments.php';
+$entrypointDependenciesPath = dirname(__DIR__) . '/app/Support/entrypoint_dependencies.php';
 
-foreach ([$servicePath, $controllerPath, $routePath, $viewPath] as $path) {
+foreach ([$servicePath, $controllerPath, $routePath, $viewPath, $entrypointDependenciesPath] as $path) {
     if (!is_file($path)) {
         fwrite(STDERR, "Missing file: {$path}\n");
         exit(1);
@@ -18,6 +19,7 @@ $service = file_get_contents($servicePath);
 $controller = file_get_contents($controllerPath);
 $route = file_get_contents($routePath);
 $view = file_get_contents($viewPath);
+$entrypointDependencies = file_get_contents($entrypointDependenciesPath);
 
 $assert = static function (bool $condition, string $message): void {
     if (!$condition) {
@@ -37,6 +39,7 @@ $assert(str_contains($service, "rollBack()"), 'employee handoff must roll back b
 $assert(!str_contains($service, 'Недостаточно средств у сотрудника'), 'sender balance must not limit transfer amount');
 $assert(!str_contains($service, 'lockAndReadEmployeeBalance'), 'sender balance gate must not exist');
 
+$assert(str_contains($entrypointDependencies, "require_once base_path('app/Service/FinanceEmployeeTransferService.php');"), 'public runtime must load employee transfer service');
 $assert(str_contains($route, '/company/finance/employee-payments/transfer'), 'transfer route must be registered');
 $assert(str_contains($controller, 'FinanceEmployeeTransferService::transfer'), 'controller must delegate to transfer service');
 $assert(str_contains($view, 'id="employee-transfer-open"'), 'page header must expose the transfer button');
