@@ -16,7 +16,7 @@ $money = static fn(mixed $v): string => FinanceInvoiceService::formatAmount((str
             <h1 style="margin:0 0 4px;font-size:20px;">Дебиторская задолженность</h1>
             <div class="receivables-muted">Платёжные обязательства клиентов по рейсам, счетам и фактическим поступлениям.</div>
         </div>
-        <a class="btn btn-secondary" href="<?= e(app_base('/company/finance/invoices')) ?>">← Счета</a>
+        <a class="btn btn-secondary" href="<?= e(app_url('/company/finance/invoices')) ?>">← Счета</a>
     </div>
 
     <?php if (!empty($dbError)): ?><div class="alert alert-danger"><?= e($dbError) ?></div><?php endif; ?>
