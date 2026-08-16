@@ -139,7 +139,12 @@ final class FinanceCashLedgerService
         }
 
         $counterpart = trim((string)($row['counterpart_account_name'] ?? ''));
-        return $counterpart !== '' ? $counterpart : '—';
+        if ($counterpart === '') {
+            return '—';
+        }
+
+        $accountNumberOnly = preg_replace('/^Расчётный счёт\s+/u', '', $counterpart);
+        return trim((string)$accountNumberOnly);
     }
 
     private static function handoffRecipientLabel(array $row): string
@@ -164,9 +169,9 @@ final class FinanceCashLedgerService
 
     private static function handoffDate(array $row): string
     {
-        if (!self::isResolvedCashLifecycle($row)) return '';
-        $createdAt = trim((string)($row['cash_resolution_created_at'] ?? ''));
-        return $createdAt !== '' ? substr($createdAt, 0, 10) : '';
+        // The handoff date remains stored in the resolution data, but the cash
+        // journal intentionally displays only the recipient name.
+        return '';
     }
 
     private static function displayPurpose(array $row): string
