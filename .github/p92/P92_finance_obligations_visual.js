@@ -39,15 +39,14 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
 
   async function waitObligationsSettled(modal, label) {
     const box = modal.locator('.js-obligations-box');
-    await page.waitForFunction(
-      ({ selector }) => {
-        const el = document.querySelector(selector);
-        return !!el && !el.textContent.includes('Загрузка…');
-      },
-      { selector: '#invoice-create-modal.is-open .js-obligations-box' },
-      { timeout: 10000 }
-    );
-    const text = (await box.innerText()).trim();
+    const deadline = Date.now() + 10000;
+    let text = '';
+    while (Date.now() < deadline) {
+      text = (await box.innerText()).trim();
+      if (!text.includes('Загрузка…')) break;
+      await page.waitForTimeout(150);
+    }
+    ok(!text.includes('Загрузка…'), `${label} obligations loading timeout`);
     ok(!text.includes('Не удалось загрузить платёжные обязательства.'), `${label} obligations load failed: ${text}`);
     ok(text.includes('Открытых обязательств для этого контрагента нет.') || text.includes('Рейс #'), `${label} obligations unexpected state: ${text}`);
     return text;
