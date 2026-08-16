@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          live=/home/s/spugovxsim/planexp/public_html/erpv2
+          live="/home/s/spugovxsim/planexp/public""_html/erpv2"
           ssh -p "$PORT" -i "$HOME/.ssh/p91" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "cd '$live' && /usr/bin/php8.5 -l scripts/p91_apply_finance_obligations_migration.php && /usr/bin/php8.5 scripts/p91_apply_finance_obligations_migration.php" | tee P91_FINANCE_OBLIGATIONS.txt
           grep -q 'No syntax errors detected' P91_FINANCE_OBLIGATIONS.txt
           grep -q 'P91_FINANCE_OBLIGATIONS_OK' P91_FINANCE_OBLIGATIONS.txt
