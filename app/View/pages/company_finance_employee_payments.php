@@ -21,6 +21,7 @@ $cleanBasis=static function(?string $purpose,?string $note):string{
 };
 $monthNames=[1=>'Январь',2=>'Февраль',3=>'Март',4=>'Апрель',5=>'Май',6=>'Июнь',7=>'Июль',8=>'Август',9=>'Сентябрь',10=>'Октябрь',11=>'Ноябрь',12=>'Декабрь'];
 $monthTitle=static function(string $month)use($monthNames):string{$ts=strtotime($month.'-01');if($ts===false)return $month;$n=(int)date('n',$ts);return ($monthNames[$n]??date('m',$ts)).' '.date('Y',$ts);};
+$resultClass=static fn(int $value):string=>$value>0?'is-positive':($value<0?'is-negative':'');
 $months=[];$totalPaid=0;$totalReturned=0;
 foreach($ledger??[] as $row){$month=substr((string)$row['operation_date'],0,7);$months[$month]??=['paid'=>0,'returned'=>0,'rows'=>[]];$months[$month]['rows'][]=$row;if(($row['status']??'')==='POSTED'){$c=$toCents($row['amount']);if(($row['movement_type']??'')==='PAYMENT'){$months[$month]['paid']+=$c;$totalPaid+=$c;}else{$months[$month]['returned']+=$c;$totalReturned+=$c;}}}
 krsort($months);$net=$totalPaid-$totalReturned;
@@ -34,12 +35,15 @@ krsort($months);$net=$totalPaid-$totalReturned;
 .employee-report-summary{display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line-soft);background:var(--surface-strong);font-size:11px}
 .employee-report-summary-title{font-weight:700;color:var(--text-main);padding-right:8px;border-right:1px solid var(--line-soft)}
 .employee-report-summary strong{font-size:12px}
+.employee-result.is-positive{color:var(--success)}
+.employee-result.is-negative{color:var(--danger)}
 .employee-month-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);background:var(--surface-form);font-size:11px}
 .employee-month-head:first-child{border-top:0}.employee-month-title{font-weight:700;font-size:12px}.employee-month-caption{margin-top:2px;color:var(--text-faint);font-size:10px}.employee-month-stats{text-align:right;line-height:1.45}.employee-report-empty{padding:18px}.employee-report-card .table-scroll+.employee-month-head{border-top:1px solid var(--line-soft)}
 .employee-report-card .table-scroll{overflow-x:hidden}
 .employee-report-table{width:100%;table-layout:fixed}
 .employee-report-table th,.employee-report-table td{min-width:0}
 .employee-report-table .employee-basis{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
+.employee-report-table .employee-name,.employee-report-table .employee-name-head{text-align:center}
 .employee-report-table .employee-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .employee-report-table .money-head,.employee-report-table .money-cell{text-align:right}
 .employee-report-table .money-cell{white-space:nowrap}
@@ -78,7 +82,7 @@ krsort($months);$net=$totalPaid-$totalReturned;
                 <div class="employee-report-summary-title">За всё время</div>
                 <div>Получено от компании: <strong><?= e($fmt($fromCents($totalPaid))) ?> ₽</strong></div>
                 <div>Возвращено компании: <strong><?= e($fmt($fromCents($totalReturned))) ?> ₽</strong></div>
-                <div>Чисто получено: <strong><?= e($fmt($fromCents($net))) ?> ₽</strong></div>
+                <div>ИТОГО: <strong class="employee-result <?= e($resultClass($net)) ?>"><?= e($fmt($fromCents($net))) ?> ₽</strong></div>
             </div>
 
             <?php if(empty($months)): ?>
@@ -87,14 +91,14 @@ krsort($months);$net=$totalPaid-$totalReturned;
                 <?php foreach($months as $month=>$bucket): $monthNet=$bucket['paid']-$bucket['returned']; ?>
                     <div class="employee-month-head">
                         <div><div class="employee-month-title"><?= e($monthTitle($month)) ?></div><div class="employee-month-caption"><?= count($bucket['rows']) ?> операций · новые сверху</div></div>
-                        <div class="employee-month-stats">За месяц: получено <strong><?= e($fmt($fromCents($bucket['paid']))) ?> ₽</strong> · возвращено <strong><?= e($fmt($fromCents($bucket['returned']))) ?> ₽</strong> · чисто <strong><?= e($fmt($fromCents($monthNet))) ?> ₽</strong></div>
+                        <div class="employee-month-stats">За месяц: получено <strong><?= e($fmt($fromCents($bucket['paid']))) ?> ₽</strong> · возвращено <strong><?= e($fmt($fromCents($bucket['returned']))) ?> ₽</strong> · ИТОГО <strong class="employee-result <?= e($resultClass($monthNet)) ?>"><?= e($fmt($fromCents($monthNet))) ?> ₽</strong></div>
                     </div>
                     <div class="table-scroll">
                         <table class="table employee-report-table">
                             <colgroup>
                                 <col style="width:82px"><col style="width:78px"><col style="width:82px"><col><col style="width:105px"><col style="width:105px"><col style="width:105px"><col style="width:118px">
                             </colgroup>
-                            <thead><tr><th>Дата</th><th>Операция</th><th>Источник</th><th>Основание</th><th class="money-head">Получено</th><th class="money-head">Возвращено</th><th class="money-head">Сальдо</th><th>Сотрудник</th></tr></thead>
+                            <thead><tr><th>Дата</th><th>Операция</th><th>Источник</th><th>Основание</th><th class="money-head">Получено</th><th class="money-head">Возвращено</th><th class="money-head">Сальдо</th><th class="employee-name-head">Сотрудник</th></tr></thead>
                             <tbody>
                             <?php foreach($bucket['rows'] as $row):
                                 $cancelled=($row['status']??'')==='CANCELLED';
