@@ -104,5 +104,6 @@ require_once base_path('app/Http/Routes/company_finance_management_balance.php')
 require_once base_path('app/Http/Routes/company_finance_payment_plan_fact.php');
 require_once base_path('app/Http/Routes/company_finance_dashboard.php');
 require_once base_path('app/Http/Routes/company_finance_matching_rules.php');
+require_once base_path('app/Http/Routes/company_production_calendar.php');
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
