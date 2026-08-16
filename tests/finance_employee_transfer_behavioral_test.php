@@ -144,8 +144,9 @@ $pdo->exec("CREATE TABLE finance_audit_log(
 $pdo->exec("INSERT INTO company_users(id,company_id,full_name,login,role,status)
             VALUES(100,1,'Руководитель','owner','company_owner','active')");
 $pdo->exec("INSERT INTO users(id,full_name,login,role_code,status,deleted_at) VALUES
-            (2,'Иванов Иван','ivanov','logist','active',NULL),
-            (3,'Петров Пётр','petrov','logist','active',NULL)");
+            (2,'Иванов Иван Иванович','ivanov','logist','active',NULL),
+            (3,'Петров Пётр Петрович','petrov','logist','active',NULL),
+            (4,'Сидорова Анна Сергеевна','sidorova','logist','active',NULL)");
 $pdo->exec("INSERT INTO finance_money_accounts(id,type,name,currency,opening_balance,is_active)
             VALUES(1,'CASH','Основная касса','RUR',0.00,1)");
 
@@ -203,5 +204,102 @@ transferOk((int)$resolution['employee_movement_id'] === (int)$result['target_mov
 
 $auditCount = (int)$pdo->query("SELECT COUNT(*) FROM finance_audit_log WHERE action='employee_transfer'")->fetchColumn();
 transferOk($auditCount === 2, 'both transfer legs are explicitly audited');
+
+$decorated = FinanceEmployeeTransferService::decorateLedger($pdo, $senderLedger);
+transferOk(count($decorated) === 1, 'active transfer remains visible in employee report');
+transferOk(isset($decorated[0]['employee_transfer']), 'active employee transfer gets edit metadata');
+transferOk($decorated[0]['employee_transfer']['transfer_group_id'] === $result['transfer_group_id'], 'edit metadata points to exact transfer group');
+transferOk($decorated[0]['employee_transfer']['source_employee_ref'] === 'TENANT_USER:2', 'edit metadata keeps sender');
+transferOk($decorated[0]['employee_transfer']['target_employee_ref'] === 'TENANT_USER:3', 'edit metadata keeps recipient');
+transferOk($decorated[0]['employee_transfer']['amount'] === '500.00', 'edit metadata keeps exact amount');
+
+$updated = FinanceEmployeeTransferService::updateTransfer(
+    $pdo,
+    $pdo,
+    1,
+    $result['transfer_group_id'],
+    [
+        'source_employee_ref' => 'TENANT_USER:2',
+        'target_employee_ref' => 'TENANT_USER:4',
+        'amount' => '750,25',
+        'operation_date' => '2026-08-17',
+        'purpose' => 'Передача на закупку материалов',
+        'comment' => 'Исправлено руководителем',
+    ],
+    ['id' => 100, 'role' => 'company_owner']
+);
+transferOk($updated['amount'] === '750.25', 'edited amount normalized exactly');
+transferOk($updated['transfer_group_id'] === $result['transfer_group_id'], 'editing preserves transfer group identity');
+transferOk($updated['target_employee']['ref'] === 'TENANT_USER:4', 'editing can change recipient');
+
+$senderLedgerAfterEdit = FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, 'TENANT_USER:2');
+$oldRecipientLedgerAfterEdit = FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, 'TENANT_USER:3');
+$newRecipientLedgerAfterEdit = FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, 'TENANT_USER:4');
+transferOk(count($senderLedgerAfterEdit) === 1 && $senderLedgerAfterEdit[0]['running_balance'] === '-750.25', 'sender balance recalculates after edit');
+transferOk(count($oldRecipientLedgerAfterEdit) === 0, 'old recipient no longer owns edited transfer');
+transferOk(count($newRecipientLedgerAfterEdit) === 1 && $newRecipientLedgerAfterEdit[0]['running_balance'] === '750.25', 'new recipient receives edited transfer');
+transferOk($newRecipientLedgerAfterEdit[0]['operation_date'] === '2026-08-17', 'edited date is reflected in ledger');
+transferOk($newRecipientLedgerAfterEdit[0]['purpose'] === 'Передача на закупку материалов', 'edited basis is reflected in ledger');
+transferOk(str_contains((string)$newRecipientLedgerAfterEdit[0]['comment'], 'Исправлено руководителем'), 'edited user comment is preserved');
+
+$editedOps = $pdo->query("SELECT operation_type, source, status, operation_date, amount, purpose, transfer_group_id, transfer_direction
+                           FROM finance_operations ORDER BY id")->fetchAll();
+transferOk(count($editedOps) === 2, 'editing does not duplicate technical operations');
+foreach ($editedOps as $editedOp) {
+    transferOk($editedOp['operation_type'] === 'TRANSFER' && $editedOp['source'] === 'TRANSFER', 'edited legs remain technical transfers');
+    transferOk($editedOp['status'] === 'POSTED', 'edited legs remain posted');
+    transferOk($editedOp['operation_date'] === '2026-08-17', 'both legs get edited date');
+    transferOk((string)$editedOp['amount'] === '750.25', 'both legs get edited amount');
+    transferOk($editedOp['purpose'] === 'Передача на закупку материалов', 'both legs get edited basis');
+    transferOk($editedOp['transfer_group_id'] === $result['transfer_group_id'], 'both legs retain transfer group');
+}
+
+$resolutionAfterEdit = $pdo->query("SELECT * FROM finance_cash_resolutions")->fetch();
+transferOk($resolutionAfterEdit['target_identity_type'] === 'TENANT_USER' && (int)$resolutionAfterEdit['target_identity_id'] === 4, 'resolution follows edited recipient');
+transferOk($resolutionAfterEdit['target_name_snapshot'] === 'Сидорова Анна Сергеевна', 'resolution recipient snapshot updates');
+$editAuditCount = (int)$pdo->query("SELECT COUNT(*) FROM finance_audit_log WHERE action='employee_transfer_edit'")->fetchColumn();
+transferOk($editAuditCount === 2, 'both technical legs audit transfer edit');
+
+$cashBalanceAfterEdit = (string)$pdo->query("SELECT CAST(
+    COALESCE(SUM(CASE WHEN operation_type='TRANSFER' AND transfer_direction='in' THEN amount ELSE 0 END),0)
+    - COALESCE(SUM(CASE WHEN operation_type='TRANSFER' AND transfer_direction='out' THEN amount ELSE 0 END),0)
+    AS DECIMAL(15,2))
+    FROM finance_operations WHERE money_account_id=1 AND status='POSTED'")->fetchColumn();
+transferOk($cashBalanceAfterEdit === '0.00', 'main cash remains zero after editing transfer');
+$economicCountAfterEdit = (int)$pdo->query("SELECT COUNT(*) FROM finance_operations WHERE operation_type IN ('INCOME','EXPENSE')")->fetchColumn();
+transferOk($economicCountAfterEdit === 0, 'editing transfer cannot introduce DDS income or expense');
+
+$deleted = FinanceEmployeeTransferService::deleteTransfer(
+    $pdo,
+    $result['transfer_group_id'],
+    ['id' => 100, 'role' => 'company_owner']
+);
+transferOk($deleted['transfer_group_id'] === $result['transfer_group_id'], 'delete targets exact transfer group');
+
+$cancelledCount = (int)$pdo->query("SELECT COUNT(*) FROM finance_operations WHERE status='CANCELLED'")->fetchColumn();
+transferOk($cancelledCount === 2, 'delete atomically cancels both technical legs');
+$postedCount = (int)$pdo->query("SELECT COUNT(*) FROM finance_operations WHERE status='POSTED'")->fetchColumn();
+transferOk($postedCount === 0, 'deleted transfer has no posted legs');
+$deleteAuditCount = (int)$pdo->query("SELECT COUNT(*) FROM finance_audit_log WHERE action='employee_transfer_delete'")->fetchColumn();
+transferOk($deleteAuditCount === 2, 'both technical legs audit transfer deletion');
+
+$senderRawAfterDelete = FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, 'TENANT_USER:2');
+transferOk(count($senderRawAfterDelete) === 1 && $senderRawAfterDelete[0]['status'] === 'CANCELLED', 'soft deletion preserves raw audit row');
+$senderVisibleAfterDelete = FinanceEmployeeTransferService::decorateLedger($pdo, $senderRawAfterDelete);
+$newRecipientVisibleAfterDelete = FinanceEmployeeTransferService::decorateLedger(
+    $pdo,
+    FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, 'TENANT_USER:4')
+);
+transferOk($senderVisibleAfterDelete === [], 'deleted transfer disappears from sender report');
+transferOk($newRecipientVisibleAfterDelete === [], 'deleted transfer disappears from recipient report');
+
+$cashBalanceAfterDelete = (string)$pdo->query("SELECT CAST(
+    COALESCE(SUM(CASE WHEN operation_type='TRANSFER' AND transfer_direction='in' THEN amount ELSE 0 END),0)
+    - COALESCE(SUM(CASE WHEN operation_type='TRANSFER' AND transfer_direction='out' THEN amount ELSE 0 END),0)
+    AS DECIMAL(15,2))
+    FROM finance_operations WHERE money_account_id=1 AND status='POSTED'")->fetchColumn();
+transferOk($cashBalanceAfterDelete === '0.00', 'main cash remains zero after deletion');
+$economicCountAfterDelete = (int)$pdo->query("SELECT COUNT(*) FROM finance_operations WHERE operation_type IN ('INCOME','EXPENSE')")->fetchColumn();
+transferOk($economicCountAfterDelete === 0, 'deletion cannot introduce DDS income or expense');
 
 echo "FINANCE_EMPLOYEE_TRANSFER_BEHAVIOR_OK\n";
