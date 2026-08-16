@@ -22,14 +22,14 @@ $carrierOb=(int)$pdo->query("SELECT id FROM finance_obligations WHERE source_par
 ok($clientOb>0&&$carrierOb>0,'client and carrier obligations created');
 
 $pdo->exec("INSERT INTO finance_invoices(direction,number,invoice_date,counterparty_entity_type,counterparty_entity_id,counterparty_name,counterparty_inn,amount,status) VALUES('OUTGOING','MAN-OUT-1','2026-12-02','client',1,'Клиент А','7701000001',300,'issued'),('INCOMING','MAN-IN-1','2026-12-02','contractor',2,'Перевозчик Б','7702000002',250,'received')");
-$clientInvoice=(int)$pdo->lastInsertId()-1;
-$carrierInvoice=$clientInvoice+1;
+$clientInvoice=(int)$pdo->query("SELECT id FROM finance_invoices WHERE number='MAN-OUT-1'")->fetchColumn();
+$carrierInvoice=(int)$pdo->query("SELECT id FROM finance_invoices WHERE number='MAN-IN-1'")->fetchColumn();
 FinanceObligationService::replaceInvoiceLinks($pdo,$clientInvoice,[['obligation_id'=>$clientOb,'amount'=>'300.00']],['user_id'=>7,'role_code'=>'company_owner']);
 FinanceObligationService::replaceInvoiceLinks($pdo,$carrierInvoice,[['obligation_id'=>$carrierOb,'amount'=>'250.00']],['user_id'=>7,'role_code'=>'company_owner']);
 
 $pdo->exec("INSERT INTO bank_transactions(operation_date,document_number,counterparty_name,counterparty_inn,purpose) VALUES('2026-12-03','PAY-1','Клиент А','7701000001','Оплата без номера счета'),('2026-12-04','PAY-2','Перевозчик Б','7702000002','Оплата перевозки')");
-$clientTx=(int)$pdo->lastInsertId()-1;
-$carrierTx=$clientTx+1;
+$clientTx=(int)$pdo->query("SELECT id FROM bank_transactions WHERE document_number='PAY-1'")->fetchColumn();
+$carrierTx=(int)$pdo->query("SELECT id FROM bank_transactions WHERE document_number='PAY-2'")->fetchColumn();
 $pdo->exec("INSERT INTO finance_operations(operation_date,operation_type,counterparty_inn,purpose,amount,status,source,bank_transaction_id) VALUES('2026-12-03','INCOME','7701000001','Оплата без номера счета',300,'POSTED','BANK_STATEMENT',{$clientTx}),('2026-12-04','EXPENSE','7702000002','Оплата перевозки',250,'POSTED','BANK_STATEMENT',{$carrierTx})");
 
 $ctx=FinanceBankInvoiceSettlementService::fetchContext($pdo,$clientTx);
