@@ -61,13 +61,6 @@ final class FinanceInvoiceController
         require base_path('app/Http/Controllers/Company/InvoiceActions/modal_delete.php');
     }
 
-    public function counterpartyList(): void
-    {
-        $config = $this->config;
-        $db = $this->db;
-        require base_path('app/Http/Controllers/Company/InvoiceActions/counterparty_list.php');
-    }
-
     public function routePayments(): void
     {
         $config = $this->config;
