@@ -48,6 +48,6 @@ ok(!str_contains($popup, 'employee-payments/bank-link'), 'direct bank employee l
 $rulesPage = file_get_contents(__DIR__ . '/../app/View/pages/company_finance_matching_rules.php');
 ok(str_contains($rulesPage, "isEmployee||d==='EXPENSE'") && str_contains($rulesPage, 'cash.required=isEmployee'), 'employee rule keeps cash enabled and required for income and expense');
 $employeePage = file_get_contents(__DIR__ . '/../app/View/pages/company_finance_employee_payments.php');
-ok(str_contains($employeePage, 'Группировка по месяцам') && str_contains($employeePage, 'Сальдо на конец месяца'), 'employee ledger grouping is explicit');
+ok(str_contains($employeePage, 'Взаиморасчёты с сотрудником') && str_contains($employeePage, 'За всё время') && str_contains($employeePage, 'ИТОГО'), 'employee ledger current summary UI is explicit');
 
 echo "FINANCE_MATCHING_EMPLOYEE_CASH_OK\n";
