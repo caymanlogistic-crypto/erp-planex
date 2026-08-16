@@ -25,6 +25,11 @@ $isValidDate = static function (string $value): bool {
         && (!is_array($dateErrors) || (($dateErrors['warning_count'] ?? 0) === 0 && ($dateErrors['error_count'] ?? 0) === 0))
         && $date->format('Y-m-d') === $value;
 };
+$moneyCents = static function (string $value): int {
+    [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '00');
+    return ((int)$whole * 100) + (int)str_pad(substr($fraction, 0, 2), 2, '0');
+};
+$centsToMoney = static fn(int $cents): string => intdiv($cents, 100) . '.' . str_pad((string)($cents % 100), 2, '0', STR_PAD_LEFT);
 
 try {
     $companyId = (int)(getSessionCompanyId() ?? 0);
@@ -43,7 +48,7 @@ try {
     $direction = strtoupper(trim((string)($_POST['direction'] ?? '')));
     $number = trim((string)($_POST['number'] ?? ''));
     $invoiceDate = trim((string)($_POST['invoice_date'] ?? ''));
-    $amount = trim((string)($_POST['amount'] ?? ''));
+    $rawAmount = trim((string)($_POST['amount'] ?? ''));
     $vatRate = ($_POST['vat_rate'] ?? '') !== '' ? $_POST['vat_rate'] : null;
     $basis = trim((string)($_POST['basis'] ?? ''));
     $comment = trim((string)($_POST['comment'] ?? ''));
@@ -56,11 +61,6 @@ try {
     }
     if ($invoiceDate === '' || !$isValidDate($invoiceDate)) {
         $errors[] = 'Укажите корректную дату счёта.';
-    }
-
-    $normalizedAmount = FinanceInvoiceService::normalizeMoneyInput($amount);
-    if ($normalizedAmount === null) {
-        $errors[] = 'Сумма должна быть больше нуля.';
     }
     if (!FinanceInvoiceService::isVatRateInputValid($vatRate)) {
         $errors[] = 'Некорректное значение НДС. Допустимые значения: Без НДС, 0%, 5%, 7%, 20%, 22%.';
@@ -84,6 +84,40 @@ try {
     $counterpartyId = $counterpartyNorm['id'];
     $counterpartyName = $counterpartyNorm['name'];
     $counterpartyInn = $counterpartyNorm['inn'];
+
+    $obligationIds = is_array($_POST['obligation_id'] ?? null) ? $_POST['obligation_id'] : [];
+    $obligationAmounts = is_array($_POST['obligation_amount'] ?? null) ? $_POST['obligation_amount'] : [];
+    $obligationRows = [];
+    $selectedObligations = 0;
+    $obligationTotalCents = 0;
+    foreach ($obligationIds as $idx => $obligationIdRaw) {
+        $obligationId = (int)$obligationIdRaw;
+        if ($obligationId <= 0) {
+            continue;
+        }
+        $selectedObligations++;
+        $linkAmount = FinanceInvoiceService::normalizeMoneyInput((string)($obligationAmounts[$idx] ?? ''));
+        if ($linkAmount === null) {
+            $errors[] = 'Для каждого выбранного обязательства укажите сумму больше нуля.';
+            continue;
+        }
+        $obligationRows[] = ['obligation_id' => $obligationId, 'amount' => $linkAmount];
+        $obligationTotalCents += $moneyCents($linkAmount);
+    }
+
+    if ($selectedObligations > 0) {
+        $normalizedAmount = count($obligationRows) === $selectedObligations
+            ? $centsToMoney($obligationTotalCents)
+            : null;
+        if ($normalizedAmount !== null) {
+            $old['amount'] = $normalizedAmount;
+        }
+    } else {
+        $normalizedAmount = FinanceInvoiceService::normalizeMoneyInput($rawAmount);
+        if ($normalizedAmount === null) {
+            $errors[] = 'Сумма должна быть больше нуля.';
+        }
+    }
 
     if ($errors === [] && $normalizedAmount !== null) {
         $duplicateStmt = $localPdo->prepare(
@@ -110,22 +144,6 @@ try {
         if ($duplicateStmt->fetchColumn() !== false) {
             $errors[] = 'Идентичный счёт уже существует.';
         }
-    }
-
-    $obligationIds = is_array($_POST['obligation_id'] ?? null) ? $_POST['obligation_id'] : [];
-    $obligationAmounts = is_array($_POST['obligation_amount'] ?? null) ? $_POST['obligation_amount'] : [];
-    $obligationRows = [];
-    foreach ($obligationIds as $idx => $obligationIdRaw) {
-        $obligationId = (int)$obligationIdRaw;
-        if ($obligationId <= 0) {
-            continue;
-        }
-        $linkAmount = FinanceInvoiceService::normalizeMoneyInput((string)($obligationAmounts[$idx] ?? ''));
-        if ($linkAmount === null) {
-            $errors[] = 'Для каждого выбранного обязательства укажите сумму больше нуля.';
-            continue;
-        }
-        $obligationRows[] = ['obligation_id' => $obligationId, 'amount' => $linkAmount];
     }
 
     if ($errors === [] && $normalizedAmount !== null && $counterpartyType !== null) {
