@@ -21,8 +21,12 @@ const fatal = /(Fatal error|Parse error|Uncaught (?:TypeError|Error|Exception)|C
 
   async function inspect(path, name, selector) {
     const response = await page.goto(B + path, { waitUntil: 'networkidle', timeout: 30000 });
-    ok(response && response.status() === 200, `${name} HTTP ${response ? response.status() : 'none'}`);
-    const body = await page.locator('body').innerText();
+    const status = response ? response.status() : 0;
+    const body = await page.locator('body').innerText().catch(() => '');
+    if (status !== 200) {
+      await page.screenshot({ path: `P92_screens/${name}_http_${status || 'none'}.png`, fullPage: true }).catch(() => {});
+      throw new Error(`${name} HTTP ${status || 'none'} BODY ${body.slice(0, 2400).replace(/\s+/g, ' ')}`);
+    }
     ok(!fatal.test(body), `${name} fatal runtime text`);
     if (selector) ok(await page.locator(selector).count() > 0, `${name} selector ${selector}`);
     const viewport = page.viewportSize();
