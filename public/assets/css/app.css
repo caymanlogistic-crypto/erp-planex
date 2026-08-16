@@ -14,6 +14,12 @@ select:not([multiple]) {
     background-color: var(--surface-field) !important;
 }
 
+/* Invoice obligation checkboxes stay native to the browser/OS,
+   but use the ERP brown accent instead of the browser blue default. */
+.invoice-form input[type="checkbox"] {
+    accent-color: var(--accent, #7c4718);
+}
+
 /* Production calendar is a composite card, not the 4-row table grid.
    Override the generic .table-card layout so all 12 months stay in normal flow. */
 .production-calendar > .table-card {
