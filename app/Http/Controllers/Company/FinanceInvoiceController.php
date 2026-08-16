@@ -16,15 +16,20 @@ final class FinanceInvoiceController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/index.php');
+    }
+
+    public function receivables(): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+        require base_path('app/Http/Controllers/Company/InvoiceActions/receivables.php');
     }
 
     public function createSubmit(): void
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/create_submit.php');
     }
 
@@ -32,7 +37,6 @@ final class FinanceInvoiceController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/modal_view.php');
     }
 
@@ -40,7 +44,6 @@ final class FinanceInvoiceController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/modal_edit_form.php');
     }
 
@@ -48,7 +51,6 @@ final class FinanceInvoiceController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/modal_edit_submit.php');
     }
 
@@ -56,7 +58,6 @@ final class FinanceInvoiceController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/modal_delete.php');
     }
 
@@ -64,7 +65,6 @@ final class FinanceInvoiceController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/counterparty_list.php');
     }
 
@@ -72,15 +72,20 @@ final class FinanceInvoiceController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/route_payments.php');
+    }
+
+    public function obligations(): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+        require base_path('app/Http/Controllers/Company/InvoiceActions/obligations.php');
     }
 
     public function history(int $id): void
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/InvoiceActions/history.php');
     }
 }
