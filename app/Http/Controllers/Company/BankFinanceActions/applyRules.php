@@ -20,10 +20,36 @@ try {
 
     $localPdo = (new \App\Core\Database(companyDatabaseConfig($config, $company)))->connection();
     $summary = \App\Service\FinanceMatchingRuleService::applyRulesToUnallocatedBankOperations($localPdo);
-    $invoiceSummary = \App\Service\FinanceObligationService::autoAllocateIncomingCustomerReceipts(
-        $localPdo,
-        $_SESSION['user'] ?? []
-    );
+
+    $localPdo->beginTransaction();
+    try {
+        // Self-heal allocations that may have been inserted by an earlier interrupted bank settlement.
+        // Recalculation is idempotent and keeps invoice/route statuses consistent with active allocations.
+        $repairIds = $localPdo->query(
+            "SELECT a.id
+               FROM finance_operation_allocations a
+               JOIN finance_operations fo ON fo.id=a.operation_id
+              WHERE a.cancelled_at IS NULL
+                AND a.invoice_id IS NOT NULL
+                AND fo.status='POSTED'
+                AND fo.source='BANK_STATEMENT'
+              ORDER BY a.id"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($repairIds as $allocationId) {
+            \App\Service\FinanceSettlementCascadeService::cascadeAfterAllocationCreate($localPdo, (int)$allocationId);
+        }
+
+        $invoiceSummary = \App\Service\FinanceObligationService::autoAllocateIncomingCustomerReceipts(
+            $localPdo,
+            $_SESSION['user'] ?? []
+        );
+        $localPdo->commit();
+    } catch (Throwable $e) {
+        if ($localPdo->inTransaction()) {
+            $localPdo->rollBack();
+        }
+        throw $e;
+    }
 
     $_SESSION['bank_finance_success'] = sprintf(
         'Разнесение завершено: проверено — %d, автоматически разнесено — %d, на проверку — %d, конфликтов — %d, без подходящего правила — %d%s. По счетам клиентов: сопоставлено платежей — %d, создано распределений — %d, сумма — %s ₽.',
