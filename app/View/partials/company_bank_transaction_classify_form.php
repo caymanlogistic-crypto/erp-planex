@@ -9,14 +9,12 @@ $credit=(string)($tx['credit_amount']??'0.00');$debit=(string)($tx['debit_amount
 .tx-classify-state{margin-bottom:12px;padding:9px 11px;border:1px solid var(--line-soft);background:var(--surface-strong);font-size:11px;line-height:1.45}
 .tx-classify-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tx-classify-mode{display:flex;gap:8px;margin:0 0 12px}
-.tx-classify-choice{flex:1;display:flex;align-items:flex-start;gap:9px;padding:10px 11px;border:1px solid var(--line-soft);background:var(--surface-strong);cursor:pointer;transition:border-color 90ms,background 90ms}
+.tx-classify-choice{flex:1;display:flex;align-items:flex-start;gap:8px;padding:9px 11px;border:1px solid var(--line-soft);background:var(--surface-strong);cursor:pointer;transition:border-color 90ms,background 90ms}
 .tx-classify-choice:hover{border-color:var(--line);background:var(--surface-field-alt)}
 .tx-classify-choice:has(input:checked){border-color:var(--accent-line);background:var(--accent-bg)}
-.tx-classify-choice input[type="radio"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;margin:1px 0 0;border:1px solid var(--line-strong);border-radius:50%;background:var(--surface-field);display:grid;place-items:center;cursor:pointer}
-.tx-classify-choice input[type="radio"]::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);transform:scale(0);transition:transform 80ms ease}
-.tx-classify-choice input[type="radio"]:checked{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-light)}
-.tx-classify-choice input[type="radio"]:checked::before{transform:scale(1)}
-.tx-classify-choice input[type="radio"]:focus-visible{outline:2px solid var(--accent-light);outline-offset:2px}
+.tx-classify-choice input[type="radio"]{appearance:auto!important;-webkit-appearance:radio!important;width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important;flex:0 0 13px!important;margin:2px 0 0!important;padding:0!important;border:0!important;box-shadow:none!important;transform:none!important;accent-color:#8a4b12;vertical-align:top}
+.tx-classify-choice input[type="radio"]::before,.tx-classify-choice input[type="radio"]::after{content:none!important;display:none!important}
+.tx-classify-choice input[type="radio"]:checked,.tx-classify-choice input[type="radio"]:focus{box-shadow:none!important;transform:none!important}
 .tx-rule-settings{display:none;margin-top:12px;padding:11px 12px;border:1px solid var(--line-soft);background:var(--surface-strong)}
 .tx-allocation-form:has(input[name="distribution_mode"][value="rule"]:checked) .tx-rule-settings{display:block}
 .tx-rule-fields{display:grid;grid-template-columns:1.6fr .4fr;gap:12px}
