@@ -36,7 +36,7 @@ $catalogsJson = json_encode([
     ], $contractors ?? [])),
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 ?>
-<form action="<?= e($formAction) ?>" method="post" class="invoice-form" data-invoice-id="<?= (int)($invoice['id'] ?? 0) ?>">
+<form action="<?= e($formAction) ?>" method="post" class="invoice-form" data-invoice-id="<?= (int)($invoice['id'] ?? 0) ?>" autocomplete="off">
 <?= csrfField() ?>
 <div class="modal-body">
 <?php if (!empty($formError)): ?><div class="form-alert alert-error"><?= e($formError) ?></div><?php endif; ?>
@@ -49,7 +49,7 @@ $catalogsJson = json_encode([
             <option value="INCOMING"<?= $invDirection === 'INCOMING' ? ' selected' : '' ?>>Полученный (от перевозчика)</option>
         </select>
     </div>
-    <div class="field"><label class="field-label">Номер счёта</label><input type="text" name="number" class="field-input" value="<?= e($invNumber) ?>" required></div>
+    <div class="field"><label class="field-label">Номер счёта</label><input type="text" name="number" class="field-input" value="<?= e($invNumber) ?>" required autocomplete="off"></div>
     <div class="field"><label class="field-label">Дата счёта</label><input type="date" name="invoice_date" class="field-input" value="<?= e($invDate) ?>" required></div>
 </div>
 
@@ -70,7 +70,11 @@ $catalogsJson = json_encode([
 
 <div class="section-title mt-section">Финансовые данные</div>
 <div class="form-grid-2">
-    <div class="field"><label class="field-label">Сумма</label><input type="text" name="amount" class="field-input" value="<?= e($invAmount) ?>" required placeholder="0.00"></div>
+    <div class="field">
+        <label class="field-label">Сумма</label>
+        <input type="text" name="amount" class="field-input js-inv-amount" value="<?= e($invAmount) ?>" required placeholder="0.00" inputmode="decimal" autocomplete="off">
+        <div class="form-hint js-inv-amount-hint" style="display:none;margin-top:4px">Рассчитано по выбранным платёжным обязательствам.</div>
+    </div>
     <div class="field">
         <label class="field-label">Ставка НДС</label>
         <select name="vat_rate" class="field-select">
@@ -82,7 +86,7 @@ $catalogsJson = json_encode([
 <div class="field"><label class="field-label">Основание</label><textarea name="basis" class="field-textarea" rows="2"><?= e($invBasis) ?></textarea></div>
 
 <div class="section-title mt-section">Платёжные обязательства</div>
-<div class="form-hint" style="margin-bottom:8px">Срок оплаты берётся из условий рейса. В один счёт можно включить несколько событий или выставить несколько счетов на одно событие. Сумма выбранных связей должна равняться сумме счёта.</div>
+<div class="form-hint" style="margin-bottom:8px">Срок оплаты берётся из условий рейса. В один счёт можно включить несколько событий или выставить несколько счетов на одно событие. Сумма счёта рассчитывается по выбранным событиям.</div>
 <div class="js-obligations-box" style="border:1px solid var(--border,#d3cec3);max-height:250px;overflow:auto;background:var(--surface,#fff)"><div style="padding:12px;color:var(--muted,#746f66)">Выберите контрагента — система покажет его открытые обязательства.</div></div>
 
 <div class="field mt-section"><label class="field-label">Комментарий</label><textarea name="comment" class="field-textarea" rows="2"><?= e($invComment) ?></textarea></div>
@@ -105,13 +109,44 @@ $catalogsJson = json_encode([
     var inn = form.querySelector('.js-inv-cparty-inn');
     var dir = form.querySelector('.js-inv-direction');
     var box = form.querySelector('.js-obligations-box');
+    var invoiceAmount = form.querySelector('.js-inv-amount');
+    var amountHint = form.querySelector('.js-inv-amount-hint');
     var initialId = <?= json_encode((string)$invCpartyId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     var obligationRequestSeq = 0;
     var obligationController = null;
 
     function esc(s){return String(s == null ? '' : s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c];});}
     function expectedType(){return dir.value === 'INCOMING' ? 'contractor' : 'client';}
-    function emptyObligations(){box.innerHTML='<div style="padding:12px;color:var(--muted,#746f66)">Выберите контрагента — система покажет его открытые обязательства.</div>';}
+    function moneyCents(value){
+        var normalized=String(value == null ? '' : value).trim().replace(/\s+/g,'').replace(',','.');
+        if(!/^\d+(?:\.\d{0,2})?$/.test(normalized)) return 0;
+        var parts=normalized.split('.');
+        return (parseInt(parts[0]||'0',10)*100)+parseInt(String(parts[1]||'').padEnd(2,'0').slice(0,2)||'0',10);
+    }
+    function formatCents(cents){return (Math.max(0,cents)/100).toFixed(2);}
+    function releaseAutoAmount(){
+        if(invoiceAmount.dataset.autoAmount==='1') invoiceAmount.value='';
+        invoiceAmount.readOnly=false;
+        delete invoiceAmount.dataset.autoAmount;
+        amountHint.style.display='none';
+    }
+    function syncInvoiceAmount(){
+        var checked=box.querySelectorAll('.js-ob-check:checked');
+        if(!checked.length){releaseAutoAmount();return;}
+        var total=0;
+        checked.forEach(function(ch){
+            var amountInput=ch.closest('tr').querySelector('.js-ob-amount');
+            total+=moneyCents(amountInput ? amountInput.value : '');
+        });
+        invoiceAmount.value=formatCents(total);
+        invoiceAmount.readOnly=true;
+        invoiceAmount.dataset.autoAmount='1';
+        amountHint.style.display='block';
+    }
+    function emptyObligations(){
+        box.innerHTML='<div style="padding:12px;color:var(--muted,#746f66)">Выберите контрагента — система покажет его открытые обязательства.</div>';
+        releaseAutoAmount();
+    }
     function cancelObligationRequest(){
         obligationRequestSeq++;
         if (obligationController) obligationController.abort();
@@ -139,21 +174,28 @@ $catalogsJson = json_encode([
     function renderObligations(data){
         if (!Array.isArray(data) || !data.length){
             box.innerHTML='<div style="padding:12px;color:var(--muted,#746f66)">Открытых обязательств для этого контрагента нет.</div>';
+            releaseAutoAmount();
             return;
         }
         var h='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:7px;text-align:left">Выбрать</th><th style="padding:7px;text-align:left">Рейс / событие</th><th style="padding:7px;text-align:right">Свободно</th><th style="padding:7px;text-align:right">В счёт</th></tr></thead><tbody>';
         data.forEach(function(x){
             var cur=parseFloat(x.current_amount||0), checked=cur>0, val=checked?x.current_amount:x.available;
             var due=x.due_date?' · срок '+esc(x.due_date):' · срок ожидает события';
-            h+='<tr style="border-top:1px solid var(--border,#ddd)"><td style="padding:7px"><input type="checkbox" class="js-ob-check" '+(checked?'checked':'')+'></td><td style="padding:7px"><strong>Рейс #'+esc(x.route_id)+'</strong><div style="font-size:11px;color:var(--muted,#746f66)">'+esc(x.condition)+due+'</div></td><td style="padding:7px;text-align:right;white-space:nowrap">'+esc(x.available)+' ₽</td><td style="padding:7px;text-align:right"><input type="hidden" name="obligation_id[]" value="'+esc(x.id)+'" '+(checked?'':'disabled')+'><input class="field-input js-ob-amount" style="width:120px;text-align:right" name="obligation_amount[]" value="'+esc(val)+'" '+(checked?'':'disabled')+'></td></tr>';
+            h+='<tr style="border-top:1px solid var(--border,#ddd)"><td style="padding:7px;text-align:center"><input type="checkbox" class="js-ob-check" style="width:16px;height:16px;min-width:16px;min-height:16px;margin:0;vertical-align:middle" '+(checked?'checked':'')+'></td><td style="padding:7px"><strong>Рейс #'+esc(x.route_id)+'</strong><div style="font-size:11px;color:var(--muted,#746f66)">'+esc(x.condition)+due+'</div></td><td style="padding:7px;text-align:right;white-space:nowrap">'+esc(x.available)+' ₽</td><td style="padding:7px;text-align:right"><input type="hidden" name="obligation_id[]" value="'+esc(x.id)+'" '+(checked?'':'disabled')+'><input class="field-input js-ob-amount" style="width:120px;text-align:right" name="obligation_amount[]" value="'+esc(val)+'" inputmode="decimal" autocomplete="off" '+(checked?'':'disabled')+'></td></tr>';
         });
         box.innerHTML=h+'</tbody></table>';
         box.querySelectorAll('.js-ob-check').forEach(function(ch){
             ch.addEventListener('change',function(){
                 var tr=ch.closest('tr');
                 tr.querySelectorAll('input[name]').forEach(function(i){i.disabled=!ch.checked;});
+                syncInvoiceAmount();
             });
         });
+        box.querySelectorAll('.js-ob-amount').forEach(function(input){
+            input.addEventListener('input',syncInvoiceAmount);
+            input.addEventListener('change',syncInvoiceAmount);
+        });
+        syncInvoiceAmount();
     }
 
     async function requestObligations(url, signal){
@@ -196,6 +238,7 @@ $catalogsJson = json_encode([
             .catch(function(error){
                 if (seq !== obligationRequestSeq || (error && error.name === 'AbortError')) return;
                 obligationController = null;
+                releaseAutoAmount();
                 box.innerHTML='<div class="form-alert alert-error" style="margin:8px">Не удалось загрузить платёжные обязательства. Повторите выбор контрагента.</div>';
             });
     }
