@@ -39,7 +39,7 @@ if (PHP_SAPI !== 'cli') {
         }
     }
 
-    ob_start(static function (string $html): string {
+    ob_start(static function (string $html) use ($config): string {
         if (!str_contains($html, '</body>')) return $html;
 
         // The old menu slot is now the unified financial-structure editor.
@@ -54,6 +54,32 @@ if (PHP_SAPI !== 'cli') {
                 '<svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5C1.5 10.8 3.5 8.8 5.5 8.8C7.5 8.8 9.5 10.8 9.5 13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 5.5H14M12 3.5V7.5M10 11.5H14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' .
                 '<span class="nav-label">Выплаты сотрудникам</span></a>';
             $html = preg_replace('~(<a class="nav-item[^"]*" href="[^"]*/company/finance/cash">)~', $employeeItem . '$1', $html, 1) ?? $html;
+        }
+
+        // Low-frequency company utilities live in a separate MISC section rather
+        // than in the operational logistics directories.
+        if (($_SESSION['role_code'] ?? '') === 'company_owner' && !str_contains($html, '<span class="nav-label">Производственный календарь</span>')) {
+            $calendarActive = str_starts_with(current_app_path(), '/company/misc/production-calendar') ? ' is-active' : '';
+            $calendarHref = e(app_url('/company/misc/production-calendar'));
+            $warningYear = null;
+            try {
+                $companyId = (int)(getSessionCompanyId() ?? 0);
+                if ($companyId > 0) {
+                    $centralDb = new \App\Core\Database($config['database']);
+                    $warningYear = \App\Service\ProductionCalendarService::warningYearForCompany($config, $centralDb, $companyId);
+                }
+            } catch (\Throwable) {
+                $warningYear = (int)date('n') === 12 ? ((int)date('Y') + 1) : null;
+            }
+            $warningBadge = $warningYear
+                ? '<span class="nav-count is-alert" title="Не загружен производственный календарь на ' . (int)$warningYear . ' год">!</span>'
+                : '';
+            $miscGroup = '<div class="nav-group pc-misc-nav-group">' .
+                '<div class="nav-group-title">ПРОЧЕЕ</div>' .
+                '<a class="nav-item' . $calendarActive . '" href="' . $calendarHref . '">' .
+                '<svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3.5" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5H14M5 2V5M11 2V5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5 9H6M8 9H9M11 9H12M5 11.5H6M8 11.5H9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>' .
+                '<span class="nav-label">Производственный календарь</span>' . $warningBadge . '</a></div>';
+            $html = str_replace('</aside>', $miscGroup . '</aside>', $html);
         }
 
         // ERPv2 lives below /erpv2. A few legacy partials still emit root-relative
