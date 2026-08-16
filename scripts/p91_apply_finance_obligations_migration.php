@@ -14,13 +14,16 @@ require_once base_path('app/Support/entrypoint_dependencies.php');
 use App\Core\Database;
 use App\Service\FinanceObligationService;
 
-$migrationName = '071_finance_obligations.sql';
-$migrationPath = base_path('database/migrations-local/' . $migrationName);
-$sql = file_get_contents($migrationPath);
-if ($sql === false || trim($sql) === '') {
-    throw new RuntimeException('P91 migration SQL is missing or empty.');
+$migrationNames = ['071_finance_obligations.sql', '072_invoice_obligation_cleanup.sql'];
+$migrations = [];
+foreach ($migrationNames as $migrationName) {
+    $migrationPath = base_path('database/migrations-local/' . $migrationName);
+    $sql = file_get_contents($migrationPath);
+    if ($sql === false || trim($sql) === '') {
+        throw new RuntimeException('P91 migration SQL is missing or empty: ' . $migrationName);
+    }
+    $migrations[$migrationName] = ['sql' => $sql, 'checksum' => hash('sha256', $sql)];
 }
-$checksum = hash('sha256', $sql);
 
 $central = (new Database($config['database']))->connection();
 $companies = $central->query("SELECT * FROM companies WHERE status='active' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
@@ -58,20 +61,24 @@ foreach ($companies as $company) {
     }
 
     try {
-        $stmt = $local->prepare('SELECT checksum FROM schema_migrations WHERE migration=? LIMIT 1');
-        $stmt->execute([$migrationName]);
-        $stored = $stmt->fetchColumn();
-        if ($stored !== false) {
-            if (!hash_equals((string)$stored, $checksum)) {
-                throw new RuntimeException('P91 migration checksum mismatch in company ' . $companyId);
+        $states = [];
+        foreach ($migrations as $migrationName => $migration) {
+            $stmt = $local->prepare('SELECT checksum FROM schema_migrations WHERE migration=? LIMIT 1');
+            $stmt->execute([$migrationName]);
+            $stored = $stmt->fetchColumn();
+            if ($stored !== false) {
+                if (!hash_equals((string)$stored, (string)$migration['checksum'])) {
+                    throw new RuntimeException('P91 migration checksum mismatch in company ' . $companyId . ': ' . $migrationName);
+                }
+                $existingCount++;
+                $states[] = $migrationName . '=existing';
+            } else {
+                $local->exec((string)$migration['sql']);
+                $local->prepare('INSERT INTO schema_migrations (migration,checksum) VALUES (?,?)')
+                    ->execute([$migrationName, $migration['checksum']]);
+                $appliedCount++;
+                $states[] = $migrationName . '=applied';
             }
-            $existingCount++;
-            $migrationState = 'existing';
-        } else {
-            $local->exec($sql);
-            $local->prepare('INSERT INTO schema_migrations (migration,checksum) VALUES (?,?)')->execute([$migrationName, $checksum]);
-            $appliedCount++;
-            $migrationState = 'applied';
         }
 
         if (!FinanceObligationService::schemaReady($local)) {
@@ -92,46 +99,52 @@ foreach ($companies as $company) {
                 AND NOT EXISTS (SELECT 1 FROM finance_obligations o WHERE o.id=a.obligation_id)"
         )->fetchColumn();
         $unresolvedInvoiceLinks = (int)$local->query(
-            "SELECT COUNT(*)
-               FROM finance_invoice_links l
+            "SELECT COUNT(*) FROM finance_invoice_links l
                JOIN finance_invoices i ON i.id=l.invoice_id
               WHERE l.linear_route_payment_id IS NOT NULL
                 AND l.obligation_id IS NULL
                 AND i.status<>'cancelled'"
         )->fetchColumn();
         $unresolvedAllocations = (int)$local->query(
-            "SELECT COUNT(*)
-               FROM finance_operation_allocations a
+            "SELECT COUNT(*) FROM finance_operation_allocations a
                JOIN finance_operations op ON op.id=a.operation_id
               WHERE a.linear_route_payment_id IS NOT NULL
                 AND a.obligation_id IS NULL
                 AND a.cancelled_at IS NULL
                 AND op.status='POSTED'"
         )->fetchColumn();
-        if ($orphanInvoiceLinks !== 0 || $orphanAllocations !== 0 || $unresolvedInvoiceLinks !== 0 || $unresolvedAllocations !== 0) {
+        $legacyDrafts = (int)$local->query("SELECT COUNT(*) FROM finance_invoices WHERE status='draft' AND cancelled_at IS NULL")->fetchColumn();
+        $legacyPlannedDates = (int)$local->query("SELECT COUNT(*) FROM finance_invoices WHERE planned_payment_date IS NOT NULL")->fetchColumn();
+
+        if ($orphanInvoiceLinks !== 0 || $orphanAllocations !== 0 || $unresolvedInvoiceLinks !== 0 || $unresolvedAllocations !== 0
+            || $legacyDrafts !== 0 || $legacyPlannedDates !== 0) {
             throw new RuntimeException(sprintf(
-                'P91 finance link integrity failure for company %d: orphan_invoice=%d orphan_alloc=%d unresolved_invoice=%d unresolved_alloc=%d',
+                'P91 integrity failure company=%d orphan_invoice=%d orphan_alloc=%d unresolved_invoice=%d unresolved_alloc=%d draft=%d planned_dates=%d',
                 $companyId,
                 $orphanInvoiceLinks,
                 $orphanAllocations,
                 $unresolvedInvoiceLinks,
-                $unresolvedAllocations
+                $unresolvedAllocations,
+                $legacyDrafts,
+                $legacyPlannedDates
             ));
         }
 
         $activeObligations = (int)$local->query("SELECT COUNT(*) FROM finance_obligations WHERE cancelled_at IS NULL")->fetchColumn();
         printf(
-            "P91_COMPANY_OK id=%d db=%s migration=%s routes=%d synced=%d active=%d orphan_invoice_links=%d orphan_allocations=%d unresolved_invoice_links=%d unresolved_allocations=%d\n",
+            "P91_COMPANY_OK id=%d db=%s migrations=%s routes=%d synced=%d active=%d orphan_invoice_links=%d orphan_allocations=%d unresolved_invoice_links=%d unresolved_allocations=%d draft=%d planned_dates=%d\n",
             $companyId,
             $databaseName,
-            $migrationState,
+            implode(',', $states),
             (int)($sync['routes'] ?? 0),
             (int)($sync['obligations'] ?? 0),
             $activeObligations,
             $orphanInvoiceLinks,
             $orphanAllocations,
             $unresolvedInvoiceLinks,
-            $unresolvedAllocations
+            $unresolvedAllocations,
+            $legacyDrafts,
+            $legacyPlannedDates
         );
     } finally {
         $local->prepare('SELECT RELEASE_LOCK(?)')->execute([$lockName]);
@@ -140,11 +153,11 @@ foreach ($companies as $company) {
 }
 
 printf(
-    "P91_FINANCE_OBLIGATIONS_OK companies=%d applied=%d existing=%d routes=%d obligations=%d checksum=%s\n",
+    "P91_FINANCE_OBLIGATIONS_OK companies=%d applied=%d existing=%d routes=%d obligations=%d migrations=%s\n",
     $count,
     $appliedCount,
     $existingCount,
     $totalRoutes,
     $totalObligations,
-    $checksum
+    implode(',', array_keys($migrations))
 );
