@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Company;
 
 use App\Core\Database;
+use App\Service\FinanceObligationService;
 use App\Service\LinearTripRequestNormalizer;
 
 final class LinearTripController
@@ -15,9 +16,9 @@ final class LinearTripController
 
     public function index(): void
     {
+        $this->syncFinanceObligations();
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/index.php');
     }
 
@@ -26,26 +27,24 @@ final class LinearTripController
         $this->normalizeSubmittedExecutorCarrier();
         $this->normalizeOptionalCargo();
         $this->ensureLegacyPaymentDueCompatibility();
-
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/create_submit.php');
     }
 
     public function modalView(string $id): void
     {
+        $this->syncFinanceObligations();
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/modal_view.php');
     }
 
     public function modalEditForm(string $id): void
     {
+        $this->syncFinanceObligations();
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/modal_edit_form.php');
     }
 
@@ -54,10 +53,8 @@ final class LinearTripController
         $this->normalizeSubmittedExecutorCarrier();
         $this->normalizeOptionalCargo();
         $this->ensureLegacyPaymentDueCompatibility();
-
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/modal_edit_submit.php');
     }
 
@@ -65,7 +62,6 @@ final class LinearTripController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/modal_delete.php');
     }
 
@@ -73,7 +69,6 @@ final class LinearTripController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/cargo_types.php');
     }
 
@@ -81,8 +76,25 @@ final class LinearTripController
     {
         $config = $this->config;
         $db = $this->db;
-
         require base_path('app/Http/Controllers/Company/LinearTripActions/departures_placeholder.php');
+    }
+
+    private function syncFinanceObligations(): void
+    {
+        $companyId = (int)(getSessionCompanyId() ?? 0);
+        if ($companyId <= 0) return;
+        try {
+            $centralPdo = $this->db->connection();
+            $stmt = $centralPdo->prepare('SELECT * FROM companies WHERE id=? AND status=\'active\' LIMIT 1');
+            $stmt->execute([$companyId]);
+            $company = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$company) return;
+            $localPdo = (new Database(companyDatabaseConfig($this->config, $company)))->connection();
+            applyLocalMigrations($localPdo);
+            FinanceObligationService::syncAllLinearRoutes($localPdo);
+        } catch (\Throwable) {
+            // The trip page remains available if finance infrastructure is temporarily unavailable.
+        }
     }
 
     private function normalizeSubmittedExecutorCarrier(): void
@@ -102,12 +114,6 @@ final class LinearTripController
         );
     }
 
-    /**
-     * Cargo is intentionally hidden in the current linear-trip UX, while the
-     * legacy schema still requires a cargo_type_id. Keep that compatibility
-     * constraint internal: an omitted cargo is represented by the neutral
-     * display value "—", which the registry already renders as a dash.
-     */
     private function normalizeOptionalCargo(): void
     {
         if (trim((string) ($_POST['cargo_type_name'] ?? '')) === '') {
@@ -115,49 +121,27 @@ final class LinearTripController
         }
     }
 
-    /**
-     * Production tenants created on the legacy route-payment schema may still
-     * have payment_due_type declared NOT NULL even though the current payment
-     * model stores timing in condition_type/days_count/days_kind/specific_due_date.
-     *
-     * Local migration 061 is the canonical schema fix. This guarded fallback
-     * repairs only a stale tenant column when the migration journal/schema have
-     * drifted, so route creation/edit cannot fail with SQLSTATE 1048. Once the
-     * column is nullable, subsequent requests perform only the metadata check.
-     */
     private function ensureLegacyPaymentDueCompatibility(): void
     {
         $companyId = (int) (getSessionCompanyId() ?? 0);
-        if ($companyId <= 0) {
-            return;
-        }
+        if ($companyId <= 0) return;
 
         $centralPdo = $this->db->connection();
         $companyStmt = $centralPdo->prepare('SELECT * FROM companies WHERE id = ? LIMIT 1');
         $companyStmt->execute([$companyId]);
         $company = $companyStmt->fetch(\PDO::FETCH_ASSOC);
-        if (!$company || ($company['status'] ?? '') !== 'active') {
-            return;
-        }
+        if (!$company || ($company['status'] ?? '') !== 'active') return;
 
         $localDb = new Database(companyDatabaseConfig($this->config, $company));
         $localPdo = $localDb->connection();
         $columnStmt = $localPdo->prepare(
-            "SELECT IS_NULLABLE
-               FROM information_schema.COLUMNS
-              WHERE TABLE_SCHEMA = DATABASE()
-                AND TABLE_NAME = ?
-                AND COLUMN_NAME = 'payment_due_type'
-              LIMIT 1"
+            "SELECT IS_NULLABLE FROM information_schema.COLUMNS
+              WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME='payment_due_type' LIMIT 1"
         );
-
         foreach (['linear_route_financial_terms', 'linear_route_payments'] as $table) {
             $columnStmt->execute([$table]);
-            $isNullable = $columnStmt->fetchColumn();
-            if ($isNullable === 'NO') {
-                $localPdo->exec(
-                    "ALTER TABLE `{$table}` MODIFY COLUMN `payment_due_type` VARCHAR(100) NULL DEFAULT NULL"
-                );
+            if ($columnStmt->fetchColumn() === 'NO') {
+                $localPdo->exec("ALTER TABLE `{$table}` MODIFY COLUMN `payment_due_type` VARCHAR(100) NULL DEFAULT NULL");
             }
         }
     }
