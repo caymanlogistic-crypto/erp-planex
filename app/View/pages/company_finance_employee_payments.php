@@ -188,7 +188,7 @@ $transferEnabled=count($employees??[])>=2;
                     <div class="field">
                         <label class="field-label" for="employee-transfer-amount">Сумма <span class="field-required">*</span></label>
                         <input class="field-input" id="employee-transfer-amount" name="amount" inputmode="decimal" autocomplete="off" placeholder="0,00" required>
-                        <div class="field-note">Передать можно не больше текущего положительного сальдо отправителя.</div>
+                        <div class="field-note">Сальдо отправителя после перевода может стать отрицательным.</div>
                     </div>
                 </div>
                 <div class="field">
