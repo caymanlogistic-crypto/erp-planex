@@ -29,21 +29,30 @@ jobs:
         run: |
           set -euo pipefail
           php -l app/Service/FinanceObligationService.php
+          php -l app/Service/FinanceBankInvoiceSettlementService.php
           php -l app/Service/FinancePaymentCalendarService.php
           php -l app/Http/Controllers/Company/InvoiceActions/create_submit.php
           php -l app/Http/Controllers/Company/InvoiceActions/modal_edit_submit.php
           php -l app/Http/Controllers/Company/InvoiceActions/obligations.php
           php -l app/Http/Controllers/Company/InvoiceActions/receivables.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/settlementForm.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/settlementSubmit.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/applyRules.php
+          php -l app/Http/Controllers/Company/BankFinanceActions/indexAutoFilters.php
           php -l app/View/partials/company_invoice_create_form.php
           php -l app/View/partials/company_invoice_modal_view.php
+          php -l app/View/partials/company_bank_invoice_settlement_form.php
           php -l app/View/pages/company_finance_invoices.php
           php -l app/View/pages/company_finance_receivables.php
           php -l scripts/p91_apply_finance_obligations_migration.php
           php -l tests/finance_obligations_architecture_test.php
           php -l tests/finance_obligations_behavioral_test.php
           php -l tests/finance_invoice_form_policy_test.php
+          php -l tests/finance_bank_invoice_settlement_architecture_test.php
+          php -l tests/finance_bank_invoice_settlement_behavioral_test.php
           php tests/finance_obligations_architecture_test.php
           php tests/finance_invoice_form_policy_test.php
+          php tests/finance_bank_invoice_settlement_architecture_test.php
       - name: Migration execution
         shell: bash
         run: |
@@ -76,9 +85,17 @@ jobs:
           set -euo pipefail
           php tests/finance_obligations_behavioral_test.php 2>&1 | tee finance_obligations_behavior.txt
           grep -q 'FINANCE_OBLIGATIONS_BEHAVIOR_OK' finance_obligations_behavior.txt
+      - name: Bank invoice settlement behavioral regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/finance_bank_invoice_settlement_behavioral_test.php 2>&1 | tee finance_bank_invoice_settlement_behavior.txt
+          grep -q 'FINANCE_BANK_INVOICE_SETTLEMENT_BEHAVIOR_OK' finance_bank_invoice_settlement_behavior.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: finance_obligations_${{ github.sha }}
-          path: finance_obligations_behavior.txt
+          path: |
+            finance_obligations_behavior.txt
+            finance_bank_invoice_settlement_behavior.txt
           if-no-files-found: warn
