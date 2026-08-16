@@ -146,7 +146,7 @@ final class FinanceObligationService
                          amount,condition_type,days_count,days_kind,specific_due_date,event_date,forecast_due_date,due_date,
                          paid_amount,status,created_by_user_id,created_by_role,updated_by_user_id,updated_by_role)
                      VALUES
-                        ('LINEAR_ROUTE_PAYMENT',? ,?,'LINEAR_ROUTE',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                        ('LINEAR_ROUTE_PAYMENT',? ,?,'LINEAR_ROUTE',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                 );
                 $stmt->execute([
                     $sourceKey, (int)$payment['id'], $routeId, $direction, (string)$payment['party_role'],
