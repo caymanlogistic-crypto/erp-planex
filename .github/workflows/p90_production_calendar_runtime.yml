@@ -41,7 +41,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          live=/home/s/spugovxsim/planexp/public_html/erpv2
+          webroot=/home/s/spugovxsim/planexp/public_html
+          live="$webroot/erpv2"
           ssh -p "$PORT" -i "$HOME/.ssh/p90" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "cd '$live' && /usr/bin/php8.5 scripts/p90_apply_production_calendar_migration.php" | tee P90_PRODUCTION_CALENDAR.txt
           grep -q 'P90_PRODUCTION_CALENDAR_OK' P90_PRODUCTION_CALENDAR.txt
       - uses: actions/upload-artifact@v4
