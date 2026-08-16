@@ -46,7 +46,10 @@ jobs:
           echo "::add-mask::$cred"
           echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
       - name: Read-only production visual acceptance
-        run: node .github/p92/P92_finance_obligations_visual.js | tee P92_RUNTIME.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p92/P92_finance_obligations_visual.js | tee P92_RUNTIME.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
