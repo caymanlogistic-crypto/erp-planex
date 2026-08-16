@@ -12,9 +12,22 @@ $shortName=static function(?string $fullName):string{
     foreach(array_slice($parts,0,2) as $part){$initials.=mb_strtoupper(mb_substr($part,0,1)).'.';}
     return trim($last.' '.$initials);
 };
-$cleanBasis=static function(?string $purpose,?string $note):string{
+$compactName=static function(?string $fullName):string{
+    $fullName=trim((string)$fullName);
+    if($fullName==='')return '—';
+    $parts=preg_split('/\s+/u',$fullName,-1,PREG_SPLIT_NO_EMPTY)?:[];
+    if(!$parts)return '—';
+    $last=array_shift($parts);
+    $initials=[];
+    foreach(array_slice($parts,0,2) as $part){$initials[]=mb_strtoupper(mb_substr($part,0,1)).'.';}
+    return trim($last.($initials?' '.implode(' ',$initials):''));
+};
+$cleanBasis=static function(?string $purpose,?string $note)use($compactName):string{
     $value=trim((string)($purpose?:$note));
     if($value==='')return '—';
+    if(preg_match('/^Передача денежных средств:\s*(.+?)\s*→\s*(.+)$/u',$value,$match)){
+        return $compactName($match[1]).' → '.$compactName($match[2]);
+    }
     $value=preg_replace('/^Передано сотруднику:\s*[^·]+·\s*/u','',$value)??$value;
     $value=preg_replace('/^Возврат от сотрудника:\s*[^·]+·\s*/u','',$value)??$value;
     return trim($value)!==''?trim($value):'—';
@@ -88,8 +101,8 @@ $transferEnabled=count($employees??[])>=2;
         <?php else: ?>
             <div class="employee-report-summary">
                 <div class="employee-report-summary-title">За всё время</div>
-                <div>Получено от компании: <strong><?= e($fmt($fromCents($totalPaid))) ?> ₽</strong></div>
-                <div>Возвращено компании: <strong><?= e($fmt($fromCents($totalReturned))) ?> ₽</strong></div>
+                <div>Поступление: <strong><?= e($fmt($fromCents($totalPaid))) ?> ₽</strong></div>
+                <div>Расход: <strong><?= e($fmt($fromCents($totalReturned))) ?> ₽</strong></div>
                 <div>ИТОГО: <strong class="employee-result <?= e($resultClass($net)) ?>"><?= e($fmt($fromCents($net))) ?> ₽</strong></div>
             </div>
 
@@ -99,14 +112,14 @@ $transferEnabled=count($employees??[])>=2;
                 <?php foreach($months as $month=>$bucket): $monthNet=$bucket['paid']-$bucket['returned']; ?>
                     <div class="employee-month-head">
                         <div><div class="employee-month-title"><?= e($monthTitle($month)) ?></div><div class="employee-month-caption"><?= count($bucket['rows']) ?> операций · новые сверху</div></div>
-                        <div class="employee-month-stats">За месяц: получено <strong><?= e($fmt($fromCents($bucket['paid']))) ?> ₽</strong> · возвращено <strong><?= e($fmt($fromCents($bucket['returned']))) ?> ₽</strong> · ИТОГО <strong class="employee-result <?= e($resultClass($monthNet)) ?>"><?= e($fmt($fromCents($monthNet))) ?> ₽</strong></div>
+                        <div class="employee-month-stats">За месяц: Поступление <strong><?= e($fmt($fromCents($bucket['paid']))) ?> ₽</strong> · Расход <strong><?= e($fmt($fromCents($bucket['returned']))) ?> ₽</strong> · ИТОГО <strong class="employee-result <?= e($resultClass($monthNet)) ?>"><?= e($fmt($fromCents($monthNet))) ?> ₽</strong></div>
                     </div>
                     <div class="table-scroll">
                         <table class="table employee-report-table">
                             <colgroup>
                                 <col style="width:82px"><col style="width:78px"><col style="width:82px"><col><col style="width:105px"><col style="width:105px"><col style="width:105px"><col style="width:118px">
                             </colgroup>
-                            <thead><tr><th>Дата</th><th>Операция</th><th>Источник</th><th>Основание</th><th class="money-head">Получено</th><th class="money-head">Возвращено</th><th class="money-head">Сальдо</th><th class="employee-name-head">Сотрудник</th></tr></thead>
+                            <thead><tr><th>Дата</th><th>Операция</th><th>Источник</th><th>Основание</th><th class="money-head">Поступление</th><th class="money-head">Расход</th><th class="money-head">Сальдо</th><th class="employee-name-head">Сотрудник</th></tr></thead>
                             <tbody>
                             <?php foreach($bucket['rows'] as $row):
                                 $cancelled=($row['status']??'')==='CANCELLED';
