@@ -122,12 +122,13 @@ final class FinanceSettlementCascadeService
                 'UPDATE linear_route_payments
                     SET paid_amount = :paid_amount, payment_status = :payment_status,
                         paid_at = :paid_at,
-                        status_updated_at = CASE WHEN :payment_status != :old_status THEN NOW() ELSE status_updated_at END
+                        status_updated_at = CASE WHEN :status_for_compare != :old_status THEN NOW() ELSE status_updated_at END
                   WHERE id = :id'
             );
             $upd->execute([
                 ':paid_amount' => $paid, ':payment_status' => $computedStatus,
-                ':paid_at' => $paidAt, ':old_status' => $oldStatus, ':id' => $paymentId,
+                ':paid_at' => $paidAt, ':status_for_compare' => $computedStatus,
+                ':old_status' => $oldStatus, ':id' => $paymentId,
             ]);
 
             if ($computedStatus !== $oldStatus || $paid !== $oldPaidAmount) {
