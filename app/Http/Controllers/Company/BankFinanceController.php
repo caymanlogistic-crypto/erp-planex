@@ -15,4 +15,6 @@ final class BankFinanceController{
  public function classifyForm(int $id):void{$this->action('classifyForm',['bankTransactionId'=>$id]);}
  public function classifySubmit(int $id):void{$this->action('classifySubmit',['bankTransactionId'=>$id]);}
  public function clearClassification(int $id):void{$this->action('clearClassification',['bankTransactionId'=>$id]);}
+ public function settlementForm(int $id):void{$this->action('settlementForm',['bankTransactionId'=>$id]);}
+ public function settlementSubmit(int $id):void{$this->action('settlementSubmit',['bankTransactionId'=>$id]);}
 }
