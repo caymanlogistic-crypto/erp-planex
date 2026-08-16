@@ -8,10 +8,9 @@ use PDO;
  * Read-only projection for the cash journal.
  *
  * Finance transfers are stored as two linked finance_operations rows. The cash
- * journal exposes only the CASH side. Technical-cash resolutions are projected
- * as one lifecycle row: the original receipt remains the canonical row and the
- * later handoff is attached to it instead of being rendered as a duplicate
- * outflow row.
+ * journal exposes only the CASH side. Resolved technical-cash movements are
+ * projected as one lifecycle row: the incoming source remains canonical and
+ * the later handoff is attached to it instead of being rendered as a duplicate.
  */
 final class FinanceCashLedgerService
 {
@@ -98,10 +97,7 @@ final class FinanceCashLedgerService
     public static function movementLabel(array $row): string
     {
         if (self::isResolvedCashLifecycle($row)) {
-            if (strtoupper((string)($row['cash_resolution_type'] ?? '')) === FinanceCashResolutionService::RESOLUTION_EMPLOYEE) {
-                return 'Получено → передано';
-            }
-            return 'Получено → разнесено';
+            return 'Получено → передано';
         }
         if (self::isUnresolvedTechnicalSource($row)) {
             return 'Получено';
@@ -139,7 +135,7 @@ final class FinanceCashLedgerService
         $employeeName = trim((string)($row['employee_name'] ?? ''));
         $movementType = strtoupper((string)($row['employee_movement_type'] ?? ''));
         if ($employeeName !== '' && $movementType === 'RETURN') {
-            return $employeeName;
+            return self::shortEmployeeName($employeeName);
         }
 
         $counterpart = trim((string)($row['counterpart_account_name'] ?? ''));
@@ -150,13 +146,17 @@ final class FinanceCashLedgerService
     {
         if (self::isResolvedCashLifecycle($row)) {
             $target = trim((string)($row['cash_resolution_target'] ?? ''));
-            if ($target !== '') return $target;
+            if ($target !== '') {
+                return strtoupper((string)($row['cash_resolution_type'] ?? '')) === FinanceCashResolutionService::RESOLUTION_EMPLOYEE
+                    ? self::shortEmployeeName($target)
+                    : $target;
+            }
         }
 
         $employeeName = trim((string)($row['employee_name'] ?? ''));
         $movementType = strtoupper((string)($row['employee_movement_type'] ?? ''));
         if ($employeeName !== '' && $movementType === 'PAYMENT') {
-            return $employeeName;
+            return self::shortEmployeeName($employeeName);
         }
 
         return '—';
@@ -177,6 +177,18 @@ final class FinanceCashLedgerService
         return $comment !== '' ? $comment : '—';
     }
 
+    private static function shortEmployeeName(string $fullName): string
+    {
+        $parts = preg_split('/\s+/u', trim($fullName), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if ($parts === []) return '—';
+        $surname = array_shift($parts);
+        $initials = '';
+        foreach (array_slice($parts, 0, 2) as $part) {
+            $initials .= mb_strtoupper(mb_substr($part, 0, 1)) . '.';
+        }
+        return trim($surname . ($initials !== '' ? ' ' . $initials : ''));
+    }
+
     /**
      * Backward-compatible projection kept for callers outside the cash table.
      * New UI uses source_label + handoff_recipient_label instead.
@@ -185,7 +197,7 @@ final class FinanceCashLedgerService
     {
         $employeeName = trim((string) ($row['employee_name'] ?? ''));
         if ($employeeName !== '') {
-            return 'Сотрудник: ' . $employeeName;
+            return 'Сотрудник: ' . self::shortEmployeeName($employeeName);
         }
 
         $counterpart = trim((string) ($row['counterpart_account_name'] ?? ''));
