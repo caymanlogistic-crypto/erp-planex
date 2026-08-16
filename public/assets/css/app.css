@@ -13,3 +13,14 @@ select:not([multiple]) {
 .field-select {
     background-color: var(--surface-field) !important;
 }
+
+/* Production calendar is a composite card, not the 4-row table grid.
+   Override the generic .table-card layout so all 12 months stay in normal flow. */
+.production-calendar > .table-card {
+    display: block;
+    grid-template-rows: none;
+}
+
+.production-calendar > .table-card > .table-toolbar {
+    min-height: 36px;
+}
