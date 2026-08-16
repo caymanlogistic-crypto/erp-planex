@@ -10,7 +10,7 @@ $formatDate=static function(?string $value):string{
     return $ts?date('d.m.Y',$ts):$value;
 };
 ?>
-<form method="post" action="<?= e(app_url('/company/finance/bank-transactions/'.(int)$settlement['bank_transaction_id'].'/settlement')) ?>" data-bank-settlement-form>
+<form method="post" action="<?= e(app_url('/company/finance/bank-transactions/'.(int)$settlement['bank_transaction_id'].'/settlement')) ?>" data-bank-settlement-form data-operation-remaining="<?= e((string)$settlement['remaining_amount']) ?>">
 <?= csrfField() ?>
 <div class="modal-body bank-settlement-body">
     <div class="bank-settlement-summary">
@@ -33,14 +33,12 @@ $formatDate=static function(?string $value):string{
             <tbody>
             <?php foreach($settlement['invoices'] as $invoice):
                 $links=$invoice['obligation_links']??[];
-                $routeIds=[];$dueDates=[];$conditions=[];
+                $routeIds=[];$dueDates=[];
                 foreach($links as $link){
                     $routeId=(int)($link['source_parent_id']??$link['linear_route_id']??0);
                     if($routeId>0)$routeIds[$routeId]=true;
                     $due=trim((string)($link['due_date']??$link['forecast_due_date']??''));
                     if($due!=='')$dueDates[$due]=true;
-                    $condition=trim((string)($link['condition_type']??''));
-                    if($condition!=='')$conditions[$condition]=true;
                 }
                 $suggested=(float)$invoice['remaining_amount']<(float)$settlement['remaining_amount']?(string)$invoice['remaining_amount']:(string)$settlement['remaining_amount'];
             ?>
