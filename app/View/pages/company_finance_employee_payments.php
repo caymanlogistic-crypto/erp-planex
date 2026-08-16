@@ -25,6 +25,7 @@ $resultClass=static fn(int $value):string=>$value>0?'is-positive':($value<0?'is-
 $months=[];$totalPaid=0;$totalReturned=0;
 foreach($ledger??[] as $row){$month=substr((string)$row['operation_date'],0,7);$months[$month]??=['paid'=>0,'returned'=>0,'rows'=>[]];$months[$month]['rows'][]=$row;if(($row['status']??'')==='POSTED'){$c=$toCents($row['amount']);if(($row['movement_type']??'')==='PAYMENT'){$months[$month]['paid']+=$c;$totalPaid+=$c;}else{$months[$month]['returned']+=$c;$totalReturned+=$c;}}}
 krsort($months);$net=$totalPaid-$totalReturned;
+$transferEnabled=count($employees??[])>=2;
 ?>
 <style>
 .employee-report{width:min(1280px,100%);margin:0 auto}
@@ -52,6 +53,9 @@ krsort($months);$net=$totalPaid-$totalReturned;
 .employee-report-table .balance-line.is-negative{justify-content:space-between;color:var(--danger)}
 .employee-report-table .balance-sign{flex:0 0 auto;text-align:left}
 .employee-report-table .balance-amount{margin-left:auto;text-align:right}
+.employee-transfer-note{padding:8px 10px;border:1px solid var(--line-soft);background:var(--surface-form);font-size:11px;color:var(--text-muted);line-height:1.4}
+.employee-transfer-route{font-weight:700;color:var(--accent-deep)}
+.employee-transfer-modal .field-note{margin-top:4px}
 </style>
 <div class="employee-report">
     <div class="page-head">
@@ -59,7 +63,13 @@ krsort($months);$net=$totalPaid-$totalReturned;
             <h1 class="page-title">Выплаты сотрудникам</h1>
             <div class="page-summary"><span>Лицевой счёт сотрудника: все выплаты из кассы и возвраты компании. Прямые выплаты с расчётного счёта не используются.</span></div>
         </div>
+        <div class="page-head-right">
+            <button type="button" class="btn btn-primary btn--toolbar" id="employee-transfer-open" <?= $transferEnabled?'':'disabled' ?> title="<?= $transferEnabled?'Передать деньги от одного сотрудника другому':'Для перевода нужны минимум два активных сотрудника' ?>">Передать деньги</button>
+        </div>
     </div>
+
+    <?php if(!empty($successFlash)): ?><div class="notice success"><?= e($successFlash) ?></div><?php endif; ?>
+    <?php if(!empty($errorFlash)): ?><div class="notice warn"><?= e($errorFlash) ?></div><?php endif; ?>
 
     <div class="table-card table-card--standard employee-report-card">
         <div class="table-toolbar">
@@ -134,3 +144,94 @@ krsort($months);$net=$totalPaid-$totalReturned;
         <?php endif; ?>
     </div>
 </div>
+
+<?php if($transferEnabled): ?>
+<div id="employee-transfer-modal" class="modal-overlay employee-transfer-modal" role="dialog" aria-modal="true" aria-labelledby="employee-transfer-title">
+    <div class="modal modal-md">
+        <div class="modal-head">
+            <span class="modal-title" id="employee-transfer-title">Передать деньги сотруднику</span>
+            <button type="button" class="modal-close" data-employee-transfer-close>&times;</button>
+        </div>
+        <form method="post" action="<?= app_url('/company/finance/employee-payments/transfer') ?>" id="employee-transfer-form">
+            <?= csrfField() ?>
+            <div class="modal-body">
+                <div class="employee-transfer-note">
+                    Перевод проводится как внутреннее движение <span class="employee-transfer-route">сотрудник → Основная касса → сотрудник</span>. Остаток Основной кассы и ДДС компании после операции не изменяются.
+                </div>
+                <div class="form-grid two-cols mt-12">
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-source">От сотрудника <span class="field-required">*</span></label>
+                        <select class="field-select" id="employee-transfer-source" name="source_employee_ref" required>
+                            <option value="">— Выберите сотрудника —</option>
+                            <?php foreach($employees as $employee): ?>
+                                <option value="<?= e($employee['ref']) ?>" <?= ($selectedRef??'')===$employee['ref']?'selected':'' ?>><?= e($employee['full_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="field-note">У отправителя сумма уменьшится как возврат в Основную кассу.</div>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-target">Кому <span class="field-required">*</span></label>
+                        <select class="field-select" id="employee-transfer-target" name="target_employee_ref" required>
+                            <option value="">— Выберите сотрудника —</option>
+                            <?php foreach($employees as $employee): ?>
+                                <option value="<?= e($employee['ref']) ?>"><?= e($employee['full_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="field-note">У получателя та же сумма увеличит сальдо как выплата из Основной кассы.</div>
+                    </div>
+                </div>
+                <div class="form-grid two-cols">
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-date">Дата <span class="field-required">*</span></label>
+                        <input class="field-input" id="employee-transfer-date" type="date" name="operation_date" value="<?= e(date('Y-m-d')) ?>" required>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="employee-transfer-amount">Сумма <span class="field-required">*</span></label>
+                        <input class="field-input" id="employee-transfer-amount" name="amount" inputmode="decimal" autocomplete="off" placeholder="0,00" required>
+                        <div class="field-note">Передать можно не больше текущего положительного сальдо отправителя.</div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label" for="employee-transfer-purpose">Основание</label>
+                    <input class="field-input" id="employee-transfer-purpose" name="purpose" placeholder="Например: передача подотчётных средств">
+                </div>
+                <div class="field">
+                    <label class="field-label" for="employee-transfer-comment">Комментарий</label>
+                    <textarea class="field-input" id="employee-transfer-comment" name="comment" rows="3" placeholder="Необязательно"></textarea>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn btn-secondary" data-employee-transfer-close>Отмена</button>
+                <button type="submit" class="btn btn-primary">Передать</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function(){
+    const modal=document.getElementById('employee-transfer-modal');
+    const openBtn=document.getElementById('employee-transfer-open');
+    const source=document.getElementById('employee-transfer-source');
+    const target=document.getElementById('employee-transfer-target');
+    if(!modal||!openBtn||!source||!target)return;
+    const syncTarget=()=>{
+        const sourceValue=source.value;
+        let selectedStillValid=target.value!==sourceValue;
+        Array.from(target.options).forEach((option)=>{
+            if(!option.value)return;
+            option.disabled=option.value===sourceValue;
+            if(option.disabled&&option.selected)selectedStillValid=false;
+        });
+        if(!selectedStillValid)target.value='';
+    };
+    const open=()=>{syncTarget();modal.classList.add('is-open');setTimeout(()=>target.focus(),0);};
+    const close=()=>modal.classList.remove('is-open');
+    openBtn.addEventListener('click',open);
+    source.addEventListener('change',syncTarget);
+    modal.querySelectorAll('[data-employee-transfer-close]').forEach((button)=>button.addEventListener('click',close));
+    modal.addEventListener('click',(event)=>{if(event.target===modal)close();});
+    document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&modal.classList.contains('is-open'))close();});
+    syncTarget();
+})();
+</script>
+<?php endif; ?>
