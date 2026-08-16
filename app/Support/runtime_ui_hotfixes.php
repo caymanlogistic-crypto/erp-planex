@@ -75,7 +75,7 @@ if (PHP_SAPI !== 'cli') {
                 ? '<span class="nav-count is-alert" title="Не загружен производственный календарь на ' . (int)$warningYear . ' год">!</span>'
                 : '';
             $miscGroup = '<div class="nav-group pc-misc-nav-group">' .
-                '<div class="nav-group-title">ПРОЧЕЕ</div>' .
+                '<div class="nav-section-label">ПРОЧЕЕ</div>' .
                 '<a class="nav-item' . $calendarActive . '" href="' . $calendarHref . '">' .
                 '<svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3.5" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5H14M5 2V5M11 2V5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5 9H6M8 9H9M11 9H12M5 11.5H6M8 11.5H9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>' .
                 '<span class="nav-label">Производственный календарь</span>' . $warningBadge . '</a></div>';
