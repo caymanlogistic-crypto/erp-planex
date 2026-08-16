@@ -1,0 +1,57 @@
+name: P92 Finance Obligations Visual
+on:
+  workflow_run:
+    workflows: ["P91 Finance Obligations Runtime"]
+    types: [completed]
+    branches: [chatgpt/production-stabilization-20260802]
+permissions:
+  contents: read
+jobs:
+  visual:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > "$HOME/.ssh/p92_credentials"
+            chmod 600 "$HOME/.ssh/p92_credentials"
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p92_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Read-only production visual acceptance
+        run: node .github/p92/P92_finance_obligations_visual.js | tee P92_RUNTIME.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P92_finance_obligations_visual_${{ github.event.workflow_run.head_sha }}
+          path: |
+            P92_RUNTIME.txt
+            P92_VISUAL.json
+            P92_screens/*.png
+          if-no-files-found: warn
