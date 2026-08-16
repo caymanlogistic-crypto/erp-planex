@@ -105,10 +105,18 @@ $catalogsJson = json_encode([
     var box = form.querySelector('.js-obligations-box');
     var base = window.getErpBasePath ? window.getErpBasePath() : '';
     var initialId = <?= json_encode((string)$invCpartyId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    var obligationRequestSeq = 0;
+    var obligationController = null;
 
     function esc(s){return String(s == null ? '' : s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c];});}
     function expectedType(){return dir.value === 'INCOMING' ? 'contractor' : 'client';}
     function emptyObligations(){box.innerHTML='<div style="padding:12px;color:var(--muted,#746f66)">Выберите контрагента — система покажет его открытые обязательства.</div>';}
+    function cancelObligationRequest(){
+        obligationRequestSeq++;
+        if (obligationController) obligationController.abort();
+        obligationController = null;
+    }
+    function wait(ms){return new Promise(function(resolve){window.setTimeout(resolve, ms);});}
 
     function populateCounterparties(selectedId){
         var t = expectedType();
@@ -127,38 +135,75 @@ $catalogsJson = json_encode([
         inn.value = selected && selected.value ? (selected.dataset.inn || '') : '';
     }
 
+    function renderObligations(data){
+        if (!Array.isArray(data) || !data.length){
+            box.innerHTML='<div style="padding:12px;color:var(--muted,#746f66)">Открытых обязательств для этого контрагента нет.</div>';
+            return;
+        }
+        var h='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:7px;text-align:left">Выбрать</th><th style="padding:7px;text-align:left">Рейс / событие</th><th style="padding:7px;text-align:right">Свободно</th><th style="padding:7px;text-align:right">В счёт</th></tr></thead><tbody>';
+        data.forEach(function(x){
+            var cur=parseFloat(x.current_amount||0), checked=cur>0, val=checked?x.current_amount:x.available;
+            var due=x.due_date?' · срок '+esc(x.due_date):' · срок ожидает события';
+            h+='<tr style="border-top:1px solid var(--border,#ddd)"><td style="padding:7px"><input type="checkbox" class="js-ob-check" '+(checked?'checked':'')+'></td><td style="padding:7px"><strong>Рейс #'+esc(x.route_id)+'</strong><div style="font-size:11px;color:var(--muted,#746f66)">'+esc(x.condition)+due+'</div></td><td style="padding:7px;text-align:right;white-space:nowrap">'+esc(x.available)+' ₽</td><td style="padding:7px;text-align:right"><input type="hidden" name="obligation_id[]" value="'+esc(x.id)+'" '+(checked?'':'disabled')+'><input class="field-input js-ob-amount" style="width:120px;text-align:right" name="obligation_amount[]" value="'+esc(val)+'" '+(checked?'':'disabled')+'></td></tr>';
+        });
+        box.innerHTML=h+'</tbody></table>';
+        box.querySelectorAll('.js-ob-check').forEach(function(ch){
+            ch.addEventListener('change',function(){
+                var tr=ch.closest('tr');
+                tr.querySelectorAll('input[name]').forEach(function(i){i.disabled=!ch.checked;});
+            });
+        });
+    }
+
+    async function requestObligations(url, signal){
+        var lastError = null;
+        for (var attempt=0; attempt<2; attempt++){
+            try {
+                var response = await fetch(url, {headers:{'Accept':'application/json'}, signal:signal});
+                var text = await response.text();
+                var data;
+                try { data = JSON.parse(text); }
+                catch (parseError) { throw new Error('Некорректный ответ сервера'); }
+                if (!response.ok) throw new Error(data && data.error ? data.error : 'HTTP '+response.status);
+                return data;
+            } catch (error) {
+                if (error && error.name === 'AbortError') throw error;
+                lastError = error;
+                if (attempt === 0) await wait(220);
+            }
+        }
+        throw lastError || new Error('Не удалось загрузить обязательства');
+    }
+
     function loadOb(){
         var t = expectedType(), id = cp.value;
         type.value = t;
+        cancelObligationRequest();
         if (!id){ emptyObligations(); return; }
+        var seq = obligationRequestSeq;
         var invoiceId = form.dataset.invoiceId || '';
         var url = base + '/company/finance/invoices/obligations?direction=' + encodeURIComponent(dir.value) + '&counterparty=' + encodeURIComponent(t + ':' + id) + (invoiceId ? '&invoice_id=' + encodeURIComponent(invoiceId) : '');
+        obligationController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var signal = obligationController ? obligationController.signal : undefined;
         box.innerHTML = '<div style="padding:12px">Загрузка…</div>';
-        fetch(url, {headers:{'Accept':'application/json'}})
-            .then(function(r){return r.json().then(function(data){if(!r.ok) throw new Error(data && data.error ? data.error : 'HTTP '+r.status); return data;});})
+        requestObligations(url, signal)
             .then(function(data){
-                if (!Array.isArray(data) || !data.length){
-                    box.innerHTML='<div style="padding:12px;color:var(--muted,#746f66)">Открытых обязательств для этого контрагента нет.</div>';
-                    return;
-                }
-                var h='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:7px;text-align:left">Выбрать</th><th style="padding:7px;text-align:left">Рейс / событие</th><th style="padding:7px;text-align:right">Свободно</th><th style="padding:7px;text-align:right">В счёт</th></tr></thead><tbody>';
-                data.forEach(function(x){
-                    var cur=parseFloat(x.current_amount||0), checked=cur>0, val=checked?x.current_amount:x.available;
-                    var due=x.due_date?' · срок '+esc(x.due_date):' · срок ожидает события';
-                    h+='<tr style="border-top:1px solid var(--border,#ddd)"><td style="padding:7px"><input type="checkbox" class="js-ob-check" '+(checked?'checked':'')+'></td><td style="padding:7px"><strong>Рейс #'+esc(x.route_id)+'</strong><div style="font-size:11px;color:var(--muted,#746f66)">'+esc(x.condition)+due+'</div></td><td style="padding:7px;text-align:right;white-space:nowrap">'+esc(x.available)+' ₽</td><td style="padding:7px;text-align:right"><input type="hidden" name="obligation_id[]" value="'+esc(x.id)+'" '+(checked?'':'disabled')+'><input class="field-input js-ob-amount" style="width:120px;text-align:right" name="obligation_amount[]" value="'+esc(val)+'" '+(checked?'':'disabled')+'></td></tr>';
-                });
-                box.innerHTML=h+'</tbody></table>';
-                box.querySelectorAll('.js-ob-check').forEach(function(ch){
-                    ch.addEventListener('change',function(){
-                        var tr=ch.closest('tr');
-                        tr.querySelectorAll('input[name]').forEach(function(i){i.disabled=!ch.checked;});
-                    });
-                });
+                if (seq !== obligationRequestSeq) return;
+                obligationController = null;
+                renderObligations(data);
             })
-            .catch(function(){box.innerHTML='<div class="form-alert alert-error" style="margin:8px">Не удалось загрузить платёжные обязательства.</div>';});
+            .catch(function(error){
+                if (seq !== obligationRequestSeq || (error && error.name === 'AbortError')) return;
+                obligationController = null;
+                box.innerHTML='<div class="form-alert alert-error" style="margin:8px">Не удалось загрузить платёжные обязательства. Повторите выбор контрагента.</div>';
+            });
     }
 
-    dir.addEventListener('change', function(){populateCounterparties(''); emptyObligations();});
+    dir.addEventListener('change', function(){
+        cancelObligationRequest();
+        populateCounterparties('');
+        emptyObligations();
+    });
     cp.addEventListener('change', function(){
         var o=cp.options[cp.selectedIndex];
         inn.value=o && o.value ? (o.dataset.inn||'') : '';
