@@ -25,6 +25,7 @@ final class FinanceEmployeePaymentsController
         if ($selectedRef === '') {
             $selectedRef = (string)($summaries[0]['employee_ref'] ?? ($employees[0]['ref'] ?? ''));
         }
+        $_SESSION['employee_payments_filter_employee_ref'] = $selectedRef;
 
         $ledger = [];
         $selectedEmployee = null;
@@ -113,7 +114,7 @@ final class FinanceEmployeePaymentsController
     {
         requireRole(['company_owner']);
         verifyCsrfRequest();
-        $redirectRef = trim((string)($_POST['source_employee_ref'] ?? ''));
+        $redirectRef = trim((string)($_SESSION['employee_payments_filter_employee_ref'] ?? $_POST['source_employee_ref'] ?? ''));
         try {
             [$company, $pdo, $central] = $this->tenant();
             $result = FinanceEmployeeTransferService::transfer(
@@ -123,7 +124,9 @@ final class FinanceEmployeePaymentsController
                 $_POST,
                 ['id' => $_SESSION['user_id'] ?? 0, 'role' => $_SESSION['role_code'] ?? 'company_owner']
             );
-            $redirectRef = (string)$result['source_employee']['ref'];
+            if ($redirectRef === '') {
+                $redirectRef = (string)$result['source_employee']['ref'];
+            }
             $_SESSION['employee_payments_success'] = 'Передано '
                 . FinanceEmployeePaymentService::formatMoney($result['amount'])
                 . ' ₽: '
