@@ -15,14 +15,18 @@ jobs:
         run: |
           php -l app/Service/FinanceMatchingRuleEmployeeExecutionTrait.php
           php -l app/Service/FinanceMatchingRuleManualTrait.php
+          php -l app/Service/FinanceEmployeeTransferService.php
           php -l app/Http/Controllers/Company/FinanceEmployeePaymentsController.php
           php -l app/View/partials/company_bank_transaction_classify_form.php
           php -l app/View/partials/company_finance_matching_rule_form.php
           php -l app/View/pages/company_finance_employee_payments.php
           php -l tests/finance_matching_employee_cash_test.php
+          php -l tests/finance_employee_transfer_test.php
       - name: Existing matching semantics
         run: php tests/finance_matching_classification_test.php
       - name: Employee cash matching architecture
         run: php tests/finance_matching_employee_cash_test.php
+      - name: Employee transfer architecture
+        run: php tests/finance_employee_transfer_test.php
       - name: Migration shape
         run: grep -q 'target_employee_identity_type' database/migrations-local/068_finance_employee_matching_rules.sql
