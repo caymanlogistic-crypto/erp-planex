@@ -9,6 +9,8 @@ require_once __DIR__.'/../app/Service/FinanceBankInvoiceSettlementService.php';
 use App\Service\FinanceBankInvoiceSettlementService;
 use App\Service\FinanceObligationService;
 
+$pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+
 $pdo->exec("ALTER TABLE clients ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active', ADD COLUMN deleted_at DATETIME NULL");
 $pdo->exec("ALTER TABLE contractors ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active', ADD COLUMN deleted_at DATETIME NULL");
 $pdo->exec("ALTER TABLE finance_operations ADD COLUMN source VARCHAR(30) NULL, ADD COLUMN bank_transaction_id INT UNSIGNED NULL, ADD COLUMN counterparty_entity_type VARCHAR(20) NULL, ADD COLUMN counterparty_entity_id INT UNSIGNED NULL");
