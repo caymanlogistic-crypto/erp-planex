@@ -157,13 +157,7 @@ final class FinanceCashLedgerService
             return self::shortEmployeeName($employeeName);
         }
 
-        $counterpart = trim((string)($row['counterpart_account_name'] ?? ''));
-        if ($counterpart === '') {
-            return '—';
-        }
-
-        $accountNumberOnly = preg_replace('/^Расчётный счёт\s+/u', '', $counterpart);
-        return trim((string)$accountNumberOnly);
+        return self::compactAccountName((string)($row['counterpart_account_name'] ?? ''));
     }
 
     private static function handoffRecipientLabel(array $row): string
@@ -173,7 +167,7 @@ final class FinanceCashLedgerService
             if ($target !== '') {
                 return strtoupper((string)($row['cash_resolution_type'] ?? '')) === FinanceCashResolutionService::RESOLUTION_EMPLOYEE
                     ? self::shortEmployeeName($target)
-                    : $target;
+                    : self::compactAccountName($target);
             }
         }
 
@@ -188,8 +182,8 @@ final class FinanceCashLedgerService
 
     private static function handoffDate(array $row): string
     {
-        // The handoff date remains stored in the resolution data, but the cash
-        // journal intentionally displays only the recipient name.
+        // The factual handoff timestamp stays in resolution history, but the
+        // compact cash journal intentionally displays only the recipient.
         return '';
     }
 
@@ -211,6 +205,13 @@ final class FinanceCashLedgerService
             $initials .= mb_strtoupper(mb_substr($part, 0, 1)) . '.';
         }
         return trim($surname . ($initials !== '' ? ' ' . $initials : ''));
+    }
+
+    private static function compactAccountName(string $name): string
+    {
+        $name = trim($name);
+        if ($name === '') return '—';
+        return trim((string)preg_replace('/^Расчётный счёт\s+/u', '', $name));
     }
 
     /**
