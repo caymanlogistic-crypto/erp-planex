@@ -56,21 +56,14 @@ final class NavigationCounterService
         }
 
         try {
-            $counters['cash_attention'] = max(0, (int)$tenant->query(
-                "SELECT COUNT(*)
-                   FROM finance_operations fo
-                   JOIN finance_money_accounts fma
-                     ON fma.id = fo.money_account_id
-                    AND fma.type = 'CASH'
-                    AND fma.is_active = 1
-                    AND fma.name = 'Основная касса'
-              LEFT JOIN finance_cash_resolutions fcr
-                     ON fcr.source_finance_operation_id = fo.id
-                  WHERE fo.status = 'POSTED'
-                    AND (fo.operation_type = 'INCOME'
-                         OR (fo.operation_type = 'TRANSFER' AND fo.transfer_direction = 'in'))
-                    AND fcr.id IS NULL"
-            )->fetchColumn());
+            // Use the same source of truth as the cash page itself. Keeping a
+            // second SQL implementation here caused the sidebar badge to show
+            // stale "unresolved" rows after the cash ledger had already folded
+            // them into completed employee lifecycles.
+            $counters['cash_attention'] = max(
+                0,
+                (int)(FinanceCashResolutionService::unresolvedSummary($tenant)['count'] ?? 0)
+            );
         } catch (Throwable) {
             // A cash-schema rollout issue must not hide the bank attention badge.
             $counters['cash_attention'] = 0;
