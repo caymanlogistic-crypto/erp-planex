@@ -26,6 +26,13 @@ final class FinanceInvoiceController
         require base_path('app/Http/Controllers/Company/InvoiceActions/receivables.php');
     }
 
+    public function payables(): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+        require base_path('app/Http/Controllers/Company/InvoiceActions/payables.php');
+    }
+
     public function createSubmit(): void
     {
         $config = $this->config;
@@ -59,6 +66,13 @@ final class FinanceInvoiceController
         $config = $this->config;
         $db = $this->db;
         require base_path('app/Http/Controllers/Company/InvoiceActions/modal_delete.php');
+    }
+
+    public function payCashSubmit(string $id): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+        require base_path('app/Http/Controllers/Company/InvoiceActions/pay_cash_submit.php');
     }
 
     public function routePayments(): void

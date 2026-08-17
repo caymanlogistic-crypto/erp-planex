@@ -6,11 +6,13 @@ $controller = new \App\Http\Controllers\Company\FinanceInvoiceController($config
 
 $router->get('/company/finance/invoices', [$controller, 'index']);
 $router->get('/company/finance/receivables', [$controller, 'receivables']);
+$router->get('/company/finance/payables', [$controller, 'payables']);
 $router->post('/company/finance/invoices/create', [$controller, 'createSubmit']);
 $router->get('/company/finance/invoices/{id}/modal-view', [$controller, 'modalView']);
 $router->get('/company/finance/invoices/{id}/modal-edit', [$controller, 'modalEditForm']);
 $router->post('/company/finance/invoices/{id}/modal-edit', [$controller, 'modalEditSubmit']);
 $router->post('/company/finance/invoices/{id}/modal-delete', [$controller, 'modalDelete']);
+$router->post('/company/finance/invoices/{id}/pay-cash', [$controller, 'payCashSubmit']);
 $router->get('/company/finance/invoices/obligations', [$controller, 'obligations']);
 $router->get('/company/finance/invoices/{id}/history', [$controller, 'history']);
 $router->get('/company/finance/invoices/route-payments', [$controller, 'routePayments']);

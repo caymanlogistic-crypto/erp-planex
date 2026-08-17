@@ -51,6 +51,13 @@ jobs:
           set -euo pipefail
           php tests/finance_invoice_cash_employee_regression_test.php
 
+      - name: Carrier payables regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/finance_carrier_payables_regression_test.php
+          node --check .github/p93/P93_carrier_payables_visual.js
+
       - name: Python syntax
         shell: bash
         run: |

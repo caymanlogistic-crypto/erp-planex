@@ -1,0 +1,89 @@
+name: P93 Carrier Payables Visual
+
+on:
+  workflow_run:
+    workflows: ["ERPv2 Controlled Deploy"]
+    types: [completed]
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Verify exact deployed marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p93"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p93" "$HOME/.ssh/known_hosts"
+          got="$(ssh -p "$PORT" -i "$HOME/.ssh/p93" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          echo "expected=$SHA"
+          echo "deployed=$got"
+          test "$got" = "$SHA"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p93_key
+            chmod 600 /tmp/p93_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p93_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+
+      - name: Read-only carrier payables visual acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p93/P93_carrier_payables_visual.js 2>&1 | tee P93_RUNTIME.txt
+          grep -q 'P93_CARRIER_PAYABLES_VISUAL_OK' P93_RUNTIME.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P93_carrier_payables_visual_${{ github.event.workflow_run.head_sha }}
+          path: |
+            P93_RUNTIME.txt
+            P93_VISUAL.json
+            P93_screens/*.png
+          if-no-files-found: warn
