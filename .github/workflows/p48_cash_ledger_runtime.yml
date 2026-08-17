@@ -55,7 +55,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          live=/home/s/spugovxsim/planexp/public_html/erpv2
+          root=/home/s/spugovxsim/planexp
+          live="$root/public_html/""erpv2"
           ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "cd '$live' && /usr/bin/php8.5 scripts/p97_apply_finance_manual_facts_migration.php" | tee P97_MIGRATION.txt
           grep -q 'P97_FINANCE_MANUAL_FACTS_MIGRATION_OK' P97_MIGRATION.txt
       - uses: actions/setup-node@v4
