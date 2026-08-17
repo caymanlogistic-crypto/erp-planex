@@ -124,6 +124,13 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
 /* The old event sections stay in DOM only as modal/action hosts; visually there is one journal. */
 .employee-money-actions{display:none!important}
 .employee-report .page-head-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.employee-report-card{overflow:visible!important}
+.employee-report-card .table-scroll{display:block!important;overflow-x:hidden!important;overflow-y:visible!important;height:auto!important;max-height:none!important;min-height:40px!important}
+.employee-report-table{display:table!important;width:100%!important;height:auto!important;min-height:0!important;table-layout:fixed!important}
+.employee-report-table thead{display:table-header-group!important}
+.employee-report-table tbody{display:table-row-group!important;height:auto!important;visibility:visible!important}
+.employee-report-table tbody tr{display:table-row!important;height:auto!important;visibility:visible!important}
+.employee-report-table tbody td{height:auto!important;min-height:30px!important;padding-top:7px!important;padding-bottom:7px!important}
 .employee-report-table .employee-unified-comment{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
 .employee-report-table .employee-unified-comment-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .employee-report-table .employee-unified-comment-actions .btn{height:22px;min-height:22px;padding:0 7px;font-size:9px}
@@ -213,6 +220,26 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
             if(scroll)scroll.remove();else table.remove();
         });
         report.querySelectorAll('.employee-month-head').forEach(el=>el.remove());
+
+        /* A merged journal must never inherit a header-only/clipped scroll height. */
+        const firstScroll=firstTable.closest('.table-scroll');
+        if(firstScroll){
+            firstScroll.style.setProperty('display','block','important');
+            firstScroll.style.setProperty('height','auto','important');
+            firstScroll.style.setProperty('max-height','none','important');
+            firstScroll.style.setProperty('min-height','40px','important');
+            firstScroll.style.setProperty('overflow-y','visible','important');
+        }
+        firstTable.style.setProperty('display','table','important');
+        firstTable.style.setProperty('height','auto','important');
+        if(firstBody){
+            firstBody.style.setProperty('display','table-row-group','important');
+            firstBody.style.setProperty('height','auto','important');
+            Array.from(firstBody.rows).forEach(row=>{
+                row.style.setProperty('display','table-row','important');
+                row.style.setProperty('height','auto','important');
+            });
+        }
     }
 
     report.dataset.unifiedEmployeeLedger='ready';
