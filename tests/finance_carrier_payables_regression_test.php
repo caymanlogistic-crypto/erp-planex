@@ -21,6 +21,19 @@ $bank=fcp_read('app/Service/FinanceBankInvoiceSettlementService.php');
 $cash=fcp_read('app/Service/FinanceCashInvoiceEventService.php');
 $employee=fcp_read('app/Service/FinanceEmployeeInvoicePaymentEventService.php');
 
+// This application intentionally uses explicit runtime require manifests (no
+// PSR autoloader). Any new invoice-route service must therefore be required by
+// the route before controller dispatch. This catches the production failure
+// where the PHP file existed on disk but the class had never been loaded.
+foreach ([
+    'FinanceOperationInvoiceSettlementService.php',
+    'FinanceCashInvoiceEventService.php',
+    'FinanceInvoiceSettlementHistoryService.php',
+    'FinancePayablesReportService.php',
+] as $dependency) {
+    fcp_has($routes, "app/Service/{$dependency}", 'Invoice route must load runtime dependency '.$dependency);
+}
+
 // Dedicated, owner-only AP entry point.
 fcp_has($routes,"/company/finance/payables",'Payables route must exist');
 fcp_has($controller,'function payables()', 'Controller must expose payables');
