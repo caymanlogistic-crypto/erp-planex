@@ -7,6 +7,8 @@
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $cashEmployees = [];
     $personalExpenses = [];
+    // Source-specific "unresolved cash" is a legacy compatibility concept.
+    // New cash is fungible: invoice allocation and physical handoff are separate.
     $unresolvedCash = ['count' => 0, 'amount' => '0.00', 'account_id' => null];
 
     if ($companyId <= 0) {
@@ -61,7 +63,6 @@
         applyLocalMigrations($localPdo);
 
         $cashAccounts = \App\Service\FinanceCashService::fetchMoneyAccounts($localPdo, 'CASH', true);
-        $unresolvedCash = \App\Service\FinanceCashResolutionService::unresolvedSummary($localPdo);
         $cashEmployees = \App\Service\FinanceEmployeePaymentService::fetchActiveEmployees($localPdo, $pdo, $companyId);
         $personalExpenses = \App\Service\FinanceManualFactService::fetchRecentPersonalExpenses($localPdo, 50);
 
@@ -93,4 +94,22 @@
     ob_start();
     require base_path('app/View/pages/company_finance_cash.php');
     $content = ob_get_clean();
+    // Keep legacy resolution backend/history, but do not offer the old
+    // "choose a source receipt -> employee" workflow in the primary UI.
+    $content = str_replace(
+        'Основная касса хранит наличные оплаты клиентов и технические поступления. Неразнесённые поступления требуют назначения.',
+        'Основная касса хранит реальные наличные. Оплаты счетов и передача денег сотрудникам оформляются отдельными операциями.',
+        $content
+    );
+    $content = str_replace(
+        'Это экономические факты компании: они не меняют остатки кассы/банка и не создают задолженность сотруднику.',
+        'Связанные расходы сотрудников показаны здесь справочно. Создание, изменение и отмена выполняются в разделе «Выплаты сотрудникам».',
+        $content
+    );
+    $content = str_replace(
+        'Добавьте их через «Новая операция» → «Сотрудник оплатил расход компании из личных средств».',
+        'Добавляйте такие операции через «Выплаты сотрудникам» → «Прочий расход».',
+        $content
+    );
+    $content .= '<style>.cash-batch-bar,#cash-dispatch-employee-modal{display:none!important}</style>';
     require base_path('app/View/layouts/main.php');

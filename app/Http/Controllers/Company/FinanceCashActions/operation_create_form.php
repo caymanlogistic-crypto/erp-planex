@@ -29,7 +29,9 @@
         $incomeDdsCategories = \App\Service\FinanceDdsCategoryService::fetchActiveForDirection($localPdo, 'INCOME');
         $expenseDdsCategories = \App\Service\FinanceDdsCategoryService::fetchActiveForDirection($localPdo, 'EXPENSE');
         $ddsCategories = $incomeDdsCategories;
-        $clientPaymentTargets = \App\Service\FinanceManualFactService::fetchClientPaymentTargets($localPdo);
+        $clientInvoices = \App\Service\FinanceCashInvoiceEventService::fetchClientInvoices($localPdo);
+        $carrierInvoices = \App\Service\FinanceCashInvoiceEventService::fetchCarrierInvoices($localPdo);
+        $cashEmployees = \App\Service\FinanceEmployeePaymentService::fetchActiveEmployees($localPdo, $pdo, $companyId);
     } catch (\Throwable $e) {
         echo '<div class="form-alert alert-error">Ошибка загрузки данных: ' . e($e->getMessage()) . '</div>';
         return;

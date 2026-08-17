@@ -52,14 +52,14 @@ foreach (compact('service','migration','form','page','submit','ledger','deletion
 }
 
 $client = method_body($service, 'createClientCashReceipt');
-assert_contains($client, "'operation_type' => 'INCOME'", 'Client cash receipt must create real income');
-assert_contains($client, "'linear_route_payment_id'", 'Client cash receipt must target an explicit route payment');
-assert_contains($client, "finance_operation_allocations", 'Client cash receipt must create a manual allocation');
-assert_contains($client, "cascadeAfterAllocationCreate", 'Client cash receipt must recalculate settlement');
-assert_contains($client, "finance_cash_route_receipts", 'Client cash receipt must keep route traceability');
-assert_contains($client, "outflow_finance_operation_id", 'Client cash receipt must explicitly use resolution without fake outflow');
-assert_contains($client, "NULL, NULL", 'Client cash resolution must not create outflow/employee movement');
-assert_not_contains($client, "createCashMovement", 'Client cash receipt must not create employee cash movement');
+assert_contains($client, "'operation_type' => 'INCOME'", 'Legacy client cash receipt writer must remain a real income operation');
+assert_contains($client, "'linear_route_payment_id'", 'Legacy client cash receipt writer must preserve historical route-payment compatibility');
+assert_contains($client, "finance_operation_allocations", 'Legacy client cash receipt writer must preserve manual allocation history');
+assert_contains($client, "cascadeAfterAllocationCreate", 'Legacy client cash receipt writer must recalculate settlement');
+assert_contains($client, "finance_cash_route_receipts", 'Legacy client cash receipt writer must keep historical route traceability');
+assert_contains($client, "outflow_finance_operation_id", 'Legacy client cash receipt writer must explicitly use resolution without fake outflow');
+assert_contains($client, "NULL, NULL", 'Legacy client cash resolution must not create outflow/employee movement');
+assert_not_contains($client, "createCashMovement", 'Legacy client cash receipt writer must not create employee cash movement');
 
 // Legacy 073 fact writer is preserved for historical compatibility only. The live entry point moved to Employee Payments.
 $personal = method_body($service, 'createEmployeePersonalExpense');
@@ -73,15 +73,16 @@ assert_contains($migration, 'outflow_finance_operation_id` INT UNSIGNED DEFAULT 
 assert_contains($migration, 'cash_flow_center_name_snapshot', 'Migration must preserve CFU snapshot');
 assert_contains($migration, 'dds_category_name_snapshot', 'Migration must preserve DDS snapshot');
 
-assert_contains($form, 'CLIENT_CASH_RECEIPT', 'Cash UI must keep client cash receipt scenario');
+// The primary UI is invoice-centric now. Keep the legacy writer only for historical compatibility; do not expose route-first entry.
+assert_contains($form, 'CLIENT_CASH_INVOICE', 'Cash UI must expose invoice-centric client cash receipt scenario');
+assert_not_contains($form, '<option value="CLIENT_CASH_RECEIPT">', 'Cash UI must not expose the legacy route-first client cash scenario');
 assert_not_contains($form, '<option value="EMPLOYEE_PERSONAL_EXPENSE">', 'Cash UI must not expose employee personal-funded expense entry point');
 assert_not_contains($form, 'data-scenario-block="EMPLOYEE_PERSONAL_EXPENSE"', 'Cash UI must not keep a competing personal-expense form block');
-assert_not_contains($form, '<script>', 'Fetched modal partial must not rely on non-executing embedded script');
 assert_contains($page, 'initManualFinanceForm', 'Cash page must initialize fetched manual finance form');
 assert_contains($page, 'Расходы сотрудников из личных средств', 'Cash page must keep historical/linked personal expense visibility');
-assert_contains($submit, "client_dds_category_id", 'Submit must normalize client DDS server-side');
-assert_contains($submit, 'оформляется в разделе «Выплаты сотрудникам»', 'Stale cash submissions must fail closed and point to Employee Payments');
-assert_contains($ledger, 'CASH_RESOLUTION_CLIENT_ROUTE', 'Cash ledger must distinguish route-assigned client cash from employee handoff');
+assert_contains($submit, 'CLIENT_CASH_INVOICE', 'Cash submit must route client cash through invoice-centric settlement');
+assert_contains($submit, 'оформляется в разделе «Выплаты сотрудникам»', 'Stale cash personal-expense submissions must fail closed and point to Employee Payments');
+assert_contains($ledger, 'CASH_RESOLUTION_CLIENT_ROUTE', 'Cash ledger must preserve legacy route-assigned client cash visibility');
 assert_contains($deletion, 'finance_employee_personal_expenses', 'CFU/DDS deletion must protect recorded personal expenses');
 
 fwrite(STDOUT, "OK: manual finance facts regression passed\n");

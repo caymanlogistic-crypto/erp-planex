@@ -36,11 +36,26 @@
         $scenario = strtoupper(trim((string)($_POST['scenario'] ?? 'CASH_OPERATION')));
         $payload = $_POST;
 
-        if ($scenario === 'CLIENT_CASH_RECEIPT') {
-            $payload['dds_category_id'] = $payload['client_dds_category_id'] ?? null;
-            $result = \App\Service\FinanceManualFactService::createClientCashReceipt($localPdo, $payload, $user);
-            $_SESSION['finance_success'] = 'Наличная оплата клиента проведена: рейс #' . (int)$result['linear_route_id']
-                . ', ' . \App\Service\FinanceCashService::formatAmount($result['amount']) . ' ₽.';
+        if ($scenario === 'CLIENT_CASH_INVOICE') {
+            $result = \App\Service\FinanceCashInvoiceEventService::createClientCashReceipt($localPdo, $payload, $user);
+            $_SESSION['finance_success'] = 'Получено от клиента ' . \App\Service\FinanceCashService::formatAmount($result['amount']) . ' ₽. '
+                . 'На счёт ' . $result['invoice_number'] . ' зачтено ' . \App\Service\FinanceCashService::formatAmount($result['allocated_amount']) . ' ₽.';
+        } elseif ($scenario === 'MAIN_CASH_INVOICE_PAYMENT') {
+            $result = \App\Service\FinanceCashInvoiceEventService::payCarrierInvoiceFromMainCash($localPdo, $payload, $user);
+            $_SESSION['finance_success'] = 'Из Основной кассы оплачено ' . \App\Service\FinanceCashService::formatAmount($result['amount'])
+                . ' ₽ по входящему счёту ' . $result['invoice_number'] . ' · ' . $result['carrier_name'] . '.';
+        } elseif ($scenario === 'MAIN_CASH_EMPLOYEE_TRANSFER') {
+            $employee = \App\Service\FinanceEmployeePaymentService::resolveActiveEmployee(
+                $localPdo,
+                $pdo,
+                $companyId,
+                trim((string)($payload['employee_ref'] ?? ''))
+            );
+            $result = \App\Service\FinanceCashInvoiceEventService::transferMainCashToEmployee($localPdo, $payload, $user, $employee);
+            $_SESSION['finance_success'] = 'Передано сотруднику ' . $result['employee']['full_name'] . ': '
+                . \App\Service\FinanceCashService::formatAmount($result['amount']) . ' ₽.';
+        } elseif ($scenario === 'CLIENT_CASH_RECEIPT') {
+            throw new \InvalidArgumentException('Старая форма оплаты клиента отключена. Обновите страницу и выберите «Получено от клиента по счёту».');
         } elseif ($scenario === 'EMPLOYEE_PERSONAL_EXPENSE') {
             throw new \InvalidArgumentException('Расход компании из личных средств сотрудника оформляется в разделе «Выплаты сотрудникам».');
         } elseif ($scenario === 'CASH_OPERATION') {

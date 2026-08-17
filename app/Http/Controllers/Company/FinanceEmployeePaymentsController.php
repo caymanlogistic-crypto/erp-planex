@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Company;
 
 use App\Core\Database;
+use App\Service\FinanceCashInvoiceEventService;
 use App\Service\FinanceCashService;
+use App\Service\FinanceEmployeeInvoicePaymentEventService;
 use App\Service\FinanceEmployeePaymentService;
+use App\Service\FinanceEmployeePersonalExpenseEventService;
 use App\Service\FinanceEmployeeTransferService;
 use PDO;
 
@@ -29,6 +32,9 @@ final class FinanceEmployeePaymentsController
 
         $ledger = [];
         $selectedEmployee = null;
+        $employeeInvoicePayments = [];
+        $employeePersonalExpenses = [];
+        $carrierInvoices = [];
         if ($selectedRef !== '') {
             try {
                 $selectedEmployee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], $selectedRef);
@@ -45,6 +51,9 @@ final class FinanceEmployeePaymentsController
             if ($selectedEmployee) {
                 $ledger = $ledger ?: FinanceEmployeePaymentService::fetchEmployeeLedger($pdo, $selectedRef);
                 $ledger = FinanceEmployeeTransferService::decorateLedger($pdo, $ledger);
+                $employeeInvoicePayments = FinanceEmployeeInvoicePaymentEventService::fetchForEmployee($pdo, $selectedRef);
+                $employeePersonalExpenses = FinanceEmployeePersonalExpenseEventService::fetchForEmployee($pdo, $selectedRef);
+                $carrierInvoices = FinanceCashInvoiceEventService::fetchCarrierInvoices($pdo);
             }
         }
 
@@ -61,6 +70,7 @@ final class FinanceEmployeePaymentsController
 
         ob_start();
         require base_path('app/View/pages/company_finance_employee_payments.php');
+        require base_path('app/View/partials/company_finance_employee_invoice_tools.php');
         $content = ob_get_clean();
         $config = $this->config;
         $db = $this->db;

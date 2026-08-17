@@ -1,5 +1,7 @@
 <?php
 
+require_once base_path('app/Service/FinanceOperationInvoiceSettlementService.php');
+require_once base_path('app/Service/FinanceCashInvoiceEventService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceCashController.php');
 
 $controller = new \App\Http\Controllers\Company\FinanceCashController($config, $db);
@@ -12,9 +14,9 @@ $router->post('/company/finance/cash/operation-create', [$controller, 'operation
 $router->get('/company/finance/cash/transfer-create', [$controller, 'transferCreateForm']);
 $router->post('/company/finance/cash/transfer-create', [$controller, 'transferCreateSubmit']);
 
-// Keep this new endpoint out of FinanceCashController's method surface. During
-// atomic deploy long-lived PHP-FPM workers may still have the previous class
-// bytecode cached; the closure itself remains a valid callable in that window.
+// Legacy source-specific handoff endpoint remains for backward compatibility
+// with already created cash-resolution chains. New handoffs are created from
+// «Новая операция» and use the fungible Main Cash balance.
 $router->post('/company/finance/cash/dispatch-employee', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceCashActions/dispatch_employee_submit.php');
 });
