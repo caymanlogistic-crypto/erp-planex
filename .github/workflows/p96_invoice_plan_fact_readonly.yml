@@ -1,0 +1,97 @@
+name: P96 Invoice Plan Fact Readonly
+on:
+  push:
+    branches: [chatgpt/p96-invoice-plan-fact-readonly-20260817]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            install -d -m 700 "$HOME/.ssh"
+            printf '%s\n' "$KEY" > "$HOME/.ssh/p96_credentials"
+            chmod 600 "$HOME/.ssh/p96_credentials"
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key "$HOME/.ssh/p96_credentials" --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Verify invoice plan fact timeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const {chromium}=require('playwright');
+          const ok=(v,m)=>{if(!v)throw new Error(m)};
+          (async()=>{
+            const credentials=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
+            const owner=credentials.find(x=>String(x.role).toUpperCase()==='OWNER');
+            ok(owner,'OWNER credentials');
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow'});
+            const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').fill(owner.password);
+            await page.locator('button[type="submit"],input[type="submit"]').first().click();
+            await page.waitForLoadState('networkidle');
+            ok(!page.url().includes('/login'),'login failed');
+            const response=await page.goto('https://plan-ex.ru/erpv2/company/finance/invoices',{waitUntil:'networkidle'});
+            ok(response && response.status()===200,'invoices HTTP '+(response?response.status():'none'));
+            ok(await page.getByText('План / факт оплаты',{exact:true}).count()===1,'timeline column missing');
+            const row=page.locator('table.table tbody tr').filter({hasText:'26-102'}).first();
+            ok(await row.count()===1,'invoice 26-102 not found');
+            const timeline=row.locator('.invoice-payment-timeline');
+            ok(await timeline.count()===1,'timeline cell missing for 26-102');
+            const text=(await timeline.innerText()).replace(/\s+/g,' ').trim();
+            console.log('P96_TIMELINE='+text);
+            ok(text.includes('План: 2 платежа'),'expected two planned payments: '+text);
+            ok(text.includes('230 000,00 ₽'),'expected planned/fact total 230000: '+text);
+            ok(text.includes('04.08.2026'),'first expected due date missing: '+text);
+            ok(text.includes('13.08.2026'),'second expected due date missing: '+text);
+            ok(text.includes('Факт: 1 платёж'),'actual bank payment must be grouped as one payment: '+text);
+            ok(text.includes('11.08.2026'),'actual payment date must come from bank statement: '+text);
+            ok(text.includes('+7 дн. просрочка'),'first part delay missing: '+text);
+            ok(text.includes('на 2 дн. раньше'),'second part early payment missing: '+text);
+            ok(text.includes('С просрочкой 115 000,00 ₽ · до 7 дн.'),'late total summary missing: '+text);
+            const box=await timeline.boundingBox();
+            ok(box && box.width>=300 && box.height>60,'timeline geometry collapsed '+JSON.stringify(box));
+            ok(errors.length===0,'page errors '+JSON.stringify(errors));
+            await page.screenshot({path:'P96_invoice_plan_fact.png',fullPage:true});
+            fs.writeFileSync('P96_RESULT.json',JSON.stringify({ok:true,text,box,errors},null,2));
+            console.log('P96_INVOICE_PLAN_FACT_OK');
+            await browser.close();
+          })().catch(e=>{console.error(e);fs.writeFileSync('P96_RESULT.json',JSON.stringify({ok:false,error:e.message},null,2));process.exit(1)});
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P96_invoice_plan_fact_${{ github.sha }}
+          path: |
+            P96_invoice_plan_fact.png
+            P96_RESULT.json
+          if-no-files-found: warn
