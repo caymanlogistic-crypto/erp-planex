@@ -62,7 +62,8 @@ fcp_not($cashAction,'DELETE FROM','Carrier payment must never hard-delete financ
 // Settlement history must identify real payment channel from posted allocations.
 fcp_has($history,"fo.status='POSTED'",'Settlement history must ignore cancelled/unposted operations');
 fcp_has($history,'fo.bank_transaction_id','History must identify bank settlements');
-fcp_has($history,"fma.type='CASH'",'History must identify cash settlements');
+fcp_has($history,'money_account_type','History must project money account type for cash identification');
+fcp_has($history,"=== 'CASH'",'History must identify cash settlements');
 fcp_has($history,'finance_employee_invoice_payments','History must identify employee-funded settlements');
 
 fwrite(STDOUT,"OK: carrier payables regression contract passed\n");
