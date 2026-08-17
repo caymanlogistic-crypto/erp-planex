@@ -75,7 +75,6 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
       ok(bodyText.includes('Движений нет.'), 'neither cash ledger nor valid empty state is visible');
     }
 
-    // Employee Payments is the only entry point for company expenses paid from personal funds.
     response = await page.goto(BASE + 'company/finance/employee-payments', { waitUntil: 'domcontentloaded' });
     ok(response && response.status() === 200, 'employee payments page HTTP 200');
     bodyText = await page.locator('body').innerText();
@@ -88,11 +87,15 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
 
     const listHost = page.locator('#employee-personal-expense-list-host');
     await listHost.waitFor({ state: 'attached', timeout: 5000 });
-    await page.waitForFunction(() => {
-      const host = document.querySelector('#employee-personal-expense-list-host');
-      return host && (host.querySelector('.employee-personal-expense-card') || host.querySelector('.notice'));
-    }, null, { timeout: 8000 });
-    ok(await listHost.locator('.notice.warn').count() === 0, 'linked employee expense list failed to load: ' + (await listHost.innerText()));
+    const loadedCard = listHost.locator('.employee-personal-expense-card');
+    const warning = listHost.locator('.notice.warn');
+    let listLoaded = false;
+    for (let i = 0; i < 40; i++) {
+      if ((await loadedCard.count()) > 0 || (await warning.count()) > 0) { listLoaded = true; break; }
+      await page.waitForTimeout(200);
+    }
+    ok(listLoaded, 'linked employee expense list did not finish loading');
+    ok(await warning.count() === 0, 'linked employee expense list failed to load: ' + (await listHost.innerText()));
 
     await personalButton.click();
     const personalModal = page.locator('.employee-personal-expense-modal');
@@ -108,7 +111,6 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok((await personalModal.innerText()).includes('Остаток Основной кассы'), 'modal must explain zero-net Main Cash effect');
     await page.screenshot({ path: 'P48_employee_personal_expense.png', fullPage: true });
 
-    // Deliberately read-only: no form is submitted and no finance record is changed.
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
     console.log('P48_CASH_LEDGER_RUNTIME_OK');
     console.log('P48_EMPLOYEE_PERSONAL_EXPENSE_UI_OK');
