@@ -107,13 +107,27 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok(visibleLegacyBlocks === 0, 'legacy employee event subtables are still visible');
     ok(await page.locator('#employee-personal-expense-list-host').count() === 0, 'duplicate employee personal-expense history host must not exist outside unified journal');
     ok(await page.locator('.employee-personal-expense-card').count() === 0, 'duplicate employee personal-expense history card must not be rendered');
-    ok(await page.locator('.employee-month-head').count() === 0, 'monthly employee subtables/group headers must be collapsed');
     const employeeTables = page.locator('.employee-report-table');
     ok(await employeeTables.count() <= 1, 'employee movements must render in one table');
     if (await employeeTables.count() === 1) {
-      const headers = await employeeTables.first().locator('thead th:visible').allInnerTexts();
+      const employeeTable = employeeTables.first();
+      const headers = await employeeTable.locator('thead th:visible').allInnerTexts();
       const expected = ['Дата', 'Тип платежа', 'Источник', 'Комментарий', 'Поступление', 'Расход', 'Сальдо'];
       ok(JSON.stringify(headers.map(normalize)) === JSON.stringify(expected.map(normalize)), 'employee unified headers mismatch: ' + JSON.stringify(headers));
+
+      const operationRows = employeeTable.locator('tbody tr:not(.employee-month-summary-row)');
+      const monthRows = employeeTable.locator('tbody tr.employee-month-summary-row');
+      if (await operationRows.count() > 0) {
+        ok(await monthRows.count() > 0, 'monthly employee totals missing from unified journal');
+        const monthTexts = await monthRows.allInnerTexts();
+        for (const text of monthTexts) {
+          ok(text.includes('За месяц:'), 'monthly employee summary missing "За месяц": ' + text);
+          ok(text.includes('Поступление'), 'monthly employee summary missing income: ' + text);
+          ok(text.includes('Расход'), 'monthly employee summary missing expense: ' + text);
+          ok(text.includes('ИТОГО'), 'monthly employee summary missing total: ' + text);
+        }
+        ok(await page.locator('.employee-month-head').count() === await monthRows.count(), 'monthly totals must exist only inside the unified employee table');
+      }
     }
 
     const invoiceButton = page.locator('#employee-invoice-payment-open');
@@ -150,6 +164,7 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok(await personalForm.locator('input[name="purpose"]').count() === 1, 'misc employee expense purpose field missing');
     await page.screenshot({ path: 'P48_employee_personal_expense.png', fullPage: true });
     console.log('P48_EMPLOYEE_PERSONAL_EXPENSE_UI_OK');
+    console.log('P48_EMPLOYEE_MONTHLY_TOTALS_OK');
     console.log('P48_EMPLOYEE_UNIFIED_LEDGER_UI_OK');
 
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
