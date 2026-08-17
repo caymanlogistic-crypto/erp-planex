@@ -127,16 +127,18 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
 /* This card has toolbar + summary + journal, so the generic 3-row table-card grid clips the journal into its 34px footer track. */
 .employee-report-card{display:block!important;grid-template-rows:none!important;overflow:visible!important}
 .employee-report-card .table-toolbar{min-height:36px!important}
-.employee-report-card .table-scroll{display:block!important;overflow:visible!important;height:auto!important;max-height:none!important;min-height:40px!important}
-.employee-report-table{display:table!important;width:100%!important;height:auto!important;min-height:0!important;table-layout:fixed!important}
+.employee-report-card .table-scroll{display:block!important;overflow-x:hidden!important;overflow-y:visible!important;height:auto!important;max-height:none!important;min-height:40px!important}
+.employee-report-table{display:table!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;table-layout:fixed!important}
 .employee-report-table thead{display:table-header-group!important}
 .employee-report-table tbody{display:table-row-group!important;height:auto!important;visibility:visible!important}
 .employee-report-table tbody tr{display:table-row!important;height:auto!important;visibility:visible!important}
+.employee-report-table th,.employee-report-table td{min-width:0!important;max-width:100%!important}
 .employee-report-table tbody td{height:auto!important;min-height:30px!important;padding-top:7px!important;padding-bottom:7px!important}
-/* User contract: date and payment type must always be fully visible. Responsive pressure is absorbed by Comment only. */
-.employee-report-table th:nth-child(1),.employee-report-table td:nth-child(1){white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
-.employee-report-table th:nth-child(2),.employee-report-table td:nth-child(2){white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
-.employee-report-table .employee-unified-comment{min-width:0!important;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
+/* Compact journal: every visible column is deliberately narrower; long labels wrap instead of forcing horizontal scroll. */
+.employee-report-table th:nth-child(1),.employee-report-table td:nth-child(1){white-space:nowrap!important;font-size:10px!important}
+.employee-report-table th:nth-child(2),.employee-report-table td:nth-child(2),.employee-report-table th:nth-child(3),.employee-report-table td:nth-child(3){white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.2}
+.employee-report-table th:nth-child(5),.employee-report-table td:nth-child(5),.employee-report-table th:nth-child(6),.employee-report-table td:nth-child(6),.employee-report-table th:nth-child(7),.employee-report-table td:nth-child(7){white-space:nowrap!important}
+.employee-report-table .employee-unified-comment{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word;line-height:1.2}
 .employee-report-table .employee-unified-comment-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .employee-report-table .employee-unified-comment-actions .btn{height:22px;min-height:22px;padding:0 7px;font-size:9px}
 .employee-report-table .employee-month-summary-row>td:first-child{display:table-cell!important;padding:0!important;min-height:0!important;background:var(--surface-form)}
@@ -176,13 +178,13 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         if(headers[3])headers[3].textContent='Комментарий';
         if(headers[7])headers[7].style.display='none';
         const cols=table.querySelectorAll('colgroup col');
-        if(cols[0])cols[0].style.width='90px';
-        if(cols[1])cols[1].style.width='190px';
-        if(cols[2])cols[2].style.width='118px';
+        if(cols[0])cols[0].style.width='68px';
+        if(cols[1])cols[1].style.width='126px';
+        if(cols[2])cols[2].style.width='86px';
         if(cols[3])cols[3].style.width='auto';
-        if(cols[4])cols[4].style.width='105px';
-        if(cols[5])cols[5].style.width='105px';
-        if(cols[6])cols[6].style.width='105px';
+        if(cols[4])cols[4].style.width='82px';
+        if(cols[5])cols[5].style.width='82px';
+        if(cols[6])cols[6].style.width='82px';
         if(cols[7])cols[7].style.display='none';
         section.rows.forEach(row=>rows.push(row));
     });
@@ -263,9 +265,12 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
             firstScroll.style.setProperty('height','auto','important');
             firstScroll.style.setProperty('max-height','none','important');
             firstScroll.style.setProperty('min-height','40px','important');
-            firstScroll.style.setProperty('overflow','visible','important');
+            firstScroll.style.setProperty('overflow-x','hidden','important');
+            firstScroll.style.setProperty('overflow-y','visible','important');
         }
         firstTable.style.setProperty('display','table','important');
+        firstTable.style.setProperty('width','100%','important');
+        firstTable.style.setProperty('max-width','100%','important');
         firstTable.style.setProperty('height','auto','important');
         if(firstBody){
             firstBody.style.setProperty('display','table-row-group','important');
