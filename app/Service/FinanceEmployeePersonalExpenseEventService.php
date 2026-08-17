@@ -218,11 +218,11 @@ final class FinanceEmployeePersonalExpenseEventService
                 LEFT JOIN finance_dds_categories dds ON dds.id=pe.dds_category_id
                 LEFT JOIN linear_routes lr ON lr.id=pe.linear_route_id
                 LEFT JOIN clients c ON c.id=lr.client_id
-                WHERE pe.employee_identity_type=? AND pe.employee_identity_id=?
+                WHERE pe.employee_identity_type=:employee_type AND pe.employee_identity_id=:employee_id
                   AND pe.event_group_id IS NOT NULL
                 ORDER BY pe.operation_date DESC, pe.id DESC LIMIT :limit");
-        $stmt->bindValue(1, $type);
-        $stmt->bindValue(2, $id, PDO::PARAM_INT);
+        $stmt->bindValue(':employee_type', $type);
+        $stmt->bindValue(':employee_id', $id, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
