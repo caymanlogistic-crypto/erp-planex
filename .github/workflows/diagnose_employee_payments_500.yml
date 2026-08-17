@@ -1,0 +1,50 @@
+name: Diagnose Employee Payments 500
+on:
+  push:
+    branches: [hotfix/employee-payments-500-diagnose-20260817]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/diag_key"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/diag_key" "$HOME/.ssh/known_hosts"
+      - name: Read-only diagnose production
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$PORT" -i "$HOME/.ssh/diag_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          live=/home/s/spugovxsim/planexp/public_html/erpv2
+          got=$(cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt)
+          echo "DEPLOYED_SHA=$got"
+          test "$got" = '4f14e3ea598ce642954c1c140464c41ed563d089'
+          cd "$live"
+          echo '=== ROUTES ==='
+          grep -Rni --exclude-dir=vendor --exclude-dir=node_modules 'employee-payments' app public routes 2>/dev/null | head -n 100 || true
+          echo '=== REFERENCES ==='
+          grep -Rni --exclude-dir=vendor --exclude-dir=node_modules 'finance_employee_personal_expenses\|Оплачено сотрудником\|personalExpense' app public routes 2>/dev/null | head -n 180 || true
+          echo '=== FILES ==='
+          find app public routes -type f 2>/dev/null | grep -Ei 'employee|payment|cash|finance' | head -n 180 || true
+          echo '=== ERRORS ==='
+          find storage logs . -maxdepth 3 -type f \( -name '*.log' -o -name 'error_log' \) -print 2>/dev/null | head -n 50 | while read -r f; do
+            echo "--- $f ---"
+            tail -n 300 "$f" 2>/dev/null | grep -Ei -C 10 'employee-payments|FinanceEmployee|personal_expense|finance_employee_personal_expenses|Fatal error|Uncaught|PDOException|TypeError|Error:' | tail -n 180 || true
+          done
+          REMOTE
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/diag_key"
