@@ -2,12 +2,14 @@
 
 use App\Core\Database;
 use App\Service\FinanceInvoiceService;
+use App\Service\FinanceInvoiceSettlementHistoryService;
 use App\Service\FinanceObligationService;
 
 requireRole(['company_owner']);
 
 $invoice = null;
 $links = [];
+$settlements = [];
 $error = null;
 
 try {
@@ -28,11 +30,16 @@ try {
         throw new RuntimeException('Счёт не найден.');
     }
     $links = FinanceObligationService::invoiceLinks($localPdo, $invoiceId);
+    $settlements = FinanceInvoiceSettlementHistoryService::forInvoice($localPdo, $invoiceId);
 
-    $roleCode = (string)(($_SESSION['user'] ?? [])['role_code'] ?? '');
+    $roleCode = (string)($_SESSION['role_code'] ?? (($_SESSION['user'] ?? [])['role_code'] ?? ''));
     $isCancelled = ($invoice['cancelled_at'] ?? null) !== null || ($invoice['status'] ?? '') === 'cancelled';
     $canEdit = $roleCode === 'company_owner' && !$isCancelled;
     $canDelete = $roleCode === 'company_owner';
+    $canPayCarrier = $roleCode === 'company_owner'
+        && !$isCancelled
+        && (string)($invoice['direction'] ?? '') === FinanceInvoiceService::DIRECTION_INCOMING
+        && (float)($invoice['remaining_amount'] ?? 0) > 0;
 } catch (Throwable $e) {
     $error = $e->getMessage();
 }
