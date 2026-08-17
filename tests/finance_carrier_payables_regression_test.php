@@ -36,6 +36,8 @@ foreach (['Кредиторская задолженность','Всего к �
 }
 foreach (['Расчётный счёт','Касса','Сотрудник'] as $channel) {
     fcp_has($view,$channel,'Payables UI must explain '.$channel.' settlement');
+}
+foreach (['Расчётный счёт','Основная касса','Сотрудник'] as $channel) {
     fcp_has($modal,$channel,'Invoice modal must expose '.$channel.' settlement');
 }
 fcp_has($view,'data-payables-search','AP table must have client-side search');
