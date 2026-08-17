@@ -133,7 +133,10 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
 .employee-report-table tbody{display:table-row-group!important;height:auto!important;visibility:visible!important}
 .employee-report-table tbody tr{display:table-row!important;height:auto!important;visibility:visible!important}
 .employee-report-table tbody td{height:auto!important;min-height:30px!important;padding-top:7px!important;padding-bottom:7px!important}
-.employee-report-table .employee-unified-comment{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
+/* Date/type/source/money columns are protected from adaptive clipping; only Comment may wrap/shrink. */
+.employee-report-table thead th:not(:nth-child(4)),
+.employee-report-table tbody tr:not(.employee-month-summary-row)>td:not(:nth-child(4)){white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+.employee-report-table .employee-unified-comment{white-space:normal!important;overflow-wrap:anywhere;word-break:break-word;line-height:1.25;min-width:0!important}
 .employee-report-table .employee-unified-comment-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .employee-report-table .employee-unified-comment-actions .btn{height:22px;min-height:22px;padding:0 7px;font-size:9px}
 .employee-report-table .employee-month-summary-row>td:first-child{display:table-cell!important;padding:0!important;min-height:0!important;background:var(--surface-form)}
@@ -173,13 +176,13 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         if(headers[3])headers[3].textContent='Комментарий';
         if(headers[7])headers[7].style.display='none';
         const cols=table.querySelectorAll('colgroup col');
-        if(cols[0])cols[0].style.width='82px';
-        if(cols[1])cols[1].style.width='142px';
-        if(cols[2])cols[2].style.width='118px';
+        if(cols[0])cols[0].style.width='96px';
+        if(cols[1])cols[1].style.width='190px';
+        if(cols[2])cols[2].style.width='126px';
         if(cols[3])cols[3].style.width='auto';
-        if(cols[4])cols[4].style.width='105px';
-        if(cols[5])cols[5].style.width='105px';
-        if(cols[6])cols[6].style.width='105px';
+        if(cols[4])cols[4].style.width='108px';
+        if(cols[5])cols[5].style.width='108px';
+        if(cols[6])cols[6].style.width='108px';
         if(cols[7])cols[7].style.display='none';
         section.rows.forEach(row=>rows.push(row));
     });
