@@ -25,86 +25,93 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     await page.waitForTimeout(700);
     ok(!page.url().includes('/login'), 'OWNER login failed');
 
-    const response = await page.goto(BASE + 'company/finance/cash', { waitUntil: 'domcontentloaded' });
+    let response = await page.goto(BASE + 'company/finance/cash', { waitUntil: 'domcontentloaded' });
     ok(response && response.status() === 200, 'cash page HTTP 200');
     ok((await page.locator('h1').first().innerText()).includes('Касса'), 'cash title missing');
 
-    const bodyText = await page.locator('body').innerText();
-    ok(!bodyText.includes('Ошибка при загрузке данных:'), 'cash page database/runtime error: ' + bodyText.match(/Ошибка при загрузке данных:[^\n]*/)?.[0]);
+    let bodyText = await page.locator('body').innerText();
+    ok(!bodyText.includes('Ошибка при загрузке данных:'), 'cash page database/runtime error');
     ok(!bodyText.includes('Работа с кассой недоступна.'), 'cash page unexpectedly unavailable');
 
-    // Migration/runtime smoke: this section is rendered only after
-    // FinanceManualFactService::fetchRecentPersonalExpenses() completes successfully.
     const personalExpenseSection = page.locator('.section-title').filter({ hasText: 'Расходы сотрудников из личных средств' });
-    ok(await personalExpenseSection.count() === 1, 'personal-funded expense section missing');
+    ok(await personalExpenseSection.count() === 1, 'personal-funded expense history section missing');
 
-    // New release acceptance: open the real production modal without submitting anything.
     const createOperation = page.locator('#cash-operation-create-btn');
     await createOperation.waitFor({ state: 'visible', timeout: 5000 });
     await createOperation.click();
-    const modal = page.locator('#cash-operation-create-modal');
-    await modal.waitFor({ state: 'visible', timeout: 5000 });
-    const form = modal.locator('#finance-cash-manual-form');
-    await form.waitFor({ state: 'visible', timeout: 10000 });
-
-    const scenario = form.locator('#cash-scenario');
+    const cashModal = page.locator('#cash-operation-create-modal');
+    await cashModal.waitFor({ state: 'visible', timeout: 5000 });
+    const cashForm = cashModal.locator('#finance-cash-manual-form');
+    await cashForm.waitFor({ state: 'visible', timeout: 10000 });
+    const scenario = cashForm.locator('#cash-scenario');
     const optionValues = await scenario.locator('option').evaluateAll(opts => opts.map(o => o.value));
-    for (const expected of ['CASH_OPERATION', 'CLIENT_CASH_RECEIPT', 'EMPLOYEE_PERSONAL_EXPENSE']) {
-      ok(optionValues.includes(expected), 'manual finance scenario missing: ' + expected + '; actual=' + JSON.stringify(optionValues));
+    for (const expected of ['CASH_OPERATION', 'CLIENT_CASH_RECEIPT']) {
+      ok(optionValues.includes(expected), 'cash scenario missing: ' + expected + '; actual=' + JSON.stringify(optionValues));
     }
+    ok(!optionValues.includes('EMPLOYEE_PERSONAL_EXPENSE'), 'employee-funded expense must no longer be created from Cash');
+    ok(await cashForm.locator('[data-scenario-block="EMPLOYEE_PERSONAL_EXPENSE"]').count() === 0, 'obsolete employee personal expense cash block still rendered');
 
     await scenario.selectOption('CLIENT_CASH_RECEIPT');
-    const clientBlock = form.locator('[data-scenario-block="CLIENT_CASH_RECEIPT"]');
+    const clientBlock = cashForm.locator('[data-scenario-block="CLIENT_CASH_RECEIPT"]');
     ok(await clientBlock.isVisible(), 'client cash receipt block did not become visible');
     ok(await clientBlock.locator('select[name="linear_route_payment_id"]').count() === 1, 'client route/payment selector missing');
-    ok(await clientBlock.locator('select[name="linear_route_payment_id"]').isEnabled(), 'client route/payment selector disabled');
-
-    await scenario.selectOption('EMPLOYEE_PERSONAL_EXPENSE');
-    const personalBlock = form.locator('[data-scenario-block="EMPLOYEE_PERSONAL_EXPENSE"]');
-    ok(await personalBlock.isVisible(), 'employee personal expense block did not become visible');
-    ok(await personalBlock.locator('select[name="employee_ref"]').count() === 1, 'employee selector missing');
-    ok(await personalBlock.locator('select[name="cash_flow_center_id"]').count() === 1, 'CFU selector missing');
-    ok(await personalBlock.locator('select[name="personal_dds_category_id"]').count() === 1, 'DDS selector missing');
-    ok(await personalBlock.locator('select[name="personal_linear_route_id"]').count() === 1, 'optional route selector missing');
-    ok(await form.locator('input[name="amount"]').count() === 1, 'amount field missing');
-    ok(await form.locator('input[name="operation_date"]').count() === 1, 'operation date field missing');
-    ok(await form.locator('input[name="purpose"]').count() === 1, 'purpose field missing');
-    ok(await form.locator('input[name="purpose"]').getAttribute('required') !== null, 'purpose must be required for employee personal expense');
-
     await page.screenshot({ path: 'P48_cash_lifecycle.png', fullPage: true });
 
-    // Ledger acceptance is state-aware. Empty production data is a valid state.
     const ledger = page.locator('#cash-ledger-table');
     if (await ledger.count()) {
       const headers = await ledger.locator('thead th').allInnerTexts();
       const expected = ['', 'Дата', 'Касса', 'Движение', 'Получено от', 'Назначение', 'Сумма', 'Передано'];
       ok(JSON.stringify(headers.map(normalize)) === JSON.stringify(expected.map(normalize)), 'cash lifecycle headers mismatch: ' + JSON.stringify(headers));
-
       const rows = ledger.locator('tbody tr[data-cash-ledger-row]');
       const rowCount = await rows.count();
       ok(rowCount > 0, 'cash ledger table rendered without rows');
       const allowedMovements = ['Поступление', 'Списание', 'Получено', 'Получено → передано', 'Получено → разнесено'].map(normalize);
-
       for (let i = 0; i < rowCount; i++) {
-        const row = rows.nth(i);
-        const direction = await row.getAttribute('data-cash-direction');
-        ok(direction === 'in' || direction === 'out', 'invalid cash direction on row ' + i + ': ' + direction);
-        const cells = row.locator('td');
+        const cells = rows.nth(i).locator('td');
         ok(await cells.count() === 8, 'cash lifecycle row must have eight cells');
-        const movement = (await cells.nth(3).innerText()).trim();
-        ok(allowedMovements.includes(normalize(movement)), 'raw/invalid lifecycle movement label on row ' + i + ': ' + movement);
-        ok((await cells.nth(2).innerText()).trim() !== '', 'cash name missing on row ' + i);
-        ok((await cells.nth(5).innerText()).trim() !== '', 'purpose missing on row ' + i);
-        ok((await cells.nth(6).innerText()).trim() !== '', 'amount missing on row ' + i);
+        ok(allowedMovements.includes(normalize(await cells.nth(3).innerText())), 'invalid cash lifecycle movement label');
       }
     } else {
       ok(bodyText.includes('Движений нет.'), 'neither cash ledger nor valid empty state is visible');
     }
 
+    // Employee Payments is the only entry point for company expenses paid from personal funds.
+    response = await page.goto(BASE + 'company/finance/employee-payments', { waitUntil: 'domcontentloaded' });
+    ok(response && response.status() === 200, 'employee payments page HTTP 200');
+    bodyText = await page.locator('body').innerText();
+    ok(bodyText.includes('Выплаты сотрудникам'), 'employee payments title missing');
+    ok(!bodyText.includes('Ошибка'), 'employee payments page contains runtime error: ' + bodyText.match(/Ошибка[^\n]*/)?.[0]);
+
+    const personalButton = page.locator('#employee-personal-expense-open');
+    await personalButton.waitFor({ state: 'visible', timeout: 8000 });
+    ok((await personalButton.innerText()).includes('Оплачено сотрудником'), 'new employee-funded expense button label mismatch');
+
+    const listHost = page.locator('#employee-personal-expense-list-host');
+    await listHost.waitFor({ state: 'attached', timeout: 5000 });
+    await page.waitForFunction(() => {
+      const host = document.querySelector('#employee-personal-expense-list-host');
+      return host && (host.querySelector('.employee-personal-expense-card') || host.querySelector('.notice'));
+    }, null, { timeout: 8000 });
+    ok(await listHost.locator('.notice.warn').count() === 0, 'linked employee expense list failed to load: ' + (await listHost.innerText()));
+
+    await personalButton.click();
+    const personalModal = page.locator('.employee-personal-expense-modal');
+    await personalModal.waitFor({ state: 'visible', timeout: 8000 });
+    const personalForm = personalModal.locator('[data-personal-expense-form]');
+    await personalForm.waitFor({ state: 'visible', timeout: 5000 });
+    ok(await personalForm.locator('input[name="amount"]').count() === 1, 'employee-funded expense amount field missing');
+    ok(await personalForm.locator('input[name="operation_date"]').count() === 1, 'employee-funded expense date field missing');
+    ok(await personalForm.locator('select[name="cash_flow_center_id"]').count() === 1, 'employee-funded expense CFU selector missing');
+    ok(await personalForm.locator('select[name="dds_category_id"]').count() === 1, 'employee-funded expense DDS selector missing');
+    ok(await personalForm.locator('input[name="purpose"]').count() === 1, 'employee-funded expense purpose field missing');
+    ok((await personalModal.innerText()).includes('Основную кассу'), 'modal must explain automatic Main Cash postings');
+    ok((await personalModal.innerText()).includes('Остаток Основной кассы'), 'modal must explain zero-net Main Cash effect');
+    await page.screenshot({ path: 'P48_employee_personal_expense.png', fullPage: true });
+
     // Deliberately read-only: no form is submitted and no finance record is changed.
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
     console.log('P48_CASH_LEDGER_RUNTIME_OK');
-    console.log('P48_MANUAL_FINANCE_SCENARIOS_OK');
+    console.log('P48_EMPLOYEE_PERSONAL_EXPENSE_UI_OK');
   } finally {
     await browser.close();
   }

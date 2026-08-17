@@ -61,14 +61,11 @@ assert_contains($client, "outflow_finance_operation_id", 'Client cash receipt mu
 assert_contains($client, "NULL, NULL", 'Client cash resolution must not create outflow/employee movement');
 assert_not_contains($client, "createCashMovement", 'Client cash receipt must not create employee cash movement');
 
+// Legacy 073 fact writer is preserved for historical compatibility only. The live entry point moved to Employee Payments.
 $personal = method_body($service, 'createEmployeePersonalExpense');
-assert_contains($personal, 'finance_employee_personal_expenses', 'Personal-funded expense must be stored as its own economic fact');
-assert_contains($personal, 'FinanceStructureService::assertAllowedPair', 'Personal-funded expense must validate CFU/DDS pairing');
-assert_contains($personal, 'cash_flow_center_name_snapshot', 'Personal-funded expense must snapshot CFU name');
-assert_contains($personal, 'dds_category_name_snapshot', 'Personal-funded expense must snapshot DDS name');
-assert_not_contains($personal, 'FinanceCashService::createCashOperation', 'Personal-funded expense must not change cash balance');
-assert_not_contains($personal, 'FinanceOperationService::', 'Personal-funded expense must not create corporate money operation');
-assert_not_contains($personal, 'finance_employee_movements', 'Personal-funded expense must not create employee debt/settlement movement');
+assert_contains($personal, 'finance_employee_personal_expenses', 'Legacy personal-funded fact storage must remain readable');
+assert_contains($personal, 'FinanceStructureService::assertAllowedPair', 'Legacy personal-funded fact must validate CFU/DDS pairing');
+assert_not_contains($personal, 'FinanceCashService::createCashOperation', 'Legacy fact writer must not silently become a money writer');
 
 assert_contains($migration, 'finance_cash_route_receipts', 'Migration must create cash-route receipt trace table');
 assert_contains($migration, 'finance_employee_personal_expenses', 'Migration must create employee personal expense fact table');
@@ -76,15 +73,14 @@ assert_contains($migration, 'outflow_finance_operation_id` INT UNSIGNED DEFAULT 
 assert_contains($migration, 'cash_flow_center_name_snapshot', 'Migration must preserve CFU snapshot');
 assert_contains($migration, 'dds_category_name_snapshot', 'Migration must preserve DDS snapshot');
 
-assert_contains($form, 'CLIENT_CASH_RECEIPT', 'UI must expose client cash receipt scenario');
-assert_contains($form, 'EMPLOYEE_PERSONAL_EXPENSE', 'UI must expose employee personal-funded expense scenario');
-assert_contains($form, 'data-allowed-expense-dds-map', 'UI must carry allowed manual CFU/DDS map');
+assert_contains($form, 'CLIENT_CASH_RECEIPT', 'Cash UI must keep client cash receipt scenario');
+assert_not_contains($form, '<option value="EMPLOYEE_PERSONAL_EXPENSE">', 'Cash UI must not expose employee personal-funded expense entry point');
+assert_not_contains($form, 'data-scenario-block="EMPLOYEE_PERSONAL_EXPENSE"', 'Cash UI must not keep a competing personal-expense form block');
 assert_not_contains($form, '<script>', 'Fetched modal partial must not rely on non-executing embedded script');
 assert_contains($page, 'initManualFinanceForm', 'Cash page must initialize fetched manual finance form');
-assert_contains($page, 'Расходы сотрудников из личных средств', 'Cash page must display recorded personal-funded expenses');
+assert_contains($page, 'Расходы сотрудников из личных средств', 'Cash page must keep historical/linked personal expense visibility');
 assert_contains($submit, "client_dds_category_id", 'Submit must normalize client DDS server-side');
-assert_contains($submit, "personal_dds_category_id", 'Submit must normalize personal expense DDS server-side');
-assert_contains($submit, "personal_linear_route_id", 'Submit must normalize optional personal expense route server-side');
+assert_contains($submit, 'оформляется в разделе «Выплаты сотрудникам»', 'Stale cash submissions must fail closed and point to Employee Payments');
 assert_contains($ledger, 'CASH_RESOLUTION_CLIENT_ROUTE', 'Cash ledger must distinguish route-assigned client cash from employee handoff');
 assert_contains($deletion, 'finance_employee_personal_expenses', 'CFU/DDS deletion must protect recorded personal expenses');
 

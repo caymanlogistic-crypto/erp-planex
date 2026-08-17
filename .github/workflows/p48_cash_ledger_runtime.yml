@@ -47,7 +47,7 @@ jobs:
           chmod 600 "$HOME/.ssh/p48" "$HOME/.ssh/known_hosts"
           got="$(ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
           test "$got" = "$SHA"
-      - name: Apply tenant migration 073
+      - name: Apply tenant migrations 073 and 074
         env:
           HOST: ${{ secrets.ERPV2_SSH_HOST }}
           PORT: ${{ secrets.ERPV2_SSH_PORT }}
@@ -59,6 +59,8 @@ jobs:
           live="$root/public_html/""erpv2"
           ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "cd '$live' && /usr/bin/php8.5 scripts/p97_apply_finance_manual_facts_migration.php" | tee P97_MIGRATION.txt
           grep -q 'P97_FINANCE_MANUAL_FACTS_MIGRATION_OK' P97_MIGRATION.txt
+          ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "cd '$live' && /usr/bin/php8.5 scripts/p98_apply_employee_personal_expense_event_migration.php" | tee P98_MIGRATION.txt
+          grep -q 'P98_EMPLOYEE_PERSONAL_EXPENSE_EVENT_MIGRATION_OK' P98_MIGRATION.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -87,18 +89,21 @@ jobs:
           test -n "$cred"
           echo "::add-mask::$cred"
           echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
-      - name: Fail-closed read-only cash ledger acceptance
+      - name: Fail-closed read-only cash and employee expense acceptance
         shell: bash
         run: |
           set -euo pipefail
           node .github/p48/P48_cash_ledger_runtime.js 2>&1 | tee P48_RUNTIME.txt
           grep -q 'P48_CASH_LEDGER_RUNTIME_OK' P48_RUNTIME.txt
+          grep -q 'P48_EMPLOYEE_PERSONAL_EXPENSE_UI_OK' P48_RUNTIME.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: P48_cash_ledger_runtime_${{ steps.sha.outputs.sha }}
           path: |
             P97_MIGRATION.txt
+            P98_MIGRATION.txt
             P48_RUNTIME.txt
             P48_cash_lifecycle.png
+            P48_employee_personal_expense.png
           if-no-files-found: warn

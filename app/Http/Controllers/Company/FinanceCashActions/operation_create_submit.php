@@ -42,17 +42,7 @@
             $_SESSION['finance_success'] = 'Наличная оплата клиента проведена: рейс #' . (int)$result['linear_route_id']
                 . ', ' . \App\Service\FinanceCashService::formatAmount($result['amount']) . ' ₽.';
         } elseif ($scenario === 'EMPLOYEE_PERSONAL_EXPENSE') {
-            $payload['dds_category_id'] = $payload['personal_dds_category_id'] ?? null;
-            $payload['linear_route_id'] = $payload['personal_linear_route_id'] ?? null;
-            $employeeRef = trim((string)($payload['employee_ref'] ?? ''));
-            $employee = \App\Service\FinanceEmployeePaymentService::resolveActiveEmployee(
-                $localPdo,
-                $pdo,
-                $companyId,
-                $employeeRef
-            );
-            \App\Service\FinanceManualFactService::createEmployeePersonalExpense($localPdo, $payload, $user, $employee);
-            $_SESSION['finance_success'] = 'Расход сотрудника из личных средств зафиксирован. Остатки кассы и банка не изменены.';
+            throw new \InvalidArgumentException('Расход компании из личных средств сотрудника оформляется в разделе «Выплаты сотрудникам».');
         } elseif ($scenario === 'CASH_OPERATION') {
             \App\Service\FinanceCashService::createCashOperation($localPdo, $payload, $user);
             $typeLabel = ($payload['operation_type'] ?? '') === 'INCOME' ? 'Приход' : 'Расход';

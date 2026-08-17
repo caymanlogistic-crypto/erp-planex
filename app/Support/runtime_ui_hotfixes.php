@@ -89,6 +89,11 @@ if (PHP_SAPI !== 'cli') {
         }
 
         $src = app_url('/assets/js/driver-phone-optional.js') . '?v=' . filemtime(base_path('public/assets/js/driver-phone-optional.js'));
+        $extraScripts = '<script src="' . e($src) . '"></script>';
+        if (str_starts_with(current_app_path(), '/company/finance/employee-payments')) {
+            $employeeExpenseSrc = app_url('/assets/js/finance-employee-personal-expense.js') . '?v=' . filemtime(base_path('public/assets/js/finance-employee-personal-expense.js'));
+            $extraScripts .= '<script src="' . e($employeeExpenseSrc) . '"></script>';
+        }
         $baseFix = <<<'HTML'
 <script>
 (function(){
@@ -117,6 +122,6 @@ if (PHP_SAPI !== 'cli') {
 }());
 </script>
 HTML;
-        return str_replace('</body>', '<script src="' . e($src) . '"></script>' . $baseFix . '</body>', $html);
+        return str_replace('</body>', $extraScripts . $baseFix . '</body>', $html);
     });
 }
