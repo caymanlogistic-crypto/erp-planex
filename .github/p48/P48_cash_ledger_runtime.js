@@ -98,6 +98,22 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok(bodyText.includes('Выплаты сотрудникам'), 'employee payments title missing');
     ok(!bodyText.includes('Ошибка при загрузке данных:'), 'employee payments page contains database/runtime error');
 
+    const report = page.locator('.employee-report');
+    await report.waitFor({ state: 'visible', timeout: 8000 });
+    ok(await report.getAttribute('data-unified-employee-ledger') === 'ready', 'unified employee ledger enhancer did not finish');
+    const visibleLegacyBlocks = await page.locator('.employee-money-actions').evaluateAll(nodes => nodes.filter(node => {
+      const s = getComputedStyle(node); return s.display !== 'none' && s.visibility !== 'hidden';
+    }).length);
+    ok(visibleLegacyBlocks === 0, 'legacy employee event subtables are still visible');
+    ok(await page.locator('.employee-month-head').count() === 0, 'monthly employee subtables/group headers must be collapsed');
+    const employeeTables = page.locator('.employee-report-table');
+    ok(await employeeTables.count() <= 1, 'employee movements must render in one table');
+    if (await employeeTables.count() === 1) {
+      const headers = await employeeTables.first().locator('thead th:visible').allInnerTexts();
+      const expected = ['Дата', 'Тип платежа', 'Источник', 'Комментарий', 'Поступление', 'Расход', 'Сальдо'];
+      ok(JSON.stringify(headers.map(normalize)) === JSON.stringify(expected.map(normalize)), 'employee unified headers mismatch: ' + JSON.stringify(headers));
+    }
+
     const invoiceButton = page.locator('#employee-invoice-payment-open');
     await invoiceButton.waitFor({ state: 'visible', timeout: 8000 });
     ok((await invoiceButton.innerText()).includes('Оплатил счёт'), 'employee invoice-payment button label mismatch');
@@ -132,6 +148,7 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok(await personalForm.locator('input[name="purpose"]').count() === 1, 'misc employee expense purpose field missing');
     await page.screenshot({ path: 'P48_employee_personal_expense.png', fullPage: true });
     console.log('P48_EMPLOYEE_PERSONAL_EXPENSE_UI_OK');
+    console.log('P48_EMPLOYEE_UNIFIED_LEDGER_UI_OK');
 
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
   } finally {
