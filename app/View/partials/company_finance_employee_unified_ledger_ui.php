@@ -1,0 +1,212 @@
+<?php
+/**
+ * Visual unification for employee settlements.
+ *
+ * The financial source of truth remains $ledger. Invoice/personal-expense events
+ * only decorate the already existing employee movement, so no amount is appended
+ * and running balances are never double-counted.
+ */
+$invoiceEventsByMovement = [];
+foreach (($employeeInvoicePayments ?? []) as $event) {
+    $movementId = (int)($event['employee_movement_id'] ?? 0);
+    if ($movementId > 0) {
+        $invoiceEventsByMovement[$movementId] = $event;
+    }
+}
+$personalEventsByMovement = [];
+foreach (($employeePersonalExpenses ?? []) as $event) {
+    $movementId = (int)($event['employee_movement_id'] ?? 0);
+    if ($movementId > 0) {
+        $personalEventsByMovement[$movementId] = $event;
+    }
+}
+
+$combineComment = static function (?string $basis, ?string $comment): string {
+    $basis = trim((string)$basis);
+    $comment = trim((string)$comment);
+    if ($basis !== '' && $comment !== '') return $basis . ': ' . $comment;
+    if ($basis !== '') return $basis;
+    if ($comment !== '') return $comment;
+    return '—';
+};
+$compactEmployeeName = static function (?string $fullName): string {
+    $fullName = trim((string)$fullName);
+    if ($fullName === '') return '';
+    $parts = preg_split('/\s+/u', $fullName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    if ($parts === []) return '';
+    $last = array_shift($parts);
+    $initials = [];
+    foreach (array_slice($parts, 0, 2) as $part) {
+        $initials[] = mb_strtoupper(mb_substr($part, 0, 1)) . '.';
+    }
+    return trim($last . ($initials ? ' ' . implode(' ', $initials) : ''));
+};
+$ordinaryBasis = static function (array $row) use ($compactEmployeeName): string {
+    if (!empty($row['employee_transfer'])) {
+        $transfer = $row['employee_transfer'];
+        $from = $compactEmployeeName((string)($transfer['source_employee_name'] ?? ''));
+        $to = $compactEmployeeName((string)($transfer['target_employee_name'] ?? ''));
+        if ($from !== '' && $to !== '') return $from . ' → ' . $to;
+    }
+    $value = trim((string)($row['purpose'] ?? ''));
+    if ($value === '') $value = trim((string)($row['note'] ?? ''));
+    $value = preg_replace('/^Передано сотруднику:\s*[^·]+·\s*/u', '', $value) ?? $value;
+    $value = preg_replace('/^Возврат от сотрудника:\s*[^·]+·\s*/u', '', $value) ?? $value;
+    return trim($value);
+};
+
+$orderedRows = [];
+$rowsByMonth = [];
+foreach (($ledger ?? []) as $row) {
+    $month = substr((string)($row['operation_date'] ?? ''), 0, 7);
+    $rowsByMonth[$month][] = $row;
+}
+krsort($rowsByMonth);
+foreach ($rowsByMonth as $rows) {
+    foreach ($rows as $row) $orderedRows[] = $row;
+}
+
+$unifiedRowMeta = [];
+foreach ($orderedRows as $row) {
+    $movementId = (int)($row['id'] ?? 0);
+    $invoiceEvent = $invoiceEventsByMovement[$movementId] ?? null;
+    $personalEvent = $personalEventsByMovement[$movementId] ?? null;
+    $type = '';
+    $source = '';
+    $comment = '—';
+    $eventKind = null;
+    $eventId = null;
+
+    if ($invoiceEvent) {
+        $number = trim((string)($invoiceEvent['invoice_number_snapshot'] ?? ''));
+        $number = preg_replace('/^[№#]\s*/u', '', $number) ?? $number;
+        $basis = $number !== '' ? 'Счёт №' . $number : 'Счёт';
+        $type = 'Оплатил счёт';
+        $source = 'Личные средства';
+        $comment = $combineComment($basis, (string)($invoiceEvent['comment'] ?? ''));
+        $eventKind = 'invoice';
+        $eventId = (int)($invoiceEvent['id'] ?? 0);
+    } elseif ($personalEvent) {
+        $basis = trim((string)($personalEvent['counterparty_name'] ?? ''));
+        $purpose = trim((string)($personalEvent['purpose'] ?? ''));
+        $extra = trim((string)($personalEvent['comment'] ?? ''));
+        $detail = $purpose;
+        if ($extra !== '') $detail = $detail !== '' ? $detail . ' · ' . $extra : $extra;
+        $type = 'Прочий расход';
+        $source = 'Личные средства';
+        $comment = $combineComment($basis, $detail);
+        $eventKind = 'personal';
+        $eventId = (int)($personalEvent['id'] ?? 0);
+    } else {
+        $movementType = (string)($row['movement_type'] ?? '');
+        $sourceType = (string)($row['source_type'] ?? '');
+        if (!empty($row['employee_transfer'])) {
+            $type = 'Передача сотруднику';
+        } elseif ($movementType === 'PAYMENT') {
+            $type = $sourceType === 'BANK' ? 'Выплата с расчётного счёта' : 'Выдача из кассы';
+        } else {
+            $type = $sourceType === 'BANK' ? 'Возврат на расчётный счёт' : 'Возврат в кассу';
+        }
+        $source = $sourceType === 'BANK' ? 'Расчётный счёт' : 'Касса';
+        $basis = $ordinaryBasis($row);
+        $userComment = !empty($row['employee_transfer'])
+            ? trim((string)($row['employee_transfer']['comment'] ?? ''))
+            : trim((string)($row['comment'] ?? ''));
+        $comment = $combineComment($basis, $userComment);
+    }
+
+    $unifiedRowMeta[] = [
+        'movement_id' => $movementId,
+        'type' => $type,
+        'source' => $source,
+        'comment' => $comment,
+        'event_kind' => $eventKind,
+        'event_id' => $eventId,
+        'cancelled' => (string)($row['status'] ?? '') === 'CANCELLED',
+    ];
+}
+$unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
+?>
+<style>
+/* One employee journal only. The legacy event cards remain as modal/JS hosts but are not displayed. */
+.employee-money-actions{display:none!important}
+.employee-report .page-head-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.employee-report-table .employee-unified-comment{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
+.employee-report-table .employee-unified-comment-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px}
+.employee-report-table .employee-unified-comment-actions .btn{height:22px;min-height:22px;padding:0 7px;font-size:9px}
+.employee-report-table th:last-child,.employee-report-table td:last-child{display:none}
+</style>
+<script>
+(function(){
+    const metas=<?= $unifiedRowMetaJson ?>;
+    const report=document.querySelector('.employee-report');
+    if(!report)return;
+
+    const headActions=report.querySelector('.page-head-right');
+    const invoiceOpen=document.getElementById('employee-invoice-payment-open');
+    const personalOpen=document.getElementById('employee-personal-expense-open');
+    if(headActions){
+        if(invoiceOpen)headActions.appendChild(invoiceOpen);
+        if(personalOpen)headActions.appendChild(personalOpen);
+    }
+
+    const tables=Array.from(report.querySelectorAll('.employee-report-table'));
+    const rows=[];
+    tables.forEach(table=>{
+        const headers=table.querySelectorAll('thead th');
+        if(headers[1])headers[1].textContent='Тип платежа';
+        if(headers[2])headers[2].textContent='Источник';
+        if(headers[3])headers[3].textContent='Комментарий';
+        if(headers[7])headers[7].style.display='none';
+        const cols=table.querySelectorAll('colgroup col');
+        if(cols[0])cols[0].style.width='82px';
+        if(cols[1])cols[1].style.width='142px';
+        if(cols[2])cols[2].style.width='118px';
+        if(cols[3])cols[3].style.width='auto';
+        if(cols[4])cols[4].style.width='105px';
+        if(cols[5])cols[5].style.width='105px';
+        if(cols[6])cols[6].style.width='105px';
+        if(cols[7])cols[7].style.display='none';
+        table.querySelectorAll('tbody tr').forEach(row=>rows.push(row));
+    });
+
+    const invoiceEdits=new Map();
+    document.querySelectorAll('[data-invoice-payment-edit]').forEach(btn=>{
+        try{const data=JSON.parse(btn.dataset.invoicePaymentEdit||'{}');if(data.id)invoiceEdits.set(String(data.id),btn);}catch(_e){}
+    });
+    const invoiceCancels=new Map();
+    document.querySelectorAll('[data-invoice-payment-cancel]').forEach(btn=>invoiceCancels.set(String(btn.dataset.invoicePaymentCancel||''),btn));
+    const personalEdits=new Map();
+    document.querySelectorAll('[data-personal-expense-edit]').forEach(btn=>personalEdits.set(String(btn.dataset.personalExpenseEdit||''),btn));
+
+    rows.forEach((row,index)=>{
+        const meta=metas[index];
+        if(!meta)return;
+        const cells=row.querySelectorAll('td');
+        if(cells[1])cells[1].textContent=meta.type||'—';
+        if(cells[2])cells[2].textContent=meta.source||'—';
+        if(cells[3]){
+            cells[3].classList.add('employee-unified-comment');
+            cells[3].textContent=meta.comment||'—';
+            cells[3].title=meta.comment||'—';
+            if(!meta.cancelled&&meta.event_kind&&meta.event_id){
+                const actions=document.createElement('div');
+                actions.className='employee-unified-comment-actions';
+                if(meta.event_kind==='invoice'){
+                    const edit=invoiceEdits.get(String(meta.event_id));
+                    const cancel=invoiceCancels.get(String(meta.event_id));
+                    if(edit)actions.appendChild(edit);
+                    if(cancel)actions.appendChild(cancel);
+                }else if(meta.event_kind==='personal'){
+                    const edit=personalEdits.get(String(meta.event_id));
+                    if(edit)actions.appendChild(edit);
+                }
+                if(actions.childNodes.length)cells[3].appendChild(actions);
+            }
+        }
+        if(cells[7])cells[7].style.display='none';
+    });
+
+    report.dataset.unifiedEmployeeLedger='ready';
+})();
+</script>
