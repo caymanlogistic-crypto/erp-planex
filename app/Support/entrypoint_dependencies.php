@@ -40,6 +40,7 @@ require_once base_path('app/Service/FinanceInvoiceService.php');
 require_once base_path('app/Service/FinanceObligationService.php');
 require_once base_path('app/Service/FinanceBankInvoiceSettlementService.php');
 require_once base_path('app/Service/FinanceSettlementStateService.php');
+require_once base_path('app/Service/FinanceInvoicePaymentTimelineService.php');
 require_once base_path('app/Service/FinanceBalanceService.php');
 require_once base_path('app/Service/FinanceBankReconciliationService.php');
 require_once base_path('app/Service/FinanceBankReconciliationCutoffService.php');
