@@ -5,16 +5,37 @@ declare(strict_types=1);
 require __DIR__.'/finance_obligations_behavioral_test.php';
 require_once __DIR__.'/../app/Service/FinanceAllocationService.php';
 require_once __DIR__.'/../app/Service/FinanceBankInvoiceSettlementService.php';
+require_once __DIR__.'/../app/Service/FinanceSettlementStateService.php';
 
 use App\Service\FinanceBankInvoiceSettlementService;
 use App\Service\FinanceObligationService;
+use App\Service\FinanceSettlementStateService;
 
 $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
 $pdo->exec("ALTER TABLE clients ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active', ADD COLUMN deleted_at DATETIME NULL");
 $pdo->exec("ALTER TABLE contractors ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active', ADD COLUMN deleted_at DATETIME NULL");
-$pdo->exec("ALTER TABLE finance_operations ADD COLUMN source VARCHAR(30) NULL, ADD COLUMN bank_transaction_id INT UNSIGNED NULL, ADD COLUMN counterparty_entity_type VARCHAR(20) NULL, ADD COLUMN counterparty_entity_id INT UNSIGNED NULL");
-$pdo->exec("CREATE TABLE bank_transactions(id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,operation_date DATE,document_number VARCHAR(100) NULL,counterparty_name VARCHAR(500) NULL,counterparty_inn VARCHAR(20) NULL,purpose TEXT NULL) ENGINE=InnoDB");
+$pdo->exec("ALTER TABLE finance_operations
+    ADD COLUMN source VARCHAR(30) NULL,
+    ADD COLUMN bank_transaction_id INT UNSIGNED NULL,
+    ADD COLUMN counterparty_entity_type VARCHAR(20) NULL,
+    ADD COLUMN counterparty_entity_id INT UNSIGNED NULL,
+    ADD COLUMN classification_status VARCHAR(20) NOT NULL DEFAULT 'UNALLOCATED',
+    ADD COLUMN classification_rule_id INT UNSIGNED NULL,
+    ADD COLUMN classification_locked TINYINT(1) NOT NULL DEFAULT 0,
+    ADD COLUMN classification_updated_at DATETIME NULL");
+$pdo->exec("CREATE TABLE bank_transactions(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    operation_date DATE,
+    document_number VARCHAR(100) NULL,
+    counterparty_name VARCHAR(500) NULL,
+    counterparty_inn VARCHAR(20) NULL,
+    purpose TEXT NULL,
+    classification_status VARCHAR(20) NOT NULL DEFAULT 'UNALLOCATED',
+    classification_rule_id INT UNSIGNED NULL,
+    classification_locked TINYINT(1) NOT NULL DEFAULT 0,
+    classification_updated_at DATETIME NULL
+) ENGINE=InnoDB");
 
 $pdo->exec("INSERT INTO linear_routes VALUES(20,1,2,'2026-12-01','2026-12-02','2026-12-01','2026-12-02',NULL,NULL)");
 $pdo->exec("INSERT INTO linear_route_payments(linear_route_id,party_role,sort_order,amount,condition_type,days_count,days_kind,side,created_by_role,updated_by_role) VALUES(20,'customer',1,300,'end_day',0,'calendar','income','company_owner','company_owner'),(20,'carrier',1,250,'end_day',0,'calendar','expense','company_owner','company_owner')");
@@ -49,6 +70,13 @@ ok((string)$pdo->query("SELECT status FROM finance_invoices WHERE id={$clientInv
 FinanceObligationService::syncLinearRoute($pdo,20);
 ok((string)$pdo->query("SELECT status FROM finance_obligations WHERE id={$clientOb}")->fetchColumn()==='paid','client obligation becomes paid');
 
+$effective=FinanceSettlementStateService::effectiveBankStatuses($pdo);
+ok(($effective[$clientTx]??null)==='MANUAL','fully manually allocated bank payment has effective manual status');
+$sync=FinanceSettlementStateService::syncPersistedStatuses($pdo);
+ok($sync['transactions']>=1,'settlement sync finds completed invoice payments');
+ok((string)$pdo->query("SELECT classification_status FROM bank_transactions WHERE id={$clientTx}")->fetchColumn()==='MANUAL','manual invoice settlement persists bank status');
+ok((int)$pdo->query("SELECT classification_locked FROM bank_transactions WHERE id={$clientTx}")->fetchColumn()===1,'manual invoice settlement is protected');
+
 $ctx=FinanceBankInvoiceSettlementService::fetchContext($pdo,$carrierTx);
 ok($ctx!==null&&$ctx['counterparty']['type']==='contractor','expense resolves carrier');
 ok(count($ctx['invoices'])===1&&(int)$ctx['invoices'][0]['id']===$carrierInvoice,'carrier sees incoming invoice');
@@ -57,6 +85,21 @@ ok($r['remaining_amount']==='0.00','carrier payment fully allocated');
 ok((string)$pdo->query("SELECT status FROM finance_invoices WHERE id={$carrierInvoice}")->fetchColumn()==='paid','carrier invoice becomes paid');
 FinanceObligationService::syncLinearRoute($pdo,20);
 ok((string)$pdo->query("SELECT status FROM finance_obligations WHERE id={$carrierOb}")->fetchColumn()==='paid','carrier obligation becomes paid');
+FinanceSettlementStateService::syncPersistedStatuses($pdo);
+ok((string)$pdo->query("SELECT classification_status FROM bank_transactions WHERE id={$carrierTx}")->fetchColumn()==='MANUAL','manual carrier settlement persists bank status');
+
+$pdo->exec("INSERT INTO finance_invoices(direction,number,invoice_date,counterparty_entity_type,counterparty_entity_id,counterparty_name,counterparty_inn,amount,status) VALUES('OUTGOING','AUTO-STALE-1','2026-12-06','client',1,'Клиент А','7701000001',90,'issued')");
+$autoInvoice=(int)$pdo->lastInsertId();
+$pdo->exec("INSERT INTO bank_transactions(operation_date,document_number,counterparty_name,counterparty_inn,purpose) VALUES('2026-12-06','PAY-AUTO','Клиент А','7701000001','Оплата счета AUTO-STALE-1')");
+$autoTx=(int)$pdo->lastInsertId();
+$pdo->exec("INSERT INTO finance_operations(operation_date,operation_type,counterparty_inn,purpose,amount,status,source,bank_transaction_id) VALUES('2026-12-06','INCOME','7701000001','Оплата счета AUTO-STALE-1',90,'POSTED','BANK_STATEMENT',{$autoTx})");
+$autoOp=(int)$pdo->lastInsertId();
+$pdo->exec("INSERT INTO finance_operation_allocations(operation_id,invoice_id,amount,allocation_date,method,comment,created_by_role) VALUES({$autoOp},{$autoInvoice},90,'2026-12-06','auto_exact','Автоматическая оплата','system')");
+$effective=FinanceSettlementStateService::effectiveBankStatuses($pdo);
+ok(($effective[$autoTx]??null)==='AUTO','stale automatic invoice allocation is derived as auto');
+FinanceSettlementStateService::syncPersistedStatuses($pdo);
+ok((string)$pdo->query("SELECT classification_status FROM bank_transactions WHERE id={$autoTx}")->fetchColumn()==='AUTO','automatic invoice settlement persists bank status');
+ok((string)$pdo->query("SELECT status FROM finance_invoices WHERE id={$autoInvoice}")->fetchColumn()==='paid','stale paid invoice status is repaired from allocation');
 
 $pdo->exec("INSERT INTO bank_transactions(operation_date,counterparty_name,counterparty_inn,purpose) VALUES('2026-12-05','Неизвестный','9999999999','Прочий платеж')");
 $unknownTx=(int)$pdo->lastInsertId();
