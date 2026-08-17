@@ -27,13 +27,32 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     const response = await page.goto(BASE + 'company/finance/cash', { waitUntil: 'domcontentloaded' });
     ok(response && response.status() === 200, 'cash page HTTP 200');
     ok((await page.locator('h1').first().innerText()).includes('Касса'), 'cash title missing');
+    const bodyText = await page.locator('body').innerText();
+    ok(!bodyText.includes('Ошибка при загрузке данных:'), 'cash page database/runtime error');
 
-    const selectAll = page.locator('#cash-select-all');
-    await selectAll.waitFor({ state: 'visible', timeout: 10000 });
     const sources = page.locator('.cash-source-select');
     const sourceCount = await sources.count();
-    ok(sourceCount > 0, 'current technical cash data has no selectable unresolved rows');
+    const employeeAction = page.locator('#cash-dispatch-employee-btn');
+    const carrierAction = page.locator('#cash-dispatch-carrier-btn');
 
+    if (sourceCount === 0) {
+      // Zero unresolved positions is a valid and healthy production state.
+      ok(await page.locator('#cash-clearing-alert').count() === 0, 'cash clearing alert shown with zero unresolved rows');
+      ok(await page.locator('a.nav-item[href*="/company/finance/cash"] .nav-count.is-alert').count() === 0, 'cash sidebar alert badge shown with zero unresolved rows');
+      ok(await page.locator('.cash-technical-status.is-alert').count() === 0, 'Main Cash incorrectly marked as requiring allocation');
+      const mainOk = page.locator('.cash-technical-status.is-ok');
+      if (await mainOk.count()) ok((await mainOk.first().innerText()).trim() === 'В норме', 'unexpected Main Cash healthy status');
+      if (await employeeAction.count()) ok(await employeeAction.isDisabled(), 'employee action must remain disabled with no selectable sources');
+      if (await carrierAction.count()) ok(await carrierAction.isDisabled(), 'carrier action must remain disabled');
+      await page.screenshot({ path: 'P49_cash_checkbox.png', fullPage: true });
+      ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
+      console.log('P49_CASH_RESOLUTION_RUNTIME_OK');
+      console.log('P49_ZERO_UNRESOLVED_STATE_OK');
+      return;
+    }
+
+    const selectAll = page.locator('#cash-select-all');
+    await selectAll.waitFor({ state: 'visible', timeout: 5000 });
     const firstSource = sources.first();
     const visual = await firstSource.evaluate(el => {
       const row = el.closest('tr');
@@ -57,8 +76,6 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     ok(visual.rowBackground === visual.expectedDangerBg, 'unresolved row is not using system light-red danger background: ' + JSON.stringify(visual));
     ok(visual.accentColor === visual.expectedAccent, 'cash checkbox is not using ERP brown accent: ' + JSON.stringify(visual));
 
-    const employeeAction = page.locator('#cash-dispatch-employee-btn');
-    const carrierAction = page.locator('#cash-dispatch-carrier-btn');
     ok(await employeeAction.isDisabled(), 'employee action must start disabled before selection');
     ok(await carrierAction.isDisabled(), 'carrier action must remain disabled for next implementation stage');
 
