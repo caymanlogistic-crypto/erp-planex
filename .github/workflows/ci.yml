@@ -56,6 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           php tests/finance_carrier_payables_regression_test.php
+          node --check .github/p93/P93_carrier_payables_visual.js
 
       - name: Python syntax
         shell: bash
