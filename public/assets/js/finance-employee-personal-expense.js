@@ -6,9 +6,7 @@
     return window.location.pathname.indexOf('/erpv2/') === 0 ? '/erpv2' : '';
   }
 
-  function endpoint(path) {
-    return basePath() + path;
-  }
+  function endpoint(path) { return basePath() + path; }
 
   function selectedEmployeeRef() {
     var select = document.querySelector('.employee-report-filter select[name="employee_ref"]');
@@ -22,8 +20,19 @@
     return html;
   }
 
-  function closeModal(modal) {
-    if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+  function closeModal(modal) { if (modal && modal.parentNode) modal.parentNode.removeChild(modal); }
+
+  function decorateLedgerRows(report) {
+    report.querySelectorAll('.employee-report-table tbody tr').forEach(function (row) {
+      var cells = row.querySelectorAll('td');
+      if (cells.length < 4) return;
+      var basis = String(cells[3].textContent || '').toLocaleLowerCase('ru-RU');
+      if (basis.indexOf('оплата расхода компании из личных средств') === -1 && basis.indexOf('оплачено сотрудником за компанию') === -1) return;
+      cells[1].textContent = 'Оплата за компанию';
+      cells[2].textContent = 'Личные средства';
+      row.classList.add('employee-personal-expense-ledger-row');
+      row.title = 'Расход компании, оплаченный сотрудником из личных средств';
+    });
   }
 
   function initExpenseForm(modal) {
@@ -89,9 +98,7 @@
       if (!modal) throw new Error('Форма не загружена.');
       document.body.appendChild(modal);
       initExpenseForm(modal);
-    } catch (error) {
-      window.alert(error.message || 'Не удалось открыть форму.');
-    }
+    } catch (error) { window.alert(error.message || 'Не удалось открыть форму.'); }
   }
 
   async function loadList(container) {
@@ -114,6 +121,8 @@
     if (window.location.pathname.indexOf('/company/finance/employee-payments') === -1) return;
     var report = document.querySelector('.employee-report');
     if (!report) return;
+    decorateLedgerRows(report);
+
     var headRight = report.querySelector('.page-head-right');
     if (headRight && !document.getElementById('employee-personal-expense-open')) {
       var button = document.createElement('button');
