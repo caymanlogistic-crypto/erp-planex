@@ -20,11 +20,11 @@ $service = file_get_contents($root . '/app/Service/FinanceEmployeePersonalExpens
 $migration = file_get_contents($root . '/database/migrations-local/074_employee_personal_expense_linked_event.sql');
 $routes = file_get_contents($root . '/app/Http/Routes/company_finance_employee_payments.php');
 $form = file_get_contents($root . '/app/View/partials/company_finance_employee_personal_expense_form.php');
-$list = file_get_contents($root . '/app/View/partials/company_finance_employee_personal_expense_list.php');
+$unified = file_get_contents($root . '/app/View/partials/company_finance_employee_unified_ledger_ui.php');
 $js = file_get_contents($root . '/public/assets/js/finance-employee-personal-expense.js');
 $cashForm = file_get_contents($root . '/app/View/partials/company_cash_operation_form.php');
 $cashSubmit = file_get_contents($root . '/app/Http/Controllers/Company/FinanceCashActions/operation_create_submit.php');
-foreach (compact('service','migration','routes','form','list','js','cashForm','cashSubmit') as $name=>$value) if ($value===false) fepe_fail("Cannot read {$name}");
+foreach (compact('service','migration','routes','form','unified','js','cashForm','cashSubmit') as $name=>$value) if ($value===false) fepe_fail("Cannot read {$name}");
 
 $create = fepe_method($service, 'create');
 $update = fepe_method($service, 'update');
@@ -56,9 +56,11 @@ fepe_has($routes, '/personal-expense/{id}/update', 'Employee Payments must own p
 fepe_has($routes, '/personal-expense/{id}/cancel', 'Employee Payments must own personal-expense cancel route');
 fepe_has($form, 'Сотрудник оплатил расход компании', 'Form must explain employee-funded expense workflow');
 fepe_has($form, 'Основную кассу', 'Form must explain automatic Main Cash postings');
-fepe_has($list, 'Расходы, оплаченные сотрудником', 'Employee Payments page must expose linked-event management list');
-fepe_has($js, 'Оплачено сотрудником', 'Employee Payments must expose the new entry button');
-fepe_has($js, 'data-personal-expense-edit', 'Linked events must be editable from Employee Payments');
+fepe_has($unified, '$personalEventsByMovement', 'Employee-funded expenses must decorate existing movements in the unified employee journal');
+fepe_has($unified, "'Прочий расход'", 'Unified employee journal must label personal-funded company expenses');
+fepe_has($unified, 'data-personal-expense-edit', 'Linked personal expenses must remain editable from the unified employee journal');
+fepe_not($js, 'employee-personal-expense-list-host', 'Employee Payments must not render a second personal-expense history block');
+fepe_has($js, 'Оплачено сотрудником', 'Employee Payments must expose the personal-expense entry fallback button');
 fepe_has($js, 'data-personal-expense-cancel-event', 'Linked events must be cancellable from Employee Payments');
 fepe_not($cashForm, '<option value="EMPLOYEE_PERSONAL_EXPENSE">', 'Cash must not expose competing employee-funded expense entry');
 fepe_has($cashSubmit, 'оформляется в разделе «Выплаты сотрудникам»', 'Stale Cash submissions must fail closed');
