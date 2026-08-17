@@ -101,22 +101,6 @@
     } catch (error) { window.alert(error.message || 'Не удалось открыть форму.'); }
   }
 
-  async function loadList(container) {
-    var ref = selectedEmployeeRef();
-    if (!ref) { container.innerHTML = ''; return; }
-    try {
-      container.innerHTML = '<div class="table-card" style="margin-top:14px;padding:18px;">Загрузка расходов сотрудника…</div>';
-      container.innerHTML = await fetchHtml(endpoint('/company/finance/employee-payments/personal-expenses?employee_ref=' + encodeURIComponent(ref)));
-      container.querySelectorAll('[data-personal-expense-edit]').forEach(function (button) {
-        button.addEventListener('click', function () {
-          openForm(endpoint('/company/finance/employee-payments/personal-expense/' + encodeURIComponent(button.getAttribute('data-personal-expense-edit')) + '/edit'));
-        });
-      });
-    } catch (error) {
-      container.innerHTML = '<div class="notice warn" style="margin-top:14px;">' + String(error.message || 'Не удалось загрузить расходы сотрудника.').replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[c]; }) + '</div>';
-    }
-  }
-
   function init() {
     if (window.location.pathname.indexOf('/company/finance/employee-payments') === -1) return;
     var report = document.querySelector('.employee-report');
@@ -140,13 +124,9 @@
       });
     }
 
-    var card = report.querySelector('.employee-report-card');
-    if (card && !document.getElementById('employee-personal-expense-list-host')) {
-      var host = document.createElement('div');
-      host.id = 'employee-personal-expense-list-host';
-      card.insertAdjacentElement('afterend', host);
-      loadList(host);
-    }
+    /* Personal expenses are already linked employee-ledger movements and are
+       rendered in the single unified journal. Do not create a second history
+       card below the report. */
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

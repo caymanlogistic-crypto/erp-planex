@@ -105,6 +105,8 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
       const s = getComputedStyle(node); return s.display !== 'none' && s.visibility !== 'hidden';
     }).length);
     ok(visibleLegacyBlocks === 0, 'legacy employee event subtables are still visible');
+    ok(await page.locator('#employee-personal-expense-list-host').count() === 0, 'duplicate employee personal-expense history host must not exist outside unified journal');
+    ok(await page.locator('.employee-personal-expense-card').count() === 0, 'duplicate employee personal-expense history card must not be rendered');
     ok(await page.locator('.employee-month-head').count() === 0, 'monthly employee subtables/group headers must be collapsed');
     const employeeTables = page.locator('.employee-report-table');
     ok(await employeeTables.count() <= 1, 'employee movements must render in one table');
