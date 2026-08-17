@@ -1,24 +1,20 @@
 <?php
 /**
- * Visual unification for employee settlements.
+ * One visual journal for all employee settlements.
  *
- * The financial source of truth remains $ledger. Invoice/personal-expense events
- * only decorate the already existing employee movement, so no amount is appended
- * and running balances are never double-counted.
+ * $ledger remains the only source of money and running balance. Linked invoice
+ * and personal-expense events decorate their existing employee movement only,
+ * therefore amounts are never appended or double-counted.
  */
 $invoiceEventsByMovement = [];
 foreach (($employeeInvoicePayments ?? []) as $event) {
     $movementId = (int)($event['employee_movement_id'] ?? 0);
-    if ($movementId > 0) {
-        $invoiceEventsByMovement[$movementId] = $event;
-    }
+    if ($movementId > 0) $invoiceEventsByMovement[$movementId] = $event;
 }
 $personalEventsByMovement = [];
 foreach (($employeePersonalExpenses ?? []) as $event) {
     $movementId = (int)($event['employee_movement_id'] ?? 0);
-    if ($movementId > 0) {
-        $personalEventsByMovement[$movementId] = $event;
-    }
+    if ($movementId > 0) $personalEventsByMovement[$movementId] = $event;
 }
 
 $combineComment = static function (?string $basis, ?string $comment): string {
@@ -36,9 +32,7 @@ $compactEmployeeName = static function (?string $fullName): string {
     if ($parts === []) return '';
     $last = array_shift($parts);
     $initials = [];
-    foreach (array_slice($parts, 0, 2) as $part) {
-        $initials[] = mb_strtoupper(mb_substr($part, 0, 1)) . '.';
-    }
+    foreach (array_slice($parts, 0, 2) as $part) $initials[] = mb_strtoupper(mb_substr($part, 0, 1)) . '.';
     return trim($last . ($initials ? ' ' . implode(' ', $initials) : ''));
 };
 $ordinaryBasis = static function (array $row) use ($compactEmployeeName): string {
@@ -55,6 +49,7 @@ $ordinaryBasis = static function (array $row) use ($compactEmployeeName): string
     return trim($value);
 };
 
+/* Mirror the page's rendered order: newest month first, rows inside each month keep ledger order. */
 $orderedRows = [];
 $rowsByMonth = [];
 foreach (($ledger ?? []) as $row) {
@@ -62,9 +57,7 @@ foreach (($ledger ?? []) as $row) {
     $rowsByMonth[$month][] = $row;
 }
 krsort($rowsByMonth);
-foreach ($rowsByMonth as $rows) {
-    foreach ($rows as $row) $orderedRows[] = $row;
-}
+foreach ($rowsByMonth as $rows) foreach ($rows as $row) $orderedRows[] = $row;
 
 $unifiedRowMeta = [];
 foreach ($orderedRows as $row) {
@@ -128,7 +121,7 @@ foreach ($orderedRows as $row) {
 $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
 ?>
 <style>
-/* One employee journal only. The legacy event cards remain as modal/JS hosts but are not displayed. */
+/* The old event sections stay in DOM only as modal/action hosts; visually there is one journal. */
 .employee-money-actions{display:none!important}
 .employee-report .page-head-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .employee-report-table .employee-unified-comment{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
@@ -142,6 +135,7 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
     const report=document.querySelector('.employee-report');
     if(!report)return;
 
+    /* Keep all three actions together at the top of the single journal. */
     const headActions=report.querySelector('.page-head-right');
     const invoiceOpen=document.getElementById('employee-invoice-payment-open');
     const personalOpen=document.getElementById('employee-personal-expense-open');
@@ -170,6 +164,7 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         table.querySelectorAll('tbody tr').forEach(row=>rows.push(row));
     });
 
+    /* Existing action nodes already have listeners bound by invoice_tools; move them, don't clone them. */
     const invoiceEdits=new Map();
     document.querySelectorAll('[data-invoice-payment-edit]').forEach(btn=>{
         try{const data=JSON.parse(btn.dataset.invoicePaymentEdit||'{}');if(data.id)invoiceEdits.set(String(data.id),btn);}catch(_e){}
@@ -206,6 +201,19 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         }
         if(cells[7])cells[7].style.display='none';
     });
+
+    /* The old view created one physical table per month. Merge them into one table. */
+    if(tables.length){
+        const firstTable=tables[0];
+        const firstBody=firstTable.querySelector('tbody');
+        tables.slice(1).forEach(table=>{
+            const body=table.querySelector('tbody');
+            if(firstBody&&body)Array.from(body.children).forEach(row=>firstBody.appendChild(row));
+            const scroll=table.closest('.table-scroll');
+            if(scroll)scroll.remove();else table.remove();
+        });
+        report.querySelectorAll('.employee-month-head').forEach(el=>el.remove());
+    }
 
     report.dataset.unifiedEmployeeLedger='ready';
 })();
