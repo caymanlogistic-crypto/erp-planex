@@ -25,10 +25,12 @@ try{
         $rows,
         $_SESSION['user']??[]
     );
+    $settlementSync=\App\Service\FinanceSettlementStateService::syncPersistedStatuses($local);
     $_SESSION['bank_finance_success']=sprintf(
-        'Платёж вручную распределён по счетам: %s ₽. Остаток банковской операции: %s ₽.',
+        'Платёж вручную распределён по счетам: %s ₽. Остаток банковской операции: %s ₽. Обновлено счетов: %d.',
         number_format((float)$result['allocated_amount'],2,',',' '),
-        number_format((float)$result['remaining_amount'],2,',',' ')
+        number_format((float)$result['remaining_amount'],2,',',' '),
+        (int)$settlementSync['invoices']
     );
 }catch(Throwable $e){
     error_log('Bank invoice settlement submit error: '.$e->getMessage());
