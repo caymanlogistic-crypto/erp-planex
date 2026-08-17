@@ -82,5 +82,6 @@ jobs:
           path: |
             P93_RUNTIME.txt
             P93_VISUAL.json
+            P93_PAYABLES_BODY.txt
             P93_screens/*.png
           if-no-files-found: warn
