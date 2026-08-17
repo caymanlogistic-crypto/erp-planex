@@ -1,5 +1,12 @@
 <?php
 
+// Route-local dependencies. ERP PLANEX uses explicit require manifests rather
+// than a PSR autoloader, so every service introduced by this route must be
+// loaded before the controller can dispatch an action.
+require_once base_path('app/Service/FinanceOperationInvoiceSettlementService.php');
+require_once base_path('app/Service/FinanceCashInvoiceEventService.php');
+require_once base_path('app/Service/FinanceInvoiceSettlementHistoryService.php');
+require_once base_path('app/Service/FinancePayablesReportService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceInvoiceController.php');
 
 $controller = new \App\Http\Controllers\Company\FinanceInvoiceController($config, $db);
