@@ -1,0 +1,76 @@
+name: Diagnose Employee Payments 500 Stepwise
+on:
+  push:
+    branches: [hotfix/employee-payments-500-diagnose2-20260817]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/diag2_key"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/diag2_key" "$HOME/.ssh/known_hosts"
+      - name: Stepwise read-only production probe
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$PORT" -i "$HOME/.ssh/diag2_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cd /home/s/spugovxsim/planexp/public_html/erpv2 && /usr/bin/php8.5' <<'PHP'
+          <?php
+          declare(strict_types=1);
+          $root=getcwd();
+          require_once $root.'/app/Support/helpers.php';
+          require_once $root.'/app/Support/environment.php';
+          loadEnvFileNonOverwriting($root.'/.env');
+          $config=require $root.'/bootstrap/app.php';
+          require_once $root.'/app/Support/entrypoint_dependencies.php';
+          foreach ([
+            'app/Service/FinanceEmployeePaymentService.php',
+            'app/Service/FinanceEmployeeTransferService.php',
+            'app/Service/FinanceEmployeeInvoicePaymentEventService.php',
+            'app/Service/FinanceEmployeePersonalExpenseEventService.php',
+            'app/Service/FinanceCashInvoiceEventService.php',
+          ] as $f) { require_once $root.'/'.$f; }
+          $central=(new \App\Core\Database($config['database']))->connection();
+          $s=$central->prepare("SELECT * FROM companies WHERE id=? AND status='active'");
+          $s->execute([25]);
+          $company=$s->fetch(PDO::FETCH_ASSOC);
+          if(!$company) throw new RuntimeException('company 25 not active');
+          $pdo=(new \App\Core\Database(companyDatabaseConfig($config,$company)))->connection();
+          $ref='TENANT_USER:1';
+          $steps=[
+            'employees'=>fn()=>\App\Service\FinanceEmployeePaymentService::fetchActiveEmployees($pdo,$central,25),
+            'summaries'=>fn()=>\App\Service\FinanceEmployeePaymentService::fetchEmployeeSummaries($pdo),
+            'resolve'=>fn()=>\App\Service\FinanceEmployeePaymentService::resolveActiveEmployee($pdo,$central,25,$ref),
+            'ledger'=>fn()=>\App\Service\FinanceEmployeePaymentService::fetchEmployeeLedger($pdo,$ref),
+            'decorate'=>fn()=>\App\Service\FinanceEmployeeTransferService::decorateLedger($pdo,\App\Service\FinanceEmployeePaymentService::fetchEmployeeLedger($pdo,$ref)),
+            'invoice_payments'=>fn()=>\App\Service\FinanceEmployeeInvoicePaymentEventService::fetchForEmployee($pdo,$ref),
+            'personal_expenses'=>fn()=>\App\Service\FinanceEmployeePersonalExpenseEventService::fetchForEmployee($pdo,$ref),
+            'carrier_invoices'=>fn()=>\App\Service\FinanceCashInvoiceEventService::fetchCarrierInvoices($pdo),
+          ];
+          foreach($steps as $name=>$fn){
+            try{
+              $v=$fn();
+              echo "STEP_OK {$name} count=".(is_array($v)?count($v):1).PHP_EOL;
+            }catch(Throwable $e){
+              echo "STEP_FAIL {$name} class=".get_class($e)." code=".$e->getCode()." message=".$e->getMessage().PHP_EOL;
+              echo $e->getTraceAsString().PHP_EOL;
+              exit(2);
+            }
+          }
+          echo "EMPLOYEE_PAYMENTS_STEPWISE_OK\n";
+          PHP
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/diag2_key"
