@@ -13,6 +13,8 @@ use PDO;
  */
 final class FinanceManualFactService
 {
+    public const CASH_RESOLUTION_CLIENT_ROUTE = 'CLIENT_ROUTE';
+
     public static function fetchClientPaymentTargets(PDO $pdo): array
     {
         $stmt = $pdo->query(
@@ -151,6 +153,26 @@ final class FinanceManualFactService
             ]);
             $receiptId = (int)$pdo->lastInsertId();
 
+            // The receipt is fully assigned to a route but the cash physically stays
+            // in Main Cash. A resolution with NULL outflow marks business resolution
+            // without creating a fake cash movement.
+            $resolutionStmt = $pdo->prepare(
+                'INSERT INTO finance_cash_resolutions
+                    (source_finance_operation_id, resolution_type, target_identity_type,
+                     target_identity_id, target_name_snapshot, outflow_finance_operation_id,
+                     employee_movement_id, created_by_user_id, created_by_role)
+                 VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?)'
+            );
+            $resolutionStmt->execute([
+                $operationId,
+                self::CASH_RESOLUTION_CLIENT_ROUTE,
+                'LINEAR_ROUTE',
+                (int)$payment['linear_route_id'],
+                'Рейс #' . (int)$payment['linear_route_id'] . ' · ' . (string)$payment['client_name'],
+                self::userId($user) ?: null,
+                self::role($user),
+            ]);
+
             FinanceAuditLogService::log($pdo, 'finance_cash_route_receipt', $receiptId, 'create', null, [
                 'finance_operation_id' => $operationId,
                 'finance_allocation_id' => $allocationId,
@@ -159,6 +181,7 @@ final class FinanceManualFactService
                 'client_id' => (int)$payment['client_id'],
                 'amount' => $amount,
                 'operation_date' => $operationDate,
+                'cash_outflow_created' => false,
             ], self::userId($user), self::role($user));
 
             if ($ownsTransaction) $pdo->commit();
