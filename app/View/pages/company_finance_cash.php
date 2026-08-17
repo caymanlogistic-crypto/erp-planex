@@ -131,9 +131,52 @@ document.addEventListener('DOMContentLoaded', function() {
         if (cashNav && !cashNav.querySelector('.nav-count')) { var badge=document.createElement('span'); badge.className='nav-count is-alert'; badge.title='Неразнесённые позиции технической кассы'; badge.textContent=unresolvedCount>999?'999+':String(unresolvedCount); cashNav.appendChild(badge); }
     }
 
+    function initManualFinanceForm(root) {
+        var form = root.querySelector('#finance-cash-manual-form');
+        if (!form || form.dataset.initialized === '1') return;
+        form.dataset.initialized = '1';
+        var scenario = form.querySelector('#cash-scenario');
+        var blocks = Array.from(form.querySelectorAll('[data-scenario-block]'));
+        var hint = form.querySelector('#scenario-hint');
+        var purpose = form.querySelector('[name="purpose"]');
+        var purposeMark = form.querySelector('#purpose-required-mark');
+        var normalType = form.querySelector('#cash-operation-type');
+        var normalDds = form.querySelector('#cash-dds-category');
+        var personalCfu = form.querySelector('#personal-expense-cfu');
+        var personalDds = form.querySelector('#personal-expense-dds');
+        var allowedMap = {};
+        try { allowedMap = JSON.parse(form.getAttribute('data-allowed-expense-dds-map') || '{}'); } catch (_) { allowedMap = {}; }
+
+        function setRequired(block, activeScenario) {
+            var names = activeScenario === 'CLIENT_CASH_RECEIPT' ? ['linear_route_payment_id'] : activeScenario === 'EMPLOYEE_PERSONAL_EXPENSE' ? ['employee_ref','cash_flow_center_id','personal_dds_category_id'] : activeScenario === 'CASH_OPERATION' ? ['operation_type','money_account_id'] : [];
+            Array.from(block.querySelectorAll('select,input,textarea')).forEach(function(el){ el.required = names.indexOf(el.name) !== -1; });
+        }
+        function syncNormalDds() {
+            if (!normalDds || !normalType) return;
+            Array.from(normalDds.options).forEach(function(opt,index){ if(index===0)return; var dir=opt.dataset.direction||'BOTH'; var visible=dir===normalType.value||dir==='BOTH'; opt.hidden=!visible; opt.disabled=!visible; if(!visible&&opt.selected)normalDds.value=''; });
+        }
+        function syncPersonalDds() {
+            if (!personalCfu || !personalDds) return;
+            var allowed = (allowedMap[personalCfu.value] || []).map(Number);
+            Array.from(personalDds.options).forEach(function(opt,index){ if(index===0)return; var visible=personalCfu.value!==''&&allowed.indexOf(Number(opt.value))!==-1; opt.hidden=!visible; opt.disabled=!visible; if(!visible&&opt.selected)personalDds.value=''; });
+            if (personalDds.options[0]) personalDds.options[0].textContent = personalCfu.value === '' ? '— Сначала выберите ЦФУ —' : '— Выберите статью —';
+        }
+        function syncScenario() {
+            var value = scenario ? scenario.value : 'CASH_OPERATION';
+            blocks.forEach(function(block){ var active=block.dataset.scenarioBlock===value; block.hidden=!active; setRequired(block,active?value:''); Array.from(block.querySelectorAll('select,input,textarea')).forEach(function(el){el.disabled=!active;}); });
+            if (purpose) { purpose.required=value==='EMPLOYEE_PERSONAL_EXPENSE'; if(purposeMark)purposeMark.hidden=!purpose.required; }
+            if (hint) hint.textContent = value==='CLIENT_CASH_RECEIPT' ? 'Реальный приход в Основную кассу с ручной привязкой к выбранному рейсу.' : value==='EMPLOYEE_PERSONAL_EXPENSE' ? 'Только факт расхода: без движения корпоративных денег и без долга сотруднику.' : 'Обычная операция изменяет остаток выбранной кассы.';
+            syncNormalDds(); syncPersonalDds();
+        }
+        if (scenario) scenario.addEventListener('change',syncScenario);
+        if (normalType) normalType.addEventListener('change',syncNormalDds);
+        if (personalCfu) personalCfu.addEventListener('change',syncPersonalDds);
+        syncScenario();
+    }
+
     function loadModal(btnId, modalId, bodyId, url) {
         var btn = document.getElementById(btnId); if (!btn) return;
-        btn.addEventListener('click', function() { var body=document.getElementById(bodyId); if(!body)return; body.innerHTML='<div class="empty-state compact"><p>Загрузка...</p></div>'; window.openModal(modalId); fetch(window.getErpBasePath()+url).then(function(r){return r.text();}).then(function(html){body.innerHTML=html;}).catch(function(){body.innerHTML='<div class="form-alert alert-error">Не удалось загрузить форму.</div>';}); });
+        btn.addEventListener('click', function() { var body=document.getElementById(bodyId); if(!body)return; body.innerHTML='<div class="empty-state compact"><p>Загрузка...</p></div>'; window.openModal(modalId); fetch(window.getErpBasePath()+url).then(function(r){return r.text();}).then(function(html){body.innerHTML=html;initManualFinanceForm(body);}).catch(function(){body.innerHTML='<div class="form-alert alert-error">Не удалось загрузить форму.</div>';}); });
     }
     loadModal('cash-account-create-btn','cash-account-create-modal','cash-account-create-modal-body','/company/finance/cash/account-create');
     loadModal('cash-operation-create-btn','cash-operation-create-modal','cash-operation-create-modal-body','/company/finance/cash/operation-create');
