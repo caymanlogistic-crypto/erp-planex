@@ -38,7 +38,7 @@ jobs:
           test "$got" = "$EXPECTED_SHA"
           echo "DEPLOYED_SHA_CONFIRMED=$got"
 
-      - name: Read-only diagnostic for obsolete ATI fact
+      - name: Delete confirmed obsolete unlinked test fact
         env:
           HOST: ${{ secrets.ERPV2_SSH_HOST }}
           PORT: ${{ secrets.ERPV2_SSH_PORT }}
@@ -58,33 +58,94 @@ jobs:
 
           $central = (new \App\Core\Database($config['database']))->connection();
           $companies = $central->query("SELECT * FROM companies WHERE status = 'active' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
-          $total = 0;
+          $targetCompany = null;
           foreach ($companies as $company) {
-              $local = (new \App\Core\Database(companyDatabaseConfig($config, $company)))->connection();
-              $exists = $local->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'finance_employee_personal_expenses'")->fetchColumn();
-              if ((int)$exists !== 1) { continue; }
+              if ((int)$company['id'] === 25) {
+                  $targetCompany = $company;
+                  break;
+              }
+          }
+          if ($targetCompany === null) {
+              throw new RuntimeException('FAIL_CLOSED: active company_id=25 not found');
+          }
+
+          $local = (new \App\Core\Database(companyDatabaseConfig($config, $targetCompany)))->connection();
+          $local->beginTransaction();
+          try {
               $stmt = $local->prepare(
                   "SELECT id, operation_date, employee_identity_type, employee_identity_id,
                           employee_name_snapshot, amount, currency,
                           cash_flow_center_id, cash_flow_center_name_snapshot,
                           dds_category_id, dds_category_name_snapshot,
-                          linear_route_id, counterparty_name, purpose, comment, status,
-                          created_at, updated_at
+                          linear_route_id, counterparty_name, purpose, status,
+                          event_group_id, employee_movement_id, receipt_finance_operation_id,
+                          expense_finance_operation_id, cash_resolution_id
                      FROM finance_employee_personal_expenses
-                    WHERE (operation_date = '2026-08-02' AND amount = 1100.00)
-                       OR (employee_name_snapshot LIKE '%Гладких%'
-                           AND (counterparty_name LIKE '%ATI%' OR purpose LIKE '%ATI%'))
-                    ORDER BY id"
+                    WHERE id = 1
+                      AND operation_date = '2026-08-02'
+                      AND amount = 1100.00
+                      AND employee_name_snapshot = 'Гладких Карина Артуровна'
+                      AND counterparty_name = 'АТИ'
+                      AND cash_flow_center_name_snapshot = 'Программное обеспечение и сервисы'
+                      AND dds_category_name_snapshot = 'Логистические сервисы и базы данных'
+                      AND linear_route_id IS NULL
+                      AND purpose = 'Доплата за достав а АТИ'
+                      AND status = 'POSTED'
+                    FOR UPDATE"
               );
               $stmt->execute();
               $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-              foreach ($rows as $row) {
-                  $total++;
-                  echo 'CANDIDATE company_id=' . (int)$company['id'] . ' json=' . json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+              echo 'EXACT_MATCHES_BEFORE=' . count($rows) . PHP_EOL;
+              if (count($rows) !== 1) {
+                  throw new RuntimeException('FAIL_CLOSED: exact row changed or disappeared');
               }
+
+              $row = $rows[0];
+              foreach (['event_group_id','employee_movement_id','receipt_finance_operation_id','expense_finance_operation_id','cash_resolution_id'] as $linkColumn) {
+                  if ($row[$linkColumn] !== null) {
+                      throw new RuntimeException('FAIL_CLOSED: obsolete row is linked through ' . $linkColumn);
+                  }
+              }
+              echo "LINKED_074_FIELDS_NULL=YES\n";
+
+              $delete = $local->prepare('DELETE FROM finance_employee_personal_expenses WHERE id = 1');
+              $delete->execute();
+              if ($delete->rowCount() !== 1) {
+                  throw new RuntimeException('FAIL_CLOSED: delete affected ' . $delete->rowCount() . ' rows');
+              }
+              $local->commit();
+          } catch (Throwable $e) {
+              if ($local->inTransaction()) {
+                  $local->rollBack();
+              }
+              throw $e;
           }
-          echo 'DIAGNOSTIC_CANDIDATES=' . $total . PHP_EOL;
-          echo "OBSOLETE_ATI_DIAGNOSTIC_OK\n";
+
+          $idRemaining = (int)$local->query('SELECT COUNT(*) FROM finance_employee_personal_expenses WHERE id = 1')->fetchColumn();
+          echo 'ROW_ID_1_AFTER=' . $idRemaining . PHP_EOL;
+          if ($idRemaining !== 0) {
+              throw new RuntimeException('Post-delete id verification failed');
+          }
+
+          $totalCandidates = 0;
+          foreach ($companies as $company) {
+              $check = (new \App\Core\Database(companyDatabaseConfig($config, $company)))->connection();
+              $exists = $check->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'finance_employee_personal_expenses'")->fetchColumn();
+              if ((int)$exists !== 1) { continue; }
+              $q = $check->query(
+                  "SELECT COUNT(*) FROM finance_employee_personal_expenses
+                    WHERE (operation_date = '2026-08-02' AND amount = 1100.00)
+                       OR (employee_name_snapshot LIKE '%Гладких%'
+                           AND (counterparty_name LIKE '%ATI%' OR counterparty_name LIKE '%АТИ%'
+                                OR purpose LIKE '%ATI%' OR purpose LIKE '%АТИ%'))"
+              );
+              $totalCandidates += (int)$q->fetchColumn();
+          }
+          echo 'OBSOLETE_CANDIDATES_AFTER=' . $totalCandidates . PHP_EOL;
+          if ($totalCandidates !== 0) {
+              throw new RuntimeException('Post-delete candidate verification failed: ' . $totalCandidates);
+          }
+          echo "OBSOLETE_ATI_TEST_EXPENSE_REMOVED_OK\n";
           PHP
 
       - name: Cleanup SSH material
