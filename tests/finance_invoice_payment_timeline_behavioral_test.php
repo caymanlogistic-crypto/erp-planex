@@ -2,6 +2,15 @@
 
 declare(strict_types=1);
 
+$fixturePdo = new PDO(
+    'mysql:host=127.0.0.1;port=3306;dbname=erp_obligations_test;charset=utf8mb4',
+    'root',
+    'root',
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+);
+$fixturePdo->exec('DROP TABLE IF EXISTS bank_transactions');
+unset($fixturePdo);
+
 require __DIR__.'/finance_bank_invoice_settlement_behavioral_test.php';
 require_once __DIR__.'/../app/Service/FinanceInvoicePaymentTimelineService.php';
 
