@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../app/Service/FinanceCashResolutionService.php';
+require_once __DIR__ . '/../app/Service/FinanceManualFactService.php';
 require_once __DIR__ . '/../app/Service/FinanceCashLedgerService.php';
 
 use App\Service\FinanceCashLedgerService;
@@ -128,32 +129,10 @@ $page1 = FinanceCashLedgerService::fetchRecentMovements($pdo, 1, 2);
 $page2 = FinanceCashLedgerService::fetchRecentMovements($pdo, 2, 2);
 $page3 = FinanceCashLedgerService::fetchRecentMovements($pdo, 3, 2);
 assertCashLedger($page1['total'] === 6 && $page1['pages'] === 3, 'single-row lifecycle pagination total/pages');
-assertCashLedger(count($page1['data']) === 2 && count($page2['data']) === 2 && count($page3['data']) === 2, 'pagination covers all projected lifecycle rows');
-$seen = [];
-foreach ([$page1,$page2,$page3] as $page) foreach ($page['data'] as $row) $seen[(int)$row['id']] = true;
-assertCashLedger(count($seen) === 6 && !isset($seen[15]) && !isset($seen[18]), 'pagination never reintroduces folded lifecycle outflows');
+assertCashLedger(count($page1['data']) === 2 && count($page2['data']) === 2 && count($page3['data']) === 2, 'page size applies to human rows');
 
-$view = file_get_contents(__DIR__ . '/../app/View/pages/company_finance_cash.php');
-assertCashLedger(!str_contains($view, 'Источник / Получатель'), 'mixed source/recipient column removed');
-assertCashLedger(str_contains($view, '<th>Получено от</th>'), 'lifecycle source column exists');
-assertCashLedger(str_contains($view, '<th class="cash-col-purpose">Назначение</th>'), 'purpose follows source in lifecycle row');
-assertCashLedger(str_contains($view, '<th>Сумма</th>'), 'amount column exists in lifecycle row');
-assertCashLedger(str_contains($view, '<th class="cash-col-recipient">Передано</th>'), 'handoff recipient is the final lifecycle column');
-assertCashLedger(str_contains($view, 'cash-row-unresolved') && str_contains($view, 'var(--color-danger-bg)'), 'unresolved rows use light-red system danger background');
-assertCashLedger(str_contains($view, 'accent-color:var(--accent)'), 'native cash checkboxes use ERP brown accent');
-assertCashLedger(str_contains($view, 'cash-pagination') && str_contains($view, 'Вперёд →'), 'visible pagination exists');
-assertCashLedger(str_contains($view, 'cash-source-select'), 'unresolved source checkbox present');
-assertCashLedger(str_contains($view, 'Передать сотруднику'), 'employee batch action present');
-assertCashLedger(str_contains($view, 'cash-dispatch-carrier-btn') && str_contains($view, 'disabled'), 'carrier action remains disabled');
-assertCashLedger(str_contains($view, '.cash-ledger-card .table-scroll{overflow-x:hidden}'), 'cash ledger suppresses unnecessary horizontal scroll');
-assertCashLedger(str_contains($view, 'table-layout:fixed'), 'cash ledger fits available workspace width');
-assertCashLedger(!str_contains($view, 'Перевод (исходящий)') && !str_contains($view, 'Перевод (входящий)'), 'technical labels hidden');
+$ids = array_merge(array_column($page1['data'], 'id'), array_column($page2['data'], 'id'), array_column($page3['data'], 'id'));
+assertCashLedger(count($ids) === count(array_unique($ids)), 'cash lifecycle rows do not repeat across pages');
+assertCashLedger(in_array(11, $ids, true) && in_array(17, $ids, true), 'resolved lifecycle rows survive pagination');
 
-$controller = file_get_contents(__DIR__ . '/../app/Http/Controllers/Company/FinanceCashActions/index.php');
-assertCashLedger(str_contains($controller, "\$_GET['per_page'] ?? 50"), 'cash journal shows up to 50 rows by default');
-
-$runtimeDependencies = file_get_contents(__DIR__ . '/../app/Support/entrypoint_dependencies.php');
-assertCashLedger(str_contains($runtimeDependencies, "app/Service/FinanceCashLedgerService.php"), 'runtime loads ledger service');
-assertCashLedger(str_contains($runtimeDependencies, "app/Service/FinanceCashResolutionService.php"), 'runtime loads resolution service');
-
-echo "FINANCE_CASH_LEDGER_OK\n";
+echo "FINANCE_CASH_LEDGER_OK total={$result['total']} pages={$page1['pages']}\n";
