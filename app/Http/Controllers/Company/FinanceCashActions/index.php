@@ -6,6 +6,7 @@
 
     $companyId = (int)(getSessionCompanyId() ?? 0);
     $cashEmployees = [];
+    $personalExpenses = [];
     $unresolvedCash = ['count' => 0, 'amount' => '0.00', 'account_id' => null];
 
     if ($companyId <= 0) {
@@ -62,6 +63,7 @@
         $cashAccounts = \App\Service\FinanceCashService::fetchMoneyAccounts($localPdo, 'CASH', true);
         $unresolvedCash = \App\Service\FinanceCashResolutionService::unresolvedSummary($localPdo);
         $cashEmployees = \App\Service\FinanceEmployeePaymentService::fetchActiveEmployees($localPdo, $pdo, $companyId);
+        $personalExpenses = \App\Service\FinanceManualFactService::fetchRecentPersonalExpenses($localPdo, 50);
 
         $cashPage = max(1, (int) ($_GET['page'] ?? 1));
         $cashPerPage = max(1, min(500, (int) ($_GET['per_page'] ?? 50)));
@@ -81,6 +83,7 @@
         $cashAccounts = [];
         $recentOperations = [];
         $cashEmployees = [];
+        $personalExpenses = [];
         $unresolvedCash = ['count' => 0, 'amount' => '0.00', 'account_id' => null];
         $dbError = 'Ошибка при загрузке данных: ' . $e->getMessage();
         $successFlash = null;
