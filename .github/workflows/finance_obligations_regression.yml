@@ -30,11 +30,13 @@ jobs:
           set -euo pipefail
           php -l app/Service/FinanceObligationService.php
           php -l app/Service/FinanceBankInvoiceSettlementService.php
+          php -l app/Service/FinanceInvoicePaymentTimelineService.php
           php -l app/Service/FinancePaymentCalendarService.php
           php -l app/Http/Controllers/Company/InvoiceActions/create_submit.php
           php -l app/Http/Controllers/Company/InvoiceActions/modal_edit_submit.php
           php -l app/Http/Controllers/Company/InvoiceActions/obligations.php
           php -l app/Http/Controllers/Company/InvoiceActions/receivables.php
+          php -l app/Http/Controllers/Company/InvoiceActions/index.php
           php -l app/Http/Controllers/Company/BankFinanceActions/settlementForm.php
           php -l app/Http/Controllers/Company/BankFinanceActions/settlementSubmit.php
           php -l app/Http/Controllers/Company/BankFinanceActions/applyRules.php
@@ -50,6 +52,7 @@ jobs:
           php -l tests/finance_invoice_form_policy_test.php
           php -l tests/finance_bank_invoice_settlement_architecture_test.php
           php -l tests/finance_bank_invoice_settlement_behavioral_test.php
+          php -l tests/finance_invoice_payment_timeline_behavioral_test.php
           php tests/finance_obligations_architecture_test.php
           php tests/finance_invoice_form_policy_test.php
           php tests/finance_bank_invoice_settlement_architecture_test.php
@@ -91,6 +94,12 @@ jobs:
           set -euo pipefail
           php tests/finance_bank_invoice_settlement_behavioral_test.php 2>&1 | tee finance_bank_invoice_settlement_behavior.txt
           grep -q 'FINANCE_BANK_INVOICE_SETTLEMENT_BEHAVIOR_OK' finance_bank_invoice_settlement_behavior.txt
+      - name: Invoice payment timeline behavioral regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tests/finance_invoice_payment_timeline_behavioral_test.php 2>&1 | tee finance_invoice_payment_timeline_behavior.txt
+          grep -q 'FINANCE_INVOICE_PAYMENT_TIMELINE_OK' finance_invoice_payment_timeline_behavior.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -98,4 +107,5 @@ jobs:
           path: |
             finance_obligations_behavior.txt
             finance_bank_invoice_settlement_behavior.txt
+            finance_invoice_payment_timeline_behavior.txt
           if-no-files-found: warn
