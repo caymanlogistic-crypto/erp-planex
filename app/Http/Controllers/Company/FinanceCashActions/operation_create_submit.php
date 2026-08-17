@@ -34,24 +34,28 @@
             'role_code' => $_SESSION['role_code'] ?? null,
         ];
         $scenario = strtoupper(trim((string)($_POST['scenario'] ?? 'CASH_OPERATION')));
+        $payload = $_POST;
 
         if ($scenario === 'CLIENT_CASH_RECEIPT') {
-            $result = \App\Service\FinanceManualFactService::createClientCashReceipt($localPdo, $_POST, $user);
+            $payload['dds_category_id'] = $payload['client_dds_category_id'] ?? null;
+            $result = \App\Service\FinanceManualFactService::createClientCashReceipt($localPdo, $payload, $user);
             $_SESSION['finance_success'] = 'Наличная оплата клиента проведена: рейс #' . (int)$result['linear_route_id']
                 . ', ' . \App\Service\FinanceCashService::formatAmount($result['amount']) . ' ₽.';
         } elseif ($scenario === 'EMPLOYEE_PERSONAL_EXPENSE') {
-            $employeeRef = trim((string)($_POST['employee_ref'] ?? ''));
+            $payload['dds_category_id'] = $payload['personal_dds_category_id'] ?? null;
+            $payload['linear_route_id'] = $payload['personal_linear_route_id'] ?? null;
+            $employeeRef = trim((string)($payload['employee_ref'] ?? ''));
             $employee = \App\Service\FinanceEmployeePaymentService::resolveActiveEmployee(
                 $localPdo,
                 $pdo,
                 $companyId,
                 $employeeRef
             );
-            \App\Service\FinanceManualFactService::createEmployeePersonalExpense($localPdo, $_POST, $user, $employee);
+            \App\Service\FinanceManualFactService::createEmployeePersonalExpense($localPdo, $payload, $user, $employee);
             $_SESSION['finance_success'] = 'Расход сотрудника из личных средств зафиксирован. Остатки кассы и банка не изменены.';
         } elseif ($scenario === 'CASH_OPERATION') {
-            \App\Service\FinanceCashService::createCashOperation($localPdo, $_POST, $user);
-            $typeLabel = ($_POST['operation_type'] ?? '') === 'INCOME' ? 'Приход' : 'Расход';
+            \App\Service\FinanceCashService::createCashOperation($localPdo, $payload, $user);
+            $typeLabel = ($payload['operation_type'] ?? '') === 'INCOME' ? 'Приход' : 'Расход';
             $_SESSION['finance_success'] = $typeLabel . ' успешно проведён.';
         } else {
             throw new \InvalidArgumentException('Неизвестный вид операции.');
