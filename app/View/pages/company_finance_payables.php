@@ -30,7 +30,9 @@ $fmtDate = static function (mixed $value): string {
         </div>
     </div>
 
-    <?php if (!empty($dbError)): ?><div class="alert alert-danger"><?= e($dbError) ?></div><?php endif; ?>
+    <?php if (!empty($successFlash)): ?><div class="notice success"><?= e((string)$successFlash) ?></div><?php endif; ?>
+    <?php if (!empty($errorFlash)): ?><div class="notice warn"><?= e((string)$errorFlash) ?></div><?php endif; ?>
+    <?php if (!empty($dbError)): ?><div class="notice warn"><?= e($dbError) ?></div><?php endif; ?>
 
     <div class="payables-summary">
         <div class="payables-stat"><div class="payables-stat__label">Всего к оплате</div><div class="payables-stat__value"><?= e($money($summary['total'] ?? 0)) ?></div></div>
