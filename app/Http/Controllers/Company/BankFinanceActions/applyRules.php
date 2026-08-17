@@ -24,9 +24,10 @@ try {
         $localPdo,
         $_SESSION['user'] ?? []
     );
+    $settlementSync = \App\Service\FinanceSettlementStateService::syncPersistedStatuses($localPdo);
 
     $_SESSION['bank_finance_success'] = sprintf(
-        'Разнесение завершено: проверено — %d, автоматически разнесено — %d, на проверку — %d, конфликтов — %d, без подходящего правила — %d%s. По счетам клиентов: сопоставлено платежей — %d, создано распределений — %d, сумма — %s ₽.',
+        'Разнесение завершено: проверено — %d, автоматически разнесено — %d, на проверку — %d, конфликтов — %d, без подходящего правила — %d%s. По счетам клиентов: сопоставлено платежей — %d, создано распределений — %d, сумма — %s ₽. Состояние расчётов обновлено: операций — %d, счетов — %d.',
         (int) $summary['scanned'],
         (int) $summary['auto_applied'],
         (int) ($summary['suggested'] + $summary['needs_review']),
@@ -35,7 +36,9 @@ try {
         (int) $summary['errors'] > 0 ? ', ошибок — ' . (int) $summary['errors'] : '',
         (int) $invoiceSummary['operations'],
         (int) $invoiceSummary['allocations'],
-        number_format((float)$invoiceSummary['amount'], 2, ',', ' ')
+        number_format((float)$invoiceSummary['amount'], 2, ',', ' '),
+        (int) $settlementSync['transactions'],
+        (int) $settlementSync['invoices']
     );
 } catch (Throwable $e) {
     error_log('Batch bank matching error: ' . $e->getMessage());
