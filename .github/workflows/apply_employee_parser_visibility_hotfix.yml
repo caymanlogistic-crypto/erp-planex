@@ -1,0 +1,39 @@
+name: Apply Employee Parser Visibility Hotfix
+on:
+  push:
+    branches: [hotfix/employee-payments-parser-visibility-20260817]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[parser-hotfix-applied]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix/employee-payments-parser-visibility-20260817
+      - name: Make employee ref parser a public service contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app/Service/FinanceEmployeePaymentService.php')
+          s=p.read_text(encoding='utf-8')
+          old='    private static function parseEmployeeRef(string $ref):array'
+          new='    public static function parseEmployeeRef(string $ref):array'
+          if s.count(old)!=1:
+              raise SystemExit(f'expected one parser declaration, got {s.count(old)}')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          php -l app/Service/FinanceEmployeePaymentService.php
+          grep -q 'public static function parseEmployeeRef' app/Service/FinanceEmployeePaymentService.php
+      - name: Commit hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'caymanlogistic-crypto'
+          git config user.email 'cayman.logistic@gmail.com'
+          git add app/Service/FinanceEmployeePaymentService.php
+          git commit -m 'Expose employee ref parser for finance event services [parser-hotfix-applied]'
+          git push origin HEAD:hotfix/employee-payments-parser-visibility-20260817
