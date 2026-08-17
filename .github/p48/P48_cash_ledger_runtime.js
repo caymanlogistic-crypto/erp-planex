@@ -33,9 +33,10 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok(!bodyText.includes('Ошибка при загрузке данных:'), 'cash page database/runtime error: ' + bodyText.match(/Ошибка при загрузке данных:[^\n]*/)?.[0]);
     ok(!bodyText.includes('Работа с кассой недоступна.'), 'cash page unexpectedly unavailable');
 
-    // Migration/runtime smoke: this block is loaded only after tenant migrations and
-    // FinanceManualFactService::fetchRecentPersonalExpenses() complete successfully.
-    ok(bodyText.includes('Личные расходы сотрудников из личных средств'), 'personal-funded expense section missing');
+    // Migration/runtime smoke: this section is rendered only after
+    // FinanceManualFactService::fetchRecentPersonalExpenses() completes successfully.
+    const personalExpenseSection = page.locator('.section-title').filter({ hasText: 'Расходы сотрудников из личных средств' });
+    ok(await personalExpenseSection.count() === 1, 'personal-funded expense section missing');
 
     // New release acceptance: open the real production modal without submitting anything.
     const createOperation = page.locator('#cash-operation-create-btn');
