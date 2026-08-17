@@ -134,13 +134,15 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
 .employee-report-table tbody tr{display:table-row!important;height:auto!important;visibility:visible!important}
 .employee-report-table th,.employee-report-table td{min-width:0!important;max-width:100%!important}
 .employee-report-table tbody td{height:auto!important;min-height:30px!important;padding-top:7px!important;padding-bottom:7px!important}
-/* Compact journal: every visible column is deliberately narrower; long labels wrap instead of forcing horizontal scroll. */
-.employee-report-table th:nth-child(1),.employee-report-table td:nth-child(1){white-space:nowrap!important;font-size:10px!important}
-.employee-report-table th:nth-child(2),.employee-report-table td:nth-child(2),.employee-report-table th:nth-child(3),.employee-report-table td:nth-child(3){white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.2}
-.employee-report-table th:nth-child(5),.employee-report-table td:nth-child(5),.employee-report-table th:nth-child(6),.employee-report-table td:nth-child(6),.employee-report-table th:nth-child(7),.employee-report-table td:nth-child(7){white-space:nowrap!important}
-.employee-report-table .employee-unified-comment{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word;line-height:1.2}
-.employee-report-table .employee-unified-comment-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px}
-.employee-report-table .employee-unified-comment-actions .btn{height:22px;min-height:22px;padding:0 7px;font-size:9px}
+/* Fixed business fields stay fully visible. Comment is the only elastic column and absorbs all remaining width. */
+.employee-report-table th:nth-child(1),.employee-report-table td:nth-child(1),
+.employee-report-table th:nth-child(2),.employee-report-table td:nth-child(2),
+.employee-report-table th:nth-child(3),.employee-report-table td:nth-child(3){white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+.employee-report-table th:nth-child(5),.employee-report-table td:nth-child(5),
+.employee-report-table th:nth-child(6),.employee-report-table td:nth-child(6),
+.employee-report-table th:nth-child(7),.employee-report-table td:nth-child(7){white-space:nowrap!important;text-align:right!important;overflow:visible!important;text-overflow:clip!important}
+.employee-report-table .employee-unified-comment{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word;line-height:1.25}
+.employee-report-table .employee-editable-row{cursor:pointer}
 .employee-report-table .employee-month-summary-row>td:first-child{display:table-cell!important;padding:0!important;min-height:0!important;background:var(--surface-form)}
 .employee-report-table .employee-month-summary-row .employee-month-head{margin:0;border-left:0;border-right:0;width:100%;box-sizing:border-box}
 .employee-report-table .employee-month-summary-row .employee-month-title{font-weight:700;font-size:12px}
@@ -178,24 +180,22 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         if(headers[3])headers[3].textContent='Комментарий';
         if(headers[7])headers[7].style.display='none';
         const cols=table.querySelectorAll('colgroup col');
-        if(cols[0])cols[0].style.width='68px';
-        if(cols[1])cols[1].style.width='126px';
-        if(cols[2])cols[2].style.width='86px';
+        if(cols[0])cols[0].style.width='86px';
+        if(cols[1])cols[1].style.width='190px';
+        if(cols[2])cols[2].style.width='118px';
         if(cols[3])cols[3].style.width='auto';
-        if(cols[4])cols[4].style.width='82px';
-        if(cols[5])cols[5].style.width='82px';
-        if(cols[6])cols[6].style.width='82px';
+        if(cols[4])cols[4].style.width='104px';
+        if(cols[5])cols[5].style.width='104px';
+        if(cols[6])cols[6].style.width='104px';
         if(cols[7])cols[7].style.display='none';
         section.rows.forEach(row=>rows.push(row));
     });
 
-    /* Existing action nodes already have listeners bound by invoice_tools; move them, don't clone them. */
+    /* Editing controls remain hidden technical hosts; editable journal rows open them by the system-wide double-click pattern. */
     const invoiceEdits=new Map();
     document.querySelectorAll('[data-invoice-payment-edit]').forEach(btn=>{
         try{const data=JSON.parse(btn.dataset.invoicePaymentEdit||'{}');if(data.id)invoiceEdits.set(String(data.id),btn);}catch(_e){}
     });
-    const invoiceCancels=new Map();
-    document.querySelectorAll('[data-invoice-payment-cancel]').forEach(btn=>invoiceCancels.set(String(btn.dataset.invoicePaymentCancel||''),btn));
     const personalEdits=new Map();
     document.querySelectorAll('[data-personal-expense-edit]').forEach(btn=>personalEdits.set(String(btn.dataset.personalExpenseEdit||''),btn));
 
@@ -209,22 +209,19 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
             cells[3].classList.add('employee-unified-comment');
             cells[3].textContent=meta.comment||'—';
             cells[3].title=meta.comment||'—';
-            if(!meta.cancelled&&meta.event_kind&&meta.event_id){
-                const actions=document.createElement('div');
-                actions.className='employee-unified-comment-actions';
-                if(meta.event_kind==='invoice'){
-                    const edit=invoiceEdits.get(String(meta.event_id));
-                    const cancel=invoiceCancels.get(String(meta.event_id));
-                    if(edit)actions.appendChild(edit);
-                    if(cancel)actions.appendChild(cancel);
-                }else if(meta.event_kind==='personal'){
-                    const edit=personalEdits.get(String(meta.event_id));
-                    if(edit)actions.appendChild(edit);
-                }
-                if(actions.childNodes.length)cells[3].appendChild(actions);
-            }
         }
         if(cells[7])cells[7].style.display='none';
+
+        if(!meta.cancelled&&meta.event_kind&&meta.event_id){
+            const edit=meta.event_kind==='invoice'
+                ? invoiceEdits.get(String(meta.event_id))
+                : personalEdits.get(String(meta.event_id));
+            if(edit){
+                row.classList.add('employee-editable-row');
+                row.title='Двойной щелчок — редактировать';
+                row.addEventListener('dblclick',()=>edit.click());
+            }
+        }
     });
 
     /* Merge the old per-month physical tables into one table, preserving each month's totals as an in-table divider row. */
