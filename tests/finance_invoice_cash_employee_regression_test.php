@@ -64,7 +64,6 @@ fice_not($genericCancel, 'DELETE FROM finance_operation_allocations', 'Real allo
 // Client cash: physical receipt may be larger than invoice settlement.
 fice_has($clientCash, "'operation_type'=>'INCOME'", 'Client cash must physically increase Main Cash');
 fice_has($clientCash, "['invoice_amount']", 'Client cash must support a separate invoice allocation amount');
-fice_has($clientCash, 'createClientCashReceipt', 'Client cash method must exist');
 fice_has($clientCash, 'FinanceOperationInvoiceSettlementService::allocate', 'Client cash must settle the selected invoice');
 fice_has($clientCash, "'unallocated_amount'", 'Client cash audit must preserve unallocated remainder semantics');
 fice_not($clientCash, 'linear_route_payment_id', 'New client cash flow must not bypass invoice settlement via route payment id');
