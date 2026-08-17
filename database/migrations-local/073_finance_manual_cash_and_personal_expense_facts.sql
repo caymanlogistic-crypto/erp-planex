@@ -3,6 +3,12 @@
 -- Employee personal-funded expenses are economic facts only: they do NOT create
 -- finance_operations, cash/bank movements or employee settlement balances.
 
+-- A client cash receipt resolves the business meaning of an incoming Main Cash
+-- operation without moving that money out of the cashbox. Existing employee
+-- resolutions still have an outflow; NULL is reserved for non-monetary resolution.
+ALTER TABLE `finance_cash_resolutions`
+    MODIFY COLUMN `outflow_finance_operation_id` INT UNSIGNED DEFAULT NULL;
+
 CREATE TABLE IF NOT EXISTS `finance_cash_route_receipts` (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `finance_operation_id` INT UNSIGNED NOT NULL,
