@@ -1,9 +1,14 @@
 <?php
+require_once base_path('app/Service/FinanceOperationInvoiceSettlementService.php');
+require_once base_path('app/Service/FinanceCashInvoiceEventService.php');
+require_once base_path('app/Service/FinanceEmployeeInvoicePaymentEventService.php');
 require_once base_path('app/Service/FinanceEmployeePersonalExpenseEventService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePaymentsController.php');
+require_once base_path('app/Http/Controllers/Company/FinanceEmployeeInvoicePaymentController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePersonalExpenseController.php');
 
 $controller = new \App\Http\Controllers\Company\FinanceEmployeePaymentsController($config, $db);
+$invoicePaymentController = new \App\Http\Controllers\Company\FinanceEmployeeInvoicePaymentController($config, $db);
 $personalExpenseController = new \App\Http\Controllers\Company\FinanceEmployeePersonalExpenseController($config, $db);
 
 $router->get('/company/finance/employee-payments', [$controller, 'index']);
@@ -16,6 +21,10 @@ $router->get('/company/finance/employee-payments/employee/{type}/{id}', [$contro
 $router->post('/company/finance/employee-payments/movements/{id}/reassign', [$controller, 'reassignMovement']);
 $router->post('/company/finance/employee-payments/bank-link', [$controller, 'bankLink']);
 $router->post('/company/finance/employee-payments/bank-unlink', [$controller, 'bankUnlink']);
+
+$router->post('/company/finance/employee-payments/invoice-payment/create', [$invoicePaymentController, 'createSubmit']);
+$router->post('/company/finance/employee-payments/invoice-payment/update', [$invoicePaymentController, 'updateSubmit']);
+$router->post('/company/finance/employee-payments/invoice-payment/cancel', [$invoicePaymentController, 'cancelSubmit']);
 
 $router->get('/company/finance/employee-payments/personal-expenses', [$personalExpenseController, 'listForEmployee']);
 $router->get('/company/finance/employee-payments/personal-expense/create', [$personalExpenseController, 'createForm']);
