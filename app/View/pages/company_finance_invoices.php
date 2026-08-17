@@ -82,6 +82,7 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
     </div>
     <div class="page-head-actions">
         <a class="btn btn-secondary" href="<?= e(app_url('/company/finance/receivables')) ?>">Дебиторка</a>
+        <a class="btn btn-secondary" href="<?= e(app_url('/company/finance/payables')) ?>">Кредиторка</a>
         <button type="button" class="btn btn-primary" data-open-modal="invoice-create-modal">Создать счёт</button>
     </div>
 </div>
@@ -144,7 +145,7 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
                                 </div>
 
                                 <div class="invoice-pf-card is-fact">
-                                    <div class="invoice-pf-card-head"><span class="invoice-pf-label">Факт по банку</span><span class="invoice-pf-total"><?= e($fmtMoney($timeline['paid_total'] ?? '0')) ?></span></div>
+                                    <div class="invoice-pf-card-head"><span class="invoice-pf-label">Факт оплаты</span><span class="invoice-pf-total"><?= e($fmtMoney($timeline['paid_total'] ?? '0')) ?></span></div>
                                     <div class="invoice-pf-meta"><?= (int)($timeline['fact_count'] ?? 0) ?> <?= e($paymentWord((int)($timeline['fact_count'] ?? 0))) ?><?= (float)($timeline['remaining_total'] ?? 0) > 0 ? ' · осталось ' . e($fmtMoney($timeline['remaining_total'])) : ' · оплачено полностью' ?></div>
                                     <?php if (empty($timeline['facts'])): ?>
                                         <div class="invoice-pf-empty">Оплат пока нет.</div>
