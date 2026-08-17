@@ -45,16 +45,31 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     await cashForm.waitFor({ state: 'visible', timeout: 10000 });
     const scenario = cashForm.locator('#cash-scenario');
     const optionValues = await scenario.locator('option').evaluateAll(opts => opts.map(o => o.value));
-    for (const expected of ['CASH_OPERATION', 'CLIENT_CASH_RECEIPT']) {
+    for (const expected of ['CASH_OPERATION', 'CLIENT_CASH_INVOICE', 'MAIN_CASH_INVOICE_PAYMENT', 'MAIN_CASH_EMPLOYEE_TRANSFER']) {
       ok(optionValues.includes(expected), 'cash scenario missing: ' + expected + '; actual=' + JSON.stringify(optionValues));
     }
-    ok(!optionValues.includes('EMPLOYEE_PERSONAL_EXPENSE'), 'employee-funded expense must no longer be created from Cash');
-    ok(await cashForm.locator('[data-scenario-block="EMPLOYEE_PERSONAL_EXPENSE"]').count() === 0, 'obsolete employee personal expense cash block still rendered');
+    ok(!optionValues.includes('CLIENT_CASH_RECEIPT'), 'legacy route-first client cash scenario must not be exposed');
+    ok(!optionValues.includes('EMPLOYEE_PERSONAL_EXPENSE'), 'employee-funded misc expense must not be created from Cash');
 
-    await scenario.selectOption('CLIENT_CASH_RECEIPT');
-    const clientBlock = cashForm.locator('[data-scenario-block="CLIENT_CASH_RECEIPT"]');
-    ok(await clientBlock.isVisible(), 'client cash receipt block did not become visible');
-    ok(await clientBlock.locator('select[name="linear_route_payment_id"]').count() === 1, 'client route/payment selector missing');
+    await scenario.selectOption('CLIENT_CASH_INVOICE');
+    const clientBlock = cashForm.locator('[data-scenario-block="CLIENT_CASH_INVOICE"]');
+    ok(await clientBlock.isVisible(), 'invoice-centric client cash block did not become visible');
+    ok(await clientBlock.locator('select[name="invoice_id"]').count() === 1, 'client outgoing invoice selector missing');
+    ok(await clientBlock.locator('input[name="invoice_amount"]').count() === 1, 'client invoice allocation amount missing');
+    ok((await clientBlock.innerText()).includes('остаток останется наличными в кассе'), 'client cash remainder semantics missing from UI');
+    await page.screenshot({ path: 'P48_invoice_cash.png', fullPage: true });
+
+    await scenario.selectOption('MAIN_CASH_INVOICE_PAYMENT');
+    const carrierBlock = cashForm.locator('[data-scenario-block="MAIN_CASH_INVOICE_PAYMENT"]');
+    ok(await carrierBlock.isVisible(), 'Main Cash carrier invoice block did not become visible');
+    ok(await carrierBlock.locator('select[name="invoice_id"]').count() === 1, 'carrier incoming invoice selector missing');
+    ok((await carrierBlock.innerText()).includes('Основной кассы'), 'carrier invoice cash source explanation missing');
+
+    await scenario.selectOption('MAIN_CASH_EMPLOYEE_TRANSFER');
+    const employeeTransferBlock = cashForm.locator('[data-scenario-block="MAIN_CASH_EMPLOYEE_TRANSFER"]');
+    ok(await employeeTransferBlock.isVisible(), 'Main Cash employee transfer block did not become visible');
+    ok(await employeeTransferBlock.locator('select[name="employee_ref"]').count() === 1, 'employee transfer selector missing');
+    ok((await employeeTransferBlock.innerText()).includes('внутренний перевод'), 'employee transfer must be described as internal transfer');
     await page.screenshot({ path: 'P48_cash_lifecycle.png', fullPage: true });
 
     const ledger = page.locator('#cash-ledger-table');
@@ -74,46 +89,51 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     } else {
       ok(bodyText.includes('Движений нет.'), 'neither cash ledger nor valid empty state is visible');
     }
+    console.log('P48_CASH_LEDGER_RUNTIME_OK');
+    console.log('P48_INVOICE_CENTRIC_CASH_UI_OK');
 
     response = await page.goto(BASE + 'company/finance/employee-payments', { waitUntil: 'domcontentloaded' });
     ok(response && response.status() === 200, 'employee payments page HTTP 200');
     bodyText = await page.locator('body').innerText();
     ok(bodyText.includes('Выплаты сотрудникам'), 'employee payments title missing');
-    ok(!bodyText.includes('Ошибка'), 'employee payments page contains runtime error: ' + bodyText.match(/Ошибка[^\n]*/)?.[0]);
+    ok(!bodyText.includes('Ошибка при загрузке данных:'), 'employee payments page contains database/runtime error');
 
-    const personalButton = page.locator('#employee-personal-expense-open');
-    await personalButton.waitFor({ state: 'visible', timeout: 8000 });
-    ok((await personalButton.innerText()).includes('Оплачено сотрудником'), 'new employee-funded expense button label mismatch');
+    const invoiceButton = page.locator('#employee-invoice-payment-open');
+    await invoiceButton.waitFor({ state: 'visible', timeout: 8000 });
+    ok((await invoiceButton.innerText()).includes('Оплатил счёт'), 'employee invoice-payment button label mismatch');
 
-    const listHost = page.locator('#employee-personal-expense-list-host');
-    await listHost.waitFor({ state: 'attached', timeout: 5000 });
-    const loadedCard = listHost.locator('.employee-personal-expense-card');
-    const warning = listHost.locator('.notice.warn');
-    let listLoaded = false;
-    for (let i = 0; i < 40; i++) {
-      if ((await loadedCard.count()) > 0 || (await warning.count()) > 0) { listLoaded = true; break; }
-      await page.waitForTimeout(200);
-    }
-    ok(listLoaded, 'linked employee expense list did not finish loading');
-    ok(await warning.count() === 0, 'linked employee expense list failed to load: ' + (await listHost.innerText()));
+    const miscButton = page.locator('#employee-personal-expense-open');
+    await miscButton.waitFor({ state: 'visible', timeout: 8000 });
+    ok((await miscButton.innerText()).includes('Прочий расход'), 'misc employee expense button label mismatch');
 
-    await personalButton.click();
+    const employeeInvoiceModal = page.locator('#employee-invoice-payment-modal');
+    await employeeInvoiceModal.waitFor({ state: 'attached', timeout: 5000 });
+    const employeeInvoiceForm = employeeInvoiceModal.locator('#employee-invoice-payment-form');
+    ok(await employeeInvoiceForm.locator('select[name="invoice_id"]').count() === 1, 'employee incoming invoice selector missing');
+    ok(await employeeInvoiceForm.locator('input[name="amount"]').count() === 1, 'employee invoice amount field missing');
+    ok(await employeeInvoiceForm.locator('input[name="operation_date"]').count() === 1, 'employee invoice date field missing');
+    ok(await employeeInvoiceForm.locator('select[name="cash_flow_center_id"]').count() === 0, 'employee invoice payment must not ask for CFU');
+    ok(await employeeInvoiceForm.locator('select[name="dds_category_id"]').count() === 0, 'employee invoice payment must not ask for DDS');
+    ok((await employeeInvoiceModal.innerText()).includes('ЦФУ и статью ДДС выбирать не нужно'), 'employee invoice UI must explain automatic invoice settlement classification');
+    await employeeInvoiceModal.evaluate(el => el.classList.add('is-open'));
+    await page.screenshot({ path: 'P48_employee_invoice_payment.png', fullPage: true });
+    await employeeInvoiceModal.evaluate(el => el.classList.remove('is-open'));
+    console.log('P48_EMPLOYEE_INVOICE_PAYMENT_UI_OK');
+
+    await miscButton.click();
     const personalModal = page.locator('.employee-personal-expense-modal');
     await personalModal.waitFor({ state: 'visible', timeout: 8000 });
     const personalForm = personalModal.locator('[data-personal-expense-form]');
     await personalForm.waitFor({ state: 'visible', timeout: 5000 });
-    ok(await personalForm.locator('input[name="amount"]').count() === 1, 'employee-funded expense amount field missing');
-    ok(await personalForm.locator('input[name="operation_date"]').count() === 1, 'employee-funded expense date field missing');
-    ok(await personalForm.locator('select[name="cash_flow_center_id"]').count() === 1, 'employee-funded expense CFU selector missing');
-    ok(await personalForm.locator('select[name="dds_category_id"]').count() === 1, 'employee-funded expense DDS selector missing');
-    ok(await personalForm.locator('input[name="purpose"]').count() === 1, 'employee-funded expense purpose field missing');
-    ok((await personalModal.innerText()).includes('Основную кассу'), 'modal must explain automatic Main Cash postings');
-    ok((await personalModal.innerText()).includes('Остаток Основной кассы'), 'modal must explain zero-net Main Cash effect');
+    ok(await personalForm.locator('input[name="amount"]').count() === 1, 'misc employee expense amount field missing');
+    ok(await personalForm.locator('input[name="operation_date"]').count() === 1, 'misc employee expense date field missing');
+    ok(await personalForm.locator('select[name="cash_flow_center_id"]').count() === 1, 'misc employee expense CFU selector missing');
+    ok(await personalForm.locator('select[name="dds_category_id"]').count() === 1, 'misc employee expense DDS selector missing');
+    ok(await personalForm.locator('input[name="purpose"]').count() === 1, 'misc employee expense purpose field missing');
     await page.screenshot({ path: 'P48_employee_personal_expense.png', fullPage: true });
+    console.log('P48_EMPLOYEE_PERSONAL_EXPENSE_UI_OK');
 
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
-    console.log('P48_CASH_LEDGER_RUNTIME_OK');
-    console.log('P48_EMPLOYEE_PERSONAL_EXPENSE_UI_OK');
   } finally {
     await browser.close();
   }
