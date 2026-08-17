@@ -96,14 +96,19 @@ try {
             }
 
             $status = (string)($invoice['status'] ?? '');
+            $amount = (float)($invoice['amount'] ?? 0);
+            $paid = (float)($invoice['paid_amount'] ?? 0);
+            $remaining = (float)($invoice['remaining_amount'] ?? 0);
             if ($status === 'draft') {
                 $status = (string)$invoice['direction'] === FinanceInvoiceService::DIRECTION_INCOMING ? 'received' : 'issued';
             }
-            if (!in_array($status, ['cancelled', 'paid'], true) && (int)($summary['has_overdue'] ?? 0) === 1) {
-                $status = (float)($invoice['paid_amount'] ?? 0) > 0 ? 'overdue_partial' : 'overdue';
+            if ($status !== 'cancelled' && $amount > 0 && $remaining <= 0.00001 && $paid >= $amount - 0.00001) {
+                $status = 'paid';
+            } elseif (!in_array($status, ['cancelled', 'paid'], true) && (int)($summary['has_overdue'] ?? 0) === 1) {
+                $status = $paid > 0 ? 'overdue_partial' : 'overdue';
             } elseif (!in_array($status, ['cancelled', 'paid'], true)
-                && (float)($invoice['paid_amount'] ?? 0) > 0
-                && (float)($invoice['remaining_amount'] ?? 0) > 0) {
+                && $paid > 0
+                && $remaining > 0) {
                 $status = 'partially_paid';
             }
             $invoice['display_status'] = $status;
