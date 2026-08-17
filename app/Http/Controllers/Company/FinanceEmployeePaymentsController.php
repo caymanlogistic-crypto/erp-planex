@@ -71,6 +71,7 @@ final class FinanceEmployeePaymentsController
         ob_start();
         require base_path('app/View/pages/company_finance_employee_payments.php');
         require base_path('app/View/partials/company_finance_employee_invoice_tools.php');
+        require base_path('app/View/partials/company_finance_employee_unified_ledger_ui.php');
         $content = ob_get_clean();
         $config = $this->config;
         $db = $this->db;
