@@ -42,8 +42,8 @@ fcp_has($view,'data-payables-search','AP table must have client-side search');
 fcp_has($view,'data-payables-status','AP table must have settlement filters');
 
 // One shared settlement core for every source.
-fcp_has($generic,": FinanceInvoiceService::DIRECTION_INCOMING",'EXPENSE must settle INCOMING invoices');
-fcp_has($bank,"$type = $isIncome ? 'client' : 'contractor'",'Bank expense must resolve a contractor');
+fcp_has($generic,': FinanceInvoiceService::DIRECTION_INCOMING','EXPENSE must settle INCOMING invoices');
+fcp_has($bank,"'client' : 'contractor'",'Bank expense must resolve a contractor');
 fcp_has($bank,'count($entities) !== 1','Bank fallback must fail closed on ambiguous contractor INN');
 fcp_has($cash,'payCarrierInvoiceFromMainCash','Cash carrier payment service must exist');
 fcp_has($cash,'FinanceOperationInvoiceSettlementService::allocate','Cash carrier payment must use generic settlement');
