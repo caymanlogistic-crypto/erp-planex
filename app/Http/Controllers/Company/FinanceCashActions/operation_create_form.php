@@ -30,13 +30,6 @@
         $expenseDdsCategories = \App\Service\FinanceDdsCategoryService::fetchActiveForDirection($localPdo, 'EXPENSE');
         $ddsCategories = $incomeDdsCategories;
         $clientPaymentTargets = \App\Service\FinanceManualFactService::fetchClientPaymentTargets($localPdo);
-        $employees = \App\Service\FinanceEmployeePaymentService::fetchActiveEmployees($localPdo, $pdo, $companyId);
-        $cashFlowCenters = \App\Service\FinanceMatchingRuleService::fetchCashFlowCenters($localPdo, true);
-        $allowedExpenseDdsMap = \App\Service\FinanceStructureService::fetchAllowedMap($localPdo, 'EXPENSE');
-        $routes = \App\Service\FinanceAllocationService::fetchRoutesForAllocation($localPdo, [
-            'role_code' => (string)($_SESSION['role_code'] ?? ''),
-            'user_id' => (int)($_SESSION['user_id'] ?? 0),
-        ]);
     } catch (\Throwable $e) {
         echo '<div class="form-alert alert-error">Ошибка загрузки данных: ' . e($e->getMessage()) . '</div>';
         return;
