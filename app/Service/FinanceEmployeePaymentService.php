@@ -60,8 +60,10 @@ final class FinanceEmployeePaymentService
     {
         $where = ['1=1'];
         $params = [];
+        $employeeIdentity = null;
         if (!empty($filters['employee_ref'])) {
-            [$type, $id] = self::parseEmployeeRef((string)$filters['employee_ref']);
+            $employeeIdentity = self::parseEmployeeRef((string)$filters['employee_ref']);
+            [$type, $id] = $employeeIdentity;
             $where[] = 'fem.employee_identity_type = :employee_identity_type';
             $where[] = 'fem.employee_identity_id = :employee_identity_id';
             $params[':employee_identity_type'] = $type;
@@ -93,15 +95,89 @@ final class FinanceEmployeePaymentService
                   FROM finance_employee_movements fem
                   JOIN finance_operations fo ON fo.id = fem.finance_operation_id
                  WHERE ".implode(' AND ', $where)."
-                 GROUP BY fem.employee_identity_type, fem.employee_identity_id
-                 ORDER BY last_operation_date DESC, full_name ASC";
+                 GROUP BY fem.employee_identity_type, fem.employee_identity_id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $byEmployee = [];
+        foreach ($rows as $row) {
+            $key = (string)$row['employee_identity_type'] . ':' . (int)$row['employee_identity_id'];
+            $byEmployee[$key] = $row;
+        }
+
+        // Personal-funded company expenses are employee settlement outflows only.
+        // They reduce the employee running balance, but are not company cash/bank movements.
+        if (empty($filters['source_type'])) {
+            $personalWhere = ["pe.status = 'POSTED'"];
+            $personalParams = [];
+            if ($employeeIdentity !== null) {
+                $personalWhere[] = 'pe.employee_identity_type = :pe_employee_identity_type';
+                $personalWhere[] = 'pe.employee_identity_id = :pe_employee_identity_id';
+                $personalParams[':pe_employee_identity_type'] = $employeeIdentity[0];
+                $personalParams[':pe_employee_identity_id'] = $employeeIdentity[1];
+            }
+            if (!empty($filters['date_from'])) {
+                $personalWhere[] = 'pe.operation_date >= :pe_date_from';
+                $personalParams[':pe_date_from'] = $filters['date_from'];
+            }
+            if (!empty($filters['date_to'])) {
+                $personalWhere[] = 'pe.operation_date <= :pe_date_to';
+                $personalParams[':pe_date_to'] = $filters['date_to'];
+            }
+            $personalStmt = $pdo->prepare(
+                "SELECT pe.employee_identity_type, pe.employee_identity_id,
+                        MAX(pe.employee_name_snapshot) AS full_name,
+                        MAX(pe.employee_role_snapshot) AS role_code,
+                        SUM(pe.amount) AS expense_amount,
+                        MAX(pe.operation_date) AS last_operation_date,
+                        COUNT(*) AS movement_count
+                   FROM finance_employee_personal_expenses pe
+                  WHERE " . implode(' AND ', $personalWhere) . "
+                  GROUP BY pe.employee_identity_type, pe.employee_identity_id"
+            );
+            $personalStmt->execute($personalParams);
+            foreach ($personalStmt->fetchAll(PDO::FETCH_ASSOC) as $personal) {
+                $key = (string)$personal['employee_identity_type'] . ':' . (int)$personal['employee_identity_id'];
+                $expenseCents = self::toCents((string)$personal['expense_amount']);
+                if (isset($byEmployee[$key])) {
+                    $row = $byEmployee[$key];
+                    $row['returned_amount'] = self::fromCents(self::toCents((string)$row['returned_amount']) + $expenseCents);
+                    $row['balance_amount'] = self::fromCents(self::toCents((string)$row['balance_amount']) - $expenseCents);
+                    $row['movement_count'] = (int)$row['movement_count'] + (int)$personal['movement_count'];
+                    $row['posted_movement_count'] = (int)$row['posted_movement_count'] + (int)$personal['movement_count'];
+                    if ((string)$personal['last_operation_date'] > (string)$row['last_operation_date']) {
+                        $row['last_operation_date'] = $personal['last_operation_date'];
+                    }
+                    $byEmployee[$key] = $row;
+                } else {
+                    $byEmployee[$key] = [
+                        'employee_identity_type' => $personal['employee_identity_type'],
+                        'employee_identity_id' => $personal['employee_identity_id'],
+                        'full_name' => $personal['full_name'],
+                        'role_code' => $personal['role_code'],
+                        'paid_amount' => '0.00',
+                        'returned_amount' => self::fromCents($expenseCents),
+                        'balance_amount' => self::fromCents(-$expenseCents),
+                        'last_operation_date' => $personal['last_operation_date'],
+                        'movement_count' => (int)$personal['movement_count'],
+                        'posted_movement_count' => (int)$personal['movement_count'],
+                        'cancelled_movement_count' => 0,
+                    ];
+                }
+            }
+        }
+
+        $rows = array_values($byEmployee);
         foreach ($rows as &$row) {
             $row['employee_ref'] = self::makeEmployeeRef((string)$row['employee_identity_type'], (int)$row['employee_identity_id']);
         }
         unset($row);
+        usort($rows, static function(array $a, array $b): int {
+            $dateCompare = strcmp((string)$b['last_operation_date'], (string)$a['last_operation_date']);
+            if ($dateCompare !== 0) return $dateCompare;
+            return strcmp(mb_strtolower((string)$a['full_name']), mb_strtolower((string)$b['full_name']));
+        });
         return $rows;
     }
 
@@ -118,10 +194,53 @@ final class FinanceEmployeePaymentService
                                 JOIN finance_operations fo ON fo.id = fem.finance_operation_id
                            LEFT JOIN finance_money_accounts fma ON fma.id = fo.money_account_id
                            LEFT JOIN bank_transactions bt ON bt.id = fem.bank_transaction_id
-                               WHERE fem.employee_identity_type = ? AND fem.employee_identity_id = ?
-                            ORDER BY fo.operation_date ASC, fem.id ASC");
+                               WHERE fem.employee_identity_type = ? AND fem.employee_identity_id = ?");
         $stmt->execute([$type, $id]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) {
+            $row['ledger_record_type'] = 'MOVEMENT';
+        }
+        unset($row);
+
+        $personalStmt = $pdo->prepare(
+            "SELECT pe.id, NULL AS employee_user_id,
+                    pe.employee_identity_type, pe.employee_identity_id,
+                    pe.employee_name_snapshot AS full_name,
+                    pe.employee_role_snapshot AS role_code,
+                    'PERSONAL_EXPENSE' AS movement_type,
+                    'PERSONAL' AS source_type,
+                    pe.comment AS note,
+                    NULL AS finance_operation_id,
+                    pe.operation_date,
+                    pe.amount,
+                    pe.status,
+                    CASE
+                        WHEN COALESCE(pe.counterparty_name, '') <> '' THEN CONCAT(pe.counterparty_name, ' · ', pe.purpose)
+                        ELSE pe.purpose
+                    END AS purpose,
+                    pe.comment,
+                    NULL AS money_account_name,
+                    NULL AS bank_transaction_id,
+                    pe.counterparty_name,
+                    NULL AS document_number,
+                    'PERSONAL_EXPENSE' AS ledger_record_type
+               FROM finance_employee_personal_expenses pe
+              WHERE pe.employee_identity_type = ?
+                AND pe.employee_identity_id = ?
+                AND pe.status = 'POSTED'"
+        );
+        $personalStmt->execute([$type, $id]);
+        $rows = array_merge($rows, $personalStmt->fetchAll(PDO::FETCH_ASSOC));
+
+        usort($rows, static function(array $a, array $b): int {
+            $dateCompare = strcmp((string)$a['operation_date'], (string)$b['operation_date']);
+            if ($dateCompare !== 0) return $dateCompare;
+            $aPersonal = ($a['ledger_record_type'] ?? '') === 'PERSONAL_EXPENSE' ? 1 : 0;
+            $bPersonal = ($b['ledger_record_type'] ?? '') === 'PERSONAL_EXPENSE' ? 1 : 0;
+            if ($aPersonal !== $bPersonal) return $aPersonal <=> $bPersonal;
+            return (int)$a['id'] <=> (int)$b['id'];
+        });
+
         $balanceCents = 0;
         foreach ($rows as &$row) {
             if (($row['status'] ?? '') === 'POSTED') {
