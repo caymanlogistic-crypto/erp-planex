@@ -10,6 +10,9 @@ $pageContext = 'Финансы › Кредиторская задолженно
 $companyId = (int)(getSessionCompanyId() ?? 0);
 $company = null;
 $dbError = null;
+$successFlash = $_SESSION['finance_success'] ?? null;
+$errorFlash = $_SESSION['finance_error'] ?? null;
+unset($_SESSION['finance_success'], $_SESSION['finance_error']);
 $report = ['rows'=>[], 'summary'=>['total'=>'0.00','overdue'=>'0.00','aging_1_7'=>'0.00','aging_8_30'=>'0.00','aging_31_60'=>'0.00','aging_61_plus'=>'0.00']];
 
 try {
