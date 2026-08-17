@@ -153,9 +153,8 @@ final class FinanceManualFactService
             ]);
             $receiptId = (int)$pdo->lastInsertId();
 
-            // The receipt is fully assigned to a route but the cash physically stays
-            // in Main Cash. A resolution with NULL outflow marks business resolution
-            // without creating a fake cash movement.
+            // Business-resolved to a route, but cash physically stays in Main Cash.
+            // NULL outflow is intentional and prevents a fake corporate cash movement.
             $resolutionStmt = $pdo->prepare(
                 'INSERT INTO finance_cash_resolutions
                     (source_finance_operation_id, resolution_type, target_identity_type,
@@ -213,6 +212,18 @@ final class FinanceManualFactService
         if ($ddsId <= 0) throw new \InvalidArgumentException('Выберите статью ДДС.');
         FinanceStructureService::assertAllowedPair($pdo, $cfuId, $ddsId, 'EXPENSE');
 
+        $classificationStmt = $pdo->prepare(
+            "SELECT cfu.name AS cfu_name, dds.name AS dds_name
+               FROM finance_cash_flow_centers cfu
+               JOIN finance_dds_categories dds ON dds.id = ?
+              WHERE cfu.id = ? AND cfu.is_active = 1 AND dds.is_active = 1"
+        );
+        $classificationStmt->execute([$ddsId, $cfuId]);
+        $classification = $classificationStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$classification) {
+            throw new \InvalidArgumentException('Выбранные ЦФУ или статья ДДС неактивны.');
+        }
+
         $purpose = trim((string)($data['purpose'] ?? ''));
         if ($purpose === '') throw new \InvalidArgumentException('Укажите назначение расхода.');
         $counterpartyName = trim((string)($data['counterparty_name'] ?? '')) ?: null;
@@ -228,10 +239,11 @@ final class FinanceManualFactService
             "INSERT INTO finance_employee_personal_expenses
                 (operation_date, employee_identity_type, employee_identity_id,
                  employee_name_snapshot, employee_role_snapshot, amount, currency,
-                 cash_flow_center_id, dds_category_id, linear_route_id,
+                 cash_flow_center_id, cash_flow_center_name_snapshot,
+                 dds_category_id, dds_category_name_snapshot, linear_route_id,
                  counterparty_name, purpose, comment, status,
                  created_by_user_id, created_by_role)
-             VALUES (?, ?, ?, ?, ?, ?, 'RUR', ?, ?, ?, ?, ?, ?, 'POSTED', ?, ?)"
+             VALUES (?, ?, ?, ?, ?, ?, 'RUR', ?, ?, ?, ?, ?, ?, ?, ?, 'POSTED', ?, ?)"
         );
         $stmt->execute([
             $operationDate,
@@ -241,7 +253,9 @@ final class FinanceManualFactService
             (string)($employee['role_code'] ?? ''),
             $amount,
             $cfuId,
+            (string)$classification['cfu_name'],
             $ddsId,
+            (string)$classification['dds_name'],
             $routeId,
             $counterpartyName,
             $purpose,
@@ -256,7 +270,9 @@ final class FinanceManualFactService
             'employee_ref' => (string)$employee['ref'],
             'amount' => $amount,
             'cash_flow_center_id' => $cfuId,
+            'cash_flow_center_name' => (string)$classification['cfu_name'],
             'dds_category_id' => $ddsId,
+            'dds_category_name' => (string)$classification['dds_name'],
             'linear_route_id' => $routeId,
             'counterparty_name' => $counterpartyName,
             'purpose' => $purpose,
@@ -271,11 +287,13 @@ final class FinanceManualFactService
     {
         $limit = max(1, min(200, $limit));
         $stmt = $pdo->prepare(
-            "SELECT pe.*, cfu.name AS cfu_name, dds.name AS dds_name,
+            "SELECT pe.*,
+                    COALESCE(cfu.name, pe.cash_flow_center_name_snapshot) AS cfu_name,
+                    COALESCE(dds.name, pe.dds_category_name_snapshot) AS dds_name,
                     c.name AS route_client_name
                FROM finance_employee_personal_expenses pe
-               JOIN finance_cash_flow_centers cfu ON cfu.id = pe.cash_flow_center_id
-               JOIN finance_dds_categories dds ON dds.id = pe.dds_category_id
+          LEFT JOIN finance_cash_flow_centers cfu ON cfu.id = pe.cash_flow_center_id
+          LEFT JOIN finance_dds_categories dds ON dds.id = pe.dds_category_id
           LEFT JOIN linear_routes lr ON lr.id = pe.linear_route_id
           LEFT JOIN clients c ON c.id = lr.client_id
               WHERE pe.status = 'POSTED'
