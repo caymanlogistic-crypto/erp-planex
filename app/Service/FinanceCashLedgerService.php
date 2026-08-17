@@ -144,6 +144,7 @@ final class FinanceCashLedgerService
     private static function isResolvedCashLifecycle(array $row): bool
     {
         if (empty($row['cash_resolution_id'])) return false;
+        if (strtoupper((string)($row['cash_resolution_type'] ?? '')) === FinanceManualFactService::CASH_RESOLUTION_CLIENT_ROUTE) return false;
         if (($row['status'] ?? '') !== 'POSTED') return false;
         if (trim((string)($row['account_name'] ?? '')) !== FinanceCashResolutionService::MAIN_CASH_NAME) return false;
         return FinanceCashResolutionService::isIncomingSource($row);
@@ -151,6 +152,10 @@ final class FinanceCashLedgerService
 
     private static function sourceLabel(array $row): string
     {
+        if (strtoupper((string)($row['cash_resolution_type'] ?? '')) === FinanceManualFactService::CASH_RESOLUTION_CLIENT_ROUTE) {
+            return trim((string)($row['cash_resolution_target'] ?? '')) ?: 'Клиент';
+        }
+
         $employeeName = trim((string)($row['employee_name'] ?? ''));
         $movementType = strtoupper((string)($row['employee_movement_type'] ?? ''));
         if ($employeeName !== '' && $movementType === 'RETURN') {
@@ -182,8 +187,6 @@ final class FinanceCashLedgerService
 
     private static function handoffDate(array $row): string
     {
-        // The factual handoff timestamp stays in resolution history, but the
-        // compact cash journal intentionally displays only the recipient.
         return '';
     }
 
@@ -214,10 +217,6 @@ final class FinanceCashLedgerService
         return trim((string)preg_replace('/^Расчётный счёт\s+/u', '', $name));
     }
 
-    /**
-     * Backward-compatible projection kept for callers outside the cash table.
-     * New UI uses source_label + handoff_recipient_label instead.
-     */
     private static function legacySourceRecipientLabel(array $row): string
     {
         $employeeName = trim((string) ($row['employee_name'] ?? ''));

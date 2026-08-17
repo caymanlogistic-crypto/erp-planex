@@ -22,6 +22,7 @@ final class FinanceStructureDeletionService
             ['bank_transactions', 'dds_category_id', 'банковских операциях'],
             ['finance_operations', 'dds_category_id', 'финансовых операциях'],
             ['finance_matching_rules', 'target_dds_category_id', 'правилах разнесения'],
+            ['finance_employee_personal_expenses', 'dds_category_id', 'расходах сотрудников из личных средств'],
         ], $id);
         if ($usage !== []) {
             throw new \InvalidArgumentException('Нельзя удалить статью «' . $row['name'] . '»: она используется в ' . implode(', ', $usage) . '. Сначала уберите эти привязки или архивируйте статью.');
@@ -56,6 +57,7 @@ final class FinanceStructureDeletionService
             ['bank_transactions', 'cash_flow_center_id', 'банковских операциях'],
             ['finance_operations', 'cash_flow_center_id', 'финансовых операциях'],
             ['finance_matching_rules', 'target_cash_flow_center_id', 'правилах разнесения'],
+            ['finance_employee_personal_expenses', 'cash_flow_center_id', 'расходах сотрудников из личных средств'],
         ], $id);
         if ($usage !== []) {
             throw new \InvalidArgumentException('Нельзя удалить ЦФУ «' . $row['name'] . '»: он используется в ' . implode(', ', $usage) . '. Сначала уберите эти привязки или архивируйте ЦФУ.');
