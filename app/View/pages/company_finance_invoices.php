@@ -20,6 +20,21 @@ $fmtDue = static function (mixed $value) use ($fmtDate): string {
     }
     return $value;
 };
+$fmtMoney = static fn(mixed $value): string => FinanceInvoiceService::formatAmount($value) . ' ₽';
+$paymentWord = static function (int $count): string {
+    $n100 = $count % 100;
+    $n10 = $count % 10;
+    if ($n100 >= 11 && $n100 <= 14) return 'платежей';
+    if ($n10 === 1) return 'платёж';
+    if ($n10 >= 2 && $n10 <= 4) return 'платежа';
+    return 'платежей';
+};
+$delayLabel = static function (?int $days): array {
+    if ($days === null) return ['text' => 'срок не определён', 'class' => 'is-neutral'];
+    if ($days > 0) return ['text' => '+' . $days . ' дн. просрочка', 'class' => 'is-late'];
+    if ($days < 0) return ['text' => 'на ' . abs($days) . ' дн. раньше', 'class' => 'is-early'];
+    return ['text' => 'в срок', 'class' => 'is-on-time'];
+};
 $successFlash = $_SESSION['invoice_success'] ?? null;
 unset($_SESSION['invoice_success']);
 $currentDirection = $_GET['direction'] ?? '';
@@ -34,6 +49,23 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
 <div class="page-head"><div class="page-head-left"><h1 class="page-title">Счета</h1><div class="page-summary"><span>Реестр счетов компании.</span></div></div></div>
 <div class="notice warn"><?= e($dbError) ?></div>
 <?php else: ?>
+<style>
+.invoice-pf-col{min-width:360px}
+.invoice-payment-timeline{min-width:340px;max-width:430px;font-size:11px;line-height:1.35;color:var(--text,#2f2b25)}
+.invoice-pf-head{font-weight:700;margin-bottom:3px}
+.invoice-pf-section+.invoice-pf-section{margin-top:5px;padding-top:5px;border-top:1px solid var(--border,#d8d2c7)}
+.invoice-pf-line{display:flex;align-items:baseline;gap:8px;justify-content:space-between;white-space:nowrap}
+.invoice-pf-line-main{display:flex;gap:7px;align-items:baseline;min-width:0}
+.invoice-pf-route{color:var(--muted,#777067)}
+.invoice-pf-empty{color:var(--muted,#777067)}
+.invoice-pf-outcome{font-weight:600}
+.invoice-pf-delay{font-weight:700}
+.invoice-pf-delay.is-late{color:#9b3a2a}
+.invoice-pf-delay.is-on-time{color:#3f6a4d}
+.invoice-pf-delay.is-early{color:#4b6657}
+.invoice-pf-delay.is-neutral{color:var(--muted,#777067)}
+.invoice-pf-balance{color:var(--muted,#777067);font-weight:500}
+</style>
 <div class="page-head">
     <div class="page-head-left">
         <h1 class="page-title">Счета</h1>
@@ -64,11 +96,12 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
     </div>
     <div class="table-scroll">
         <table class="table">
-            <thead><tr><th>№</th><th>Дата</th><th>Направление</th><th>Контрагент</th><th>Сумма</th><th>НДС</th><th>Срок оплаты</th><th>Оплачено</th><th>Статус</th></tr></thead>
+            <thead><tr><th>№</th><th>Дата</th><th>Направление</th><th>Контрагент</th><th>Сумма</th><th>НДС</th><th>Срок оплаты</th><th>Оплачено</th><th class="invoice-pf-col">План / факт оплаты</th><th>Статус</th></tr></thead>
             <tbody>
             <?php foreach ($invoices as $inv):
                 $displayStatus = (string)($inv['display_status'] ?? $inv['status'] ?? '');
                 $dueText = $fmtDue($inv['display_due_text'] ?? '—');
+                $timeline = is_array($inv['payment_timeline'] ?? null) ? $inv['payment_timeline'] : null;
             ?>
                 <tr data-invoice-id="<?= (int)($inv['id'] ?? 0) ?>">
                     <td class="col-mono"><?= e($inv['number'] ?? '—') ?></td>
@@ -79,6 +112,49 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
                     <td><?= $inv['vat_rate'] !== null ? e(((float)$inv['vat_rate'] == 0.0 ? '0' : rtrim(rtrim((string)$inv['vat_rate'], '0'), '.')) . '%') : 'Без НДС' ?></td>
                     <td class="col-mono"><?= e($dueText) ?></td>
                     <td class="col-mono"><?= e(FinanceInvoiceService::formatAmount($inv['paid_amount'] ?? null)) ?></td>
+                    <td>
+                        <div class="invoice-payment-timeline">
+                        <?php if ($timeline === null || (int)($timeline['planned_count'] ?? 0) === 0): ?>
+                            <div class="invoice-pf-empty">Нет связанных платёжных обязательств.</div>
+                        <?php else: ?>
+                            <div class="invoice-pf-section">
+                                <div class="invoice-pf-head">План: <?= (int)$timeline['planned_count'] ?> <?= e($paymentWord((int)$timeline['planned_count'])) ?> · <?= e($fmtMoney($timeline['planned_total'] ?? '0')) ?></div>
+                                <?php foreach (($timeline['plans'] ?? []) as $plan): ?>
+                                <div class="invoice-pf-line">
+                                    <span class="invoice-pf-line-main">
+                                        <span><?= e(($plan['expected_date'] ?? null) ? $fmtDate($plan['expected_date']) : 'дата ожидается') ?></span>
+                                        <?php if (!empty($plan['route_id'])): ?><span class="invoice-pf-route">рейс #<?= (int)$plan['route_id'] ?></span><?php endif; ?>
+                                    </span>
+                                    <span><?= e($fmtMoney($plan['amount'] ?? '0')) ?></span>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <div class="invoice-pf-section">
+                                <div class="invoice-pf-head">Факт: <?= (int)($timeline['fact_count'] ?? 0) ?> <?= e($paymentWord((int)($timeline['fact_count'] ?? 0))) ?> · <?= e($fmtMoney($timeline['paid_total'] ?? '0')) ?></div>
+                                <?php if (empty($timeline['facts'])): ?>
+                                    <div class="invoice-pf-empty">Оплат пока нет.</div>
+                                <?php else: ?>
+                                    <?php foreach ($timeline['facts'] as $fact): ?>
+                                    <div class="invoice-pf-line"><span><?= e(($fact['actual_date'] ?? null) ? $fmtDate($fact['actual_date']) : 'дата не определена') ?></span><span><?= e($fmtMoney($fact['amount'] ?? '0')) ?></span></div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="invoice-pf-section invoice-pf-outcome">
+                                <div>Итого: оплачено <?= e($fmtMoney($timeline['paid_total'] ?? '0')) ?><?php if ((float)($timeline['remaining_total'] ?? 0) > 0): ?> <span class="invoice-pf-balance">· осталось <?= e($fmtMoney($timeline['remaining_total'])) ?></span><?php endif; ?></div>
+                                <?php if (!empty($timeline['settlement_parts'])): ?>
+                                    <?php foreach ($timeline['settlement_parts'] as $part): $delay = $delayLabel(isset($part['delay_days']) ? (int)$part['delay_days'] : null); ?>
+                                    <div class="invoice-pf-line"><span><?= e($fmtMoney($part['amount'] ?? '0')) ?></span><span class="invoice-pf-delay <?= e($delay['class']) ?>"><?= e($delay['text']) ?></span></div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                                <?php if ((float)($timeline['late_paid_total'] ?? 0) > 0): ?>
+                                <div class="invoice-pf-line"><span>С просрочкой</span><span class="invoice-pf-delay is-late"><?= e($fmtMoney($timeline['late_paid_total'])) ?> · до <?= (int)$timeline['max_delay_days'] ?> дн.</span></div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                        </div>
+                    </td>
                     <td><span class="<?= e(FinanceInvoiceService::statusBadgeClass($displayStatus)) ?>"><span class="dot"></span><?= e(FinanceInvoiceService::statusLabel($displayStatus)) ?></span></td>
                 </tr>
             <?php endforeach; ?>
