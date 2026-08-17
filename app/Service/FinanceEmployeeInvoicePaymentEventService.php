@@ -178,9 +178,9 @@ final class FinanceEmployeeInvoicePaymentEventService
         $stmt=$pdo->prepare("SELECT p.*,i.status AS invoice_status
             FROM finance_employee_invoice_payments p
             LEFT JOIN finance_invoices i ON i.id=p.invoice_id
-            WHERE p.employee_identity_type=? AND p.employee_identity_id=?
+            WHERE p.employee_identity_type=:employee_type AND p.employee_identity_id=:employee_id
             ORDER BY p.operation_date DESC,p.id DESC LIMIT :limit");
-        $stmt->bindValue(1,$type);$stmt->bindValue(2,$id,PDO::PARAM_INT);$stmt->bindValue(':limit',$limit,PDO::PARAM_INT);$stmt->execute();
+        $stmt->bindValue(':employee_type',$type);$stmt->bindValue(':employee_id',$id,PDO::PARAM_INT);$stmt->bindValue(':limit',$limit,PDO::PARAM_INT);$stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
