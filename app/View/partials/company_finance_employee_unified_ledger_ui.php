@@ -136,6 +136,10 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
 .employee-report-table .employee-unified-comment{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
 .employee-report-table .employee-unified-comment-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .employee-report-table .employee-unified-comment-actions .btn{height:22px;min-height:22px;padding:0 7px;font-size:9px}
+.employee-report-table .employee-month-summary-row>td:first-child{display:table-cell!important;padding:0!important;min-height:0!important;background:var(--surface-form)}
+.employee-report-table .employee-month-summary-row .employee-month-head{margin:0;border-left:0;border-right:0;width:100%;box-sizing:border-box}
+.employee-report-table .employee-month-summary-row .employee-month-title{font-weight:700;font-size:12px}
+.employee-report-table .employee-month-summary-row .employee-month-stats{text-align:right;line-height:1.45}
 .employee-report-table th:last-child,.employee-report-table td:last-child{display:none}
 </style>
 <script>
@@ -154,8 +158,15 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
     }
 
     const tables=Array.from(report.querySelectorAll('.employee-report-table'));
+    const sections=tables.map(table=>{
+        const scroll=table.closest('.table-scroll');
+        const previous=scroll?scroll.previousElementSibling:null;
+        const monthHead=previous&&previous.classList.contains('employee-month-head')?previous:null;
+        return {table,scroll,monthHead,rows:Array.from(table.querySelectorAll('tbody tr'))};
+    });
     const rows=[];
-    tables.forEach(table=>{
+    sections.forEach(section=>{
+        const table=section.table;
         const headers=table.querySelectorAll('thead th');
         if(headers[1])headers[1].textContent='Тип платежа';
         if(headers[2])headers[2].textContent='Источник';
@@ -170,7 +181,7 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         if(cols[5])cols[5].style.width='105px';
         if(cols[6])cols[6].style.width='105px';
         if(cols[7])cols[7].style.display='none';
-        table.querySelectorAll('tbody tr').forEach(row=>rows.push(row));
+        section.rows.forEach(row=>rows.push(row));
     });
 
     /* Existing action nodes already have listeners bound by invoice_tools; move them, don't clone them. */
@@ -211,17 +222,30 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         if(cells[7])cells[7].style.display='none';
     });
 
-    /* The old view created one physical table per month. Merge them into one table. */
+    /* Merge the old per-month physical tables into one table, preserving each month's totals as an in-table divider row. */
     if(tables.length){
         const firstTable=tables[0];
         const firstBody=firstTable.querySelector('tbody');
-        tables.slice(1).forEach(table=>{
-            const body=table.querySelector('tbody');
-            if(firstBody&&body)Array.from(body.children).forEach(row=>firstBody.appendChild(row));
-            const scroll=table.closest('.table-scroll');
-            if(scroll)scroll.remove();else table.remove();
+        sections.forEach(section=>section.rows.forEach(row=>row.remove()));
+        sections.forEach((section,index)=>{
+            if(firstBody&&section.monthHead){
+                const summaryRow=document.createElement('tr');
+                summaryRow.className='employee-month-summary-row';
+                const summaryCell=document.createElement('td');
+                summaryCell.colSpan=7;
+                summaryCell.appendChild(section.monthHead);
+                const hiddenCell=document.createElement('td');
+                hiddenCell.className='employee-month-summary-spacer';
+                hiddenCell.setAttribute('aria-hidden','true');
+                summaryRow.appendChild(summaryCell);
+                summaryRow.appendChild(hiddenCell);
+                firstBody.appendChild(summaryRow);
+            }
+            if(firstBody)section.rows.forEach(row=>firstBody.appendChild(row));
+            if(index>0){
+                if(section.scroll)section.scroll.remove();else section.table.remove();
+            }
         });
-        report.querySelectorAll('.employee-month-head').forEach(el=>el.remove());
 
         /* The unified journal is content-sized; never let the generic table-card grid/footer track clip it. */
         const reportCard=firstTable.closest('.employee-report-card');
