@@ -1,0 +1,201 @@
+name: Maintenance Remove Obsolete ATI Test Expense
+
+on:
+  push:
+    branches:
+      - maintenance/remove-obsolete-ati-test-expense-20260817
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Configure isolated SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/maintenance_key"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/maintenance_key" "$HOME/.ssh/known_hosts"
+
+      - name: Verify exact deployed ERPv2 marker
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: efda4aa398afff40080d74d11ccdc346de4beaf1
+        shell: bash
+        run: |
+          set -euo pipefail
+          got="$(ssh -p "$PORT" -i "$HOME/.ssh/maintenance_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$got" = "$EXPECTED_SHA"
+          echo "DEPLOYED_SHA_CONFIRMED=$got"
+
+      - name: Fail-closed remove exactly one obsolete test fact
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$PORT" -i "$HOME/.ssh/maintenance_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cd /home/s/spugovxsim/planexp/public_html/erpv2 && /usr/bin/php8.5' <<'PHP'
+          <?php
+          declare(strict_types=1);
+
+          $root = getcwd();
+          if ($root === false || $root === '') {
+              throw new RuntimeException('Cannot resolve ERPv2 root');
+          }
+
+          require_once $root . '/app/Support/helpers.php';
+          require_once $root . '/app/Support/environment.php';
+          loadEnvFileNonOverwriting($root . '/.env');
+          $config = require $root . '/bootstrap/app.php';
+          require_once $root . '/app/Support/entrypoint_dependencies.php';
+
+          $central = (new \App\Core\Database($config['database']))->connection();
+          $companies = $central->query("SELECT * FROM companies WHERE status = 'active' ORDER BY id")
+              ->fetchAll(PDO::FETCH_ASSOC);
+
+          $where = "operation_date = :operation_date
+                    AND amount = :amount
+                    AND employee_name_snapshot = :employee_name
+                    AND counterparty_name = :counterparty
+                    AND cash_flow_center_name_snapshot = :cfu
+                    AND dds_category_name_snapshot = :dds
+                    AND linear_route_id IS NULL
+                    AND status = 'POSTED'";
+
+          $params = [
+              ':operation_date' => '2026-08-02',
+              ':amount' => '1100.00',
+              ':employee_name' => 'Гладких Карина Артуровна',
+              ':counterparty' => 'ATI',
+              ':cfu' => 'Программное обеспечение и сервисы',
+              ':dds' => 'Логистические сервисы и базы данных',
+          ];
+
+          $matches = [];
+          foreach ($companies as $company) {
+              $local = (new \App\Core\Database(companyDatabaseConfig($config, $company)))->connection();
+              $tableExists = $local->query(
+                  "SELECT COUNT(*) FROM information_schema.TABLES
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'finance_employee_personal_expenses'"
+              )->fetchColumn();
+              if ((int) $tableExists !== 1) {
+                  continue;
+              }
+
+              $stmt = $local->prepare(
+                  "SELECT id, operation_date, employee_identity_type, employee_identity_id,
+                          employee_name_snapshot, amount, currency,
+                          cash_flow_center_name_snapshot, dds_category_name_snapshot,
+                          linear_route_id, counterparty_name, purpose, comment, status, created_at
+                     FROM finance_employee_personal_expenses
+                    WHERE {$where}
+                    ORDER BY id"
+              );
+              $stmt->execute($params);
+              foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                  $matches[] = [
+                      'company_id' => (int) $company['id'],
+                      'row' => $row,
+                  ];
+              }
+          }
+
+          echo 'TOTAL_MATCHES_BEFORE=' . count($matches) . PHP_EOL;
+          foreach ($matches as $match) {
+              $row = $match['row'];
+              echo 'MATCH company_id=' . $match['company_id']
+                  . ' id=' . (int) $row['id']
+                  . ' date=' . $row['operation_date']
+                  . ' employee=' . $row['employee_name_snapshot']
+                  . ' amount=' . $row['amount']
+                  . ' counterparty=' . $row['counterparty_name']
+                  . ' purpose=' . str_replace(["\r", "\n"], ' ', (string) $row['purpose'])
+                  . PHP_EOL;
+          }
+
+          if (count($matches) !== 1) {
+              throw new RuntimeException('FAIL_CLOSED: expected exactly one obsolete ATI test expense, found ' . count($matches));
+          }
+
+          $targetCompanyId = (int) $matches[0]['company_id'];
+          $targetId = (int) $matches[0]['row']['id'];
+          $targetCompany = null;
+          foreach ($companies as $company) {
+              if ((int) $company['id'] === $targetCompanyId) {
+                  $targetCompany = $company;
+                  break;
+              }
+          }
+          if ($targetCompany === null) {
+              throw new RuntimeException('Target company disappeared from active company set');
+          }
+
+          $local = (new \App\Core\Database(companyDatabaseConfig($config, $targetCompany)))->connection();
+          $local->beginTransaction();
+          try {
+              $lock = $local->prepare(
+                  "SELECT id FROM finance_employee_personal_expenses
+                    WHERE id = :id AND {$where}
+                    FOR UPDATE"
+              );
+              $lockParams = $params;
+              $lockParams[':id'] = $targetId;
+              $lock->execute($lockParams);
+              $lockedIds = $lock->fetchAll(PDO::FETCH_COLUMN);
+              if (count($lockedIds) !== 1 || (int) $lockedIds[0] !== $targetId) {
+                  throw new RuntimeException('FAIL_CLOSED: target changed before deletion');
+              }
+
+              $delete = $local->prepare('DELETE FROM finance_employee_personal_expenses WHERE id = ?');
+              $delete->execute([$targetId]);
+              if ($delete->rowCount() !== 1) {
+                  throw new RuntimeException('FAIL_CLOSED: delete affected ' . $delete->rowCount() . ' rows');
+              }
+              $local->commit();
+          } catch (Throwable $e) {
+              if ($local->inTransaction()) {
+                  $local->rollBack();
+              }
+              throw $e;
+          }
+
+          $after = 0;
+          foreach ($companies as $company) {
+              $check = (new \App\Core\Database(companyDatabaseConfig($config, $company)))->connection();
+              $tableExists = $check->query(
+                  "SELECT COUNT(*) FROM information_schema.TABLES
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'finance_employee_personal_expenses'"
+              )->fetchColumn();
+              if ((int) $tableExists !== 1) {
+                  continue;
+              }
+              $stmt = $check->prepare("SELECT COUNT(*) FROM finance_employee_personal_expenses WHERE {$where}");
+              $stmt->execute($params);
+              $after += (int) $stmt->fetchColumn();
+          }
+
+          echo 'DELETED_COMPANY_ID=' . $targetCompanyId . PHP_EOL;
+          echo 'DELETED_ROW_ID=' . $targetId . PHP_EOL;
+          echo 'TOTAL_MATCHES_AFTER=' . $after . PHP_EOL;
+          if ($after !== 0) {
+              throw new RuntimeException('Post-delete verification failed: remaining matches=' . $after);
+          }
+          echo "OBSOLETE_ATI_TEST_EXPENSE_REMOVED_OK\n";
+          PHP
+
+      - name: Cleanup SSH material
+        if: always()
+        shell: bash
+        run: rm -f "$HOME/.ssh/maintenance_key"
