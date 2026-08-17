@@ -1,0 +1,59 @@
+name: Apply Employee Payments Placeholder Hotfix
+on:
+  push:
+    branches: [hotfix/employee-payments-mixed-placeholders-20260817]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[hotfix-applied]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix/employee-payments-mixed-placeholders-20260817
+      - name: Apply minimal PDO placeholder fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path('app/Service/FinanceEmployeeInvoicePaymentEventService.php'),
+              Path('app/Service/FinanceEmployeePersonalExpenseEventService.php'),
+          ]
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              old_where = 'WHERE p.employee_identity_type=? AND p.employee_identity_id=?' if 'InvoicePayment' in path.name else 'WHERE pe.employee_identity_type=? AND pe.employee_identity_id=?'
+              prefix = 'p' if 'InvoicePayment' in path.name else 'pe'
+              new_where = f'WHERE {prefix}.employee_identity_type=:employee_type AND {prefix}.employee_identity_id=:employee_id'
+              if text.count(old_where) != 1:
+                  raise SystemExit(f'{path}: expected exactly one mixed-placeholder WHERE, got {text.count(old_where)}')
+              text = text.replace(old_where, new_where, 1)
+              if 'InvoicePayment' in path.name:
+                  old_bind = "$stmt->bindValue(1,$type);$stmt->bindValue(2,$id,PDO::PARAM_INT);$stmt->bindValue(':limit',$limit,PDO::PARAM_INT);$stmt->execute();"
+                  new_bind = "$stmt->bindValue(':employee_type',$type);$stmt->bindValue(':employee_id',$id,PDO::PARAM_INT);$stmt->bindValue(':limit',$limit,PDO::PARAM_INT);$stmt->execute();"
+              else:
+                  old_bind = "        $stmt->bindValue(1, $type);\n        $stmt->bindValue(2, $id, PDO::PARAM_INT);\n        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);"
+                  new_bind = "        $stmt->bindValue(':employee_type', $type);\n        $stmt->bindValue(':employee_id', $id, PDO::PARAM_INT);\n        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);"
+              if text.count(old_bind) != 1:
+                  raise SystemExit(f'{path}: expected exactly one mixed-placeholder bind block, got {text.count(old_bind)}')
+              text = text.replace(old_bind, new_bind, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+          php -l app/Service/FinanceEmployeeInvoicePaymentEventService.php
+          php -l app/Service/FinanceEmployeePersonalExpenseEventService.php
+          if grep -nE 'employee_identity_type=\? AND .*employee_identity_id=\?' app/Service/FinanceEmployeeInvoicePaymentEventService.php app/Service/FinanceEmployeePersonalExpenseEventService.php; then
+            echo 'Mixed positional employee placeholders remain' >&2
+            exit 1
+          fi
+      - name: Commit hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'caymanlogistic-crypto'
+          git config user.email 'cayman.logistic@gmail.com'
+          git add app/Service/FinanceEmployeeInvoicePaymentEventService.php app/Service/FinanceEmployeePersonalExpenseEventService.php
+          git commit -m 'Fix employee payment PDO placeholders [hotfix-applied]'
+          git push origin HEAD:hotfix/employee-payments-mixed-placeholders-20260817
