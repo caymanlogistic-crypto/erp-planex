@@ -133,7 +133,10 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
 .employee-report-table tbody{display:table-row-group!important;height:auto!important;visibility:visible!important}
 .employee-report-table tbody tr{display:table-row!important;height:auto!important;visibility:visible!important}
 .employee-report-table tbody td{height:auto!important;min-height:30px!important;padding-top:7px!important;padding-bottom:7px!important}
-.employee-report-table .employee-unified-comment{white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
+/* User contract: date and payment type must always be fully visible. Responsive pressure is absorbed by Comment only. */
+.employee-report-table th:nth-child(1),.employee-report-table td:nth-child(1){white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+.employee-report-table th:nth-child(2),.employee-report-table td:nth-child(2){white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+.employee-report-table .employee-unified-comment{min-width:0!important;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
 .employee-report-table .employee-unified-comment-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px}
 .employee-report-table .employee-unified-comment-actions .btn{height:22px;min-height:22px;padding:0 7px;font-size:9px}
 .employee-report-table .employee-month-summary-row>td:first-child{display:table-cell!important;padding:0!important;min-height:0!important;background:var(--surface-form)}
@@ -173,8 +176,8 @@ $unifiedRowMetaJson = json_encode($unifiedRowMeta, JSON_UNESCAPED_UNICODE | JSON
         if(headers[3])headers[3].textContent='Комментарий';
         if(headers[7])headers[7].style.display='none';
         const cols=table.querySelectorAll('colgroup col');
-        if(cols[0])cols[0].style.width='82px';
-        if(cols[1])cols[1].style.width='142px';
+        if(cols[0])cols[0].style.width='90px';
+        if(cols[1])cols[1].style.width='190px';
         if(cols[2])cols[2].style.width='118px';
         if(cols[3])cols[3].style.width='auto';
         if(cols[4])cols[4].style.width='105px';
