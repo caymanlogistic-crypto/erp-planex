@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Database;
+use App\Service\FinanceInvoicePaymentTimelineService;
 use App\Service\FinanceInvoiceService;
 use App\Service\FinanceObligationService;
 
@@ -14,6 +15,7 @@ $company = null;
 $localPdo = null;
 $dbError = null;
 $invoices = [];
+$paymentTimelines = [];
 $invPage = 1;
 $invPerPage = 100;
 $invTotal = 0;
@@ -58,9 +60,11 @@ try {
         $invPages = $invResult['pages'];
 
         $deadlineSummary = [];
+        $ids = [];
         if ($invoices !== [] && FinanceObligationService::schemaReady($localPdo)) {
             $ids = array_values(array_filter(array_map(static fn(array $row): int => (int)($row['id'] ?? 0), $invoices)));
             if ($ids !== []) {
+                $paymentTimelines = FinanceInvoicePaymentTimelineService::buildForInvoices($localPdo, $ids);
                 $placeholders = implode(',', array_fill(0, count($ids), '?'));
                 $summaryStmt = $localPdo->prepare(
                     "SELECT l.invoice_id,
@@ -82,7 +86,8 @@ try {
         }
 
         foreach ($invoices as &$invoice) {
-            $summary = $deadlineSummary[(int)$invoice['id']] ?? null;
+            $invoiceId = (int)($invoice['id'] ?? 0);
+            $summary = $deadlineSummary[$invoiceId] ?? null;
             $obligationCount = (int)($summary['obligation_count'] ?? 0);
             $resolvedCount = (int)($summary['resolved_count'] ?? 0);
             if ($obligationCount === 0) {
@@ -94,6 +99,8 @@ try {
             } else {
                 $invoice['display_due_text'] = 'Несколько сроков';
             }
+
+            $invoice['payment_timeline'] = $paymentTimelines[$invoiceId] ?? null;
 
             $status = (string)($invoice['status'] ?? '');
             $amount = (float)($invoice['amount'] ?? 0);
