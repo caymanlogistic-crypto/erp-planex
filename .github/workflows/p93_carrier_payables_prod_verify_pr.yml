@@ -37,6 +37,32 @@ jobs:
           test "$EXPECTED_SHA" = '36f73fcf0940717f40802be70d3fbbb789f0e6f3'
           test "$got" = "$EXPECTED_SHA"
 
+      - name: Diagnose deployed files and P07 copy strategy
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$PORT" -i "$HOME/.ssh/p93_verify" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp
+          LIVE="$ROOT/public_html/erpv2"
+          echo '--- deployed file presence ---'
+          for f in \
+            app/Service/FinancePayablesReportService.php \
+            app/Service/FinanceInvoiceSettlementHistoryService.php \
+            app/Http/Controllers/Company/InvoiceActions/payables.php \
+            app/Http/Controllers/Company/InvoiceActions/pay_cash_submit.php \
+            app/View/pages/company_finance_payables.php \
+            app/View/pages/company_finance_invoices.php; do
+              if [ -f "$LIVE/$f" ]; then printf 'PRESENT %s %s\n' "$f" "$(sha256sum "$LIVE/$f" | awk '{print $1}')"; else printf 'MISSING %s\n' "$f"; fi
+          done
+          echo '--- P07 deploy engine ---'
+          sed -n '1,260p' "$ROOT/deploy/P07_deploy_erpv2.sh"
+          REMOTE
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
