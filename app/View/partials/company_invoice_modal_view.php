@@ -10,6 +10,8 @@ $fmtDate = static function (mixed $value): string {
 };
 $canEdit = $canEdit ?? false;
 $canDelete = $canDelete ?? false;
+$canPayCarrier = $canPayCarrier ?? false;
+$settlements = $settlements ?? [];
 
 $effectiveStatus = (string)($invoice['status'] ?? '');
 if ($effectiveStatus === 'draft') {
@@ -49,6 +51,9 @@ if (($links ?? []) === []) {
 <?php if ($error): ?>
 <div class="form-alert alert-error"><?= e($error) ?></div>
 <?php elseif ($invoice): ?>
+<style>
+.invoice-pay-channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.invoice-pay-channel{border:1px solid var(--border,#d3cec3);background:var(--surface-2,#f4f1eb);padding:9px 10px;min-height:74px}.invoice-pay-channel strong{display:block;margin-bottom:3px}.invoice-pay-channel span{display:block;color:var(--muted,#746f66);font-size:11px;line-height:1.35}.invoice-pay-channel .btn{margin-top:7px}.invoice-settlement-list{border:1px solid var(--border,#d3cec3);background:var(--surface,#fff)}.invoice-settlement-row{display:grid;grid-template-columns:110px 1fr 145px;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border,#e3dfd6);align-items:center}.invoice-settlement-row:last-child{border-bottom:0}.invoice-settlement-source strong{display:block}.invoice-settlement-source span{display:block;color:var(--muted,#746f66);font-size:11px}.invoice-settlement-amount{text-align:right;font-weight:700;white-space:nowrap}.invoice-cash-pay-form{display:none;margin-top:8px;padding:10px;border:1px solid var(--border,#d3cec3);background:var(--surface,#fff)}.invoice-cash-pay-form.is-open{display:block}.invoice-cash-pay-grid{display:grid;grid-template-columns:1fr 160px;gap:8px}.invoice-cash-pay-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}@media(max-width:760px){.invoice-pay-channels{grid-template-columns:1fr}.invoice-settlement-row{grid-template-columns:90px 1fr}.invoice-settlement-amount{grid-column:2}.invoice-cash-pay-grid{grid-template-columns:1fr}}
+</style>
 <div class="driver-modal-body">
     <h3 class="driver-view-name">Счёт №<?= e($invoice['number'] ?? '') ?></h3>
     <div class="driver-view-card">
@@ -80,6 +85,40 @@ if (($links ?? []) === []) {
         </div>
     </div>
 
+    <div class="section-title mt-section"><span>Фактические оплаты</span></div>
+    <?php if (!$settlements): ?>
+        <div class="empty-state compact mt-half"><p class="empty-desc">Оплат по счёту пока нет.</p></div>
+    <?php else: ?>
+        <div class="invoice-settlement-list mt-half">
+            <?php foreach ($settlements as $payment): ?>
+            <div class="invoice-settlement-row">
+                <div><?= e($fmtDate($payment['actual_date'] ?? '')) ?></div>
+                <div class="invoice-settlement-source"><strong><?= e((string)($payment['channel'] ?? 'Финансовая операция')) ?></strong><?php if (!empty($payment['channel_detail'])): ?><span><?= e((string)$payment['channel_detail']) ?></span><?php endif; ?></div>
+                <div class="invoice-settlement-amount"><?= e(FinanceInvoiceService::formatAmount($payment['amount'] ?? null)) ?> ₽</div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($canPayCarrier): ?>
+    <div class="section-title mt-section"><span>Оплатить входящий счёт</span></div>
+    <div class="invoice-pay-channels">
+        <div class="invoice-pay-channel"><strong>Расчётный счёт</strong><span>Оплата фиксируется по исходящему платежу из банковской выписки и распределяется на этот счёт.</span><a class="btn btn-secondary btn-sm" href="<?= e(app_url('/company/finance/bank-accounts')) ?>">Открыть выписки</a></div>
+        <div class="invoice-pay-channel"><strong>Основная касса</strong><span>Наличные будут списаны из Основной кассы, а счёт и обязательство закроются на указанную сумму.</span><button type="button" class="btn btn-secondary btn-sm" data-invoice-cash-pay-toggle>Оплатить из кассы</button></div>
+        <div class="invoice-pay-channel"><strong>Сотрудник</strong><span>Если счёт оплатил сотрудник из находящихся у него денег, используйте действие «Оплатил счёт».</span><a class="btn btn-secondary btn-sm" href="<?= e(app_url('/company/finance/employee-payments')) ?>">К сотрудникам</a></div>
+    </div>
+    <form class="invoice-cash-pay-form" data-invoice-cash-pay-form method="post" action="<?= e(app_url('/company/finance/invoices/' . (int)$invoice['id'] . '/pay-cash')) ?>">
+        <?= csrfField() ?>
+        <div class="invoice-cash-pay-grid">
+            <div class="field"><label class="field-label">Сумма оплаты <span class="field-required">*</span></label><input class="field-input" name="amount" inputmode="decimal" value="<?= e((string)($invoice['remaining_amount'] ?? '')) ?>" required></div>
+            <div class="field"><label class="field-label">Дата <span class="field-required">*</span></label><input class="field-input" type="date" name="operation_date" value="<?= e(date('Y-m-d')) ?>" required></div>
+        </div>
+        <div class="field"><label class="field-label">Комментарий</label><input class="field-input" name="comment" placeholder="Необязательно"></div>
+        <div class="form-alert alert-info">Будет создан один фактический расход из Основной кассы и allocation к этому входящему счёту. Сумма не может превышать остаток счёта или доступный остаток кассы.</div>
+        <div class="invoice-cash-pay-actions"><button type="button" class="btn btn-ghost" data-invoice-cash-pay-cancel>Отмена</button><button type="submit" class="btn btn-primary">Провести оплату</button></div>
+    </form>
+    <?php endif; ?>
+
     <div class="section-title mt-section"><span>История изменений</span><button type="button" class="btn btn-ghost btn-sm" data-invoice-history-btn data-invoice-id="<?= (int)($invoice['id'] ?? 0) ?>">История</button></div>
     <div id="invoice-history-container" class="mt-half"><div class="empty-state compact"><p class="empty-desc">Нажмите «История» для загрузки.</p></div></div>
 </div>
@@ -91,6 +130,11 @@ if (($links ?? []) === []) {
 (function() {
     var modal = document.getElementById('invoice-view-modal');
     if (!modal) return;
+    var cashToggle = modal.querySelector('[data-invoice-cash-pay-toggle]');
+    var cashForm = modal.querySelector('[data-invoice-cash-pay-form]');
+    var cashCancel = modal.querySelector('[data-invoice-cash-pay-cancel]');
+    if (cashToggle && cashForm) cashToggle.addEventListener('click', function(){ cashForm.classList.add('is-open'); cashToggle.disabled=true; });
+    if (cashCancel && cashForm) cashCancel.addEventListener('click', function(){ cashForm.classList.remove('is-open'); if(cashToggle) cashToggle.disabled=false; });
     var editBtn = modal.querySelector('[data-invoice-edit-btn]');
     if (editBtn) editBtn.addEventListener('click', function() {
         var id = <?= (int)($invoice['id'] ?? 0) ?>;
