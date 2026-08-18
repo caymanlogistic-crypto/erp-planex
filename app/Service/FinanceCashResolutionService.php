@@ -47,6 +47,9 @@ final class FinanceCashResolutionService
                  ON fcr.source_finance_operation_id = fo.id
           LEFT JOIN ({$legacyResolutionSql}) legacy_resolution
                  ON legacy_resolution.source_finance_operation_id = fo.id
+          LEFT JOIN finance_employee_invoice_payments employee_invoice_payment
+                 ON employee_invoice_payment.receipt_finance_operation_id = fo.id
+                AND employee_invoice_payment.status = 'POSTED'
               WHERE fo.money_account_id = ?
                 AND fo.status = 'POSTED'
                 AND (
@@ -54,7 +57,8 @@ final class FinanceCashResolutionService
                      OR (fo.operation_type = 'TRANSFER' AND fo.transfer_direction = 'in')
                 )
                 AND fcr.id IS NULL
-                AND legacy_resolution.source_finance_operation_id IS NULL"
+                AND legacy_resolution.source_finance_operation_id IS NULL
+                AND employee_invoice_payment.id IS NULL"
         );
         $stmt->execute([(int)$account['id']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -187,10 +191,14 @@ SQL;
 
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $stmt = $localPdo->prepare(
-                "SELECT fo.*, fcr.id AS resolution_id
+                "SELECT fo.*, fcr.id AS resolution_id,
+                        employee_invoice_payment.id AS employee_invoice_payment_id
                    FROM finance_operations fo
               LEFT JOIN finance_cash_resolutions fcr
                      ON fcr.source_finance_operation_id = fo.id
+              LEFT JOIN finance_employee_invoice_payments employee_invoice_payment
+                     ON employee_invoice_payment.receipt_finance_operation_id = fo.id
+                    AND employee_invoice_payment.status = 'POSTED'
                   WHERE fo.id IN ({$placeholders})
                   ORDER BY fo.id ASC
                     FOR UPDATE"
@@ -209,7 +217,7 @@ SQL;
                 if (($source['status'] ?? '') !== 'POSTED' || !self::isIncomingSource($source)) {
                     throw new \RuntimeException('Позиция #' . (int)$source['id'] . ' не является неразнесённым поступлением.');
                 }
-                if (!empty($source['resolution_id'])) {
+                if (!empty($source['resolution_id']) || !empty($source['employee_invoice_payment_id'])) {
                     throw new \RuntimeException('Позиция #' . (int)$source['id'] . ' уже разнесена. Обновите страницу.');
                 }
                 $totalCents += self::toCents((string)($source['amount'] ?? '0'));
