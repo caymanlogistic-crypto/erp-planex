@@ -1,0 +1,54 @@
+name: P48 Finance Cash Inventory
+on:
+  push:
+    branches: [audit/finance-cash-removal-20260818]
+    paths:
+      - '.github/p48/**'
+      - '.github/workflows/p48_finance_cash_inventory.yml'
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate read-only inventory script
+        run: |
+          set -euo pipefail
+          php -l .github/p48/P48_finance_cash_inventory.php
+          ! grep -Eiq '\b(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|TRUNCATE|CREATE)[[:space:]]' .github/p48/P48_finance_cash_inventory.php
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p48"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p48" "$HOME/.ssh/known_hosts"
+      - name: Read-only production inventory
+        env:
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 499194c497eeea999ad1633ebefcc3a5e60a0db4
+        run: |
+          set -euo pipefail
+          remote="/tmp/P48_finance_cash_inventory_${GITHUB_RUN_ID}.php"
+          marker="$(ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$EXPECTED_SHA"
+          scp -P "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes .github/p48/P48_finance_cash_inventory.php "$USER@$HOST:$remote"
+          ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "php '$remote'; rm -f '$remote'" 2>&1 | tee P48_FINANCE_CASH_INVENTORY.txt
+          grep -q 'P48_FINANCE_CASH_INVENTORY_OK' P48_FINANCE_CASH_INVENTORY.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P48_finance_cash_inventory
+          path: P48_FINANCE_CASH_INVENTORY.txt
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p48"
