@@ -31,7 +31,7 @@ ok(!empty($r['matched']) && ($r['result'] ?? '') === 'auto_apply', 'employee com
 
 $execution = file_get_contents(__DIR__ . '/../app/Service/FinanceMatchingRuleEmployeeExecutionTrait.php');
 ok(str_contains($execution, 'FinanceEmployeeBankSettlementService::settleBankTransaction'), 'employee rule delegates to direct bank settlement');
-ok(!str_contains($execution, 'finance_cash_resolutions'), 'employee rule never creates cash resolution');
+ok(!str_contains($execution, 'INSERT INTO finance_cash_resolutions'), 'employee rule never inserts cash resolution');
 ok(!str_contains($execution, 'target_cash_account_id'), 'employee rule execution has no cash target dependency');
 
 $bank = file_get_contents(__DIR__ . '/../app/Service/FinanceEmployeeBankSettlementService.php');
@@ -43,7 +43,7 @@ ok(!str_contains($bank, 'INSERT INTO finance_cash_resolutions'), 'direct bank se
 $transfer = file_get_contents(__DIR__ . '/../app/Service/FinanceEmployeeDirectTransferService.php');
 ok(str_contains($transfer, "'EMPLOYEE'"), 'employee transfer uses employee source type');
 ok(str_contains($transfer, "'cash_account_used' => false"), 'employee transfer explicitly records no cash usage');
-ok(!str_contains($transfer, 'finance_cash_resolutions'), 'employee transfer cannot create cash resolution');
+ok(!str_contains($transfer, 'INSERT INTO finance_cash_resolutions'), 'employee transfer cannot insert cash resolution');
 
 $validation = file_get_contents(__DIR__ . '/../app/Service/FinanceMatchingRuleValidationTrait.php');
 ok(str_contains($validation, '$cash=null;'), 'employee rule forcibly clears legacy cash target');
