@@ -18,9 +18,6 @@ $personalExpenseController = new \App\Http\Controllers\Company\FinanceEmployeePe
 
 $router->get('/company/finance/employee-payments', [$controller, 'index']);
 
-// The old generic form created a CASH movement. Keep the URLs only as a safe
-// compatibility redirect/rejection; all new employee money events have an
-// explicit direct route below.
 $router->get('/company/finance/employee-payments/create', static function (): void {
     requireRole(['company_owner']);
     $_SESSION['employee_payments_success'] = 'Выберите прямую операцию сотрудника: передача, личный расход или оплата счёта.';
@@ -36,9 +33,6 @@ $router->post('/company/finance/employee-payments/create', static function (): v
 $router->post('/company/finance/employee-payments/transfer', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_submit.php');
 });
-
-// Historical CASH transfer chains are immutable. This prevents a correction UI
-// from silently rewriting preserved history after CASH retirement.
 $router->post('/company/finance/employee-payments/transfer/update', static function (): void {
     requireRole(['company_owner']);
     verifyCsrfRequest();
@@ -58,7 +52,12 @@ $router->post('/company/finance/employee-payments/movements/{id}/reassign', [$co
 $router->post('/company/finance/employee-payments/bank-link', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/bank_link.php');
 });
-$router->post('/company/finance/employee-payments/bank-unlink', [$controller, 'bankUnlink']);
+$router->post('/company/finance/employee-payments/bank-unlink', static function (): void {
+    requireRole(['company_owner']);
+    verifyCsrfRequest();
+    $_SESSION['bank_finance_error'] = 'Прямой перевод банк ↔ сотрудник нельзя частично отвязать. Для корректировки используйте компенсирующую операцию.';
+    redirect_to('/company/finance/bank-accounts');
+});
 
 $router->post('/company/finance/employee-payments/invoice-payment/create', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/invoice_payment_create.php');
