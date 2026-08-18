@@ -5,9 +5,11 @@ declare(strict_types=1);
 require __DIR__.'/finance_obligations_behavioral_test.php';
 require_once __DIR__.'/../app/Service/FinanceAllocationService.php';
 require_once __DIR__.'/../app/Service/FinanceBankInvoiceSettlementService.php';
+require_once __DIR__.'/../app/Service/FinanceCarrierBankAutoSettlementService.php';
 require_once __DIR__.'/../app/Service/FinanceSettlementStateService.php';
 
 use App\Service\FinanceBankInvoiceSettlementService;
+use App\Service\FinanceCarrierBankAutoSettlementService;
 use App\Service\FinanceObligationService;
 use App\Service\FinanceSettlementStateService;
 
@@ -31,6 +33,7 @@ $pdo->exec("CREATE TABLE bank_transactions(
     counterparty_name VARCHAR(500) NULL,
     counterparty_inn VARCHAR(20) NULL,
     purpose TEXT NULL,
+    is_internal_transfer TINYINT(1) NOT NULL DEFAULT 0,
     classification_status VARCHAR(20) NOT NULL DEFAULT 'UNALLOCATED',
     classification_rule_id INT UNSIGNED NULL,
     classification_locked TINYINT(1) NOT NULL DEFAULT 0,
@@ -87,6 +90,38 @@ FinanceObligationService::syncLinearRoute($pdo,20);
 ok((string)$pdo->query("SELECT status FROM finance_obligations WHERE id={$carrierOb}")->fetchColumn()==='paid','carrier obligation becomes paid');
 FinanceSettlementStateService::syncPersistedStatuses($pdo);
 ok((string)$pdo->query("SELECT classification_status FROM bank_transactions WHERE id={$carrierTx}")->fetchColumn()==='MANUAL','manual carrier settlement persists bank status');
+
+// Payable-side automatic regression: one 145 payment references a 195 incoming
+// invoice with two obligations (58.5 + 136.5). It must allocate 58.5 + 86.5,
+// leave 50 outstanding, and mark the bank transaction AUTO after state sync.
+$pdo->exec("INSERT INTO linear_routes VALUES(21,1,2,'2026-12-10','2026-12-11','2026-12-10','2026-12-11',NULL,NULL)");
+$pdo->exec("INSERT INTO linear_route_payments(linear_route_id,party_role,sort_order,amount,condition_type,days_count,days_kind,side,created_by_role,updated_by_role) VALUES(21,'carrier',1,58.50,'end_day',0,'calendar','expense','company_owner','company_owner'),(21,'carrier',2,136.50,'end_day',2,'calendar','expense','company_owner','company_owner')");
+FinanceObligationService::syncLinearRoute($pdo,21);
+$carrierObs=$pdo->query("SELECT id FROM finance_obligations WHERE source_parent_id=21 AND direction='PAYABLE' AND cancelled_at IS NULL ORDER BY due_date,id")->fetchAll(PDO::FETCH_COLUMN);
+ok(count($carrierObs)===2,'two payable obligations created for partial auto test');
+$pdo->exec("INSERT INTO finance_invoices(direction,number,invoice_date,counterparty_entity_type,counterparty_entity_id,counterparty_name,counterparty_inn,amount,status) VALUES('INCOMING','№26/3947','2026-12-10','contractor',2,'Перевозчик Б','7702000002',195,'received')");
+$partialCarrierInvoice=(int)$pdo->lastInsertId();
+FinanceObligationService::replaceInvoiceLinks($pdo,$partialCarrierInvoice,[
+    ['obligation_id'=>(int)$carrierObs[0],'amount'=>'58.50'],
+    ['obligation_id'=>(int)$carrierObs[1],'amount'=>'136.50'],
+],['user_id'=>7,'role_code'=>'company_owner']);
+$pdo->exec("INSERT INTO bank_transactions(operation_date,document_number,counterparty_name,counterparty_inn,purpose) VALUES('2026-12-12','PAY-PARTIAL-CARRIER','Перевозчик Б','7702000002','Частичная оплата по счету №26/3947 за перевозку')");
+$partialCarrierTx=(int)$pdo->lastInsertId();
+$pdo->exec("INSERT INTO finance_operations(operation_date,operation_type,counterparty_inn,purpose,amount,status,source,bank_transaction_id) VALUES('2026-12-12','EXPENSE','7702000002','Частичная оплата по счету №26/3947 за перевозку',145,'POSTED','BANK_STATEMENT',{$partialCarrierTx})");
+$partialCarrierOp=(int)$pdo->lastInsertId();
+$autoCarrier=FinanceCarrierBankAutoSettlementService::autoAllocateOutgoingCarrierPayments($pdo,['user_id'=>7,'role_code'=>'company_owner']);
+ok($autoCarrier['operations']===1,'one carrier bank payment auto matched');
+ok($autoCarrier['allocations']===2,'partial carrier bank payment split across two obligations');
+ok($autoCarrier['amount']==='145.00','partial carrier bank amount allocated exactly');
+$parts=$pdo->query("SELECT amount FROM finance_operation_allocations WHERE operation_id={$partialCarrierOp} AND invoice_id={$partialCarrierInvoice} AND cancelled_at IS NULL ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+ok($parts===['58.50','86.50'],'145 payment allocated 58.50 + 86.50');
+ok((string)$pdo->query("SELECT paid_amount FROM finance_invoices WHERE id={$partialCarrierInvoice}")->fetchColumn()==='145.00','incoming invoice paid amount becomes 145');
+ok((string)$pdo->query("SELECT status FROM finance_invoices WHERE id={$partialCarrierInvoice}")->fetchColumn()==='partially_paid','incoming invoice becomes partially paid');
+FinanceObligationService::syncLinearRoute($pdo,21);
+ok((string)$pdo->query("SELECT paid_amount FROM finance_obligations WHERE id=".(int)$carrierObs[0])->fetchColumn()==='58.50','first payable obligation closed by partial payment');
+ok((string)$pdo->query("SELECT paid_amount FROM finance_obligations WHERE id=".(int)$carrierObs[1])->fetchColumn()==='86.50','second payable obligation partially paid');
+FinanceSettlementStateService::syncPersistedStatuses($pdo);
+ok((string)$pdo->query("SELECT classification_status FROM bank_transactions WHERE id={$partialCarrierTx}")->fetchColumn()==='AUTO','fully allocated carrier bank transaction becomes AUTO');
 
 $pdo->exec("INSERT INTO finance_invoices(direction,number,invoice_date,counterparty_entity_type,counterparty_entity_id,counterparty_name,counterparty_inn,amount,status) VALUES('OUTGOING','AUTO-STALE-1','2026-12-06','client',1,'Клиент А','7701000001',90,'issued')");
 $autoInvoice=(int)$pdo->lastInsertId();
