@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Database;
+use App\Service\FinanceEmployeeBankSettlementService;
 use App\Service\FinanceEmployeePaymentService;
 
 requireRole(['company_owner']);
@@ -25,11 +26,16 @@ try {
         $companyId,
         trim((string)($_POST['employee_ref'] ?? ''))
     );
-    $result = FinanceEmployeePaymentService::linkBankTransaction(
+    FinanceEmployeeBankSettlementService::settleBankTransaction(
         $pdo,
-        $_POST,
-        ['id' => $_SESSION['user_id'] ?? 0, 'role' => $_SESSION['role_code'] ?? 'company_owner'],
-        $employee
+        (int)($_POST['bank_transaction_id'] ?? 0),
+        $employee,
+        [
+            'id' => (int)($_SESSION['user_id'] ?? 0),
+            'role' => (string)($_SESSION['role_code'] ?? 'company_owner'),
+            'user_id' => (int)($_SESSION['user_id'] ?? 0),
+            'role_code' => (string)($_SESSION['role_code'] ?? 'company_owner'),
+        ]
     );
     $_SESSION['bank_finance_success'] = 'Банковская операция напрямую связана с сотрудником. Техническая касса не использована.';
     $_SESSION['employee_payments_success'] = 'Банковская операция напрямую отражена у сотрудника.';
