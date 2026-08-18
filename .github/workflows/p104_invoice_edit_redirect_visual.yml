@@ -1,0 +1,87 @@
+name: P104 Invoice Edit Redirect Visual PR
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for exact controlled deploy marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 168f3857c507ba294364de62b46ee20b43bb6ce1
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p104"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p104" "$HOME/.ssh/known_hosts"
+          for i in $(seq 1 90); do
+            got="$(ssh -p "$PORT" -i "$HOME/.ssh/p104" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt 2>/dev/null || true')"
+            echo "attempt=$i expected=$EXPECTED_SHA deployed=$got"
+            if [ "$got" = "$EXPECTED_SHA" ]; then exit 0; fi
+            sleep 10
+          done
+          echo 'Exact deployed marker was not reached' >&2
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p104_key
+            chmod 600 /tmp/p104_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p104_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+
+      - name: Read-only invoice edit visual acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p104/P104_invoice_edit_redirect_visual.js 2>&1 | tee P104_RUNTIME.txt
+          grep -q 'P104_INVOICE_EDIT_REDIRECT_VISUAL_OK' P104_RUNTIME.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P104_invoice_edit_redirect_168f3857c507ba294364de62b46ee20b43bb6ce1
+          path: |
+            P104_RUNTIME.txt
+            P104_VISUAL.json
+            P104_screens/*.png
+          if-no-files-found: warn
