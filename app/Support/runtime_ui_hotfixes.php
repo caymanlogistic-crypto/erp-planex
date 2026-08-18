@@ -45,16 +45,51 @@ if (PHP_SAPI !== 'cli') {
         // The old menu slot is now the unified financial-structure editor.
         $html = str_replace('<span class="nav-label">Статьи ДДС</span>', '<span class="nav-label">Финансовая структура</span>', $html);
 
-        // Employee settlements are a first-class finance workspace. Inject next
-        // to Cash without duplicating the large legacy layout template.
-        if (str_contains($html, '<span class="nav-label">Касса</span>') && !str_contains($html, '<span class="nav-label">Выплаты сотрудникам</span>')) {
-            $employeeActive = str_starts_with(current_app_path(), '/company/finance/employee-payments') ? ' is-active' : '';
-            $employeeHref = e(app_url('/company/finance/employee-payments'));
-            $employeeItem = '<a class="nav-item' . $employeeActive . '" href="' . $employeeHref . '">' .
-                '<svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5C1.5 10.8 3.5 8.8 5.5 8.8C7.5 8.8 9.5 10.8 9.5 13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 5.5H14M12 3.5V7.5M10 11.5H14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' .
-                '<span class="nav-label">Выплаты сотрудникам</span></a>';
-            $html = preg_replace('~(<a class="nav-item[^"]*" href="[^"]*/company/finance/cash">)~', $employeeItem . '$1', $html, 1) ?? $html;
+        // Employee money is the only user-facing owner of physical company funds.
+        // Replace the retired legacy money-account navigation slot rather than
+        // exposing a second financial subsystem to the user.
+        $employeeActive = str_starts_with(current_app_path(), '/company/finance/employee-payments') ? ' is-active' : '';
+        $employeeHref = e(app_url('/company/finance/employee-payments'));
+        $employeeItem = '<a class="nav-item' . $employeeActive . '" href="' . $employeeHref . '">' .
+            '<svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5C1.5 10.8 3.5 8.8 5.5 8.8C7.5 8.8 9.5 10.8 9.5 13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10 5.5H14M12 3.5V7.5M10 11.5H14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' .
+            '<span class="nav-label">Взаиморасчёты с сотрудниками</span></a>';
+
+        if (str_contains($html, '/company/finance/cash')) {
+            if (!str_contains($html, '/company/finance/employee-payments')) {
+                $html = preg_replace(
+                    '~<a class="nav-item[^"]*" href="[^"]*/company/finance/cash">.*?</a>~s',
+                    $employeeItem,
+                    $html,
+                    1
+                ) ?? $html;
+            } else {
+                $html = preg_replace(
+                    '~<a class="nav-item[^"]*" href="[^"]*/company/finance/cash">.*?</a>~s',
+                    '',
+                    $html,
+                    1
+                ) ?? $html;
+            }
         }
+
+        // Normalize the employee-money workspace to the new business model.
+        // Historical database text is intentionally not rewritten: audit facts
+        // remain immutable, while the UI describes their current economic meaning.
+        $financeVocabulary = [
+            'Выплаты сотрудникам' => 'Взаиморасчёты с сотрудниками',
+            'Лицевой счёт сотрудника: все выплаты из кассы и возвраты компании. Прямые выплаты с расчётного счёта не используются.' => 'Движение средств сотрудника: получено от клиентов, оплачено за компанию и передано другим сотрудникам.',
+            'Касса выведена из рабочего контура. Исторические операции сохранены в финансовой истории.' => '',
+            'Выдача из кассы' => 'Получено сотрудником',
+            'Возврат в кассу' => 'Передано сотрудником',
+            'Разнесение технической кассы.' => 'Внутренний расчёт по операции.',
+            'Разнесение технической кассы' => 'Внутренний расчёт по операции',
+            'Технический перевод кассы' => 'Внутренний перевод средств',
+            'техническую «Основная касса»' => 'внутренний расчёт',
+            'технической «Основная касса»' => 'внутреннего расчёта',
+            'Основная касса' => 'Средства компании',
+            '>Касса<' => '>Средства компании<',
+        ];
+        $html = str_replace(array_keys($financeVocabulary), array_values($financeVocabulary), $html);
 
         // Low-frequency company utilities live in a separate MISC section rather
         // than in the operational logistics directories.
@@ -118,7 +153,7 @@ if (PHP_SAPI !== 'cli') {
     });
   }
   fix(document);
-  new MutationObserver(function(records){records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1)fix(node);});});}).observe(document.body,{childList:true,subtree:true});
+  new MutationObserver(function(records){records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1)fix(node);});}).observe(document.body,{childList:true,subtree:true});
 }());
 </script>
 HTML;
