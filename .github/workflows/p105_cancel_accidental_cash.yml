@@ -64,26 +64,11 @@ jobs:
           echo "::add-mask::$cred"
           echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
 
-      - name: Cancel exact accidental cash operation and verify
+      - name: Finalize exact accidental cash cancellation and verify
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('.github/p105/P105_cancel_accidental_cash_v2.js')
-          s = p.read_text(encoding='utf-8')
-          old_reason = "if (await reason.count()) await reason.fill('Отмена распределения ошибочной кассовой операции по указанию владельца 18.08.2026.');"
-          new_reason = "if (await reason.count()) await reason.evaluate((el, value) => { el.value = value; }, 'Отмена распределения ошибочной кассовой операции по указанию владельца 18.08.2026.');"
-          old_button = "const cancelButton = card.locator(`[data-operation-cancel-btn][data-operation-id=\"${opId}\"]`);"
-          new_button = "const cancelButton = page.locator(`#operation-view-modal.is-open [data-operation-cancel-btn][data-operation-id=\"${opId}\"]`);"
-          if old_reason not in s:
-              raise SystemExit('expected hidden-reason line missing')
-          if old_button not in s:
-              raise SystemExit('expected cancel-button line missing')
-          s = s.replace(old_reason, new_reason).replace(old_button, new_button)
-          p.write_text(s, encoding='utf-8')
-          PY
-          node .github/p105/P105_cancel_accidental_cash_v2.js 2>&1 | tee P105_RUNTIME.txt
+          node .github/p105/P105_finalize_cancel.js 2>&1 | tee P105_RUNTIME.txt
           grep -q 'P105_CANCEL_ACCIDENTAL_CASH_OK' P105_RUNTIME.txt
 
       - uses: actions/upload-artifact@v4
