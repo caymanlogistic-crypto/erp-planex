@@ -1,0 +1,95 @@
+name: P103 Invoice Timeline Visual PR
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Wait for exact controlled deploy marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p103"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p103" "$HOME/.ssh/known_hosts"
+          test "$EXPECTED_SHA" = '40ec5102c8bdcd839e60c2c03be3cb60c2667e69'
+          for attempt in $(seq 1 60); do
+            got="$(ssh -p "$PORT" -i "$HOME/.ssh/p103" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+            echo "attempt=$attempt expected=$EXPECTED_SHA deployed=$got"
+            if [ "$got" = "$EXPECTED_SHA" ]; then exit 0; fi
+            sleep 10
+          done
+          echo 'Timed out waiting for exact production deploy.' >&2
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p103_key
+            chmod 600 /tmp/p103_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p103_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+
+      - name: Read-only invoice timeline visual acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p103/P103_invoice_timeline_visual.js 2>&1 | tee P103_RUNTIME.txt
+          grep -q 'P103_INVOICE_TIMELINE_VISUAL_OK' P103_RUNTIME.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P103_invoice_timeline_${{ github.event.pull_request.base.sha }}
+          path: |
+            P103_RUNTIME.txt
+            P103_VISUAL.json
+            P103_screens/*.png
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$HOME/.ssh/p103" /tmp/p103_key
