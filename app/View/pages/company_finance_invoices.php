@@ -29,11 +29,34 @@ $paymentWord = static function (int $count): string {
     if ($n10 >= 2 && $n10 <= 4) return 'платежа';
     return 'платежей';
 };
-$delayLabel = static function (?int $days): array {
-    if ($days === null) return ['text' => 'Срок не определён', 'class' => 'is-neutral'];
-    if ($days > 0) return ['text' => 'Просрочка ' . $days . ' дн.', 'class' => 'is-late'];
-    if ($days < 0) return ['text' => 'На ' . abs($days) . ' дн. раньше', 'class' => 'is-early'];
-    return ['text' => 'В срок', 'class' => 'is-on-time'];
+$moneyToCents = static function (mixed $value): int {
+    $normalized = trim(str_replace(',', '.', (string)$value));
+    if (preg_match('/^-?\d+(?:\.\d+)?$/D', $normalized) !== 1) return 0;
+    $negative = str_starts_with($normalized, '-');
+    if ($negative) $normalized = substr($normalized, 1);
+    [$whole, $fraction] = array_pad(explode('.', $normalized, 2), 2, '');
+    $fraction = str_pad(substr($fraction, 0, 2), 2, '0');
+    $cents = ((int)$whole * 100) + (int)$fraction;
+    return $negative ? -$cents : $cents;
+};
+$centsToMoney = static function (int $cents): string {
+    $sign = $cents < 0 ? '-' : '';
+    $cents = abs($cents);
+    return $sign . intdiv($cents, 100) . '.' . str_pad((string)($cents % 100), 2, '0', STR_PAD_LEFT);
+};
+$settlementLabel = static function (array $part): array {
+    if (($part['kind'] ?? 'paid') === 'unpaid') {
+        $days = isset($part['overdue_days']) ? (int)$part['overdue_days'] : null;
+        if ($days === null) return ['text' => 'Не оплачено · срок не определён', 'class' => 'is-neutral'];
+        if ($days > 0) return ['text' => 'Не оплачено · просрочка ' . $days . ' дн.', 'class' => 'is-late'];
+        if ($days < 0) return ['text' => 'Не оплачено · срок через ' . abs($days) . ' дн.', 'class' => 'is-neutral'];
+        return ['text' => 'Не оплачено · срок сегодня', 'class' => 'is-neutral'];
+    }
+    $days = isset($part['delay_days']) ? (int)$part['delay_days'] : null;
+    if ($days === null) return ['text' => 'Оплачено · срок не определён', 'class' => 'is-neutral'];
+    if ($days > 0) return ['text' => 'Оплачено с просрочкой ' . $days . ' дн.', 'class' => 'is-late'];
+    if ($days < 0) return ['text' => 'Оплачено на ' . abs($days) . ' дн. раньше', 'class' => 'is-early'];
+    return ['text' => 'Оплачено в срок', 'class' => 'is-on-time'];
 };
 $successFlash = $_SESSION['invoice_success'] ?? null;
 unset($_SESSION['invoice_success']);
@@ -65,6 +88,7 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
 .invoice-pf-result{margin-top:6px;padding-top:6px;border-top:1px solid var(--border,#d8d2c7)}
 .invoice-pf-result-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
 .invoice-pf-balance{color:var(--muted,#777067);font-size:10px;font-weight:600;white-space:nowrap}
+.invoice-pf-balance.is-overdue{color:#8b2f22}
 .invoice-pf-result-row{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;min-height:20px}
 .invoice-pf-dates{color:var(--muted,#777067);white-space:nowrap;font-size:10px}
 .invoice-pf-result-amount{font-weight:700;white-space:nowrap}
@@ -113,11 +137,46 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
                 $dueText = $fmtDue($inv['display_due_text'] ?? '—');
                 $timeline = is_array($inv['payment_timeline'] ?? null) ? $inv['payment_timeline'] : null;
                 $routeIds = [];
+                $displaySettlementParts = [];
+                $overdueRemainingCents = 0;
                 if ($timeline !== null) {
                     foreach (($timeline['plans'] ?? []) as $plan) {
                         $routeId = (int)($plan['route_id'] ?? 0);
                         if ($routeId > 0) $routeIds[$routeId] = true;
                     }
+                    foreach (($timeline['settlement_parts'] ?? []) as $part) {
+                        $part['kind'] = 'paid';
+                        $displaySettlementParts[] = $part;
+                    }
+                    $today = new DateTimeImmutable('today');
+                    foreach (($timeline['plans'] ?? []) as $plan) {
+                        $remainingCents = $moneyToCents($plan['remaining_amount'] ?? '0');
+                        if ($remainingCents <= 0) continue;
+                        $expectedDate = trim((string)($plan['expected_date'] ?? ''));
+                        $overdueDays = null;
+                        if ($expectedDate !== '') {
+                            $due = DateTimeImmutable::createFromFormat('!Y-m-d', $expectedDate);
+                            if ($due !== false && $due->format('Y-m-d') === $expectedDate) {
+                                $days = (int)$due->diff($today)->format('%a');
+                                $overdueDays = $today < $due ? -$days : $days;
+                                if ($today > $due) $overdueRemainingCents += $remainingCents;
+                            }
+                        }
+                        $displaySettlementParts[] = [
+                            'kind' => 'unpaid',
+                            'amount' => $centsToMoney($remainingCents),
+                            'expected_date' => $expectedDate !== '' ? $expectedDate : null,
+                            'actual_date' => null,
+                            'overdue_days' => $overdueDays,
+                        ];
+                    }
+                    usort($displaySettlementParts, static function (array $a, array $b): int {
+                        $ad = $a['expected_date'] ?? '9999-12-31';
+                        $bd = $b['expected_date'] ?? '9999-12-31';
+                        $ak = ($a['kind'] ?? 'paid') === 'unpaid' ? 1 : 0;
+                        $bk = ($b['kind'] ?? 'paid') === 'unpaid' ? 1 : 0;
+                        return [$ad, $ak, ($a['actual_date'] ?? '9999-12-31')] <=> [$bd, $bk, ($b['actual_date'] ?? '9999-12-31')];
+                    });
                 }
                 $routeText = count($routeIds) === 1 ? 'Рейс #' . (int)array_key_first($routeIds) : (count($routeIds) > 1 ? count($routeIds) . ' рейса' : '');
             ?>
@@ -157,13 +216,13 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
                                 </div>
                             </div>
 
-                            <?php if (!empty($timeline['settlement_parts'])): ?>
+                            <?php if (!empty($displaySettlementParts)): ?>
                             <div class="invoice-pf-result">
                                 <div class="invoice-pf-result-head">
                                     <span class="invoice-pf-label">Соблюдение сроков</span>
-                                    <?php if ((float)($timeline['late_paid_total'] ?? 0) > 0): ?><span class="invoice-pf-balance">Просрочено <?= e($fmtMoney($timeline['late_paid_total'])) ?></span><?php endif; ?>
+                                    <?php if ($overdueRemainingCents > 0): ?><span class="invoice-pf-balance is-overdue">Просроченный остаток <?= e($fmtMoney($centsToMoney($overdueRemainingCents))) ?></span><?php endif; ?>
                                 </div>
-                                <?php foreach ($timeline['settlement_parts'] as $part): $delay = $delayLabel(isset($part['delay_days']) ? (int)$part['delay_days'] : null); ?>
+                                <?php foreach ($displaySettlementParts as $part): $delay = $settlementLabel($part); ?>
                                 <div class="invoice-pf-result-row">
                                     <span class="invoice-pf-dates"><?= e(($part['expected_date'] ?? null) ? $fmtDate($part['expected_date']) : '—') ?> → <?= e(($part['actual_date'] ?? null) ? $fmtDate($part['actual_date']) : '—') ?></span>
                                     <span class="invoice-pf-result-amount"><?= e($fmtMoney($part['amount'] ?? '0')) ?></span>

@@ -28,6 +28,10 @@ mustContain('app/Service/FinanceCarrierBankAutoSettlementService.php',"o.directi
 mustContain('app/Service/FinanceCarrierBankAutoSettlementService.php','purposeMentionsInvoice','invoice number in bank purpose drives unambiguous matching');
 mustContain('app/Service/FinanceCarrierBankAutoSettlementService.php',"'auto_exact'",'automatic carrier allocations are persisted as automatic');
 mustContain('app/Service/FinanceCarrierBankAutoSettlementService.php','$opRemaining','partial carrier payment amount is allocated, not forced to equal invoice total');
+mustContain('app/View/pages/company_finance_invoices.php','$displaySettlementParts','invoice timeline builds paid and unpaid settlement rows');
+mustContain('app/View/pages/company_finance_invoices.php','Просроченный остаток','invoice timeline reports only overdue unpaid balance');
+mustContain('app/View/pages/company_finance_invoices.php','Оплачено с просрочкой','late paid portion is explicitly marked as paid');
+mustContain('app/View/pages/company_finance_invoices.php','Не оплачено · просрочка','unpaid overdue portion is explicit');
 mustContain('app/Http/Routes/company_bank_finance.php','/bank-transactions/{id}/classify','generic classification route remains');
 
 echo "FINANCE_BANK_INVOICE_SETTLEMENT_ARCHITECTURE_OK\n";
