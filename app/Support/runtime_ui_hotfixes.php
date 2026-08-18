@@ -74,9 +74,9 @@ if (PHP_SAPI !== 'cli') {
             }
         }
 
-        // Normalize the employee-money workspace to the new business model.
-        // Historical database text is intentionally not rewritten: audit facts
-        // remain immutable, while the UI describes their current economic meaning.
+        // Normalize the employee-money workspace to the current business model.
+        // Historical database facts remain immutable; only their presentation is
+        // translated from the retired implementation vocabulary.
         $financeVocabulary = [
             'Выплаты сотрудникам' => 'Взаиморасчёты с сотрудниками',
             'Лицевой счёт сотрудника: все выплаты из кассы и возвраты компании. Прямые выплаты с расчётного счёта не используются.' => 'Движение средств сотрудника: получено от клиентов, оплачено за компанию и передано другим сотрудникам.',
@@ -89,9 +89,20 @@ if (PHP_SAPI !== 'cli') {
             'техническую «Основная касса»' => 'внутренний расчёт',
             'технической «Основная касса»' => 'внутреннего расчёта',
             'Основная касса' => 'Средства компании',
-            '>Касса<' => '>Средства компании<',
         ];
         $html = str_replace(array_keys($financeVocabulary), array_values($financeVocabulary), $html);
+
+        // Some historical table cells contain whitespace/newlines around the old
+        // standalone source label, so a literal >...< replacement is insufficient.
+        // Replace only standalone rendered text between HTML tags; URLs, field
+        // names and historical technical identifiers are deliberately untouched.
+        if (str_starts_with(current_app_path(), '/company/finance')) {
+            $html = preg_replace(
+                '~(?<=>)(\s*)Касса(\s*)(?=<)~u',
+                '${1}Средства компании${2}',
+                $html
+            ) ?? $html;
+        }
 
         // Low-frequency company utilities live in a separate MISC section rather
         // than in the operational logistics directories.
@@ -155,7 +166,7 @@ if (PHP_SAPI !== 'cli') {
     });
   }
   fix(document);
-  new MutationObserver(function(records){records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1)fix(node);});}).observe(document.body,{childList:true,subtree:true});
+  new MutationObserver(function(records){records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1)fix(node);});});}).observe(document.body,{childList:true,subtree:true});
 }());
 </script>
 HTML;
