@@ -67,9 +67,16 @@
         $cashPage = max(1, (int) ($_GET['page'] ?? 1));
         $cashPerPage = max(1, min(500, (int) ($_GET['per_page'] ?? 50)));
         $cashResult = \App\Service\FinanceCashLedgerService::fetchRecentMovements($localPdo, $cashPage, $cashPerPage);
-        $recentOperations = $cashResult['data'];
-        $cashTotal = $cashResult['total'];
-        $cashPages = $cashResult['pages'];
+        $cashRows = $cashResult['data'];
+        $recentOperations = array_values(array_filter(
+            $cashRows,
+            static fn(array $row): bool => strtoupper((string)($row['status'] ?? '')) !== 'CANCELLED'
+        ));
+        // Cancelled operations remain available in the audit/operations register,
+        // but they are not part of the working cash journal.
+        $cancelledRowsOnPage = count($cashRows) - count($recentOperations);
+        $cashTotal = max(0, (int)$cashResult['total'] - $cancelledRowsOnPage);
+        $cashPages = (int) ceil($cashTotal / max(1, $cashPerPage));
 
         $successFlash = $_SESSION['finance_success'] ?? null;
         unset($_SESSION['finance_success']);
