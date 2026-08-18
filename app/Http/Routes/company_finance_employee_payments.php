@@ -6,6 +6,7 @@ require_once base_path('app/Service/FinanceEmployeePersonalExpenseEventService.p
 require_once base_path('app/Service/FinanceEmployeeMoneyAccountService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectTransferService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectExpenseService.php');
+require_once base_path('app/Service/FinanceEmployeeDirectInvoicePaymentService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePaymentsController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeeInvoicePaymentController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePersonalExpenseController.php');
@@ -36,7 +37,11 @@ $router->post('/company/finance/employee-payments/bank-link', static function ()
 });
 $router->post('/company/finance/employee-payments/bank-unlink', [$controller, 'bankUnlink']);
 
-$router->post('/company/finance/employee-payments/invoice-payment/create', [$invoicePaymentController, 'createSubmit']);
+$router->post('/company/finance/employee-payments/invoice-payment/create', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/invoice_payment_create.php');
+});
+// Existing update/cancel logic is retained for history and also works for direct
+// events because one canonical operation id is stored in both linkage columns.
 $router->post('/company/finance/employee-payments/invoice-payment/update', [$invoicePaymentController, 'updateSubmit']);
 $router->post('/company/finance/employee-payments/invoice-payment/cancel', [$invoicePaymentController, 'cancelSubmit']);
 
@@ -45,9 +50,6 @@ $router->get('/company/finance/employee-payments/personal-expense/create', [$per
 $router->post('/company/finance/employee-payments/personal-expense/create', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/personal_expense_create.php');
 });
-// Update/cancel remain backward-compatible with both historical two-leg events and
-// new one-operation events because the latter store one canonical operation id in
-// both linkage columns and do not create a cash_resolution.
 $router->get('/company/finance/employee-payments/personal-expense/{id}/edit', [$personalExpenseController, 'editForm']);
 $router->post('/company/finance/employee-payments/personal-expense/{id}/update', [$personalExpenseController, 'updateSubmit']);
 $router->post('/company/finance/employee-payments/personal-expense/{id}/cancel', [$personalExpenseController, 'cancelSubmit']);
