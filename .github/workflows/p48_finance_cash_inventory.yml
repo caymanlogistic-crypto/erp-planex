@@ -2,9 +2,8 @@ name: P48 Finance Cash Inventory
 on:
   push:
     branches: [audit/finance-cash-removal-20260818]
-    paths:
-      - '.github/p48/**'
-      - '.github/workflows/p48_finance_cash_inventory.yml'
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
 permissions:
   contents: read
 jobs:
