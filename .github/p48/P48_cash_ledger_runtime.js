@@ -80,11 +80,18 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
       const rows = ledger.locator('tbody tr[data-cash-ledger-row]');
       const rowCount = await rows.count();
       ok(rowCount > 0, 'cash ledger table rendered without rows');
-      const allowedMovements = ['Поступление', 'Списание', 'Получено', 'Получено → передано', 'Получено → разнесено'].map(normalize);
+      const employeeInvoiceMovement = normalize('Получено → списано');
+      const allowedMovements = ['Поступление', 'Списание', 'Получено', 'Получено → передано', 'Получено → разнесено', 'Получено → списано'].map(normalize);
       for (let i = 0; i < rowCount; i++) {
         const cells = rows.nth(i).locator('td');
         ok(await cells.count() === 8, 'cash lifecycle row must have eight cells');
-        ok(allowedMovements.includes(normalize(await cells.nth(3).innerText())), 'invalid cash lifecycle movement label');
+        const movement = normalize(await cells.nth(3).innerText());
+        ok(allowedMovements.includes(movement), 'invalid cash lifecycle movement label');
+        if (movement === employeeInvoiceMovement) {
+          ok(normalize(await cells.nth(4).innerText()) !== normalize('—'), 'employee invoice cash lifecycle must expose employee source');
+          ok(normalize(await cells.nth(7).innerText()) !== normalize('—'), 'employee invoice cash lifecycle must expose carrier recipient');
+          ok((await cells.nth(5).innerText()).includes('Оплата счёта'), 'employee invoice cash lifecycle must expose invoice payment purpose');
+        }
       }
     } else {
       ok(bodyText.includes('Движений нет.'), 'neither cash ledger nor valid empty state is visible');
