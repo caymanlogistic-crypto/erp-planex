@@ -167,6 +167,21 @@ if (PHP_SAPI !== 'cli') {
       node.nodeValue=value;
     }
   }
+  function normalizeFinanceNavigation(root,base){
+    if(window.location.pathname.indexOf('/company/finance')===-1)return;
+    var old=[];
+    if(root.matches&&root.matches('a[href*="/company/finance/cash"]'))old.push(root);
+    root.querySelectorAll('a[href*="/company/finance/cash"]').forEach(function(link){old.push(link);});
+    old.forEach(function(link){
+      var existing=document.querySelector('a[href*="/company/finance/employee-payments"]');
+      if(existing&&existing!==link){link.remove();return;}
+      link.setAttribute('href',(base||'')+'/company/finance/employee-payments');
+      link.classList.toggle('is-active',window.location.pathname.indexOf('/company/finance/employee-payments')!==-1);
+      var label=link.querySelector('.nav-label');
+      if(label)label.textContent='Взаиморасчёты с сотрудниками';
+      link.querySelectorAll('.nav-count').forEach(function(node){node.remove();});
+    });
+  }
   function fix(root){
     if(!root||!root.querySelectorAll)return;
     var base=window.getErpBasePath?window.getErpBasePath():'';
@@ -186,6 +201,7 @@ if (PHP_SAPI !== 'cli') {
       var href=link.getAttribute('href')||'';
       if(href.indexOf('/company/documents')===0&&base)link.setAttribute('href',base+href);
     });
+    normalizeFinanceNavigation(root,base);
     normalizeFinanceText(root);
   }
   fix(document);
