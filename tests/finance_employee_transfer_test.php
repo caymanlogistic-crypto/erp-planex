@@ -31,22 +31,22 @@ $assert(str_contains($direct, "'PAYMENT'"), 'recipient must be recorded as PAYME
 $assert(str_contains($direct, 'FinanceEmployeeMoneyAccountService::accountId'), 'each transfer side must use an employee money account');
 $assert(str_contains($direct, "'TRANSFER','POSTED','TRANSFER'"), 'employee handoff must be a paired internal transfer');
 $assert(str_contains($direct, "'EMPLOYEE'"), 'employee movement provenance must be EMPLOYEE');
-$assert(str_contains($direct, "'cash_account_used' => false"), 'direct transfer must record that cash is not used');
-$assert(!str_contains($direct, 'INSERT INTO finance_cash_resolutions'), 'direct transfer must never create a cash resolution');
-$assert(!str_contains($direct, 'FinanceCashResolutionService::MAIN_CASH_NAME'), 'direct transfer must not depend on main cash');
+$assert(str_contains($direct, "'cash_account_used' => false"), 'direct transfer must record retired-account bypass');
+$assert(!str_contains($direct, 'INSERT INTO finance_cash_resolutions'), 'direct transfer must never create historical resolution');
+$assert(!str_contains($direct, 'FinanceCashResolutionService::MAIN_CASH_NAME'), 'direct transfer must not depend on retired main account');
 $assert(str_contains($direct, 'beginTransaction()'), 'employee handoff must be atomic');
 $assert(str_contains($direct, 'rollBack()'), 'employee handoff must roll back both legs on failure');
 $assert(!str_contains($direct, 'Недостаточно средств у сотрудника'), 'sender balance may become negative');
 
 $assert(str_contains($legacy, 'public static function decorateLedger'), 'historical ledger decoration remains available');
-$assert(str_contains($legacy, 'finance_cash_resolutions'), 'historical cash transfer implementation remains preserved for read/audit compatibility');
+$assert(str_contains($legacy, 'finance_cash_resolutions'), 'historical transfer implementation remains preserved for read/audit compatibility');
 
 $assert(str_contains($route, "FinanceEmployeeDirectActions/transfer_submit.php"), 'new transfer route must use direct service action');
-$assert(str_contains($route, 'Исторические кассовые передачи защищены от изменения'), 'historical transfer edit endpoint must be frozen');
-$assert(str_contains($route, 'Исторические кассовые передачи защищены от удаления'), 'historical transfer delete endpoint must be frozen');
+$assert(str_contains($route, 'Исторические передачи защищены от изменения'), 'historical transfer edit endpoint must be frozen');
+$assert(str_contains($route, 'Исторические передачи защищены от удаления'), 'historical transfer delete endpoint must be frozen');
 $assert(!str_contains($route, "[$controller, 'transferSubmit']"), 'active create route must not call legacy transfer controller');
-$assert(!str_contains($route, "[$controller, 'transferUpdateSubmit']"), 'active update route must not call legacy cash transfer mutation');
-$assert(!str_contains($route, "[$controller, 'transferDeleteSubmit']"), 'active delete route must not call legacy cash transfer mutation');
+$assert(!str_contains($route, "[$controller, 'transferUpdateSubmit']"), 'active update route must not call legacy transfer mutation');
+$assert(!str_contains($route, "[$controller, 'transferDeleteSubmit']"), 'active delete route must not call legacy transfer mutation');
 
 $assert(str_contains($view, 'id="employee-transfer-open"'), 'page header must expose transfer button');
 $assert(str_contains($view, 'btn btn-primary btn--toolbar'), 'transfer button must use standard primary toolbar style');
