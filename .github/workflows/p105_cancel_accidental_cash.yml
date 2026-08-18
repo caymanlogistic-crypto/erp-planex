@@ -49,6 +49,7 @@ jobs:
           <?php
           $config = require getcwd() . '/bootstrap/app.php';
           require_once getcwd() . '/app/Core/Database.php';
+          require_once getcwd() . '/app/Support/crypto_helper.php';
           require_once getcwd() . '/app/Support/company_database.php';
           require_once getcwd() . '/app/Service/FinanceCashService.php';
 
