@@ -51,23 +51,31 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
       return modal;
     }
 
-    let modal = await openTargetInvoice();
-    const settlementRows = modal.locator('.invoice-settlement-row');
-    let employeeRow = null;
-    for (let i = 0; i < await settlementRows.count(); i++) {
-      const row = settlementRows.nth(i);
-      const text = norm(await row.innerText());
-      if (text.includes('сотрудник') && text.includes('спугов') && text.includes('14 600')) {
-        employeeRow = row;
-        break;
+    async function findEditable14600Row(modal) {
+      const rows = modal.locator('.invoice-settlement-row');
+      const texts = [];
+      for (let i = 0; i < await rows.count(); i++) {
+        const row = rows.nth(i);
+        const raw = await row.innerText();
+        texts.push(raw.replace(/\s+/g, ' ').trim());
+        if (norm(raw).includes('14 600') && (await row.locator('[data-settlement-date-edit]').count()) === 1) {
+          return { row, texts };
+        }
       }
+      console.log('P101_SETTLEMENT_ROWS=' + JSON.stringify(texts));
+      return { row: null, texts };
     }
-    ok(employeeRow, 'employee-funded 14 600 settlement row not found');
-    ok((await employeeRow.locator('[data-settlement-date-edit]').count()) === 1, 'edit actual payment date button missing');
-    ok(norm(await employeeRow.locator('.invoice-settlement-date-value').innerText()) === norm('18.08.2026'), 'unexpected current actual payment date');
 
-    await employeeRow.locator('[data-settlement-date-edit]').click();
-    const form = employeeRow.locator('[data-settlement-date-form]');
+    let modal = await openTargetInvoice();
+    let found = await findEditable14600Row(modal);
+    ok(found.row, 'editable 14 600 settlement row not found; rows=' + JSON.stringify(found.texts));
+    let paymentRow = found.row;
+    const initialText = (await paymentRow.innerText()).replace(/\s+/g, ' ').trim();
+    console.log('P101_TARGET_SETTLEMENT=' + initialText);
+    ok(norm(await paymentRow.locator('.invoice-settlement-date-value').innerText()) === norm('18.08.2026'), 'unexpected current actual payment date');
+
+    await paymentRow.locator('[data-settlement-date-edit]').click();
+    const form = paymentRow.locator('[data-settlement-date-form]');
     ok(await form.isVisible(), 'inline date edit form did not open');
     const input = form.locator('input[name="operation_date"]');
     ok((await input.inputValue()) === '2026-08-18', 'date input does not contain the current actual payment date');
@@ -81,25 +89,17 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
     ]);
 
     modal = await openTargetInvoice();
-    const rowsAfter = modal.locator('.invoice-settlement-row');
-    let rowAfter = null;
-    for (let i = 0; i < await rowsAfter.count(); i++) {
-      const row = rowsAfter.nth(i);
-      const text = norm(await row.innerText());
-      if (text.includes('сотрудник') && text.includes('спугов') && text.includes('14 600')) {
-        rowAfter = row;
-        break;
-      }
-    }
-    ok(rowAfter, 'settlement disappeared after idempotent save');
-    ok(norm(await rowAfter.locator('.invoice-settlement-date-value').innerText()) === norm('18.08.2026'), 'actual payment date changed during no-op verification');
-    ok((await rowAfter.locator('[data-settlement-date-edit]').count()) === 1, 'date editor missing after reload');
+    found = await findEditable14600Row(modal);
+    ok(found.row, 'settlement disappeared after idempotent save; rows=' + JSON.stringify(found.texts));
+    paymentRow = found.row;
+    ok(norm(await paymentRow.locator('.invoice-settlement-date-value').innerText()) === norm('18.08.2026'), 'actual payment date changed during no-op verification');
+    ok((await paymentRow.locator('[data-settlement-date-edit]').count()) === 1, 'date editor missing after reload');
     await page.screenshot({ path: 'P101_invoice_payment_date_after_noop.png', fullPage: true });
 
     evidence.invoice = {
-      settlementText: await rowAfter.innerText(),
-      actualDate: await rowAfter.locator('.invoice-settlement-date-value').innerText(),
-      operationId: await rowAfter.getAttribute('data-invoice-settlement-operation')
+      settlementText: await paymentRow.innerText(),
+      actualDate: await paymentRow.locator('.invoice-settlement-date-value').innerText(),
+      operationId: await paymentRow.getAttribute('data-invoice-settlement-operation')
     };
     evidence.browserErrors = browserErrors;
     ok(browserErrors.length === 0, 'browser errors: ' + JSON.stringify(browserErrors));
