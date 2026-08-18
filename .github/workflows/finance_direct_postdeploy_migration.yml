@@ -41,8 +41,7 @@ jobs:
           printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/finance_direct_post_key"
           printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/finance_direct_post_key" "$HOME/.ssh/known_hosts"
-      - name: Verify exact deployed marker and resolve PHP
-        id: php
+      - name: Verify exact deployed marker
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
@@ -52,26 +51,36 @@ jobs:
           set -euo pipefail
           marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
           test "$marker" = "$SHA"
-          phpbin="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "bash -s" <<'REMOTE'
+      - name: Upload isolated scripts
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes scripts/finance_direct_verify.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes scripts/finance_direct_apply_076.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php"
+      - name: Resolve standalone DB PHP
+        id: php
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          phpbin="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' bash -s" <<'REMOTE'
           set -e
-          LIVE=/home/s/spugovxsim/planexp/public_html
-          LIVE="$LIVE/erpv2"
           candidates="$(command -v php 2>/dev/null || true) $(which -a php 2>/dev/null || true)"
           for pattern in /usr/local/bin/php* /usr/local/php*/bin/php /opt/php*/bin/php /opt/*/php*/bin/php /usr/bin/php*; do
-            for p in $pattern; do
-              [ -x "$p" ] || continue
-              candidates="$candidates $p"
-            done
+            for p in $pattern; do [ -x "$p" ] && candidates="$candidates $p"; done
           done
           for p in $candidates; do
             [ -x "$p" ] || continue
             case "$p" in *php-config*|*phpize*) continue ;; esac
-            "$p" -l "$LIVE/bootstrap/app.php" >/dev/null 2>&1 || continue
-            "$p" -l "$LIVE/app/Support/helpers.php" >/dev/null 2>&1 || continue
-            "$p" -l "$LIVE/app/Support/entrypoint_dependencies.php" >/dev/null 2>&1 || continue
-            "$p" -l "$LIVE/app/Http/Controllers/Company/BankFinanceController.php" >/dev/null 2>&1 || continue
-            echo "$p"
-            exit 0
+            "$p" -l "/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php" >/dev/null 2>&1 || continue
+            "$p" -l "/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php" >/dev/null 2>&1 || continue
+            "$p" -r 'exit(extension_loaded("pdo_mysql") ? 0 : 1);' >/dev/null 2>&1 || continue
+            echo "$p"; exit 0
           done
           exit 1
           REMOTE
@@ -79,17 +88,6 @@ jobs:
           test -n "$phpbin"
           echo "REMOTE_PHP=$phpbin"
           echo "phpbin=$phpbin" >> "$GITHUB_OUTPUT"
-      - name: Upload isolated scripts
-        env:
-          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
-          PHPBIN: ${{ steps.php.outputs.phpbin }}
-        run: |
-          set -euo pipefail
-          scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes scripts/finance_direct_verify.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php"
-          scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes scripts/finance_direct_apply_076.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php"
-          ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "'$PHPBIN' -l '/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php' >/dev/null && '$PHPBIN' -l '/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php' >/dev/null"
       - name: Snapshot before migration
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
