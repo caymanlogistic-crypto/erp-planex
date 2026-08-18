@@ -45,16 +45,38 @@ jobs:
           set -euo pipefail
           scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             scripts/finance_direct_verify.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php"
-      - name: Production read-only snapshot twice
+      - name: Resolve production-compatible PHP
+        id: php
         env:
           SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
           SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
           SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
         run: |
           set -euo pipefail
+          phpbin="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "bash -s" <<'REMOTE'
+          set -e
+          LIVE=/home/s/spugovxsim/planexp/public_html/erpv2
+          for p in /usr/local/php*/bin/php /opt/php*/bin/php /usr/bin/php*; do
+            [ -x "$p" ] || continue
+            if "$p" -l "$LIVE/bootstrap/app.php" >/dev/null 2>&1; then echo "$p"; exit 0; fi
+          done
+          exit 1
+          REMOTE
+          )"
+          test -n "$phpbin"
+          echo "REMOTE_PHP=$phpbin"
+          echo "phpbin=$phpbin" >> "$GITHUB_OUTPUT"
+      - name: Production read-only snapshot twice
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PHPBIN: ${{ steps.php.outputs.phpbin }}
+        run: |
+          set -euo pipefail
           for n in 1 2; do
             ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
-              "PLANEX_ROOT='$LIVE_ROOT' php '/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php'" | tee "finance_direct_pre_${n}.txt"
+              "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php'" | tee "finance_direct_pre_${n}.txt"
             grep -q 'FINANCE_DIRECT_READ_ONLY_OK' "finance_direct_pre_${n}.txt"
           done
           fp1="$(sed -n 's/^FINANCE_DIRECT_READ_ONLY_FINGERPRINT=//p' finance_direct_pre_1.txt)"
