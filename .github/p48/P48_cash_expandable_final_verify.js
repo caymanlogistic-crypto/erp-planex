@@ -83,13 +83,13 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
       if (await cells.count() !== 8) continue;
       const texts = await cells.allInnerTexts();
       const joined = norm(texts.join(' | '));
-      if (joined.includes('1 100') && joined.includes('гладких') && joined.includes('ati')) gladkikhMatches.push(i);
+      if (joined.includes('1 100') && joined.includes('гладких') && (joined.includes('ати') || joined.includes('ati'))) gladkikhMatches.push(i);
       if (joined.includes('14 600') && joined.includes('спугов') && joined.includes('неизвестное физ лицо') && joined.includes('оплата счёта')) spugovMatches.push(i);
     }
-    ok(gladkikhMatches.length === 1, 'expected exactly one Gladkikh/ATI 1 100 lifecycle row; found=' + gladkikhMatches.length);
+    ok(gladkikhMatches.length === 1, 'expected exactly one Gladkikh/АТИ 1 100 lifecycle row; found=' + gladkikhMatches.length);
     ok(spugovMatches.length === 1, 'expected exactly one Spugov/carrier 14 600 lifecycle row; found=' + spugovMatches.length);
 
-    const gladkikh = await openLifecycle(rows.nth(gladkikhMatches[0]), 'EMPLOYEE_PERSONAL_EXPENSE', 'Гладких', 'ATI', '1 100');
+    const gladkikh = await openLifecycle(rows.nth(gladkikhMatches[0]), 'EMPLOYEE_PERSONAL_EXPENSE', 'Гладких', 'АТИ', '1 100');
     ok(norm(gladkikh.detailText).includes(norm('ЦФУ:')), 'Gladkikh personal-expense detail must show CFU');
     ok(norm(gladkikh.detailText).includes(norm('Статья ДДС:')), 'Gladkikh personal-expense detail must show DDS category');
 
