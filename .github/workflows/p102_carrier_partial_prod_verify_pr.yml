@@ -53,7 +53,7 @@ jobs:
             .github/p102/P102_carrier_partial_prod_diag.php "$USER@$HOST:/tmp/P102_carrier_partial_prod_diag.php"
           ssh -p "$PORT" -i "$HOME/.ssh/p102_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" \
             "cd /tmp && /usr/bin/php8.5 /tmp/P102_carrier_partial_prod_diag.php /home/s/spugovxsim/planexp/public_html/erpv2 && rm -f /tmp/P102_carrier_partial_prod_diag.php" | tee P102_RUNTIME.txt
-          grep -q 'P102_CARRIER_PARTIAL_READONLY_OK' P102_RUNTIME.txt
+          grep -q 'P102_DIAG_CAPTURED' P102_RUNTIME.txt
           scp -P "$PORT" -i "$HOME/.ssh/p102_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$USER@$HOST:/tmp/P102_CARRIER_PARTIAL_DIAG.json" P102_CARRIER_PARTIAL_DIAG.json
           ssh -p "$PORT" -i "$HOME/.ssh/p102_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'rm -f /tmp/P102_CARRIER_PARTIAL_DIAG.json'
