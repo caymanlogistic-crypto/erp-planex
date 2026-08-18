@@ -48,7 +48,7 @@ if ($allowedMapJson === false) $allowedMapJson = '{}';
                     <option value="<?= e($employee['ref']) ?>" <?= $employeeRef === $employee['ref'] ? 'selected' : '' ?>><?= e($employee['full_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <div class="field-note">Списание с банка = деньги переданы сотруднику; поступление на банк = сотрудник вернул деньги. Техническая касса не используется.</div>
+                <div class="field-note">Списание с банка = деньги переданы сотруднику; поступление на банк = сотрудник вернул деньги. Операция отражается напрямую по сотруднику.</div>
             </div>
             <div class="field">
                 <label class="field-label">ЦФУ *</label>
@@ -86,7 +86,7 @@ if ($allowedMapJson === false) $allowedMapJson = '{}';
     </div>
     <?php else: ?>
     <input type="hidden" name="action_type" value="<?= e($actionType) ?>">
-    <div class="modal-body">Служебное правило старого кассового типа сохранено только для истории. Новые кассовые операции по нему не создаются.</div>
+    <div class="modal-body">Служебное правило прежнего типа сохранено только для истории. Новые операции по нему не создаются.</div>
     <?php endif; ?>
 
     <div class="modal-foot matching-rule-foot">

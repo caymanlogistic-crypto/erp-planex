@@ -26,7 +26,7 @@ $router->get('/company/finance/employee-payments/create', static function (): vo
 $router->post('/company/finance/employee-payments/create', static function (): void {
     requireRole(['company_owner']);
     verifyCsrfRequest();
-    $_SESSION['employee_payments_error'] = 'Старая кассовая операция сотрудника отключена. Используйте прямые операции.';
+    $_SESSION['employee_payments_error'] = 'Устаревший способ операции сотрудника отключён. Используйте прямые операции.';
     redirect_to('/company/finance/employee-payments');
 });
 
@@ -36,13 +36,13 @@ $router->post('/company/finance/employee-payments/transfer', static function () 
 $router->post('/company/finance/employee-payments/transfer/update', static function (): void {
     requireRole(['company_owner']);
     verifyCsrfRequest();
-    $_SESSION['employee_payments_error'] = 'Исторические кассовые передачи защищены от изменения. Для исправления создайте новую прямую операцию.';
+    $_SESSION['employee_payments_error'] = 'Исторические передачи защищены от изменения. Для исправления создайте новую прямую операцию.';
     redirect_to('/company/finance/employee-payments');
 });
 $router->post('/company/finance/employee-payments/transfer/delete', static function (): void {
     requireRole(['company_owner']);
     verifyCsrfRequest();
-    $_SESSION['employee_payments_error'] = 'Исторические кассовые передачи защищены от удаления.';
+    $_SESSION['employee_payments_error'] = 'Исторические передачи защищены от удаления.';
     redirect_to('/company/finance/employee-payments');
 });
 

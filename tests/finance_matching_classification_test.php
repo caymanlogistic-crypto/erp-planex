@@ -36,23 +36,23 @@ ok(str_contains($manual,'clearBankTransactionClassification')&&str_contains($man
 
 $validation=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleValidationTrait.php');
 ok(str_contains($validation,"'auto_apply'=>1"),'saved rules normalize to automatic application');
-ok(str_contains($validation,'$cash=null;'),'employee settlement strips cash target');
+ok(str_contains($validation,'$cash=null;'),'employee settlement strips legacy money target');
 
 $classification=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleClassificationTrait.php');
-ok(str_contains($classification,'legacy_cash_rule_suppressed'),'legacy transfer-to-cash is suppressed');
-ok(str_contains($classification,'classification_auto_legacy_cash_suppressed'),'legacy categorize-to-cash becomes classification only');
-ok(str_contains($classification,"'cash_operation_created'=>false"),'active classification records no new cash operation');
-ok(!str_contains($classification,'convertBankOperationToCashTransfer($pdo,$op,$rule)'),'active classifier does not call cash transfer execution');
+ok(str_contains($classification,'legacy_cash_rule_suppressed'),'legacy transfer rule is suppressed');
+ok(str_contains($classification,'classification_auto_legacy_cash_suppressed'),'legacy combined rule becomes classification only');
+ok(str_contains($classification,"'cash_operation_created'=>false"),'active classification records no retired money-account operation');
+ok(!str_contains($classification,'convertBankOperationToCashTransfer($pdo,$op,$rule)'),'active classifier does not call retired transfer execution');
 
 $service=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleService.php');
 ok(str_contains($service,"'categorize_to_cash'"),'legacy combined action stays accepted for stored-rule compatibility');
 
 $form=file_get_contents(__DIR__.'/../app/View/partials/company_finance_matching_rule_form.php');
-ok(!str_contains($form,'id="matching-rule-cash"'),'active matching UI has no cash selector');
-ok(str_contains($form,'name="target_cash_account_id" value=""'),'active matching UI clears legacy cash target');
+ok(!str_contains($form,'id="matching-rule-cash"'),'active matching UI has no retired money-account selector');
+ok(str_contains($form,'name="target_cash_account_id" value=""'),'active matching UI clears legacy money target');
 
-$cashRoutes=file_get_contents(__DIR__.'/../app/Http/Routes/company_finance_cash.php');
-ok(!str_contains($cashRoutes,'FinanceCashController'),'cash controller is retired from active routes');
-ok(str_contains($cashRoutes,'Создание и изменение кассовых операций отключено'),'cash write endpoints are blocked');
+$legacyRoutes=file_get_contents(__DIR__.'/../app/Http/Routes/company_finance_cash.php');
+ok(!str_contains($legacyRoutes,'FinanceCashController'),'retired controller is absent from active routes');
+ok(str_contains($legacyRoutes,'Этот устаревший способ операции отключён'),'legacy write endpoints are blocked');
 
 echo "FINANCE_MATCHING_CLASSIFICATION_OK\n";

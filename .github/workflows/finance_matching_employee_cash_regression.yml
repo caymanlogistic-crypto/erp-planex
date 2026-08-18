@@ -37,9 +37,9 @@ jobs:
           test -f database/migrations-local/076_finance_employee_money_accounts.sql
           grep -q 'finance_employee_money_accounts' database/migrations-local/076_finance_employee_money_accounts.sql
           test ! -f database/migrations/20260818_finance_employee_money_accounts.sql
-      - name: No active cash writes
+      - name: No active retired-account writes
         run: |
           ! grep -q 'FinanceCashController' app/Http/Routes/company_finance_cash.php
-          grep -q 'Создание и изменение кассовых операций отключено' app/Http/Routes/company_finance_cash.php
+          grep -q 'Этот устаревший способ операции отключён' app/Http/Routes/company_finance_cash.php
           ! grep -q 'INSERT INTO finance_cash_resolutions' app/Service/FinanceEmployeeBankSettlementService.php
           ! grep -q 'INSERT INTO finance_cash_resolutions' app/Service/FinanceEmployeeDirectTransferService.php
