@@ -55,7 +55,9 @@ if (PHP_SAPI !== 'cli') {
             '<span class="nav-label">Взаиморасчёты с сотрудниками</span></a>';
 
         if (str_contains($html, '/company/finance/cash')) {
-            if (!str_contains($html, '/company/finance/employee-payments')) {
+            $hasEmployeeNav = str_contains($html, '<span class="nav-label">Выплаты сотрудникам</span>')
+                || str_contains($html, '<span class="nav-label">Взаиморасчёты с сотрудниками</span>');
+            if (!$hasEmployeeNav) {
                 $html = preg_replace(
                     '~<a class="nav-item[^"]*" href="[^"]*/company/finance/cash">.*?</a>~s',
                     $employeeItem,
