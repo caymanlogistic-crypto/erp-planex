@@ -70,7 +70,7 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
 <div class="notice warn">Работа со счетами недоступна.</div>
 <?php elseif ($dbError !== null): ?>
 <div class="page-head"><div class="page-head-left"><h1 class="page-title">Счета</h1><div class="page-summary"><span>Реестр счетов компании.</span></div></div></div>
-<div class="notice warn">Работа со счетами недоступна.</div>
+<div class="notice warn"><?= e($dbError) ?></div>
 <?php else: ?>
 <style>
 .invoice-pf-col{min-width:390px}
