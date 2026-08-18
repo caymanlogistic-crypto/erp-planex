@@ -7,12 +7,8 @@ require_once __DIR__.'/../app/Service/FinanceMatchingRuleService.php';
 
 use App\Service\FinanceMatchingRuleService as Rules;
 
-function ok(bool $condition,string $message): void {
-    if (!$condition) throw new RuntimeException('FAIL: '.$message);
-}
-function one(PDO $pdo,string $sql,array $params=[]): array {
-    $stmt=$pdo->prepare($sql);$stmt->execute($params);$row=$stmt->fetch(PDO::FETCH_ASSOC);return $row?:[];
-}
+function ok(bool $condition,string $message): void { if (!$condition) throw new RuntimeException('FAIL: '.$message); }
+function one(PDO $pdo,string $sql,array $params=[]): array { $s=$pdo->prepare($sql);$s->execute($params);$r=$s->fetch(PDO::FETCH_ASSOC);return $r?:[]; }
 function countRows(PDO $pdo,string $table): int { return (int)$pdo->query('SELECT COUNT(*) FROM `'.$table.'`')->fetchColumn(); }
 
 $host=getenv('EMPLOYEE_PAYMENTS_DB_HOST')?:'127.0.0.1';
@@ -31,7 +27,7 @@ $pdo->exec("CREATE TABLE finance_dds_categories (id INT UNSIGNED PRIMARY KEY,nam
 $pdo->exec("CREATE TABLE finance_cash_flow_center_dds_categories (cash_flow_center_id INT UNSIGNED NOT NULL,dds_category_id INT UNSIGNED NOT NULL,sort_order INT NOT NULL DEFAULT 100,is_active TINYINT NOT NULL DEFAULT 1,PRIMARY KEY(cash_flow_center_id,dds_category_id))");
 $pdo->exec("CREATE TABLE finance_money_accounts (id INT UNSIGNED PRIMARY KEY,name VARCHAR(255) NOT NULL,type VARCHAR(20) NOT NULL,is_active TINYINT NOT NULL DEFAULT 1)");
 $pdo->exec("CREATE TABLE finance_matching_rules (
- id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,name VARCHAR(255) NOT NULL,active TINYINT NOT NULL DEFAULT 1,priority INT NOT NULL DEFAULT 100,direction VARCHAR(20) NULL,bank_account_id INT UNSIGNED NULL,counterparty_inn VARCHAR(20) NULL,counterparty_id INT UNSIGNED NULL,counterparty_type VARCHAR(20) NULL,invoice_number_pattern VARCHAR(255) NULL,purpose_contains VARCHAR(255) NULL,purpose_regex VARCHAR(500) NULL,amount_from DECIMAL(15,2) NULL,amount_to DECIMAL(15,2) NULL,action_type VARCHAR(30) NOT NULL DEFAULT 'categorize',target_dds_category_id INT UNSIGNED NULL,target_cash_flow_center_id INT UNSIGNED NULL,target_cash_account_id INT UNSIGNED NULL,target_counterparty_id INT UNSIGNED NULL,target_counterparty_type VARCHAR(20) NULL,auto_apply TINYINT NOT NULL DEFAULT 1,deleted_at DATETIME NULL,created_by_user_id INT UNSIGNED NULL,created_by_role VARCHAR(20) NULL,updated_by_user_id INT UNSIGNED NULL,updated_by_role VARCHAR(20) NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+ id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,name VARCHAR(255) NOT NULL,active TINYINT NOT NULL DEFAULT 1,priority INT NOT NULL DEFAULT 100,direction VARCHAR(20) NULL,bank_account_id INT UNSIGNED NULL,counterparty_inn VARCHAR(20) NULL,counterparty_id INT UNSIGNED NULL,counterparty_type VARCHAR(20) NULL,invoice_number_pattern VARCHAR(255) NULL,purpose_contains VARCHAR(255) NULL,purpose_regex VARCHAR(500) NULL,amount_from DECIMAL(15,2) NULL,amount_to DECIMAL(15,2) NULL,action_type VARCHAR(30) NOT NULL DEFAULT 'categorize',target_dds_category_id INT UNSIGNED NULL,target_cash_flow_center_id INT UNSIGNED NULL,target_cash_account_id INT UNSIGNED NULL,target_employee_identity_type VARCHAR(30) NULL,target_employee_identity_id INT UNSIGNED NULL,target_employee_name_snapshot VARCHAR(255) NULL,target_employee_role_snapshot VARCHAR(255) NULL,target_counterparty_id INT UNSIGNED NULL,target_counterparty_type VARCHAR(20) NULL,auto_apply TINYINT NOT NULL DEFAULT 1,deleted_at DATETIME NULL,created_by_user_id INT UNSIGNED NULL,created_by_role VARCHAR(20) NULL,updated_by_user_id INT UNSIGNED NULL,updated_by_role VARCHAR(20) NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )");
 $pdo->exec("CREATE TABLE bank_transactions (
  id INT UNSIGNED PRIMARY KEY,account_id INT UNSIGNED NOT NULL,operation_date DATE NOT NULL,credit_amount DECIMAL(15,2) NOT NULL DEFAULT 0,debit_amount DECIMAL(15,2) NOT NULL DEFAULT 0,counterparty_inn VARCHAR(20) NULL,counterparty_name VARCHAR(255) NULL,purpose TEXT NULL,cash_flow_center_id INT UNSIGNED NULL,dds_category_id INT UNSIGNED NULL,classification_status VARCHAR(30) NOT NULL DEFAULT 'UNALLOCATED',classification_rule_id INT UNSIGNED NULL,classification_locked TINYINT NOT NULL DEFAULT 0,classification_updated_at DATETIME NULL,is_internal_transfer TINYINT NOT NULL DEFAULT 0,linked_cash_transaction_id INT UNSIGNED NULL
@@ -45,85 +41,62 @@ $pdo->exec("CREATE TABLE finance_allocations (id INT UNSIGNED PRIMARY KEY,note V
 $pdo->exec("CREATE TABLE finance_invoices (id INT UNSIGNED PRIMARY KEY,note VARCHAR(50) NULL)");
 
 $pdo->exec("INSERT INTO finance_cash_flow_centers VALUES (1,'Операционные расходы',1,100)");
-$pdo->exec("INSERT INTO finance_dds_categories VALUES (1,'Хозяйственные расходы','EXPENSE',1,0,100),(2,'Прочие поступления','INCOME',1,0,100)");
-$pdo->exec("INSERT INTO finance_cash_flow_center_dds_categories VALUES (1,1,100,1),(1,2,100,1)");
-$pdo->exec("INSERT INTO finance_money_accounts VALUES (10,'Основная касса','CASH',1),(11,'Резервная касса','CASH',1),(20,'Расчётный счёт','BANK',1)");
+$pdo->exec("INSERT INTO finance_dds_categories VALUES (1,'Хозяйственные расходы','EXPENSE',1,0,100)");
+$pdo->exec("INSERT INTO finance_cash_flow_center_dds_categories VALUES (1,1,100,1)");
+$pdo->exec("INSERT INTO finance_money_accounts VALUES (10,'Основная касса','CASH',1),(20,'Расчётный счёт','BANK',1)");
 $pdo->exec("INSERT INTO finance_allocations VALUES (1,'sentinel')");
 $pdo->exec("INSERT INTO finance_invoices VALUES (1,'sentinel')");
 $userContext=['id'=>7,'role'=>'company_owner'];
 
+// A historical categorize_to_cash configuration may still exist, but execution is classification-only.
 $ruleId=Rules::createRule($pdo,[
-    'name'=>'Комиссия с выдачей в кассу','priority'=>500,'direction'=>'EXPENSE','counterparty_inn'=>'7701234567','purpose_contains'=>'выдача наличных',
+    'name'=>'Legacy classify with cash target','priority'=>500,'direction'=>'EXPENSE','counterparty_inn'=>'7701234567','purpose_contains'=>'выдача наличных',
     'action_type'=>'categorize','target_cash_flow_center_id'=>1,'target_dds_category_id'=>1,'target_cash_account_id'=>10,
 ],$userContext);
 $stored=one($pdo,'SELECT * FROM finance_matching_rules WHERE id=?',[$ruleId]);
-ok(($stored['action_type']??'')==='categorize_to_cash','cash selection stores combined action type');
-ok(($stored['direction']??'')==='EXPENSE','combined rule is expense-only');
+ok(($stored['action_type']??'')==='categorize_to_cash','legacy combined action remains representable for audit compatibility');
 
 $pdo->exec("INSERT INTO bank_transactions (id,account_id,operation_date,debit_amount,credit_amount,counterparty_inn,counterparty_name,purpose) VALUES (200,1,'2026-08-15',1234.56,0,'7701234567','Банк','Выдача наличных по чеку')");
 $pdo->exec("INSERT INTO finance_operations (id,operation_type,status,source,money_account_id,operation_date,amount,currency,purpose,bank_transaction_id,counterparty_inn,counterparty_name) VALUES (1000,'EXPENSE','POSTED','BANK_STATEMENT',20,'2026-08-15',1234.56,'RUR','Выдача наличных по чеку',200,'7701234567','Банк')");
-
+$opsBefore=countRows($pdo,'finance_operations');
 $result=Rules::applyAutoMatchToOperation($pdo,1000);
-ok(!empty($result['matched'])&&!empty($result['transferred_to_cash']),'combined rule classifies and transfers');
-$cashOperationId=(int)($result['cash_operation_id']??0);ok($cashOperationId>0&&$cashOperationId!==1000,'cash transfer operation created');
-
+ok(!empty($result['matched']),'legacy combined rule still classifies');
+ok(empty($result['transferred_to_cash']) && empty($result['cash_operation_id']) && ($result['cash_operation_created']??null)===false,'legacy combined rule creates no CASH leg');
+ok(countRows($pdo,'finance_operations')===$opsBefore,'classification-only execution creates no finance operation');
 $bank=one($pdo,'SELECT * FROM bank_transactions WHERE id=200');
-ok((int)$bank['cash_flow_center_id']===1&&(int)$bank['dds_category_id']===1,'bank transaction keeps CFU and DDS');
-ok($bank['classification_status']==='AUTO'&&(int)$bank['classification_rule_id']===$ruleId,'bank classification points to rule');
-ok((int)$bank['is_internal_transfer']===1&&(int)$bank['linked_cash_transaction_id']===$cashOperationId,'bank transaction linked to cash transfer');
+$op=one($pdo,'SELECT * FROM finance_operations WHERE id=1000');
+ok((int)$bank['cash_flow_center_id']===1&&(int)$bank['dds_category_id']===1&&$bank['classification_status']==='AUTO','bank transaction is classified');
+ok((int)$bank['is_internal_transfer']===0&&$bank['linked_cash_transaction_id']===null,'bank transaction is never rewritten as internal CASH transfer');
+ok($op['operation_type']==='EXPENSE'&&$op['source']==='BANK_STATEMENT'&&$op['transfer_direction']===null,'source operation remains the real bank expense');
+ok((int)$op['cash_flow_center_id']===1&&(int)$op['dds_category_id']===1,'source operation keeps CFU and DDS');
 
-$out=one($pdo,'SELECT * FROM finance_operations WHERE id=1000');
-ok($out['operation_type']==='TRANSFER'&&$out['source']==='TRANSFER'&&$out['transfer_direction']==='out','original bank operation becomes transfer-out');
-ok((int)$out['cash_flow_center_id']===1&&(int)$out['dds_category_id']===1,'outgoing transfer preserves CFU and DDS');
-ok((int)$out['transfer_account_id']===10,'outgoing transfer targets selected cash account');
-$in=one($pdo,'SELECT * FROM finance_operations WHERE id=?',[$cashOperationId]);
-ok($in['operation_type']==='TRANSFER'&&$in['source']==='TRANSFER'&&$in['transfer_direction']==='in','paired cash operation is transfer-in');
-ok((int)$in['money_account_id']===10&&(int)$in['transfer_account_id']===20,'cash leg links cash and original bank accounts');
-ok((string)$in['amount']==='1234.56','cash leg preserves exact amount');
-ok($in['cash_flow_center_id']===null&&$in['dds_category_id']===null,'cash leg does not duplicate P&L classification');
-
-$beforeRepeat=countRows($pdo,'finance_operations');
-$repeat=Rules::applyAutoMatchToOperation($pdo,1000);
-ok(!empty($repeat['idempotent']),'reapply is explicitly idempotent');
-ok((int)($repeat['cash_operation_id']??0)===$cashOperationId,'reapply points to same cash operation');
-ok(countRows($pdo,'finance_operations')===$beforeRepeat,'reapply creates no duplicate transfer');
-
-$plainRuleId=Rules::createRule($pdo,[
-    'name'=>'Только разнесение','priority'=>400,'direction'=>'EXPENSE','counterparty_inn'=>'7707654321','purpose_contains'=>'без кассы',
-    'action_type'=>'categorize','target_cash_flow_center_id'=>1,'target_dds_category_id'=>1,'target_cash_account_id'=>'',
+// A transfer_to_cash rule is historical-only and must fail closed into review.
+$legacyTransferId=Rules::createRule($pdo,[
+    'name'=>'Legacy cash transfer','priority'=>600,'direction'=>'EXPENSE','counterparty_inn'=>'7709999999','purpose_contains'=>'legacy transfer',
+    'action_type'=>'transfer_to_cash','target_cash_account_id'=>10,
 ],$userContext);
-$plainStored=one($pdo,'SELECT action_type FROM finance_matching_rules WHERE id=?',[$plainRuleId]);ok($plainStored['action_type']==='categorize','empty cash keeps ordinary categorize action');
-$pdo->exec("INSERT INTO bank_transactions (id,account_id,operation_date,debit_amount,credit_amount,counterparty_inn,counterparty_name,purpose) VALUES (201,1,'2026-08-15',500.00,0,'7707654321','Поставщик','Оплата без кассы')");
-$pdo->exec("INSERT INTO finance_operations (id,operation_type,status,source,money_account_id,operation_date,amount,currency,purpose,bank_transaction_id,counterparty_inn,counterparty_name) VALUES (1100,'EXPENSE','POSTED','BANK_STATEMENT',20,'2026-08-15',500.00,'RUR','Оплата без кассы',201,'7707654321','Поставщик')");
-$opsBeforePlain=countRows($pdo,'finance_operations');$plain=Rules::applyAutoMatchToOperation($pdo,1100);ok(!empty($plain['matched'])&&empty($plain['transferred_to_cash']),'ordinary categorize still works without transfer');ok(countRows($pdo,'finance_operations')===$opsBeforePlain,'ordinary categorize creates no cash leg');
+$pdo->exec("INSERT INTO bank_transactions (id,account_id,operation_date,debit_amount,credit_amount,counterparty_inn,counterparty_name,purpose) VALUES (201,1,'2026-08-15',700.00,0,'7709999999','Банк','Legacy transfer')");
+$pdo->exec("INSERT INTO finance_operations (id,operation_type,status,source,money_account_id,operation_date,amount,currency,purpose,bank_transaction_id,counterparty_inn,counterparty_name) VALUES (1100,'EXPENSE','POSTED','BANK_STATEMENT',20,'2026-08-15',700.00,'RUR','Legacy transfer',201,'7709999999','Банк')");
+$opsBeforeLegacy=countRows($pdo,'finance_operations');
+$legacy=Rules::applyAutoMatchToOperation($pdo,1100);
+ok(!empty($legacy['needs_review'])&&!empty($legacy['legacy_cash_rule'])&&empty($legacy['matched']),'transfer_to_cash is suppressed and requires review');
+ok(countRows($pdo,'finance_operations')===$opsBeforeLegacy,'suppressed transfer_to_cash creates no operation');
+$legacyBank=one($pdo,'SELECT * FROM bank_transactions WHERE id=201');
+$legacyOp=one($pdo,'SELECT * FROM finance_operations WHERE id=1100');
+ok($legacyBank['classification_status']==='NEEDS_REVIEW'&&(int)$legacyBank['is_internal_transfer']===0,'legacy bank row is review-only');
+ok($legacyOp['operation_type']==='EXPENSE'&&$legacyOp['source']==='BANK_STATEMENT','legacy source operation is not rewritten');
 
-$invalidIncome=false;
-try{Rules::createRule($pdo,[
-    'name'=>'Нельзя доход в кассу','priority'=>300,'direction'=>'INCOME','counterparty_inn'=>'7700000001','purpose_contains'=>'доход',
-    'action_type'=>'categorize','target_cash_flow_center_id'=>1,'target_dds_category_id'=>2,'target_cash_account_id'=>10,
-],$userContext);}catch(InvalidArgumentException $e){$invalidIncome=str_contains($e->getMessage(),'только к расходу');}
-ok($invalidIncome,'income classification cannot be configured with bank-to-cash transfer');
-
-$rollbackRuleId=Rules::createRule($pdo,[
-    'name'=>'Атомарность','priority'=>600,'direction'=>'EXPENSE','counterparty_inn'=>'7709999999','purpose_contains'=>'проверка отката',
-    'action_type'=>'categorize','target_cash_flow_center_id'=>1,'target_dds_category_id'=>1,'target_cash_account_id'=>11,
-],$userContext);
-$pdo->exec("UPDATE finance_money_accounts SET is_active=0 WHERE id=11");
-$pdo->exec("INSERT INTO bank_transactions (id,account_id,operation_date,debit_amount,credit_amount,counterparty_inn,counterparty_name,purpose) VALUES (202,1,'2026-08-15',700.00,0,'7709999999','Банк','Проверка отката')");
-$pdo->exec("INSERT INTO finance_operations (id,operation_type,status,source,money_account_id,operation_date,amount,currency,purpose,bank_transaction_id,counterparty_inn,counterparty_name) VALUES (1200,'EXPENSE','POSTED','BANK_STATEMENT',20,'2026-08-15',700.00,'RUR','Проверка отката',202,'7709999999','Банк')");
-$opsBeforeRollback=countRows($pdo,'finance_operations');$thrown=false;try{Rules::applyAutoMatchToOperation($pdo,1200);}catch(Throwable){$thrown=true;}ok($thrown,'transfer failure is surfaced');
-$rollbackBank=one($pdo,'SELECT * FROM bank_transactions WHERE id=202');$rollbackOp=one($pdo,'SELECT * FROM finance_operations WHERE id=1200');
-ok($rollbackBank['classification_status']==='UNALLOCATED'&&$rollbackBank['cash_flow_center_id']===null&&$rollbackBank['dds_category_id']===null,'failed transfer rolls back bank classification');
-ok($rollbackOp['classification_status']==='UNALLOCATED'&&$rollbackOp['cash_flow_center_id']===null&&$rollbackOp['dds_category_id']===null,'failed transfer rolls back finance operation classification');
-ok((int)$rollbackBank['is_internal_transfer']===0&&countRows($pdo,'finance_operations')===$opsBeforeRollback,'failed transfer creates no cash movement');
-
-$pdo->exec("INSERT INTO bank_transactions (id,account_id,operation_date,debit_amount,credit_amount,counterparty_inn,counterparty_name,purpose,classification_status,classification_locked) VALUES (203,1,'2026-08-15',900.00,0,'7701234567','Банк','Выдача наличных вручную','MANUAL',1)");
-$pdo->exec("INSERT INTO finance_operations (id,operation_type,status,source,money_account_id,operation_date,amount,currency,purpose,bank_transaction_id,counterparty_inn,counterparty_name,classification_status,classification_locked) VALUES (1300,'EXPENSE','POSTED','BANK_STATEMENT',20,'2026-08-15',900.00,'RUR','Выдача наличных вручную',203,'7701234567','Банк','MANUAL',1)");
-$opsBeforeManual=countRows($pdo,'finance_operations');$manual=Rules::applyAutoMatchToOperation($pdo,1300);ok(!empty($manual['protected']),'manual classification stays protected');ok(countRows($pdo,'finance_operations')===$opsBeforeManual,'manual-protected operation creates no cash transfer');
+// Manual classifications remain protected from all automation.
+$pdo->exec("INSERT INTO bank_transactions (id,account_id,operation_date,debit_amount,credit_amount,counterparty_inn,counterparty_name,purpose,classification_status,classification_locked) VALUES (202,1,'2026-08-15',900.00,0,'7701234567','Банк','Выдача наличных вручную','MANUAL',1)");
+$pdo->exec("INSERT INTO finance_operations (id,operation_type,status,source,money_account_id,operation_date,amount,currency,purpose,bank_transaction_id,counterparty_inn,counterparty_name,classification_status,classification_locked) VALUES (1200,'EXPENSE','POSTED','BANK_STATEMENT',20,'2026-08-15',900.00,'RUR','Выдача наличных вручную',202,'7701234567','Банк','MANUAL',1)");
+$manualBefore=countRows($pdo,'finance_operations');
+$manual=Rules::applyAutoMatchToOperation($pdo,1200);
+ok(!empty($manual['protected']),'manual classification stays protected');
+ok(countRows($pdo,'finance_operations')===$manualBefore,'manual-protected operation creates no CASH transfer');
 
 ok(countRows($pdo,'finance_allocations')===1&&countRows($pdo,'finance_invoices')===1,'allocations and invoices are untouched');
-
-$crud=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleCrudTrait.php');
-ok(str_contains($crud,"operation_type,''))<>'TRANSFER'"),'rule removal never rewrites executed transfer operations');
+$classification=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleClassificationTrait.php');
+ok(str_contains($classification,'cash_rule_deprecated'),'legacy cash-only rules have an explicit deprecated path');
+ok(str_contains($classification,"'cash_operation_created'=>false"),'classification path explicitly records zero CASH writes');
 
 echo "FINANCE_MATCHING_CASH_TRANSFER_OK\n";

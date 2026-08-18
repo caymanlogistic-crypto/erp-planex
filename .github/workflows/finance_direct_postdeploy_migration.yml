@@ -1,0 +1,160 @@
+name: Finance Direct Postdeploy Migration
+
+on:
+  workflow_run:
+    workflows: ["ERPv2 Controlled Deploy"]
+    types: [completed]
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finance-direct-postdeploy-migration
+  cancel-in-progress: false
+
+env:
+  LIVE_PARENT: /home/s/spugovxsim/planexp/public_html
+  LIVE_SUBDIR: erpv2
+
+jobs:
+  migrate-and-verify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+      - name: Syntax
+        run: |
+          php -l scripts/finance_direct_verify.php
+          php -l scripts/finance_direct_apply_076.php
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/finance_direct_post_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/finance_direct_post_key" "$HOME/.ssh/known_hosts"
+      - name: Verify exact deployed marker
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          test "$marker" = "$SHA"
+      - name: Upload isolated scripts
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes scripts/finance_direct_verify.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php"
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes scripts/finance_direct_apply_076.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php"
+      - name: Resolve standalone DB PHP
+        id: php
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          phpbin="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "GITHUB_RUN_ID='$GITHUB_RUN_ID' bash -s" <<'REMOTE'
+          set -e
+          candidates="$(command -v php 2>/dev/null || true) $(which -a php 2>/dev/null || true)"
+          for pattern in /usr/local/bin/php* /usr/local/php*/bin/php /opt/php*/bin/php /opt/*/php*/bin/php /usr/bin/php*; do
+            for p in $pattern; do [ -x "$p" ] && candidates="$candidates $p"; done
+          done
+          for p in $candidates; do
+            [ -x "$p" ] || continue
+            case "$p" in *php-config*|*phpize*) continue ;; esac
+            "$p" -l "/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php" >/dev/null 2>&1 || continue
+            "$p" -l "/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php" >/dev/null 2>&1 || continue
+            "$p" -r 'exit(extension_loaded("pdo_mysql") ? 0 : 1);' >/dev/null 2>&1 || continue
+            echo "$p"; exit 0
+          done
+          exit 1
+          REMOTE
+          )"
+          test -n "$phpbin"
+          echo "REMOTE_PHP=$phpbin"
+          echo "phpbin=$phpbin" >> "$GITHUB_OUTPUT"
+      - name: Snapshot before migration
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PHPBIN: ${{ steps.php.outputs.phpbin }}
+        run: |
+          set -euo pipefail
+          LIVE_ROOT="$LIVE_PARENT/$LIVE_SUBDIR"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php'" | tee finance_direct_post_before.txt
+          grep -q 'FINANCE_DIRECT_READ_ONLY_OK' finance_direct_post_before.txt
+      - name: Apply only migration 076
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PHPBIN: ${{ steps.php.outputs.phpbin }}
+        run: |
+          set -euo pipefail
+          LIVE_ROOT="$LIVE_PARENT/$LIVE_SUBDIR"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php'" | tee finance_direct_post_migration.txt
+          grep -q 'FINANCE_DIRECT_076_OK' finance_direct_post_migration.txt
+      - name: Snapshot after migration and compare business data
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          PHPBIN: ${{ steps.php.outputs.phpbin }}
+        run: |
+          set -euo pipefail
+          LIVE_ROOT="$LIVE_PARENT/$LIVE_SUBDIR"
+          ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php'" | tee finance_direct_post_after.txt
+          grep -q 'FINANCE_DIRECT_READ_ONLY_OK' finance_direct_post_after.txt
+          before_json="$(sed -n 's/^FINANCE_DIRECT_READ_ONLY_SNAPSHOT=//p' finance_direct_post_before.txt)"
+          after_json="$(sed -n 's/^FINANCE_DIRECT_READ_ONLY_SNAPSHOT=//p' finance_direct_post_after.txt)"
+          python3 - "$before_json" "$after_json" <<'PY'
+          import json, sys
+          before=json.loads(sys.argv[1]); after=json.loads(sys.argv[2])
+          schema_only={'employee_account_table_exists','employee_account_rows','migration_076_applied'}
+          for key in before:
+              if key not in schema_only and before[key] != after[key]:
+                  raise SystemExit(f'business invariant changed: {key}: {before[key]} -> {after[key]}')
+          if not after['employee_account_table_exists'] or after['migration_076_applied'] != 1:
+              raise SystemExit('migration 076 is not active for PLANEX')
+          if after['cash_posted_balance'] != '0.00' or after['cancelled_159_count'] != 1:
+              raise SystemExit('historical CASH invariant failed')
+          print('FINANCE_DIRECT_POSTDEPLOY_INVARIANTS_OK')
+          PY
+      - name: HTTP acceptance
+        run: |
+          set -euo pipefail
+          test "$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)" = 200
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: finance_direct_postdeploy_${{ github.event.workflow_run.head_sha }}
+          path: finance_direct_post_*.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Cleanup
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          if [ -f "$HOME/.ssh/finance_direct_post_key" ]; then
+            ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "rm -f '/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php' '/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php'" 2>/dev/null || true
+          fi
+          rm -f "$HOME/.ssh/finance_direct_post_key" 2>/dev/null || true

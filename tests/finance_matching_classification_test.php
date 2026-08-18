@@ -23,13 +23,36 @@ ok(S::classificationBadgeClass('UNALLOCATED')==='badge badge-danger','unallocate
 ok(S::classificationBadgeClass('AUTO')==='badge badge-neutral','automatic is blue-violet neutral');
 ok(S::classificationBadgeClass('MANUAL')==='badge badge-ok','manual is green');
 ok(S::classificationBadgeClass('NEEDS_REVIEW')==='badge badge-warning','review is warning');
-$migration=file_get_contents(__DIR__.'/../database/migrations-local/063_finance_matching_classification.sql');ok(str_contains($migration,'finance_cash_flow_centers')&&str_contains($migration,'classification_locked')&&str_contains($migration,'linked_cash_transaction_id'),'migration contains CFU, lock and transfer link');
-$transfer=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleTransferExecutionTrait.php');ok(str_contains($transfer,'rule_cash_transfer:')&&str_contains($transfer,"transfer_direction='out'")&&str_contains($transfer,"'in'"),'bank-to-cash uses idempotent paired transfer representation');
-$crud=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleCrudTrait.php');ok(str_contains($crud,"classification_rule_id=?")&&str_contains($crud,"classification_status='UNALLOCATED'")&&str_contains($crud,"='AUTO'"),'rule deletion reverts only rule-owned AUTO classifications');ok(str_contains($crud,"operation_type,''))<>'TRANSFER'"),'rule deletion preserves executed transfer operations');
-$manual=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleManualTrait.php');ok(str_contains($manual,'clearBankTransactionClassification')&&str_contains($manual,"['AUTO','MANUAL']")&&str_contains($manual,"classification_status='UNALLOCATED'")&&str_contains($manual,'is_internal_transfer'),'explicit classification removal is guarded and resets status');
-$validation=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleValidationTrait.php');ok(str_contains($validation,"'auto_apply'=>1"),'saved rules normalize to automatic application');ok(str_contains($validation,'$action=\'categorize_to_cash\'')&&str_contains($validation,"['transfer_to_cash','categorize_to_cash']"),'cash selection normalizes to expense-only combined action');
-$classification=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleClassificationTrait.php');ok(str_contains($classification,"['categorize','categorize_to_cash']")&&str_contains($classification,'classification_auto_cash_transfer')&&str_contains($classification,'transferred_to_cash'),'combined execution classifies and transfers atomically');
-$service=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleService.php');ok(str_contains($service,"'categorize_to_cash'"),'combined action type is allowed');
-$form=file_get_contents(__DIR__.'/../app/View/partials/company_finance_matching_rule_form.php');ok(str_contains($form,'id="matching-rule-cash"')&&str_contains($form,'После разнесения')&&str_contains($form,'Повторный перевод не создаётся'),'rule UI exposes optional cash transfer with idempotency hint');
-$page=file_get_contents(__DIR__.'/../app/View/pages/company_finance_matching_rules.php');ok(str_contains($page,"d==='EXPENSE'")&&str_contains($page,'После разнесения → касса'),'UI enables cash choice only for expense DDS and shows it in registry');
+
+$migration=file_get_contents(__DIR__.'/../database/migrations-local/063_finance_matching_classification.sql');
+ok(str_contains($migration,'finance_cash_flow_centers')&&str_contains($migration,'classification_locked')&&str_contains($migration,'linked_cash_transaction_id'),'historical matching schema remains readable');
+
+$crud=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleCrudTrait.php');
+ok(str_contains($crud,"classification_rule_id=?")&&str_contains($crud,"classification_status='UNALLOCATED'")&&str_contains($crud,"='AUTO'"),'rule deletion reverts only rule-owned AUTO classifications');
+ok(str_contains($crud,"operation_type,''))<>'TRANSFER'"),'rule deletion preserves executed historical transfers');
+
+$manual=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleManualTrait.php');
+ok(str_contains($manual,'clearBankTransactionClassification')&&str_contains($manual,"['AUTO','MANUAL']")&&str_contains($manual,"classification_status='UNALLOCATED'")&&str_contains($manual,'is_internal_transfer'),'explicit classification removal remains guarded');
+
+$validation=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleValidationTrait.php');
+ok(str_contains($validation,"'auto_apply'=>1"),'saved rules normalize to automatic application');
+ok(str_contains($validation,'$cash=null;'),'employee settlement strips cash target');
+
+$classification=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleClassificationTrait.php');
+ok(str_contains($classification,'legacy_cash_rule_suppressed'),'legacy transfer-to-cash is suppressed');
+ok(str_contains($classification,'classification_auto_legacy_cash_suppressed'),'legacy categorize-to-cash becomes classification only');
+ok(str_contains($classification,"'cash_operation_created'=>false"),'active classification records no new cash operation');
+ok(!str_contains($classification,'convertBankOperationToCashTransfer($pdo,$op,$rule)'),'active classifier does not call cash transfer execution');
+
+$service=file_get_contents(__DIR__.'/../app/Service/FinanceMatchingRuleService.php');
+ok(str_contains($service,"'categorize_to_cash'"),'legacy combined action stays accepted for stored-rule compatibility');
+
+$form=file_get_contents(__DIR__.'/../app/View/partials/company_finance_matching_rule_form.php');
+ok(!str_contains($form,'id="matching-rule-cash"'),'active matching UI has no cash selector');
+ok(str_contains($form,'name="target_cash_account_id" value=""'),'active matching UI clears legacy cash target');
+
+$cashRoutes=file_get_contents(__DIR__.'/../app/Http/Routes/company_finance_cash.php');
+ok(!str_contains($cashRoutes,'FinanceCashController'),'cash controller is retired from active routes');
+ok(str_contains($cashRoutes,'Создание и изменение кассовых операций отключено'),'cash write endpoints are blocked');
+
 echo "FINANCE_MATCHING_CLASSIFICATION_OK\n";
