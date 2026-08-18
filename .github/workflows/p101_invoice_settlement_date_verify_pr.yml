@@ -1,0 +1,95 @@
+name: P101 Invoice Settlement Date Verify PR
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Wait for exact controlled deploy marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p101_key"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p101_key" "$HOME/.ssh/known_hosts"
+          test "$EXPECTED_SHA" = '3ed8d55d3cb6e8bfb69567dab3193d3ab393d438'
+          for attempt in $(seq 1 48); do
+            got="$(ssh -p "$PORT" -i "$HOME/.ssh/p101_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+            echo "attempt=$attempt expected=$EXPECTED_SHA deployed=$got"
+            if [ "$got" = "$EXPECTED_SHA" ]; then exit 0; fi
+            sleep 15
+          done
+          echo 'Timed out waiting for exact production deploy.' >&2
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install chromium
+
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p101_key
+            chmod 600 /tmp/p101_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p101_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+
+      - name: Verify settlement date editor on real production invoice
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p101/P101_invoice_settlement_date_verify.js 2>&1 | tee P101_RUNTIME.txt
+          grep -q 'P101_SETTLEMENT_DATE_BUTTON_OK' P101_RUNTIME.txt
+          grep -q 'P101_SETTLEMENT_DATE_FORM_OK' P101_RUNTIME.txt
+          grep -q 'P101_SETTLEMENT_DATE_NOOP_POST_OK' P101_RUNTIME.txt
+          grep -q 'P101_SETTLEMENT_DATE_PRESERVED_OK' P101_RUNTIME.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P101_invoice_settlement_date_${{ github.event.pull_request.base.sha }}
+          path: |
+            P101_RUNTIME.txt
+            P101_invoice_settlement_date_evidence.json
+            P101_invoice_payment_date_editor.png
+            P101_invoice_payment_date_after_noop.png
+          if-no-files-found: warn
+          retention-days: 30
