@@ -1,5 +1,5 @@
 <?php
-/** P48 production READ-ONLY finance/cash inventory. PHP 5.6 compatible. */
+/** P48 production READ-ONLY finance/cash inventory. Compatible with old production PHP. */
 function envFile($path) {
     $out = array();
     $lines = @file($path, FILE_IGNORE_NEW_LINES);
@@ -13,9 +13,16 @@ function envFile($path) {
     return $out;
 }
 function qi($s) { return '`'.str_replace('`','``',$s).'`'; }
-function j($v) { return json_encode($v, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRESERVE_ZERO_FRACTION); }
-function section($name, $data) { echo "\n=== ".$name." ===\n".j($data)."\n"; }
-
+function fields($schema) {
+    $out = array();
+    foreach ($schema as $row) if (isset($row['Field'])) $out[] = $row['Field'];
+    return $out;
+}
+function section($name, $data) {
+    echo "\n=== ".$name." ===\n";
+    print_r($data);
+    echo "\n";
+}
 $e = envFile('/home/s/spugovxsim/planexp/public_html/erpv2/.env');
 $host = isset($e['DB_HOST']) ? $e['DB_HOST'] : '127.0.0.1';
 $port = isset($e['DB_PORT']) ? $e['DB_PORT'] : '3306';
@@ -32,7 +39,6 @@ try {
     foreach ($allTables as $t) if (preg_match('/finance|employee|cash|invoice|obligation|allocation|settlement|payment/i', $t)) $interesting[] = $t;
     sort($interesting);
     section('INTERESTING_TABLES', $interesting);
-
     $schemas = array(); $counts = array();
     foreach ($interesting as $t) {
         $schemas[$t] = $pdo->query('SHOW COLUMNS FROM '.qi($t))->fetchAll();
@@ -40,10 +46,9 @@ try {
     }
     section('SCHEMAS', $schemas);
     section('ROW_COUNTS', $counts);
-
     if (in_array('finance_operations', $allTables, true)) {
         $opSchema = isset($schemas['finance_operations']) ? $schemas['finance_operations'] : $pdo->query('SHOW COLUMNS FROM finance_operations')->fetchAll();
-        $cols = array_column($opSchema, 'Field');
+        $cols = fields($opSchema);
         if (in_array('id', $cols, true)) {
             $st = $pdo->prepare('SELECT * FROM finance_operations WHERE id = ?');
             $st->execute(array(159));
@@ -54,26 +59,23 @@ try {
         $dist = array();
         foreach ($cols as $c) {
             if (!preg_match('/status|type|source|direction|kind|method|account/i', $c)) continue;
-            try {
-                $dist[$c] = $pdo->query('SELECT '.qi($c).' AS v, COUNT(*) AS n FROM finance_operations GROUP BY '.qi($c).' ORDER BY n DESC')->fetchAll();
-            } catch (Exception $ignored) {}
+            try { $dist[$c] = $pdo->query('SELECT '.qi($c).' AS v, COUNT(*) AS n FROM finance_operations GROUP BY '.qi($c).' ORDER BY n DESC')->fetchAll(); }
+            catch (Exception $ignored) {}
         }
         section('FINANCE_OPERATION_DISTRIBUTIONS', $dist);
     }
-
     $rowDump = array();
     foreach ($interesting as $t) {
         if ($t === 'finance_operations') continue;
         $n = isset($counts[$t]) ? $counts[$t] : 0;
         if ($n <= 2000) {
-            $cols = array_column(isset($schemas[$t]) ? $schemas[$t] : array(), 'Field');
+            $cols = fields(isset($schemas[$t]) ? $schemas[$t] : array());
             $order = in_array('id', $cols, true) ? ' ORDER BY id ASC' : '';
             try { $rowDump[$t] = $pdo->query('SELECT * FROM '.qi($t).$order.' LIMIT 2000')->fetchAll(); }
             catch (Exception $ex) { $rowDump[$t] = array('__error' => $ex->getMessage()); }
         } else $rowDump[$t] = array('__skipped_rows' => $n);
     }
     section('RELEVANT_ROWS', $rowDump);
-
     $cashHits = array();
     foreach ($interesting as $t) {
         $cols = isset($schemas[$t]) ? $schemas[$t] : array();
