@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: finance-direct-predeploy-guard
+  group: finance-direct-predeploy-guard-${{ github.event_name }}
   cancel-in-progress: true
 
 env:
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: finance_direct_predeploy_${{ github.sha }}
+          name: finance_direct_predeploy_${{ github.sha }}_${{ github.event_name }}
           path: finance_direct_pre_*.txt
           if-no-files-found: warn
           retention-days: 30
