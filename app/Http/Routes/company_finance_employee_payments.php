@@ -5,6 +5,7 @@ require_once base_path('app/Service/FinanceEmployeeInvoicePaymentEventService.ph
 require_once base_path('app/Service/FinanceEmployeePersonalExpenseEventService.php');
 require_once base_path('app/Service/FinanceEmployeeMoneyAccountService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectTransferService.php');
+require_once base_path('app/Service/FinanceEmployeeDirectExpenseService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePaymentsController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeeInvoicePaymentController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePersonalExpenseController.php');
@@ -29,7 +30,7 @@ $router->post('/company/finance/employee-payments/transfer/delete', [$controller
 $router->get('/company/finance/employee-payments/employee/{type}/{id}', [$controller, 'employeeDetail']);
 $router->post('/company/finance/employee-payments/movements/{id}/reassign', [$controller, 'reassignMovement']);
 
-// Bank transactions are again attached directly to the responsible employee.
+// Bank transactions are attached directly to the responsible employee.
 $router->post('/company/finance/employee-payments/bank-link', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/bank_link.php');
 });
@@ -41,7 +42,12 @@ $router->post('/company/finance/employee-payments/invoice-payment/cancel', [$inv
 
 $router->get('/company/finance/employee-payments/personal-expenses', [$personalExpenseController, 'listForEmployee']);
 $router->get('/company/finance/employee-payments/personal-expense/create', [$personalExpenseController, 'createForm']);
-$router->post('/company/finance/employee-payments/personal-expense/create', [$personalExpenseController, 'createSubmit']);
+$router->post('/company/finance/employee-payments/personal-expense/create', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/personal_expense_create.php');
+});
+// Update/cancel remain backward-compatible with both historical two-leg events and
+// new one-operation events because the latter store one canonical operation id in
+// both linkage columns and do not create a cash_resolution.
 $router->get('/company/finance/employee-payments/personal-expense/{id}/edit', [$personalExpenseController, 'editForm']);
 $router->post('/company/finance/employee-payments/personal-expense/{id}/update', [$personalExpenseController, 'updateSubmit']);
 $router->post('/company/finance/employee-payments/personal-expense/{id}/cancel', [$personalExpenseController, 'cancelSubmit']);
