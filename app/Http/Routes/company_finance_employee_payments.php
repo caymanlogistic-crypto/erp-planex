@@ -3,6 +3,8 @@ require_once base_path('app/Service/FinanceOperationInvoiceSettlementService.php
 require_once base_path('app/Service/FinanceCashInvoiceEventService.php');
 require_once base_path('app/Service/FinanceEmployeeInvoicePaymentEventService.php');
 require_once base_path('app/Service/FinanceEmployeePersonalExpenseEventService.php');
+require_once base_path('app/Service/FinanceEmployeeMoneyAccountService.php');
+require_once base_path('app/Service/FinanceEmployeeDirectTransferService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePaymentsController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeeInvoicePaymentController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePersonalExpenseController.php');
@@ -14,12 +16,23 @@ $personalExpenseController = new \App\Http\Controllers\Company\FinanceEmployeePe
 $router->get('/company/finance/employee-payments', [$controller, 'index']);
 $router->get('/company/finance/employee-payments/create', [$controller, 'createForm']);
 $router->post('/company/finance/employee-payments/create', [$controller, 'createSubmit']);
-$router->post('/company/finance/employee-payments/transfer', [$controller, 'transferSubmit']);
+
+// New employee handoffs bypass the historical technical CASH account.
+$router->post('/company/finance/employee-payments/transfer', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_submit.php');
+});
+
+// Historical employee transfers keep their existing edit/delete path so no old
+// finance_operations or finance_cash_resolutions need to be rewritten.
 $router->post('/company/finance/employee-payments/transfer/update', [$controller, 'transferUpdateSubmit']);
 $router->post('/company/finance/employee-payments/transfer/delete', [$controller, 'transferDeleteSubmit']);
 $router->get('/company/finance/employee-payments/employee/{type}/{id}', [$controller, 'employeeDetail']);
 $router->post('/company/finance/employee-payments/movements/{id}/reassign', [$controller, 'reassignMovement']);
-$router->post('/company/finance/employee-payments/bank-link', [$controller, 'bankLink']);
+
+// Bank transactions are again attached directly to the responsible employee.
+$router->post('/company/finance/employee-payments/bank-link', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/bank_link.php');
+});
 $router->post('/company/finance/employee-payments/bank-unlink', [$controller, 'bankUnlink']);
 
 $router->post('/company/finance/employee-payments/invoice-payment/create', [$invoicePaymentController, 'createSubmit']);
