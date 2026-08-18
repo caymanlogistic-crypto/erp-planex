@@ -8,6 +8,7 @@ require_once base_path('app/Service/FinanceEmployeeBankSettlementService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectTransferService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectExpenseService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectInvoicePaymentService.php');
+require_once base_path('app/Service/FinanceEmployeeClientReceiptService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePaymentsController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeeInvoicePaymentController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePersonalExpenseController.php');
@@ -18,18 +19,22 @@ $personalExpenseController = new \App\Http\Controllers\Company\FinanceEmployeePe
 
 $router->get('/company/finance/employee-payments', [$controller, 'index']);
 
+// Retired generic form: the workspace exposes exactly four business operations.
 $router->get('/company/finance/employee-payments/create', static function (): void {
     requireRole(['company_owner']);
-    $_SESSION['employee_payments_success'] = 'Выберите прямую операцию сотрудника: передача, личный расход или оплата счёта.';
+    $_SESSION['employee_payments_success'] = 'Выберите операцию: получено от клиента, передача сотруднику, оплата счёта или прочий расход.';
     redirect_to('/company/finance/employee-payments');
 });
 $router->post('/company/finance/employee-payments/create', static function (): void {
     requireRole(['company_owner']);
     verifyCsrfRequest();
-    $_SESSION['employee_payments_error'] = 'Устаревший способ операции сотрудника отключён. Используйте прямые операции.';
+    $_SESSION['employee_payments_error'] = 'Устаревший универсальный способ отключён. Используйте одну из четырёх бизнес-операций.';
     redirect_to('/company/finance/employee-payments');
 });
 
+$router->post('/company/finance/employee-payments/client-receipt/create', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/client_receipt_create.php');
+});
 $router->post('/company/finance/employee-payments/transfer', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_submit.php');
 });
