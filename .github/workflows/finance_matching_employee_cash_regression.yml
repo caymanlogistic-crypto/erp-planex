@@ -1,4 +1,4 @@
-name: Finance Matching Employee Cash Regression
+name: Finance Employee Direct Regression
 on:
   push:
   pull_request:
@@ -14,19 +14,32 @@ jobs:
       - name: PHP syntax
         run: |
           php -l app/Service/FinanceMatchingRuleEmployeeExecutionTrait.php
-          php -l app/Service/FinanceMatchingRuleManualTrait.php
-          php -l app/Service/FinanceEmployeeTransferService.php
-          php -l app/Http/Controllers/Company/FinanceEmployeePaymentsController.php
-          php -l app/View/partials/company_bank_transaction_classify_form.php
+          php -l app/Service/FinanceEmployeeMoneyAccountService.php
+          php -l app/Service/FinanceEmployeeBankSettlementService.php
+          php -l app/Service/FinanceEmployeeDirectTransferService.php
+          php -l app/Service/FinanceEmployeeDirectExpenseService.php
+          php -l app/Service/FinanceEmployeeDirectInvoicePaymentService.php
+          php -l app/Http/Controllers/Company/FinanceEmployeeDirectActions/bank_link.php
+          php -l app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_submit.php
+          php -l app/Http/Controllers/Company/FinanceEmployeeDirectActions/personal_expense_create.php
+          php -l app/Http/Controllers/Company/FinanceEmployeeDirectActions/invoice_payment_create.php
           php -l app/View/partials/company_finance_matching_rule_form.php
-          php -l app/View/pages/company_finance_employee_payments.php
           php -l tests/finance_matching_employee_cash_test.php
           php -l tests/finance_employee_transfer_test.php
       - name: Existing matching semantics
         run: php tests/finance_matching_classification_test.php
-      - name: Employee cash matching architecture
+      - name: Employee direct architecture
         run: php tests/finance_matching_employee_cash_test.php
-      - name: Employee transfer architecture
+      - name: Employee transfer compatibility
         run: php tests/finance_employee_transfer_test.php
-      - name: Migration shape
-        run: grep -q 'target_employee_identity_type' database/migrations-local/068_finance_employee_matching_rules.sql
+      - name: Tenant migration shape
+        run: |
+          test -f database/migrations-local/076_finance_employee_money_accounts.sql
+          grep -q 'finance_employee_money_accounts' database/migrations-local/076_finance_employee_money_accounts.sql
+          test ! -f database/migrations/20260818_finance_employee_money_accounts.sql
+      - name: No active cash writes
+        run: |
+          ! grep -q 'FinanceCashController' app/Http/Routes/company_finance_cash.php
+          grep -q 'Создание и изменение кассовых операций отключено' app/Http/Routes/company_finance_cash.php
+          ! grep -q 'INSERT INTO finance_cash_resolutions' app/Service/FinanceEmployeeBankSettlementService.php
+          ! grep -q 'INSERT INTO finance_cash_resolutions' app/Service/FinanceEmployeeDirectTransferService.php
