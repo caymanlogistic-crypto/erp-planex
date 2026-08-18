@@ -16,53 +16,48 @@ function fepe_method(string $php, string $name): string {
     fepe_fail("Method {$name} is not balanced");
 }
 
-$service = file_get_contents($root . '/app/Service/FinanceEmployeePersonalExpenseEventService.php');
+$historicalService = file_get_contents($root . '/app/Service/FinanceEmployeePersonalExpenseEventService.php');
+$directService = file_get_contents($root . '/app/Service/FinanceEmployeeDirectExpenseService.php');
 $migration = file_get_contents($root . '/database/migrations-local/074_employee_personal_expense_linked_event.sql');
 $routes = file_get_contents($root . '/app/Http/Routes/company_finance_employee_payments.php');
 $form = file_get_contents($root . '/app/View/partials/company_finance_employee_personal_expense_form.php');
-$unified = file_get_contents($root . '/app/View/partials/company_finance_employee_unified_ledger_ui.php');
+$page = file_get_contents($root . '/app/View/pages/company_finance_employee_payments.php');
 $js = file_get_contents($root . '/public/assets/js/finance-employee-personal-expense.js');
 $cashForm = file_get_contents($root . '/app/View/partials/company_cash_operation_form.php');
 $cashSubmit = file_get_contents($root . '/app/Http/Controllers/Company/FinanceCashActions/operation_create_submit.php');
-foreach (compact('service','migration','routes','form','unified','js','cashForm','cashSubmit') as $name=>$value) if ($value===false) fepe_fail("Cannot read {$name}");
+foreach (compact('historicalService','directService','migration','routes','form','page','js','cashForm','cashSubmit') as $name=>$value) if ($value===false) fepe_fail("Cannot read {$name}");
 
-$create = fepe_method($service, 'create');
-$update = fepe_method($service, 'update');
-$cancel = fepe_method($service, 'cancel');
-$receipt = fepe_method($service, 'insertTechnicalReceipt');
-$employeeReturn = fepe_method($service, 'insertEmployeeReturn');
-
-fepe_has($receipt, "'TRANSFER','POSTED','TRANSFER'", 'Employee funding must enter Main Cash as a technical transfer, not economic income');
-fepe_has($receipt, "'in'", 'Technical employee funding must be transfer-in');
-fepe_has($employeeReturn, "'RETURN','CASH'", 'Employee ledger row must be negative RETURN');
-fepe_has($create, "'operation_type' => 'EXPENSE'", 'Company expense must be a real cash expense');
-fepe_has($create, 'FinanceCashResolutionService::findMainCashAccount', 'Linked event must use Main Cash');
-fepe_has($create, 'finance_cash_resolutions', 'Technical receipt must be resolved and not left pending');
-fepe_has($create, 'cash_net_effect', 'Audit must record the zero-net cash invariant');
-fepe_has($update, 'receipt_finance_operation_id', 'Update must touch technical receipt');
-fepe_has($update, 'expense_finance_operation_id', 'Update must touch economic expense');
-fepe_has($update, 'finance_employee_personal_expenses', 'Update must keep master event synchronized');
-fepe_has($cancel, "status='CANCELLED'", 'Cancellation must state-cancel linked cash operations');
-fepe_has($cancel, 'receipt_finance_operation_id', 'Cancellation must cancel receipt leg');
-fepe_has($cancel, 'expense_finance_operation_id', 'Cancellation must cancel expense leg');
+// Historical linked events stay readable/cancellable without deleting audit history.
+$update = fepe_method($historicalService, 'update');
+$cancel = fepe_method($historicalService, 'cancel');
+fepe_has($update, 'finance_employee_personal_expenses', 'Historical event update must keep master event synchronized');
+fepe_has($cancel, "status='CANCELLED'", 'Historical cancellation must state-cancel linked operations');
 fepe_not($cancel, 'DELETE FROM finance_operations', 'Cancellation must preserve finance operation history');
 fepe_not($cancel, 'DELETE FROM finance_employee_movements', 'Cancellation must preserve employee ledger history');
 
-foreach (['event_group_id','employee_movement_id','receipt_finance_operation_id','expense_finance_operation_id','cash_resolution_id'] as $column) {
-    fepe_has($migration, $column, "Migration 074 must add {$column}");
-}
-fepe_has($routes, '/personal-expense/create', 'Employee Payments must own personal-expense create route');
-fepe_has($routes, '/personal-expense/{id}/update', 'Employee Payments must own personal-expense update route');
-fepe_has($routes, '/personal-expense/{id}/cancel', 'Employee Payments must own personal-expense cancel route');
-fepe_has($form, 'Сотрудник оплатил расход компании', 'Form must explain employee-funded expense workflow');
-fepe_has($form, 'Основную кассу', 'Form must explain automatic Main Cash postings');
-fepe_has($unified, '$personalEventsByMovement', 'Employee-funded expenses must decorate existing movements in the unified employee journal');
-fepe_has($unified, "'Прочий расход'", 'Unified employee journal must label personal-funded company expenses');
-fepe_has($unified, 'data-personal-expense-edit', 'Linked personal expenses must remain editable from the unified employee journal');
-fepe_not($js, 'employee-personal-expense-list-host', 'Employee Payments must not render a second personal-expense history block');
-fepe_has($js, 'Оплачено сотрудником', 'Employee Payments must expose the personal-expense entry fallback button');
-fepe_has($js, 'data-personal-expense-cancel-event', 'Linked events must be cancellable from Employee Payments');
-fepe_not($cashForm, '<option value="EMPLOYEE_PERSONAL_EXPENSE">', 'Cash must not expose competing employee-funded expense entry');
-fepe_has($cashSubmit, 'оформляется в разделе «Выплаты сотрудникам»', 'Stale Cash submissions must fail closed');
+// New entries use one direct economic operation on the employee account.
+fepe_has($directService, 'FinanceEmployeeMoneyAccountService::accountId', 'New personal expense must use employee money account');
+fepe_has($directService, "'EXPENSE','POSTED','EMPLOYEE'", 'New personal expense must be a direct employee expense');
+fepe_has($directService, "'RETURN','EMPLOYEE'", 'Employee ledger must decrease for the company expense');
+fepe_has($directService, "'cash_account_used' => false", 'Direct expense audit must record no retired account usage');
+fepe_not($directService, 'finance_cash_resolutions', 'New personal expense must not create historical resolution rows');
 
-fwrite(STDOUT, "OK: linked employee personal expense event regression passed\n");
+foreach (['event_group_id','employee_movement_id','receipt_finance_operation_id','expense_finance_operation_id','cash_resolution_id'] as $column) {
+    fepe_has($migration, $column, "Migration 074 must preserve historical {$column}");
+}
+fepe_has($routes, 'FinanceEmployeeDirectActions/personal_expense_create.php', 'Employee Payments must route new personal expense to direct action');
+fepe_has($routes, '/personal-expense/{id}/update', 'Historical/update route must remain available');
+fepe_has($routes, '/personal-expense/{id}/cancel', 'Cancellation route must remain available');
+fepe_has($form, 'Сотрудник оплатил расход компании', 'Form must explain the approved business event');
+fepe_has($form, 'в его взаиморасчётах и в расходах компании', 'Form must explain direct accounting result');
+fepe_not($form, 'Основную кассу', 'Form must not expose retired internal model');
+fepe_not($form, 'Основной кассы', 'Form must not expose retired internal model');
+fepe_has($page, '$personalByMovement', 'Personal expenses must decorate their existing employee movement in the journal');
+fepe_has($page, "['Прочий расход', 'Сотрудник'", 'Journal must label personal company expense semantically');
+fepe_not($js, 'employee-personal-expense-list-host', 'Employee Payments must not render a second personal-expense history block');
+fepe_has($js, 'Оплачено сотрудником', 'Employee Payments must retain the personal-expense entry fallback button');
+fepe_has($js, 'data-personal-expense-cancel-event', 'Linked historical events must remain cancellable');
+fepe_not($cashForm, '<option value="EMPLOYEE_PERSONAL_EXPENSE">', 'Retired generic form must not expose competing employee expense entry');
+fepe_has($cashSubmit, 'оформляется в разделе «Выплаты сотрудникам»', 'Stale submissions must fail closed');
+
+fwrite(STDOUT, "OK: linked/direct employee personal expense regression passed\n");

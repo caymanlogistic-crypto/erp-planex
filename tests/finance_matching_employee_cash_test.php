@@ -45,6 +45,14 @@ ok(str_contains($transfer, "'EMPLOYEE'"), 'employee transfer uses employee sourc
 ok(str_contains($transfer, "'cash_account_used' => false"), 'employee transfer explicitly records no retired account usage');
 ok(!str_contains($transfer, 'INSERT INTO finance_cash_resolutions'), 'employee transfer cannot insert historical resolution');
 
+$clientReceipt = file_get_contents(__DIR__ . '/../app/Service/FinanceEmployeeClientReceiptService.php');
+ok(str_contains($clientReceipt, 'FinanceEmployeeMoneyAccountService::accountId'), 'client receipt lands directly on employee money account');
+ok(str_contains($clientReceipt, "'PAYMENT','CLIENT'"), 'client receipt keeps client provenance in employee ledger');
+ok(str_contains($clientReceipt, "'INCOME','POSTED','EMPLOYEE'"), 'client receipt creates direct employee income operation');
+ok(str_contains($clientReceipt, 'FinanceOperationInvoiceSettlementService::allocate'), 'client receipt allocates against outgoing invoice');
+ok(str_contains($clientReceipt, "'cash_account_used'=>false"), 'client receipt explicitly records no retired account usage');
+ok(!str_contains($clientReceipt, 'finance_cash_resolutions'), 'client receipt cannot insert historical resolution');
+
 $validation = file_get_contents(__DIR__ . '/../app/Service/FinanceMatchingRuleValidationTrait.php');
 ok(str_contains($validation, '$cash=null;'), 'employee rule forcibly clears legacy target');
 ok(str_contains($validation, "if(\$action==='employee_cash_settlement'&&(\$cfu===null||\$dds===null))"), 'employee rule requires classification but not retired account');
@@ -65,11 +73,26 @@ ok(!str_contains($legacyRoutes, 'FinanceCashController'), 'retired controller is
 ok(str_contains($legacyRoutes, 'Этот устаревший способ операции отключён'), 'legacy POST routes are blocked');
 
 $employeeRoutes = file_get_contents(__DIR__ . '/../app/Http/Routes/company_finance_employee_payments.php');
-ok(str_contains($employeeRoutes, 'Устаревший способ операции сотрудника отключён'), 'generic old employee create route is blocked');
+ok(str_contains($employeeRoutes, 'Устаревший универсальный способ отключён'), 'generic old employee create route remains blocked');
 ok(!preg_match('/касс/ui', $employeeRoutes), 'employee route messages contain no retired terminology');
+ok(str_contains($employeeRoutes, 'client-receipt/create'), 'approved client receipt route exists');
+ok(str_contains($employeeRoutes, 'FinanceEmployeeDirectActions/client_receipt_create.php'), 'client receipt uses direct action');
 ok(str_contains($employeeRoutes, 'FinanceEmployeeDirectActions/transfer_submit.php'), 'employee transfer create uses direct route');
 ok(str_contains($employeeRoutes, 'FinanceEmployeeDirectActions/invoice_payment_create.php'), 'employee invoice create uses direct route');
 ok(str_contains($employeeRoutes, 'FinanceEmployeeDirectActions/personal_expense_create.php'), 'employee personal expense create uses direct route');
+
+$page = file_get_contents(__DIR__ . '/../app/View/pages/company_finance_employee_payments.php');
+$approvedLabels = ['Получено от клиента', 'Передать деньги'];
+foreach ($approvedLabels as $label) ok(str_contains($page, $label), 'employee page exposes approved action '.$label);
+ok(!str_contains($page, 'employee-transfer-edit-modal'), 'retired transfer edit modal removed');
+ok(!str_contains($page, 'Удалить передачу'), 'retired transfer delete control removed');
+
+$tools = file_get_contents(__DIR__ . '/../app/View/partials/company_finance_employee_invoice_tools.php');
+ok(str_contains($tools, '>Оплатил счёт</button>'), 'approved invoice payment action exists');
+ok(str_contains($tools, '>Прочий расход</button>'), 'approved personal expense action exists');
+
+$glue = file_get_contents(__DIR__ . '/../app/View/partials/company_finance_employee_unified_ledger_ui.php');
+ok(str_contains($glue, "client-receipt,transfer,invoice-payment,personal-expense"), 'UI glue declares exact approved four-action matrix');
 
 $migration = file_get_contents(__DIR__ . '/../database/migrations-local/076_finance_employee_money_accounts.sql');
 ok(str_contains($migration, 'finance_employee_money_accounts'), 'tenant migration creates employee account mapping');

@@ -14,16 +14,14 @@ $action = $isEdit
 <div class="modal-overlay is-open employee-personal-expense-modal" role="dialog" aria-modal="true" aria-labelledby="employee-personal-expense-title">
     <div class="modal modal-lg">
         <div class="modal-head">
-            <span class="modal-title" id="employee-personal-expense-title"><?= $isEdit ? 'Изменить расход из личных средств' : 'Сотрудник оплатил расход компании' ?></span>
+            <span class="modal-title" id="employee-personal-expense-title"><?= $isEdit ? 'Изменить расход сотрудника' : 'Прочий расход' ?></span>
             <button type="button" class="modal-close" data-personal-expense-close>&times;</button>
         </div>
         <form method="post" action="<?= e($action) ?>" data-personal-expense-form data-allowed-expense-dds-map="<?= e($allowedMapJson) ?>">
             <?= csrfField() ?>
             <div class="modal-body">
                 <div class="form-alert alert-info" style="margin-bottom:12px;">
-                    После сохранения система создаст единое связанное событие: <strong>расход сотрудника</strong>,
-                    <strong>поступление в Основную кассу от сотрудника</strong> и <strong>списание из Основной кассы на выбранные ЦФУ / статью ДДС</strong>.
-                    Остаток Основной кассы по событию не изменится.
+                    Сотрудник оплатил расход компании. Сумма будет отражена в его взаиморасчётах и в расходах компании по выбранным ЦФУ и статье ДДС.
                 </div>
 
                 <?php if ($isEdit || $employee): ?>
