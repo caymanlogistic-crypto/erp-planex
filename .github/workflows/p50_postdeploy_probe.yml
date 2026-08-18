@@ -20,7 +20,7 @@ jobs:
           HOST: ${{ secrets.ERPV2_SSH_HOST }}
           PORT: ${{ secrets.ERPV2_SSH_PORT }}
           USER: ${{ secrets.ERPV2_SSH_USER }}
-          EXPECTED_SHA: d6747c2d6f57c80a411d21bf2320f03f6f1b54bf
+          EXPECTED_SHA: f9d2f57661601b707f9665b9b33126b9600373ef
         shell: bash
         run: |
           set -euo pipefail
