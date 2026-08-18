@@ -6,6 +6,7 @@
 require_once base_path('app/Service/FinanceOperationInvoiceSettlementService.php');
 require_once base_path('app/Service/FinanceCashInvoiceEventService.php');
 require_once base_path('app/Service/FinanceInvoiceSettlementHistoryService.php');
+require_once base_path('app/Service/FinanceInvoiceSettlementDateService.php');
 require_once base_path('app/Service/FinancePayablesReportService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceInvoiceController.php');
 
@@ -20,6 +21,7 @@ $router->get('/company/finance/invoices/{id}/modal-edit', [$controller, 'modalEd
 $router->post('/company/finance/invoices/{id}/modal-edit', [$controller, 'modalEditSubmit']);
 $router->post('/company/finance/invoices/{id}/modal-delete', [$controller, 'modalDelete']);
 $router->post('/company/finance/invoices/{id}/pay-cash', [$controller, 'payCashSubmit']);
+$router->post('/company/finance/invoices/{id}/settlements/{operationId}/date', [$controller, 'settlementDateSubmit']);
 $router->get('/company/finance/invoices/obligations', [$controller, 'obligations']);
 $router->get('/company/finance/invoices/{id}/history', [$controller, 'history']);
 $router->get('/company/finance/invoices/route-payments', [$controller, 'routePayments']);

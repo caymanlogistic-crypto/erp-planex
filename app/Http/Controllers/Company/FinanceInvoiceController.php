@@ -75,6 +75,13 @@ final class FinanceInvoiceController
         require base_path('app/Http/Controllers/Company/InvoiceActions/pay_cash_submit.php');
     }
 
+    public function settlementDateSubmit(string $id, string $operationId): void
+    {
+        $config = $this->config;
+        $db = $this->db;
+        require base_path('app/Http/Controllers/Company/InvoiceActions/settlement_date_submit.php');
+    }
+
     public function routePayments(): void
     {
         $config = $this->config;
