@@ -34,7 +34,7 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok(!bodyText.includes('Работа с кассой недоступна.'), 'cash page unexpectedly unavailable');
 
     const personalExpenseSection = page.locator('.section-title').filter({ hasText: 'Расходы сотрудников из личных средств' });
-    ok(await personalExpenseSection.count() === 1, 'personal-funded expense history section missing');
+    ok(await personalExpenseSection.count() === 0, 'duplicate personal-funded expense history section must not exist below the cash ledger');
 
     const createOperation = page.locator('#cash-operation-create-btn');
     await createOperation.waitFor({ state: 'visible', timeout: 5000 });
@@ -70,7 +70,7 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
     ok(await employeeTransferBlock.isVisible(), 'Main Cash employee transfer block did not become visible');
     ok(await employeeTransferBlock.locator('select[name="employee_ref"]').count() === 1, 'employee transfer selector missing');
     ok((await employeeTransferBlock.innerText()).includes('внутренний перевод'), 'employee transfer must be described as internal transfer');
-    await page.screenshot({ path: 'P48_cash_lifecycle.png', fullPage: true });
+    await cashModal.evaluate(el => el.classList.remove('is-open'));
 
     const ledger = page.locator('#cash-ledger-table');
     if (await ledger.count()) {
@@ -80,23 +80,57 @@ const normalize = value => String(value || '').trim().toLocaleLowerCase('ru-RU')
       const rows = ledger.locator('tbody tr[data-cash-ledger-row]');
       const rowCount = await rows.count();
       ok(rowCount > 0, 'cash ledger table rendered without rows');
-      const employeeInvoiceMovement = normalize('Получено → списано');
+      const combinedMovement = normalize('Получено → списано');
       const allowedMovements = ['Поступление', 'Списание', 'Получено', 'Получено → передано', 'Получено → разнесено', 'Получено → списано'].map(normalize);
+      let combinedRows = 0;
+      let expandedOne = false;
       for (let i = 0; i < rowCount; i++) {
-        const cells = rows.nth(i).locator('td');
+        const row = rows.nth(i);
+        const cells = row.locator('td');
         ok(await cells.count() === 8, 'cash lifecycle row must have eight cells');
         const movement = normalize(await cells.nth(3).innerText());
         ok(allowedMovements.includes(movement), 'invalid cash lifecycle movement label');
-        if (movement === employeeInvoiceMovement) {
-          ok(normalize(await cells.nth(4).innerText()) !== normalize('—'), 'employee invoice cash lifecycle must expose employee source');
-          ok(normalize(await cells.nth(7).innerText()) !== normalize('—'), 'employee invoice cash lifecycle must expose carrier recipient');
-          ok((await cells.nth(5).innerText()).includes('Оплата счёта'), 'employee invoice cash lifecycle must expose invoice payment purpose');
+        if (movement === combinedMovement) {
+          combinedRows += 1;
+          ok(await row.getAttribute('data-cash-expandable') === '1', 'employee-funded cash lifecycle must be expandable');
+          const kind = await row.getAttribute('data-cash-lifecycle-kind');
+          ok(['EMPLOYEE_INVOICE', 'EMPLOYEE_PERSONAL_EXPENSE'].includes(kind), 'combined lifecycle kind missing: ' + kind);
+          ok(normalize(await cells.nth(4).innerText()) !== normalize('—'), 'combined employee cash lifecycle must expose employee source');
+          ok(normalize(await cells.nth(7).innerText()) !== normalize('—'), 'combined employee cash lifecycle must expose expense recipient');
+          const purpose = (await cells.nth(5).innerText()).trim();
+          ok(purpose !== '' && purpose !== '—', 'combined employee cash lifecycle must expose expense purpose');
+          if (kind === 'EMPLOYEE_INVOICE') {
+            ok(purpose.includes('Оплата счёта'), 'employee invoice cash lifecycle must expose invoice payment purpose');
+          }
+
+          const toggle = row.locator('[data-cash-lifecycle-toggle]');
+          ok(await toggle.count() === 1, 'combined lifecycle expand control missing');
+          const detailId = await toggle.getAttribute('aria-controls');
+          ok(detailId, 'combined lifecycle detail id missing');
+          const detail = page.locator('#' + detailId);
+          ok(await detail.count() === 1, 'combined lifecycle detail row missing');
+          ok(await detail.isHidden(), 'combined lifecycle detail must be collapsed by default');
+          if (!expandedOne) {
+            await toggle.click();
+            ok(await toggle.getAttribute('aria-expanded') === 'true', 'combined lifecycle toggle did not open');
+            ok(await detail.isVisible(), 'combined lifecycle detail did not become visible');
+            const detailText = await detail.innerText();
+            ok(detailText.includes('Поступление'), 'expanded lifecycle missing receipt leg');
+            ok(detailText.includes('Списание'), 'expanded lifecycle missing expense leg');
+            ok(detailText.includes('Основная касса'), 'expanded lifecycle missing Main Cash routing');
+            expandedOne = true;
+          }
         }
       }
+      if (combinedRows > 0) {
+        ok(expandedOne, 'combined employee lifecycle existed but none was expanded');
+      }
+      await page.screenshot({ path: 'P48_cash_lifecycle.png', fullPage: true });
     } else {
       ok(bodyText.includes('Движений нет.'), 'neither cash ledger nor valid empty state is visible');
     }
     console.log('P48_CASH_LEDGER_RUNTIME_OK');
+    console.log('P48_EMPLOYEE_FUNDED_CASH_EXPAND_OK');
     console.log('P48_INVOICE_CENTRIC_CASH_UI_OK');
 
     response = await page.goto(BASE + 'company/finance/employee-payments', { waitUntil: 'domcontentloaded' });
