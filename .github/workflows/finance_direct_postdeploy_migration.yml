@@ -14,7 +14,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  LIVE_ROOT: /home/s/spugovxsim/planexp/public_html/erpv2
+  LIVE_PARENT: /home/s/spugovxsim/planexp/public_html
+  LIVE_SUBDIR: erpv2
 
 jobs:
   migrate-and-verify:
@@ -53,7 +54,8 @@ jobs:
           test "$marker" = "$SHA"
           phpbin="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "bash -s" <<'REMOTE'
           set -e
-          LIVE=/home/s/spugovxsim/planexp/public_html/erpv2
+          LIVE=/home/s/spugovxsim/planexp/public_html
+          LIVE="$LIVE/erpv2"
           candidates="$(command -v php 2>/dev/null || true) $(which -a php 2>/dev/null || true)"
           for pattern in /usr/local/bin/php* /usr/local/php*/bin/php /opt/php*/bin/php /opt/*/php*/bin/php /usr/bin/php*; do
             for p in $pattern; do
@@ -96,6 +98,7 @@ jobs:
           PHPBIN: ${{ steps.php.outputs.phpbin }}
         run: |
           set -euo pipefail
+          LIVE_ROOT="$LIVE_PARENT/$LIVE_SUBDIR"
           ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php'" | tee finance_direct_post_before.txt
           grep -q 'FINANCE_DIRECT_READ_ONLY_OK' finance_direct_post_before.txt
       - name: Apply only migration 076
@@ -106,6 +109,7 @@ jobs:
           PHPBIN: ${{ steps.php.outputs.phpbin }}
         run: |
           set -euo pipefail
+          LIVE_ROOT="$LIVE_PARENT/$LIVE_SUBDIR"
           ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_post_apply_${GITHUB_RUN_ID}.php'" | tee finance_direct_post_migration.txt
           grep -q 'FINANCE_DIRECT_076_OK' finance_direct_post_migration.txt
       - name: Snapshot after migration and compare business data
@@ -116,6 +120,7 @@ jobs:
           PHPBIN: ${{ steps.php.outputs.phpbin }}
         run: |
           set -euo pipefail
+          LIVE_ROOT="$LIVE_PARENT/$LIVE_SUBDIR"
           ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_post_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_post_verify_${GITHUB_RUN_ID}.php'" | tee finance_direct_post_after.txt
           grep -q 'FINANCE_DIRECT_READ_ONLY_OK' finance_direct_post_after.txt
           before_json="$(sed -n 's/^FINANCE_DIRECT_READ_ONLY_SNAPSHOT=//p' finance_direct_post_before.txt)"
