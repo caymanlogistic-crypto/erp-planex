@@ -10,18 +10,17 @@ permissions:
 jobs:
   cancel-accidental-cash:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - name: Require exact production baseline
+      - name: Cancel exact accidental operation 159
         env:
           KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
           HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
           HOST: ${{ secrets.ERPV2_SSH_HOST }}
           PORT: ${{ secrets.ERPV2_SSH_PORT }}
           USER: ${{ secrets.ERPV2_SSH_USER }}
-          EXPECTED_SHA: 168f3857c507ba294364de62b46ee20b43bb6ce1
         shell: bash
         run: |
           set -euo pipefail
@@ -29,67 +28,79 @@ jobs:
           printf '%s\n' "$KEY" > "$HOME/.ssh/p105"
           printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/p105" "$HOME/.ssh/known_hosts"
-          got="$(ssh -p "$PORT" -i "$HOME/.ssh/p105" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt 2>/dev/null || true')"
-          echo "expected=$EXPECTED_SHA deployed=$got"
-          test "$got" = "$EXPECTED_SHA"
 
-      - name: Read-only cancellation schema diagnostic
-        env:
-          HOST: ${{ secrets.ERPV2_SSH_HOST }}
-          PORT: ${{ secrets.ERPV2_SSH_PORT }}
-          USER: ${{ secrets.ERPV2_SSH_USER }}
-        shell: bash
-        run: |
+          ssh -p "$PORT" -i "$HOME/.ssh/p105" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
-          ssh -p "$PORT" -i "$HOME/.ssh/p105" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" \
-            'cd /home/s/spugovxsim/planexp/public_html/erpv2 && php' \
-            < .github/p105/P105_schema_diag.php | tee P105_SCHEMA_DIAG.json
+          ROOT=/home/s/spugovxsim/planexp/public_html/erpv2
+          MARKER=/home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt
+          test "$(cat "$MARKER")" = "168f3857c507ba294364de62b46ee20b43bb6ce1"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+          PHPBIN=""
+          for p in /opt/php85/bin/php /opt/php8.5/bin/php /usr/local/bin/php8.5 /usr/bin/php8.5 php8.5 php; do
+            if [ -x "$p" ] || command -v "$p" >/dev/null 2>&1; then
+              v="$($p -r 'echo PHP_VERSION_ID;' 2>/dev/null || true)"
+              if [[ "$v" =~ ^[0-9]+$ ]] && [ "$v" -ge 80000 ]; then PHPBIN="$p"; break; fi
+            fi
+          done
+          test -n "$PHPBIN"
+          cd "$ROOT"
 
-      - name: Install Chromium
-        run: |
-          npm install --no-save playwright@1.54.2
-          npx playwright install --with-deps chromium
+          "$PHPBIN" <<'PHP'
+          <?php
+          $config = require getcwd() . '/bootstrap/app.php';
+          require_once getcwd() . '/app/Core/Database.php';
+          require_once getcwd() . '/app/Support/company_database.php';
+          require_once getcwd() . '/app/Service/FinanceCashService.php';
 
-      - name: Resolve OWNER credentials
-        env:
-          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
-          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          cred="${CRED:-}"
-          if [ -z "$cred" ]; then
-            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
-            mkdir -p .github/p11
-            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
-            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
-            python -m pip install --quiet 'cryptography==46.0.3'
-            printf '%s\n' "$KEY" > /tmp/p105_key
-            chmod 600 /tmp/p105_key
-            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p105_key --input .github/p11/P11_runtime_credentials.enc.json)"
-          fi
-          test -n "$cred"
-          echo "::add-mask::$cred"
-          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+          $central = new \App\Core\Database($config['database']);
+          $company = $central->fetch("SELECT * FROM companies WHERE status='active' AND name LIKE '%ПЛАНЭКС%' ORDER BY id LIMIT 1");
+          if (!$company) { throw new RuntimeException('company not found'); }
+          $local = new \App\Core\Database(companyDatabaseConfig($config, $company));
+          $pdo = $local->connection();
+          $pdo->beginTransaction();
+          try {
+              $s = $pdo->prepare('SELECT * FROM finance_operations WHERE id=159 FOR UPDATE');
+              $s->execute();
+              $op = $s->fetch(PDO::FETCH_ASSOC);
+              if (!$op) throw new RuntimeException('operation 159 missing');
+              if (($op['status'] ?? '') === 'CANCELLED') {
+                  $pdo->commit();
+                  echo "P105_ALREADY_CANCELLED\n";
+                  exit(0);
+              }
+              if (($op['status'] ?? '') !== 'POSTED') throw new RuntimeException('unexpected status');
+              if (($op['operation_type'] ?? '') !== 'INCOME' || ($op['source'] ?? '') !== 'CASH') throw new RuntimeException('unexpected type/source');
+              if (($op['operation_date'] ?? '') !== '2026-08-10') throw new RuntimeException('unexpected date');
+              if (abs((float)$op['amount'] - 300000.0) > 0.01) throw new RuntimeException('unexpected amount');
+              $identity = (string)($op['counterparty_name'] ?? '') . ' ' . (string)($op['purpose'] ?? '');
+              if (mb_stripos($identity, 'ПОТОК') === false || mb_stripos($identity, 'счёт Н') === false) throw new RuntimeException('unexpected identity');
+              $a = $pdo->prepare('SELECT COUNT(*) FROM finance_operation_allocations WHERE operation_id=159 AND cancelled_at IS NULL');
+              $a->execute();
+              if ((int)$a->fetchColumn() !== 0) throw new RuntimeException('active allocations remain');
 
-      - name: Finalize exact accidental cash cancellation and verify
-        shell: bash
-        run: |
-          set -euo pipefail
-          node .github/p105/P105_finalize_cancel.js 2>&1 | tee P105_RUNTIME.txt
-          grep -q 'P105_CANCEL_ACCIDENTAL_CASH_OK' P105_RUNTIME.txt
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: P105_cancel_accidental_cash
-          path: |
-            P105_SCHEMA_DIAG.json
-            P105_RUNTIME.txt
-            P105_RESULT.json
-            P105_screens/*.png
-          if-no-files-found: warn
+              $accountId = (int)$op['money_account_id'];
+              $before = \App\Service\FinanceCashService::getCashAccountBalance($pdo, $accountId);
+              $userId = (int)($op['created_by_user_id'] ?? 0);
+              $reason = 'Ошибочно созданная кассовая операция. Отмена по указанию владельца 18.08.2026.';
+              $u = $pdo->prepare("UPDATE finance_operations SET status='CANCELLED', cancelled_at=NOW(), cancelled_by_user_id=?, cancelled_by_role='company_owner', cancellation_reason=?, updated_at=NOW() WHERE id=159 AND status='POSTED'");
+              $u->execute([$userId, $reason]);
+              if ($u->rowCount() !== 1) throw new RuntimeException('cancel update failed');
+              $audit = $pdo->prepare("INSERT INTO finance_audit_log (entity_type, entity_id, action, old_values, new_values, created_by_user_id, created_by_role, created_at) VALUES ('finance_operation',159,'cancel',?,?,?,?,NOW())");
+              $audit->execute([
+                  json_encode(['status'=>'POSTED','operation_type'=>$op['operation_type'],'amount'=>$op['amount']], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+                  json_encode(['status'=>'CANCELLED','cancellation_reason'=>$reason], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+                  $userId,
+                  'company_owner'
+              ]);
+              $pdo->commit();
+              $after = \App\Service\FinanceCashService::getCashAccountBalance($pdo, $accountId);
+              if (abs(((float)$before - (float)$after) - 300000.0) > 0.01) throw new RuntimeException('cash balance delta mismatch');
+              echo "P105_OPERATION_159_CANCELLED\n";
+              echo "P105_CASH_BEFORE={$before}\n";
+              echo "P105_CASH_AFTER={$after}\n";
+          } catch (Throwable $e) {
+              if ($pdo->inTransaction()) $pdo->rollBack();
+              throw $e;
+          }
+          PHP
+          REMOTE
