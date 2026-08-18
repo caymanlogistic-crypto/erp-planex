@@ -27,7 +27,7 @@ const normalize = s => String(s || '').replace(/\s+/g, ' ').trim();
 
   const evidence = {
     target: {
-      date: '18.08.2026',
+      date: '10.08.2026',
       account: 'Основная касса',
       purposeContains: 'Наличная оплата от клиента ООО "ПОТОК"',
       invoiceFragment: 'счёт Н',
@@ -66,7 +66,7 @@ const normalize = s => String(s || '').replace(/\s+/g, ' ').trim();
       const row = unresolved.nth(i);
       const text = normalize(await row.innerText());
       if (
-        text.includes('18.08.2026') &&
+        text.includes('10.08.2026') &&
         text.includes('Основная касса') &&
         text.includes('ПОТОК') &&
         text.includes('счёт Н') &&
@@ -105,7 +105,7 @@ const normalize = s => String(s || '').replace(/\s+/g, ' ').trim();
     const opRow = page.locator(`tr[data-operation-id="${operationId}"]`);
     ok(await opRow.count() === 1, `operation #${operationId} not found in operations register`);
     const opText = normalize(await opRow.innerText());
-    ok(opText.includes('18.08.2026'), 'operation date mismatch');
+    ok(opText.includes('10.08.2026'), 'operation date mismatch');
     ok(opText.includes('Основная касса'), 'operation account mismatch');
     ok(opText.includes('ПОТОК'), 'operation counterparty/purpose mismatch');
     ok(/300\s*000,00/.test(opText), 'operation amount mismatch');
@@ -129,7 +129,7 @@ const normalize = s => String(s || '').replace(/\s+/g, ' ').trim();
     await cancelModal.waitFor({ state: 'visible', timeout: 10000 });
     const summary = normalize(await cancelModal.innerText());
     ok(summary.includes(`Операция №${operationId}`), 'cancel modal operation id mismatch');
-    ok(summary.includes('18.08.2026'), 'cancel modal date mismatch');
+    ok(summary.includes('10.08.2026'), 'cancel modal date mismatch');
     ok(/300\s*000,00/.test(summary), 'cancel modal amount mismatch');
     await cancelModal.locator('textarea[name="reason"]').fill('Ошибочно созданная кассовая операция. Отмена по указанию владельца 18.08.2026.');
     await page.screenshot({ path: 'P105_screens/cancel_confirmation.png', fullPage: true });
@@ -160,7 +160,7 @@ const normalize = s => String(s || '').replace(/\s+/g, ' ').trim();
     for (let i = 0; i < await unresolvedAfter.count(); i++) {
       const text = normalize(await unresolvedAfter.nth(i).innerText());
       if (
-        text.includes('18.08.2026') && text.includes('Основная касса') && text.includes('ПОТОК') &&
+        text.includes('10.08.2026') && text.includes('Основная касса') && text.includes('ПОТОК') &&
         text.includes('счёт Н') && /300\s*000,00/.test(text)
       ) stillPresent++;
     }
