@@ -39,7 +39,24 @@ jobs:
           marker="$(ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
           test "$marker" = "$EXPECTED_SHA"
           scp -P "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes .github/p48/P48_finance_cash_inventory.php "$USER@$HOST:$remote"
-          ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "php '$remote'; rm -f '$remote'" 2>&1 | tee P48_FINANCE_CASH_INVENTORY.txt
+          ssh -p "$PORT" -i "$HOME/.ssh/p48" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" "REMOTE='$remote' bash -se" <<'REMOTE' 2>&1 | tee P48_FINANCE_CASH_INVENTORY.txt
+          set -euo pipefail
+          chosen=''
+          for b in /opt/php*/bin/php /usr/bin/php8* /usr/local/bin/php8*; do
+            [ -x "$b" ] || continue
+            major="$($b -r 'echo PHP_MAJOR_VERSION;' 2>/dev/null || true)"
+            if [ "$major" = 8 ]; then chosen="$b"; break; fi
+          done
+          if [ -z "$chosen" ]; then
+            echo 'NO_PHP8_RUNTIME'
+            command -v php || true
+            php -v || true
+            exit 3
+          fi
+          echo "P48_PHP_RUNTIME=$chosen"
+          "$chosen" "$REMOTE"
+          rm -f "$REMOTE"
+          REMOTE
           grep -q 'P48_FINANCE_CASH_INVENTORY_OK' P48_FINANCE_CASH_INVENTORY.txt
       - uses: actions/upload-artifact@v4
         if: always()
