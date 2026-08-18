@@ -1,5 +1,5 @@
 <?php
-if (PHP_SAPI !== 'cli') { fwrite(STDERR,"CLI only.\n"); exit(1); }
+if(PHP_SAPI!=='cli'&&PHP_SAPI!=='cgi-fcgi'){fwrite(STDERR,"CLI/CGI only.\n");exit(1);}
 $envRoot=getenv('PLANEX_ROOT'); $argRoot=isset($argv[1])?$argv[1]:''; $root=rtrim((string)($envRoot!==false&&$envRoot!==''?$envRoot:$argRoot),'/');
 if($root===''||!is_file($root.'/bootstrap/app.php')) throw new RuntimeException('PLANEX_ROOT is invalid.');
 require_once $root.'/app/Support/helpers.php'; require_once $root.'/app/Support/environment.php'; loadEnvFileNonOverwriting($root.'/.env'); $config=require $root.'/bootstrap/app.php'; require_once $root.'/app/Support/entrypoint_dependencies.php';
