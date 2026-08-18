@@ -22,6 +22,7 @@ $ledger = fceil_read('app/Service/FinanceCashLedgerService.php');
 $resolution = fceil_read('app/Service/FinanceCashResolutionService.php');
 $view = fceil_read('app/View/pages/company_finance_cash.php');
 $event = fceil_read('app/Service/FinanceEmployeeInvoicePaymentEventService.php');
+$p48 = fceil_read('.github/p48/P48_cash_ledger_runtime.js');
 
 // The economic model remains two immutable POSTED operations linked by one event.
 fceil_has($event, 'receipt_finance_operation_id', 'Employee invoice event must retain the technical receipt operation');
@@ -39,6 +40,7 @@ fceil_has($ledger, 'employee_invoice_expense_purpose', 'Combined row must use th
 fceil_has($ledger, "if (self::isEmployeeInvoiceLifecycle(\$row)) return false;", 'Combined employee invoice receipt must never be selectable as unresolved cash');
 
 // Unresolved cash counters and dispatch must fail closed for an already consumed receipt.
+fceil_has($resolution, 'hasEmployeeInvoicePaymentEvents', 'Cash projection must tolerate tenants where migration 075 is not yet present');
 fceil_has($resolution, 'finance_employee_invoice_payments employee_invoice_payment', 'Cash unresolved source of truth must know employee invoice events');
 fceil_has($resolution, 'AND employee_invoice_payment.id IS NULL', 'Employee invoice receipt must not count as unresolved cash');
 fceil_has($resolution, 'employee_invoice_payment.id AS employee_invoice_payment_id', 'Dispatch lock query must identify invoice-consumed receipt rows');
@@ -47,5 +49,11 @@ fceil_has($resolution, "!empty(\$source['employee_invoice_payment_id'])", 'Dispa
 // Existing table projection is reused; no duplicate UI table or fake transaction is introduced.
 fceil_has($view, 'FinanceCashLedgerService::movementLabel($op)', 'Cash page must render the ledger projection movement label');
 fceil_has($view, "!empty(\$op['is_resolved_cash_lifecycle'])", 'Combined lifecycle must render as resolved in the existing table');
+
+// Permanent browser acceptance must recognize and validate the combined lifecycle.
+fceil_has($p48, "'Получено → списано'", 'P48 must accept the employee invoice combined cash lifecycle');
+fceil_has($p48, 'employee invoice cash lifecycle must expose employee source', 'P48 must require the employee source in the combined row');
+fceil_has($p48, 'employee invoice cash lifecycle must expose carrier recipient', 'P48 must require the carrier recipient in the combined row');
+fceil_has($p48, 'employee invoice cash lifecycle must expose invoice payment purpose', 'P48 must require the invoice purpose in the combined row');
 
 fwrite(STDOUT, "OK: employee invoice cash lifecycle is projected as one resolved journal row\n");
