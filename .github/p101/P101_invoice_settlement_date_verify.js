@@ -48,11 +48,15 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
       await target.dblclick();
       const modal = page.locator('#invoice-view-modal.is-open');
       await modal.waitFor({ state: 'visible', timeout: 10000 });
+      // The modal shell opens before its body is fetched. Wait for the actual
+      // invoice AJAX payload, not merely for the overlay to become visible.
+      await modal.getByText('Фактические оплаты', { exact: true }).waitFor({ state: 'visible', timeout: 10000 });
       return modal;
     }
 
     async function findEditable14600Row(modal) {
       const rows = modal.locator('.invoice-settlement-row');
+      await rows.first().waitFor({ state: 'visible', timeout: 10000 });
       const texts = [];
       for (let i = 0; i < await rows.count(); i++) {
         const row = rows.nth(i);
