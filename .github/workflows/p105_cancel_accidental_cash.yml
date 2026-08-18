@@ -68,6 +68,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/p105/P105_cancel_accidental_cash_v2.js')
+          s = p.read_text(encoding='utf-8')
+          old = "if (await reason.count()) await reason.fill('Отмена распределения ошибочной кассовой операции по указанию владельца 18.08.2026.');"
+          new = "if (await reason.count()) await reason.evaluate((el, value) => { el.value = value; }, 'Отмена распределения ошибочной кассовой операции по указанию владельца 18.08.2026.');"
+          if old not in s:
+              raise SystemExit('expected hidden-reason line missing')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
           node .github/p105/P105_cancel_accidental_cash_v2.js 2>&1 | tee P105_RUNTIME.txt
           grep -q 'P105_CANCEL_ACCIDENTAL_CASH_OK' P105_RUNTIME.txt
 
