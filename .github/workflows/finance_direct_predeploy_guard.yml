@@ -16,7 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  LIVE_ROOT: /home/s/spugovxsim/planexp/public_html/erpv2
+  LIVE_PARENT: /home/s/spugovxsim/planexp/public_html
+  LIVE_SUBDIR: erpv2
 
 jobs:
   verify:
@@ -55,7 +56,8 @@ jobs:
           set -euo pipefail
           phpbin="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "bash -s" <<'REMOTE'
           set -e
-          LIVE=/home/s/spugovxsim/planexp/public_html/erpv2
+          LIVE=/home/s/spugovxsim/planexp/public_html
+          LIVE="$LIVE/erpv2"
           candidates="$(command -v php 2>/dev/null || true) $(which -a php 2>/dev/null || true)"
           for pattern in /usr/local/bin/php* /usr/local/php*/bin/php /opt/php*/bin/php /opt/*/php*/bin/php /usr/bin/php*; do
             for p in $pattern; do
@@ -88,6 +90,7 @@ jobs:
           PHPBIN: ${{ steps.php.outputs.phpbin }}
         run: |
           set -euo pipefail
+          LIVE_ROOT="$LIVE_PARENT/$LIVE_SUBDIR"
           for n in 1 2; do
             ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
               "PLANEX_ROOT='$LIVE_ROOT' '$PHPBIN' '/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php'" | tee "finance_direct_pre_${n}.txt"
