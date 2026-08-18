@@ -79,7 +79,15 @@ assert_not_contains($form, '<option value="CLIENT_CASH_RECEIPT">', 'Cash UI must
 assert_not_contains($form, '<option value="EMPLOYEE_PERSONAL_EXPENSE">', 'Cash UI must not expose employee personal-funded expense entry point');
 assert_not_contains($form, 'data-scenario-block="EMPLOYEE_PERSONAL_EXPENSE"', 'Cash UI must not keep a competing personal-expense form block');
 assert_contains($page, 'initManualFinanceForm', 'Cash page must initialize fetched manual finance form');
-assert_contains($page, 'Расходы сотрудников из личных средств', 'Cash page must keep historical/linked personal expense visibility');
+
+// Linked personal expenses remain visible, but only in the unified cash journal.
+// The old lower table was a duplicate of the same economic event and must not return.
+assert_contains($ledger, 'finance_employee_personal_expenses employee_personal_receipt', 'Cash ledger must project linked personal expenses into the unified journal');
+assert_contains($ledger, "return 'EMPLOYEE_PERSONAL_EXPENSE';", 'Unified cash journal must identify personal-expense lifecycle rows');
+assert_contains($page, 'data-cash-lifecycle-toggle', 'Linked employee-funded expenses must be expandable in the unified cash journal');
+assert_contains($page, 'cash-lifecycle-detail-row', 'Unified cash journal must expose the two linked cash legs on demand');
+assert_not_contains($page, '<div class="section-title mt-section">Расходы сотрудников из личных средств</div>', 'Cash page must not duplicate personal expenses in a second history table');
+
 assert_contains($submit, 'CLIENT_CASH_INVOICE', 'Cash submit must route client cash through invoice-centric settlement');
 assert_contains($submit, 'оформляется в разделе «Выплаты сотрудникам»', 'Stale cash personal-expense submissions must fail closed and point to Employee Payments');
 assert_contains($ledger, 'CASH_RESOLUTION_CLIENT_ROUTE', 'Cash ledger must preserve legacy route-assigned client cash visibility');
