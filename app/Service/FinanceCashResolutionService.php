@@ -17,6 +17,9 @@ final class FinanceCashResolutionService
     public const MAIN_CASH_NAME = 'Основная касса';
     public const RESOLUTION_EMPLOYEE = 'EMPLOYEE';
 
+    /** @var array<int,bool> */
+    private static array $employeeInvoiceEventTableCache = [];
+
     public static function findMainCashAccount(PDO $pdo, bool $lock = false): ?array
     {
         $sql = "SELECT *
@@ -30,6 +33,29 @@ final class FinanceCashResolutionService
         return $row ?: null;
     }
 
+    /**
+     * Migration 075 is tenant-local and controlled deploys do not run migrations.
+     * Finance reads must therefore tolerate tenants where the event table has not
+     * been introduced yet instead of turning the whole cash page into a 500.
+     */
+    public static function hasEmployeeInvoicePaymentEvents(PDO $pdo): bool
+    {
+        $key = spl_object_id($pdo);
+        if (array_key_exists($key, self::$employeeInvoiceEventTableCache)) {
+            return self::$employeeInvoiceEventTableCache[$key];
+        }
+
+        try {
+            $stmt = $pdo->query("SHOW TABLES LIKE 'finance_employee_invoice_payments'");
+            $exists = $stmt !== false && $stmt->fetchColumn() !== false;
+        } catch (\Throwable) {
+            $exists = false;
+        }
+
+        self::$employeeInvoiceEventTableCache[$key] = $exists;
+        return $exists;
+    }
+
     /** @return array{count:int,amount:string,account_id:int|null} */
     public static function unresolvedSummary(PDO $pdo): array
     {
@@ -39,6 +65,13 @@ final class FinanceCashResolutionService
         }
 
         $legacyResolutionSql = self::legacyResolutionProjectionSql();
+        $employeeInvoiceJoin = '';
+        $employeeInvoiceWhere = '';
+        if (self::hasEmployeeInvoicePaymentEvents($pdo)) {
+            $employeeInvoiceJoin = "\n          LEFT JOIN finance_employee_invoice_payments employee_invoice_payment\n                 ON employee_invoice_payment.receipt_finance_operation_id = fo.id\n                AND employee_invoice_payment.status = 'POSTED'";
+            $employeeInvoiceWhere = "\n                AND employee_invoice_payment.id IS NULL";
+        }
+
         $stmt = $pdo->prepare(
             "SELECT COUNT(*) AS unresolved_count,
                     COALESCE(SUM(fo.amount), 0) AS unresolved_amount
@@ -46,7 +79,7 @@ final class FinanceCashResolutionService
           LEFT JOIN finance_cash_resolutions fcr
                  ON fcr.source_finance_operation_id = fo.id
           LEFT JOIN ({$legacyResolutionSql}) legacy_resolution
-                 ON legacy_resolution.source_finance_operation_id = fo.id
+                 ON legacy_resolution.source_finance_operation_id = fo.id{$employeeInvoiceJoin}
               WHERE fo.money_account_id = ?
                 AND fo.status = 'POSTED'
                 AND (
@@ -54,7 +87,7 @@ final class FinanceCashResolutionService
                      OR (fo.operation_type = 'TRANSFER' AND fo.transfer_direction = 'in')
                 )
                 AND fcr.id IS NULL
-                AND legacy_resolution.source_finance_operation_id IS NULL"
+                AND legacy_resolution.source_finance_operation_id IS NULL{$employeeInvoiceWhere}"
         );
         $stmt->execute([(int)$account['id']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -185,12 +218,19 @@ SQL;
             }
             $mainCashId = (int)$mainCash['id'];
 
+            $employeeInvoiceSelect = ', NULL AS employee_invoice_payment_id';
+            $employeeInvoiceJoin = '';
+            if (self::hasEmployeeInvoicePaymentEvents($localPdo)) {
+                $employeeInvoiceSelect = ', employee_invoice_payment.id AS employee_invoice_payment_id';
+                $employeeInvoiceJoin = "\n              LEFT JOIN finance_employee_invoice_payments employee_invoice_payment\n                     ON employee_invoice_payment.receipt_finance_operation_id = fo.id\n                    AND employee_invoice_payment.status = 'POSTED'";
+            }
+
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $stmt = $localPdo->prepare(
-                "SELECT fo.*, fcr.id AS resolution_id
+                "SELECT fo.*, fcr.id AS resolution_id{$employeeInvoiceSelect}
                    FROM finance_operations fo
               LEFT JOIN finance_cash_resolutions fcr
-                     ON fcr.source_finance_operation_id = fo.id
+                     ON fcr.source_finance_operation_id = fo.id{$employeeInvoiceJoin}
                   WHERE fo.id IN ({$placeholders})
                   ORDER BY fo.id ASC
                     FOR UPDATE"
@@ -209,7 +249,7 @@ SQL;
                 if (($source['status'] ?? '') !== 'POSTED' || !self::isIncomingSource($source)) {
                     throw new \RuntimeException('Позиция #' . (int)$source['id'] . ' не является неразнесённым поступлением.');
                 }
-                if (!empty($source['resolution_id'])) {
+                if (!empty($source['resolution_id']) || !empty($source['employee_invoice_payment_id'])) {
                     throw new \RuntimeException('Позиция #' . (int)$source['id'] . ' уже разнесена. Обновите страницу.');
                 }
                 $totalCents += self::toCents((string)($source['amount'] ?? '0'));

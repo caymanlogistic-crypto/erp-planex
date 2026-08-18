@@ -7,10 +7,15 @@ use PDO;
 /**
  * Read-only projection for the cash journal.
  *
- * Finance transfers are stored as two linked finance_operations rows. The cash
- * journal exposes only the CASH side. Resolved technical-cash movements are
- * projected as one lifecycle row: the incoming source remains canonical and
- * the later handoff is attached to it instead of being rendered as a duplicate.
+ * Finance transfers are stored as linked finance_operations rows. The cash
+ * journal exposes business lifecycles rather than technical double entries:
+ * - cash resolutions keep the canonical incoming source and hide the technical outflow;
+ * - employee invoice payments keep the employee TRANSFER IN row and attach the
+ *   carrier EXPENSE to it, so one real-world payment is rendered as one row.
+ *
+ * Migration 075 may be absent in an older tenant because GET requests/deploys do
+ * not mutate tenant schemas. In that case the projection must gracefully retain
+ * the legacy cash journal instead of failing the whole finance page.
  */
 final class FinanceCashLedgerService
 {
@@ -20,6 +25,14 @@ final class FinanceCashLedgerService
         $perPage = max(1, min(500, $perPage));
         $offset = ($page - 1) * $perPage;
         $legacyResolutionSql = FinanceCashResolutionService::legacyResolutionProjectionSql();
+        $hasEmployeeInvoiceEvents = FinanceCashResolutionService::hasEmployeeInvoicePaymentEvents($pdo);
+
+        $employeeInvoiceCountJoin = $hasEmployeeInvoiceEvents
+            ? "\n                  LEFT JOIN finance_employee_invoice_payments employee_invoice_expense\n                         ON employee_invoice_expense.expense_finance_operation_id = fo.id\n                        AND employee_invoice_expense.status = 'POSTED'"
+            : '';
+        $employeeInvoiceCountWhere = $hasEmployeeInvoiceEvents
+            ? "\n                        AND employee_invoice_expense.id IS NULL"
+            : '';
 
         $countSql = "SELECT COUNT(*)
                        FROM finance_operations fo
@@ -29,11 +42,21 @@ final class FinanceCashLedgerService
                   LEFT JOIN finance_cash_resolutions outflow_resolution
                          ON outflow_resolution.outflow_finance_operation_id = fo.id
                   LEFT JOIN ({$legacyResolutionSql}) legacy_outflow_resolution
-                         ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id
+                         ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id{$employeeInvoiceCountJoin}
                       WHERE outflow_resolution.id IS NULL
-                        AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL";
+                        AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL{$employeeInvoiceCountWhere}";
         $countStmt = $pdo->query($countSql);
         $total = (int) $countStmt->fetchColumn();
+
+        $employeeInvoiceSelect = $hasEmployeeInvoiceEvents
+            ? ",\n                       employee_invoice_receipt.id AS employee_invoice_payment_id,\n                       employee_invoice_receipt.invoice_id AS employee_invoice_id,\n                       employee_invoice_receipt.invoice_number_snapshot AS employee_invoice_number,\n                       employee_invoice_receipt.counterparty_name_snapshot AS employee_invoice_counterparty,\n                       employee_invoice_receipt.expense_finance_operation_id AS employee_invoice_expense_operation_id,\n                       employee_invoice_expense_op.operation_date AS employee_invoice_expense_date,\n                       employee_invoice_expense_op.amount AS employee_invoice_expense_amount,\n                       employee_invoice_expense_op.purpose AS employee_invoice_expense_purpose,\n                       employee_invoice_expense_op.comment AS employee_invoice_expense_comment"
+            : ",\n                       NULL AS employee_invoice_payment_id,\n                       NULL AS employee_invoice_id,\n                       NULL AS employee_invoice_number,\n                       NULL AS employee_invoice_counterparty,\n                       NULL AS employee_invoice_expense_operation_id,\n                       NULL AS employee_invoice_expense_date,\n                       NULL AS employee_invoice_expense_amount,\n                       NULL AS employee_invoice_expense_purpose,\n                       NULL AS employee_invoice_expense_comment";
+        $employeeInvoiceJoins = $hasEmployeeInvoiceEvents
+            ? "\n             LEFT JOIN finance_employee_invoice_payments employee_invoice_receipt\n                    ON employee_invoice_receipt.receipt_finance_operation_id = fo.id\n                   AND employee_invoice_receipt.status = 'POSTED'\n             LEFT JOIN finance_operations employee_invoice_expense_op\n                    ON employee_invoice_expense_op.id = employee_invoice_receipt.expense_finance_operation_id\n                   AND employee_invoice_expense_op.status = 'POSTED'\n             LEFT JOIN finance_employee_invoice_payments employee_invoice_expense\n                    ON employee_invoice_expense.expense_finance_operation_id = fo.id\n                   AND employee_invoice_expense.status = 'POSTED'"
+            : '';
+        $employeeInvoiceWhere = $hasEmployeeInvoiceEvents
+            ? "\n                   AND employee_invoice_expense.id IS NULL"
+            : '';
 
         $sql = "SELECT fo.*,
                        cash_account.name AS account_name,
@@ -57,7 +80,7 @@ final class FinanceCashLedgerService
                            WHEN legacy_outflow_resolution.outflow_finance_operation_id IS NOT NULL
                                THEN -legacy_outflow_resolution.outflow_finance_operation_id
                            ELSE NULL
-                       END AS cash_outflow_resolution_id
+                       END AS cash_outflow_resolution_id{$employeeInvoiceSelect}
                   FROM finance_operations fo
                   JOIN finance_money_accounts cash_account
                     ON cash_account.id = fo.money_account_id
@@ -79,9 +102,9 @@ final class FinanceCashLedgerService
              LEFT JOIN ({$legacyResolutionSql}) legacy_source_resolution
                     ON legacy_source_resolution.source_finance_operation_id = fo.id
              LEFT JOIN ({$legacyResolutionSql}) legacy_outflow_resolution
-                    ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id
+                    ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id{$employeeInvoiceJoins}
                  WHERE outflow_resolution.id IS NULL
-                   AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL
+                   AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL{$employeeInvoiceWhere}
               ORDER BY fo.created_at DESC, fo.id DESC
                  LIMIT :limit OFFSET :offset";
 
@@ -99,6 +122,7 @@ final class FinanceCashLedgerService
             $row['handoff_recipient_label'] = self::handoffRecipientLabel($row);
             $row['handoff_date'] = self::handoffDate($row);
             $row['display_purpose'] = self::displayPurpose($row);
+            $row['is_employee_invoice_lifecycle'] = self::isEmployeeInvoiceLifecycle($row);
             $row['is_unresolved_cash_source'] = self::isUnresolvedTechnicalSource($row);
             $row['is_resolved_cash_lifecycle'] = self::isResolvedCashLifecycle($row);
         }
@@ -115,6 +139,9 @@ final class FinanceCashLedgerService
 
     public static function movementLabel(array $row): string
     {
+        if (self::isEmployeeInvoiceLifecycle($row)) {
+            return 'Получено → списано';
+        }
         if (self::isResolvedCashLifecycle($row)) {
             return 'Получено → передано';
         }
@@ -133,8 +160,19 @@ final class FinanceCashLedgerService
         return $operationType === 'EXPENSE' ? 'out' : 'in';
     }
 
+    private static function isEmployeeInvoiceLifecycle(array $row): bool
+    {
+        if (empty($row['employee_invoice_payment_id'])) return false;
+        if (($row['status'] ?? '') !== 'POSTED') return false;
+        if (trim((string)($row['account_name'] ?? '')) !== FinanceCashResolutionService::MAIN_CASH_NAME) return false;
+        if (strtoupper((string)($row['operation_type'] ?? '')) !== 'TRANSFER') return false;
+        if (strtolower((string)($row['transfer_direction'] ?? '')) !== 'in') return false;
+        return !empty($row['employee_invoice_expense_operation_id']);
+    }
+
     private static function isUnresolvedTechnicalSource(array $row): bool
     {
+        if (self::isEmployeeInvoiceLifecycle($row)) return false;
         if (($row['status'] ?? '') !== 'POSTED') return false;
         if (trim((string)($row['account_name'] ?? '')) !== FinanceCashResolutionService::MAIN_CASH_NAME) return false;
         if (!empty($row['cash_resolution_id'])) return false;
@@ -143,6 +181,7 @@ final class FinanceCashLedgerService
 
     private static function isResolvedCashLifecycle(array $row): bool
     {
+        if (self::isEmployeeInvoiceLifecycle($row)) return true;
         if (empty($row['cash_resolution_id'])) return false;
         if (strtoupper((string)($row['cash_resolution_type'] ?? '')) === FinanceManualFactService::CASH_RESOLUTION_CLIENT_ROUTE) return false;
         if (($row['status'] ?? '') !== 'POSTED') return false;
@@ -167,6 +206,11 @@ final class FinanceCashLedgerService
 
     private static function handoffRecipientLabel(array $row): string
     {
+        if (self::isEmployeeInvoiceLifecycle($row)) {
+            $counterparty = trim((string)($row['employee_invoice_counterparty'] ?? ''));
+            return $counterparty !== '' ? $counterparty : 'Перевозчик';
+        }
+
         if (self::isResolvedCashLifecycle($row)) {
             $target = trim((string)($row['cash_resolution_target'] ?? ''));
             if ($target !== '') {
@@ -187,11 +231,24 @@ final class FinanceCashLedgerService
 
     private static function handoffDate(array $row): string
     {
+        if (self::isEmployeeInvoiceLifecycle($row)) {
+            return (string)($row['employee_invoice_expense_date'] ?? '');
+        }
         return '';
     }
 
     private static function displayPurpose(array $row): string
     {
+        if (self::isEmployeeInvoiceLifecycle($row)) {
+            $expensePurpose = trim((string)($row['employee_invoice_expense_purpose'] ?? ''));
+            if ($expensePurpose !== '') return $expensePurpose;
+            $invoiceNumber = trim((string)($row['employee_invoice_number'] ?? ''));
+            $counterparty = trim((string)($row['employee_invoice_counterparty'] ?? ''));
+            if ($invoiceNumber !== '' || $counterparty !== '') {
+                return trim('Оплата счёта ' . $invoiceNumber . ($counterparty !== '' ? ' · ' . $counterparty : ''));
+            }
+        }
+
         $purpose = trim((string)($row['purpose'] ?? ''));
         if ($purpose !== '') return $purpose;
         $comment = trim((string)($row['comment'] ?? ''));
