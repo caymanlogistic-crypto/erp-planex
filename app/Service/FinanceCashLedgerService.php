@@ -12,6 +12,10 @@ use PDO;
  * - cash resolutions keep the canonical incoming source and hide the technical outflow;
  * - employee invoice payments keep the employee TRANSFER IN row and attach the
  *   carrier EXPENSE to it, so one real-world payment is rendered as one row.
+ *
+ * Migration 075 may be absent in an older tenant because GET requests/deploys do
+ * not mutate tenant schemas. In that case the projection must gracefully retain
+ * the legacy cash journal instead of failing the whole finance page.
  */
 final class FinanceCashLedgerService
 {
@@ -21,6 +25,14 @@ final class FinanceCashLedgerService
         $perPage = max(1, min(500, $perPage));
         $offset = ($page - 1) * $perPage;
         $legacyResolutionSql = FinanceCashResolutionService::legacyResolutionProjectionSql();
+        $hasEmployeeInvoiceEvents = FinanceCashResolutionService::hasEmployeeInvoicePaymentEvents($pdo);
+
+        $employeeInvoiceCountJoin = $hasEmployeeInvoiceEvents
+            ? "\n                  LEFT JOIN finance_employee_invoice_payments employee_invoice_expense\n                         ON employee_invoice_expense.expense_finance_operation_id = fo.id\n                        AND employee_invoice_expense.status = 'POSTED'"
+            : '';
+        $employeeInvoiceCountWhere = $hasEmployeeInvoiceEvents
+            ? "\n                        AND employee_invoice_expense.id IS NULL"
+            : '';
 
         $countSql = "SELECT COUNT(*)
                        FROM finance_operations fo
@@ -30,15 +42,21 @@ final class FinanceCashLedgerService
                   LEFT JOIN finance_cash_resolutions outflow_resolution
                          ON outflow_resolution.outflow_finance_operation_id = fo.id
                   LEFT JOIN ({$legacyResolutionSql}) legacy_outflow_resolution
-                         ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id
-                  LEFT JOIN finance_employee_invoice_payments employee_invoice_expense
-                         ON employee_invoice_expense.expense_finance_operation_id = fo.id
-                        AND employee_invoice_expense.status = 'POSTED'
+                         ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id{$employeeInvoiceCountJoin}
                       WHERE outflow_resolution.id IS NULL
-                        AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL
-                        AND employee_invoice_expense.id IS NULL";
+                        AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL{$employeeInvoiceCountWhere}";
         $countStmt = $pdo->query($countSql);
         $total = (int) $countStmt->fetchColumn();
+
+        $employeeInvoiceSelect = $hasEmployeeInvoiceEvents
+            ? ",\n                       employee_invoice_receipt.id AS employee_invoice_payment_id,\n                       employee_invoice_receipt.invoice_id AS employee_invoice_id,\n                       employee_invoice_receipt.invoice_number_snapshot AS employee_invoice_number,\n                       employee_invoice_receipt.counterparty_name_snapshot AS employee_invoice_counterparty,\n                       employee_invoice_receipt.expense_finance_operation_id AS employee_invoice_expense_operation_id,\n                       employee_invoice_expense_op.operation_date AS employee_invoice_expense_date,\n                       employee_invoice_expense_op.amount AS employee_invoice_expense_amount,\n                       employee_invoice_expense_op.purpose AS employee_invoice_expense_purpose,\n                       employee_invoice_expense_op.comment AS employee_invoice_expense_comment"
+            : ",\n                       NULL AS employee_invoice_payment_id,\n                       NULL AS employee_invoice_id,\n                       NULL AS employee_invoice_number,\n                       NULL AS employee_invoice_counterparty,\n                       NULL AS employee_invoice_expense_operation_id,\n                       NULL AS employee_invoice_expense_date,\n                       NULL AS employee_invoice_expense_amount,\n                       NULL AS employee_invoice_expense_purpose,\n                       NULL AS employee_invoice_expense_comment";
+        $employeeInvoiceJoins = $hasEmployeeInvoiceEvents
+            ? "\n             LEFT JOIN finance_employee_invoice_payments employee_invoice_receipt\n                    ON employee_invoice_receipt.receipt_finance_operation_id = fo.id\n                   AND employee_invoice_receipt.status = 'POSTED'\n             LEFT JOIN finance_operations employee_invoice_expense_op\n                    ON employee_invoice_expense_op.id = employee_invoice_receipt.expense_finance_operation_id\n                   AND employee_invoice_expense_op.status = 'POSTED'\n             LEFT JOIN finance_employee_invoice_payments employee_invoice_expense\n                    ON employee_invoice_expense.expense_finance_operation_id = fo.id\n                   AND employee_invoice_expense.status = 'POSTED'"
+            : '';
+        $employeeInvoiceWhere = $hasEmployeeInvoiceEvents
+            ? "\n                   AND employee_invoice_expense.id IS NULL"
+            : '';
 
         $sql = "SELECT fo.*,
                        cash_account.name AS account_name,
@@ -62,16 +80,7 @@ final class FinanceCashLedgerService
                            WHEN legacy_outflow_resolution.outflow_finance_operation_id IS NOT NULL
                                THEN -legacy_outflow_resolution.outflow_finance_operation_id
                            ELSE NULL
-                       END AS cash_outflow_resolution_id,
-                       employee_invoice_receipt.id AS employee_invoice_payment_id,
-                       employee_invoice_receipt.invoice_id AS employee_invoice_id,
-                       employee_invoice_receipt.invoice_number_snapshot AS employee_invoice_number,
-                       employee_invoice_receipt.counterparty_name_snapshot AS employee_invoice_counterparty,
-                       employee_invoice_receipt.expense_finance_operation_id AS employee_invoice_expense_operation_id,
-                       employee_invoice_expense_op.operation_date AS employee_invoice_expense_date,
-                       employee_invoice_expense_op.amount AS employee_invoice_expense_amount,
-                       employee_invoice_expense_op.purpose AS employee_invoice_expense_purpose,
-                       employee_invoice_expense_op.comment AS employee_invoice_expense_comment
+                       END AS cash_outflow_resolution_id{$employeeInvoiceSelect}
                   FROM finance_operations fo
                   JOIN finance_money_accounts cash_account
                     ON cash_account.id = fo.money_account_id
@@ -93,19 +102,9 @@ final class FinanceCashLedgerService
              LEFT JOIN ({$legacyResolutionSql}) legacy_source_resolution
                     ON legacy_source_resolution.source_finance_operation_id = fo.id
              LEFT JOIN ({$legacyResolutionSql}) legacy_outflow_resolution
-                    ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id
-             LEFT JOIN finance_employee_invoice_payments employee_invoice_receipt
-                    ON employee_invoice_receipt.receipt_finance_operation_id = fo.id
-                   AND employee_invoice_receipt.status = 'POSTED'
-             LEFT JOIN finance_operations employee_invoice_expense_op
-                    ON employee_invoice_expense_op.id = employee_invoice_receipt.expense_finance_operation_id
-                   AND employee_invoice_expense_op.status = 'POSTED'
-             LEFT JOIN finance_employee_invoice_payments employee_invoice_expense
-                    ON employee_invoice_expense.expense_finance_operation_id = fo.id
-                   AND employee_invoice_expense.status = 'POSTED'
+                    ON legacy_outflow_resolution.outflow_finance_operation_id = fo.id{$employeeInvoiceJoins}
                  WHERE outflow_resolution.id IS NULL
-                   AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL
-                   AND employee_invoice_expense.id IS NULL
+                   AND legacy_outflow_resolution.outflow_finance_operation_id IS NULL{$employeeInvoiceWhere}
               ORDER BY fo.created_at DESC, fo.id DESC
                  LIMIT :limit OFFSET :offset";
 
