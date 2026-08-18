@@ -1,0 +1,47 @@
+name: P106 Verify Cancelled Cash Hidden
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for exact production SHA and verify cash controller
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 499194c497eeea999ad1633ebefcc3a5e60a0db4
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p106"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p106" "$HOME/.ssh/known_hosts"
+
+          for i in $(seq 1 48); do
+            got="$(ssh -p "$PORT" -i "$HOME/.ssh/p106" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt 2>/dev/null || true')"
+            echo "attempt=$i deployed=$got"
+            if [ "$got" = "$EXPECTED_SHA" ]; then break; fi
+            sleep 5
+          done
+          test "$got" = "$EXPECTED_SHA"
+
+          ssh -p "$PORT" -i "$HOME/.ssh/p106" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          ROOT=/home/s/spugovxsim/planexp/public_html/erpv2
+          grep -F "strtoupper((string)(\$row['status'] ?? '')) !== 'CANCELLED'" "$ROOT/app/Http/Controllers/Company/FinanceCashActions/index.php"
+          curl -fsS --max-time 30 https://plan-ex.ru/erpv2/login >/dev/null
+          echo P106_CANCELLED_CASH_FILTER_LIVE
+          REMOTE
