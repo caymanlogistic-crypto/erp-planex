@@ -52,7 +52,7 @@ if (($links ?? []) === []) {
 <div class="form-alert alert-error"><?= e($error) ?></div>
 <?php elseif ($invoice): ?>
 <style>
-.invoice-pay-channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.invoice-pay-channel{border:1px solid var(--border,#d3cec3);background:var(--surface-2,#f4f1eb);padding:9px 10px;min-height:74px}.invoice-pay-channel strong{display:block;margin-bottom:3px}.invoice-pay-channel span{display:block;color:var(--muted,#746f66);font-size:11px;line-height:1.35}.invoice-pay-channel .btn{margin-top:7px}.invoice-settlement-list{border:1px solid var(--border,#d3cec3);background:var(--surface,#fff)}.invoice-settlement-row{display:grid;grid-template-columns:110px 1fr 145px;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border,#e3dfd6);align-items:center}.invoice-settlement-row:last-child{border-bottom:0}.invoice-settlement-source strong{display:block}.invoice-settlement-source span{display:block;color:var(--muted,#746f66);font-size:11px}.invoice-settlement-amount{text-align:right;font-weight:700;white-space:nowrap}.invoice-cash-pay-form{display:none;margin-top:8px;padding:10px;border:1px solid var(--border,#d3cec3);background:var(--surface,#fff)}.invoice-cash-pay-form.is-open{display:block}.invoice-cash-pay-grid{display:grid;grid-template-columns:1fr 160px;gap:8px}.invoice-cash-pay-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}@media(max-width:760px){.invoice-pay-channels{grid-template-columns:1fr}.invoice-settlement-row{grid-template-columns:90px 1fr}.invoice-settlement-amount{grid-column:2}.invoice-cash-pay-grid{grid-template-columns:1fr}}
+.invoice-pay-channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.invoice-pay-channel{border:1px solid var(--border,#d3cec3);background:var(--surface-2,#f4f1eb);padding:9px 10px;min-height:74px}.invoice-pay-channel strong{display:block;margin-bottom:3px}.invoice-pay-channel span{display:block;color:var(--muted,#746f66);font-size:11px;line-height:1.35}.invoice-pay-channel .btn{margin-top:7px}.invoice-settlement-list{border:1px solid var(--border,#d3cec3);background:var(--surface,#fff)}.invoice-settlement-row{display:grid;grid-template-columns:150px 1fr 145px;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border,#e3dfd6);align-items:center}.invoice-settlement-row:last-child{border-bottom:0}.invoice-settlement-date-value{font-weight:700}.invoice-settlement-date-edit{display:inline-flex;margin-top:4px;padding:2px 5px;font-size:10px;line-height:1.15}.invoice-settlement-date-form{display:none;margin-top:6px}.invoice-settlement-date-form.is-open{display:block}.invoice-settlement-date-form-row{display:flex;align-items:center;gap:5px}.invoice-settlement-date-form .field-input{height:28px;min-width:128px;padding:3px 5px;font-size:11px}.invoice-settlement-date-form .btn{padding:3px 6px;font-size:10px}.invoice-settlement-date-error{display:none;margin-top:4px;color:#8b2f22;font-size:10px;line-height:1.25}.invoice-settlement-date-error.is-visible{display:block}.invoice-settlement-date-source{display:block;margin-top:3px;color:var(--muted,#746f66);font-size:10px}.invoice-settlement-source strong{display:block}.invoice-settlement-source span{display:block;color:var(--muted,#746f66);font-size:11px}.invoice-settlement-amount{text-align:right;font-weight:700;white-space:nowrap}.invoice-cash-pay-form{display:none;margin-top:8px;padding:10px;border:1px solid var(--border,#d3cec3);background:var(--surface,#fff)}.invoice-cash-pay-form.is-open{display:block}.invoice-cash-pay-grid{display:grid;grid-template-columns:1fr 160px;gap:8px}.invoice-cash-pay-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}@media(max-width:760px){.invoice-pay-channels{grid-template-columns:1fr}.invoice-settlement-row{grid-template-columns:120px 1fr}.invoice-settlement-amount{grid-column:2}.invoice-cash-pay-grid{grid-template-columns:1fr}}
 </style>
 <div class="driver-modal-body">
     <h3 class="driver-view-name">Счёт №<?= e($invoice['number'] ?? '') ?></h3>
@@ -90,9 +90,30 @@ if (($links ?? []) === []) {
         <div class="empty-state compact mt-half"><p class="empty-desc">Оплат по счёту пока нет.</p></div>
     <?php else: ?>
         <div class="invoice-settlement-list mt-half">
-            <?php foreach ($settlements as $payment): ?>
-            <div class="invoice-settlement-row">
-                <div><?= e($fmtDate($payment['actual_date'] ?? '')) ?></div>
+            <?php foreach ($settlements as $payment):
+                $operationId = (int)($payment['operation_id'] ?? 0);
+                $bankLinked = (int)($payment['bank_transaction_id'] ?? 0) > 0;
+                $paymentDate = trim((string)($payment['actual_date'] ?? ''));
+                $canEditPaymentDate = $canEdit && !$bankLinked && $operationId > 0 && $paymentDate !== '';
+            ?>
+            <div class="invoice-settlement-row" data-invoice-settlement-operation="<?= $operationId ?>">
+                <div>
+                    <div class="invoice-settlement-date-value"><?= e($fmtDate($paymentDate)) ?></div>
+                    <?php if ($canEditPaymentDate): ?>
+                        <button type="button" class="btn btn-ghost btn-sm invoice-settlement-date-edit" data-settlement-date-edit>Изменить дату</button>
+                        <form class="invoice-settlement-date-form" data-settlement-date-form method="post" action="<?= e(app_url('/company/finance/invoices/' . (int)$invoice['id'] . '/settlements/' . $operationId . '/date')) ?>">
+                            <?= csrfField() ?>
+                            <div class="invoice-settlement-date-form-row">
+                                <input class="field-input" type="date" name="operation_date" value="<?= e($paymentDate) ?>" required>
+                                <button type="submit" class="btn btn-primary btn-sm" data-settlement-date-save>Сохранить</button>
+                                <button type="button" class="btn btn-ghost btn-sm" data-settlement-date-cancel>Отмена</button>
+                            </div>
+                            <div class="invoice-settlement-date-error" data-settlement-date-error></div>
+                        </form>
+                    <?php elseif ($bankLinked): ?>
+                        <span class="invoice-settlement-date-source">Дата из банковской выписки</span>
+                    <?php endif; ?>
+                </div>
                 <div class="invoice-settlement-source"><strong><?= e((string)($payment['channel'] ?? 'Финансовая операция')) ?></strong><?php if (!empty($payment['channel_detail'])): ?><span><?= e((string)$payment['channel_detail']) ?></span><?php endif; ?></div>
                 <div class="invoice-settlement-amount"><?= e(FinanceInvoiceService::formatAmount($payment['amount'] ?? null)) ?> ₽</div>
             </div>
@@ -135,6 +156,55 @@ if (($links ?? []) === []) {
     var cashCancel = modal.querySelector('[data-invoice-cash-pay-cancel]');
     if (cashToggle && cashForm) cashToggle.addEventListener('click', function(){ cashForm.classList.add('is-open'); cashToggle.disabled=true; });
     if (cashCancel && cashForm) cashCancel.addEventListener('click', function(){ cashForm.classList.remove('is-open'); if(cashToggle) cashToggle.disabled=false; });
+
+    modal.querySelectorAll('[data-settlement-date-edit]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var form = button.parentElement.querySelector('[data-settlement-date-form]');
+            if (!form) return;
+            form.classList.add('is-open');
+            button.style.display = 'none';
+            var input = form.querySelector('input[name="operation_date"]');
+            if (input) input.focus();
+        });
+    });
+    modal.querySelectorAll('[data-settlement-date-cancel]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var form = button.closest('[data-settlement-date-form]');
+            if (!form) return;
+            form.classList.remove('is-open');
+            var editButton = form.parentElement.querySelector('[data-settlement-date-edit]');
+            if (editButton) editButton.style.display = '';
+            var error = form.querySelector('[data-settlement-date-error]');
+            if (error) { error.textContent=''; error.classList.remove('is-visible'); }
+        });
+    });
+    modal.querySelectorAll('[data-settlement-date-form]').forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            var save = form.querySelector('[data-settlement-date-save]');
+            var error = form.querySelector('[data-settlement-date-error]');
+            if (save) save.disabled = true;
+            if (error) { error.textContent=''; error.classList.remove('is-visible'); }
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {'X-Requested-With':'XMLHttpRequest'}
+            })
+            .then(function(response) {
+                return response.json().catch(function(){ return {ok:false,message:'Некорректный ответ сервера.'}; })
+                    .then(function(data) {
+                        if (!response.ok || !data.ok) throw new Error(data.message || ('HTTP ' + response.status));
+                        return data;
+                    });
+            })
+            .then(function() { window.location.reload(); })
+            .catch(function(err) {
+                if (error) { error.textContent = err.message || 'Не удалось изменить дату.'; error.classList.add('is-visible'); }
+                if (save) save.disabled = false;
+            });
+        });
+    });
+
     var editBtn = modal.querySelector('[data-invoice-edit-btn]');
     if (editBtn) editBtn.addEventListener('click', function() {
         var id = <?= (int)($invoice['id'] ?? 0) ?>;
