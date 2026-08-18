@@ -56,9 +56,23 @@ jobs:
           phpbin="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" "bash -s" <<'REMOTE'
           set -e
           LIVE=/home/s/spugovxsim/planexp/public_html/erpv2
-          for p in /usr/local/php*/bin/php /opt/php*/bin/php /usr/bin/php*; do
+          candidates="$(command -v php 2>/dev/null || true) $(which -a php 2>/dev/null || true)"
+          for pattern in /usr/local/bin/php* /usr/local/php*/bin/php /opt/php*/bin/php /opt/*/php*/bin/php /usr/bin/php*; do
+            for p in $pattern; do
+              [ -x "$p" ] || continue
+              candidates="$candidates $p"
+            done
+          done
+          for p in $candidates; do
             [ -x "$p" ] || continue
-            if "$p" -l "$LIVE/bootstrap/app.php" >/dev/null 2>&1; then echo "$p"; exit 0; fi
+            case "$p" in *php-config*|*phpize*) continue ;; esac
+            "$p" -l "$LIVE/bootstrap/app.php" >/dev/null 2>&1 || continue
+            "$p" -l "$LIVE/app/Support/helpers.php" >/dev/null 2>&1 || continue
+            "$p" -l "$LIVE/app/Support/entrypoint_dependencies.php" >/dev/null 2>&1 || continue
+            "$p" -l "$LIVE/app/Http/Controllers/Company/BankFinanceController.php" >/dev/null 2>&1 || continue
+            "$p" -l "/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php" >/dev/null 2>&1 || continue
+            echo "$p"
+            exit 0
           done
           exit 1
           REMOTE
