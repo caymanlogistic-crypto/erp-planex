@@ -1,0 +1,84 @@
+name: P51 Finance Controls Production Verify
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact deployed marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 765d765d7182a717104fb8d4ef97b484357fede4
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p51"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p51" "$HOME/.ssh/known_hosts"
+          got="$(ssh -p "$PORT" -i "$HOME/.ssh/p51" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          echo "P51_EXPECTED_SHA=$EXPECTED_SHA"
+          echo "P51_DEPLOYED_SHA=$got"
+          test "$got" = "$EXPECTED_SHA"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p51_key
+            chmod 600 /tmp/p51_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p51_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+
+      - name: Verify approved finance controls in production
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/p50/P50_finance_cashless_runtime.js | tee P51_RUNTIME.txt
+          grep -q 'P50_FINANCE_CASHLESS_UI_OK' P51_RUNTIME.txt
+          echo P51_PRODUCTION_FINANCE_CONTROLS_OK | tee -a P51_RUNTIME.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P51_finance_controls_production_765d765d
+          path: P51_RUNTIME.txt
+          if-no-files-found: warn
+          retention-days: 30
