@@ -12,8 +12,10 @@ $routes=fcp_read('app/Http/Routes/company_finance_invoices.php');
 $controller=fcp_read('app/Http/Controllers/Company/FinanceInvoiceController.php');
 $action=fcp_read('app/Http/Controllers/Company/InvoiceActions/payables.php');
 $cashAction=fcp_read('app/Http/Controllers/Company/InvoiceActions/pay_cash_submit.php');
+$dateAction=fcp_read('app/Http/Controllers/Company/InvoiceActions/settlement_date_submit.php');
 $report=fcp_read('app/Service/FinancePayablesReportService.php');
 $history=fcp_read('app/Service/FinanceInvoiceSettlementHistoryService.php');
+$dateService=fcp_read('app/Service/FinanceInvoiceSettlementDateService.php');
 $view=fcp_read('app/View/pages/company_finance_payables.php');
 $modal=fcp_read('app/View/partials/company_invoice_modal_view.php');
 $generic=fcp_read('app/Service/FinanceOperationInvoiceSettlementService.php');
@@ -29,6 +31,7 @@ foreach ([
     'FinanceOperationInvoiceSettlementService.php',
     'FinanceCashInvoiceEventService.php',
     'FinanceInvoiceSettlementHistoryService.php',
+    'FinanceInvoiceSettlementDateService.php',
     'FinancePayablesReportService.php',
 ] as $dependency) {
     fcp_has($routes, "app/Service/{$dependency}", 'Invoice route must load runtime dependency '.$dependency);
@@ -78,5 +81,28 @@ fcp_has($history,'fo.bank_transaction_id','History must identify bank settlement
 fcp_has($history,'money_account_type','History must project money account type for cash identification');
 fcp_has($history,"=== 'CASH'",'History must identify cash settlements');
 fcp_has($history,'finance_employee_invoice_payments','History must identify employee-funded settlements');
+
+// Actual payment date must be editable for manual settlements without creating
+// another money operation. Bank dates stay sourced from imported statements.
+fcp_has($routes,'/{id}/settlements/{operationId}/date','Settlement date update route must exist');
+fcp_has($controller,'function settlementDateSubmit(', 'Controller must expose settlement date update');
+fcp_has($dateAction,"requireRole(['company_owner'])",'Settlement date edit must remain owner-only');
+fcp_has($dateAction,'verifyCsrfRequest()','Settlement date edit must require CSRF');
+fcp_has($dateAction,'FinanceInvoiceSettlementDateService::updateDate','Date action must delegate to the date service');
+fcp_has($dateService,'bank_transaction_id','Date service must distinguish bank-sourced dates');
+fcp_has($dateService,'Дата банковского платежа берётся из банковской выписки','Bank dates must be immutable from invoice settlement UI');
+fcp_has($dateService,'finance_employee_invoice_payments','Employee-funded invoice event date must be updated');
+fcp_has($dateService,'receipt_finance_operation_id','Employee receipt leg date must remain synchronized');
+fcp_has($dateService,'expense_finance_operation_id','Employee expense leg date must remain synchronized');
+fcp_has($dateService,'SET allocation_date=?','Allocation date must follow edited actual payment date');
+fcp_has($dateService,'first_paid_at','Invoice first-paid date must be synchronized');
+fcp_has($dateService,'fully_paid_at','Invoice fully-paid date must be synchronized');
+fcp_has($dateService,'linear_route_payments SET paid_at=?','Route payment paid date must be synchronized');
+fcp_not($dateService,'INSERT INTO finance_operations','Editing payment date must not create a second finance operation');
+fcp_not($dateService,'DELETE FROM','Editing payment date must not delete finance history');
+fcp_has($modal,'data-settlement-date-edit','Manual settlement must expose an edit-date control');
+fcp_has($modal,'data-settlement-date-form','Manual settlement must expose an inline date form');
+fcp_has($modal,'Дата из банковской выписки','Bank settlement UI must explain why its date is not editable here');
+fcp_has($modal,'window.location.reload()','Successful date edit must refresh invoice plan/fact data');
 
 fwrite(STDOUT,"OK: carrier payables regression contract passed\n");
