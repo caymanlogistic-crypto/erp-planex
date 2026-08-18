@@ -91,6 +91,25 @@ jobs:
           fp2="$(sed -n 's/^FINANCE_DIRECT_READ_ONLY_FINGERPRINT=//p' finance_direct_pre_2.txt)"
           test -n "$fp1" && test "$fp1" = "$fp2"
           echo "FINANCE_DIRECT_PREDEPLOY_STABLE_FINGERPRINT=$fp1"
+      - name: Read-only release acceptance
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 4d9928f30cef8b6bc3a93c0c20dfa1e66eb4b527
+        run: |
+          set -euo pipefail
+          marker="$(ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          echo "PRODUCTION_MARKER=$marker"
+          test "$marker" = "$EXPECTED_SHA"
+          grep -q '"employee_account_table_exists":true' finance_direct_pre_1.txt
+          grep -q '"migration_076_applied":1' finance_direct_pre_1.txt
+          grep -q '"cash_posted_balance":"0.00"' finance_direct_pre_1.txt
+          grep -q '"cancelled_159_count":1' finance_direct_pre_1.txt
+          http="$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 https://plan-ex.ru/erpv2/login)"
+          echo "ERPV2_LOGIN_HTTP=$http"
+          test "$http" = 200
+          echo FINANCE_DIRECT_RELEASE_ACCEPTANCE_OK
       - uses: actions/upload-artifact@v4
         if: always()
         with:
