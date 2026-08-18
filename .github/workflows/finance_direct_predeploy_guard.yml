@@ -1,0 +1,82 @@
+name: Finance Direct Predeploy Guard
+
+on:
+  push:
+    branches:
+      - feature/finance-remove-cash-20260818
+  pull_request:
+    branches:
+      - chatgpt/production-stabilization-20260802
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finance-direct-predeploy-guard
+  cancel-in-progress: true
+
+env:
+  LIVE_ROOT: /home/s/spugovxsim/planexp/public_html/erpv2
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax
+        run: php -l scripts/finance_direct_verify.php
+      - name: Configure SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/finance_direct_pre_key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/finance_direct_pre_key" "$HOME/.ssh/known_hosts"
+      - name: Upload verifier
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            scripts/finance_direct_verify.php "$SSH_USER@$SSH_HOST:/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php"
+      - name: Production read-only snapshot twice
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          set -euo pipefail
+          for n in 1 2; do
+            ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+              "PLANEX_ROOT='$LIVE_ROOT' php '/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php'" | tee "finance_direct_pre_${n}.txt"
+            grep -q 'FINANCE_DIRECT_READ_ONLY_OK' "finance_direct_pre_${n}.txt"
+          done
+          fp1="$(sed -n 's/^FINANCE_DIRECT_READ_ONLY_FINGERPRINT=//p' finance_direct_pre_1.txt)"
+          fp2="$(sed -n 's/^FINANCE_DIRECT_READ_ONLY_FINGERPRINT=//p' finance_direct_pre_2.txt)"
+          test -n "$fp1" && test "$fp1" = "$fp2"
+          echo "FINANCE_DIRECT_PREDEPLOY_STABLE_FINGERPRINT=$fp1"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: finance_direct_predeploy_${{ github.sha }}
+          path: finance_direct_pre_*.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Cleanup
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          SSH_PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          SSH_USER: ${{ secrets.ERPV2_SSH_USER }}
+        run: |
+          if [ -f "$HOME/.ssh/finance_direct_pre_key" ]; then
+            ssh -p "$SSH_PORT" -i "$HOME/.ssh/finance_direct_pre_key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+              "rm -f '/tmp/finance_direct_pre_${GITHUB_RUN_ID}.php'" 2>/dev/null || true
+          fi
+          rm -f "$HOME/.ssh/finance_direct_pre_key" 2>/dev/null || true
