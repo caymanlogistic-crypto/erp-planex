@@ -48,8 +48,6 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
       await target.dblclick();
       const modal = page.locator('#invoice-view-modal.is-open');
       await modal.waitFor({ state: 'visible', timeout: 10000 });
-      // The modal shell opens before its body is fetched. Wait for the actual
-      // invoice AJAX payload, not merely for the overlay to become visible.
       await modal.getByText('Фактические оплаты', { exact: true }).waitFor({ state: 'visible', timeout: 10000 });
       return modal;
     }
@@ -85,13 +83,26 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
     ok((await input.inputValue()) === '2026-08-18', 'date input does not contain the current actual payment date');
     await page.screenshot({ path: 'P101_invoice_payment_date_editor.png', fullPage: true });
 
-    // Submit the same date. The backend is explicitly idempotent for this case,
-    // so this validates route + CSRF + service without changing production data.
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }),
-      form.locator('[data-settlement-date-save]').click()
-    ]);
+    // Submit the same date. This exercises the real POST + CSRF + service but
+    // remains a no-op at the data layer. Assert the API response directly;
+    // the UI reload is intentionally not part of the API contract.
+    const responsePromise = page.waitForResponse(response =>
+      response.request().method() === 'POST' && response.url().includes('/settlements/') && response.url().endsWith('/date'),
+      { timeout: 15000 }
+    );
+    await form.locator('[data-settlement-date-save]').click();
+    const saveResponse = await responsePromise;
+    const saveText = await saveResponse.text();
+    let saveJson = null;
+    try { saveJson = JSON.parse(saveText); } catch (_) {}
+    console.log('P101_SAVE_RESPONSE=' + saveResponse.status() + ' ' + saveText);
+    ok(saveResponse.status() === 200, 'settlement date POST HTTP ' + saveResponse.status() + ': ' + saveText);
+    ok(saveJson && saveJson.ok === true, 'settlement date POST did not return ok=true: ' + saveText);
+    ok(saveJson.operation_date === '2026-08-18', 'settlement date POST returned unexpected date: ' + saveText);
 
+    // The modal script may reload the current page after a successful save.
+    // Navigate afresh so verification is deterministic regardless of reload timing.
+    await page.waitForTimeout(500);
     modal = await openTargetInvoice();
     found = await findEditable14600Row(modal);
     ok(found.row, 'settlement disappeared after idempotent save; rows=' + JSON.stringify(found.texts));
@@ -103,7 +114,8 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
     evidence.invoice = {
       settlementText: await paymentRow.innerText(),
       actualDate: await paymentRow.locator('.invoice-settlement-date-value').innerText(),
-      operationId: await paymentRow.getAttribute('data-invoice-settlement-operation')
+      operationId: await paymentRow.getAttribute('data-invoice-settlement-operation'),
+      saveResponse: saveJson
     };
     evidence.browserErrors = browserErrors;
     ok(browserErrors.length === 0, 'browser errors: ' + JSON.stringify(browserErrors));
