@@ -145,6 +145,28 @@ if (PHP_SAPI !== 'cli') {
         $baseFix = <<<'HTML'
 <script>
 (function(){
+  function normalizeFinanceText(root){
+    if(window.location.pathname.indexOf('/company/finance')===-1)return;
+    var scope=root===document?document.body:root;
+    if(!scope)return;
+    var walker=document.createTreeWalker(scope,NodeFilter.SHOW_TEXT);
+    var node;
+    while((node=walker.nextNode())){
+      var value=node.nodeValue||'';
+      if(!/касс/iu.test(value))continue;
+      value=value
+        .replace(/Лицевой счёт сотрудника: все выплаты из кассы и возвраты компании\. Прямые выплаты с расчётного счёта не используются\./giu,'Движение средств сотрудника: получено от клиентов, оплачено за компанию и передано другим сотрудникам.')
+        .replace(/Выдача из кассы/giu,'Получено сотрудником')
+        .replace(/Возврат в кассу/giu,'Передано сотрудником')
+        .replace(/Разнесение технической кассы\.?/giu,'Внутренний расчёт по операции.')
+        .replace(/Технический перевод кассы/giu,'Внутренний перевод средств')
+        .replace(/Основная касса/giu,'Средства компании')
+        .replace(/Основной кассы/giu,'Средств компании')
+        .replace(/Основную кассу/giu,'Средства компании')
+        .replace(/касс\p{L}*/giu,'средства компании');
+      node.nodeValue=value;
+    }
+  }
   function fix(root){
     if(!root||!root.querySelectorAll)return;
     var base=window.getErpBasePath?window.getErpBasePath():'';
@@ -164,6 +186,7 @@ if (PHP_SAPI !== 'cli') {
       var href=link.getAttribute('href')||'';
       if(href.indexOf('/company/documents')===0&&base)link.setAttribute('href',base+href);
     });
+    normalizeFinanceText(root);
   }
   fix(document);
   new MutationObserver(function(records){records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1)fix(node);});});}).observe(document.body,{childList:true,subtree:true});
