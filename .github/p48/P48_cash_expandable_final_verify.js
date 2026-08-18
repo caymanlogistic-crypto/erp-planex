@@ -42,8 +42,8 @@ const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLo
     ok(await toggle.getAttribute('aria-expanded') === 'true', 'expand control did not open');
     ok(await detail.isVisible(), 'detail did not become visible');
     const detailText = (await detail.innerText()).replace(/\s+/g, ' ').trim();
-    ok(detailText.includes('Поступление'), 'receipt leg missing');
-    ok(detailText.includes('Списание'), 'expense leg missing');
+    ok(norm(detailText).includes(norm('Поступление')), 'receipt leg missing: ' + detailText);
+    ok(norm(detailText).includes(norm('Списание')), 'expense leg missing: ' + detailText);
     ok(norm(detailText).includes(norm(expectedSource)), 'receipt leg source missing');
     ok(norm(detailText).includes(norm(expectedRecipient)), 'expense leg recipient missing');
     ok(norm(detailText).includes(norm('Основная касса')), 'Main Cash routing missing');
