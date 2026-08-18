@@ -27,7 +27,7 @@ jobs:
           grep -q "Получено сотрудником" app/Support/runtime_ui_hotfixes.php
           grep -q "Передано сотрудником" app/Support/runtime_ui_hotfixes.php
           ! grep -q "Создание и изменение кассовых операций" app/Http/Routes/company_finance_cash.php
-          grep -q "Архивный денежный раздел недоступен" app/Http/Routes/company_finance_cash.php
+          grep -q "Этот устаревший способ операции отключён" app/Http/Routes/company_finance_cash.php
           echo P50_STATIC_CASHLESS_UI_OK
 
   runtime:
