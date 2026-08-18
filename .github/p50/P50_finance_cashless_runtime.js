@@ -29,8 +29,11 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
       'company/finance/dashboard',
       'company/finance/bank-accounts',
       'company/finance/invoices',
+      'company/finance/receivables',
+      'company/finance/payables',
       'company/finance/operations',
-      'company/finance/payment-calendar'
+      'company/finance/payment-calendar',
+      'company/finance/settings/matching-rules'
     ];
 
     for (const route of routes) {
@@ -46,30 +49,40 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     await page.waitForTimeout(250);
     const title = (await page.locator('h1.page-title').first().innerText()).trim();
     ok(title === 'Взаиморасчёты с сотрудниками', 'employee workspace title: ' + title);
-
-    const headButtons = await page.locator('.employee-report .page-head-right button:visible').allTextContents();
-    const normalized = headButtons.map(v => v.trim()).filter(Boolean);
+    const normalized = (await page.locator('.employee-report .page-head-right button:visible').allTextContents()).map(v => v.trim()).filter(Boolean);
     const expected = ['Получено от клиента', 'Передать деньги', 'Оплатил счёт', 'Прочий расход'];
     ok(JSON.stringify(normalized) === JSON.stringify(expected), 'employee action matrix mismatch: ' + JSON.stringify(normalized));
-    ok(await page.locator('#employee-client-receipt-open').count() === 1, 'client receipt control missing');
-    ok(await page.locator('#employee-transfer-open').count() === 1, 'employee transfer control missing');
-    ok(await page.locator('#employee-invoice-payment-open').count() === 1, 'invoice payment control missing');
-    ok(await page.locator('#employee-personal-expense-open').count() === 1, 'personal expense control missing');
+    for (const id of ['employee-client-receipt-open','employee-transfer-open','employee-invoice-payment-open','employee-personal-expense-open']) {
+      ok(await page.locator('#' + id).count() === 1, id + ' missing or duplicated');
+    }
     ok(await page.locator('button:visible', { hasText: /Изменить|Удалить передачу/i }).count() === 0, 'retired transfer edit/delete control visible');
     ok(await page.locator('[data-employee-transfer-edit]').count() === 0, 'retired transfer edit host remains');
+    const employeeBody = await page.locator('body').innerText();
+    ok(employeeBody.includes('Средства у сотрудника'), 'employee money explanation missing');
+    ok(!/Выдача из|Возврат в|Основн.*касс/iu.test(employeeBody), 'retired employee semantics visible');
 
-    const body = await page.locator('body').innerText();
-    ok(body.includes('Средства у сотрудника'), 'employee money explanation missing');
-    ok(!/Выдача из|Возврат в|Основн.*касс/iu.test(body), 'retired payment semantics visible');
+    await page.goto(B + 'company/finance/payables', { waitUntil: 'domcontentloaded' });
+    const payablesBody = await page.locator('body').innerText();
+    ok(payablesBody.includes('Расчётный счёт') && payablesBody.includes('Сотрудник'), 'approved carrier payment channels missing');
+    ok(!/касс/iu.test(payablesBody), 'payables exposes retired payment channel');
+    ok(await page.locator('.payables-toolbar__actions a').allTextContents().then(v => !v.some(x => /касс/iu.test(x))), 'payables toolbar exposes retired action');
+
+    await page.goto(B + 'company/finance/settings/matching-rules', { waitUntil: 'domcontentloaded' });
+    ok(await page.locator('#matching-rule-create-btn').count() === 1, 'matching rules create control missing');
+    ok(!/касс/iu.test(await page.locator('body').innerText()), 'matching rules expose retired model');
+
+    await page.goto(B + 'company/finance/invoices', { waitUntil: 'domcontentloaded' });
+    ok(await page.locator('[data-invoice-cash-pay-toggle]').count() === 0, 'invoice page exposes retired payment button');
+    ok(await page.locator('[data-invoice-cash-pay-form]').count() === 0, 'invoice page exposes retired payment form');
 
     const legacy = await page.goto(B + 'company/finance/cash', { waitUntil: 'domcontentloaded' });
     ok(legacy && legacy.status() === 200, 'legacy finance URL did not resolve safely');
     ok(page.url().includes('/company/finance/employee-payments'), 'legacy finance URL did not redirect to employee settlements');
-    const legacyBody = await page.locator('body').innerText();
-    ok(!/касс/iu.test(legacyBody), 'legacy redirect still exposes retired terminology');
+    ok(!/касс/iu.test(await page.locator('body').innerText()), 'legacy redirect still exposes retired terminology');
 
     ok(errors.length === 0, 'browser errors: ' + JSON.stringify(errors));
     console.log('P50_ACTIONS=' + JSON.stringify(expected));
+    console.log('P50_ROUTES=' + JSON.stringify(routes));
     console.log('P50_ERRORS=' + JSON.stringify(errors));
     console.log('P50_FINANCE_CASHLESS_UI_OK');
   } finally {
