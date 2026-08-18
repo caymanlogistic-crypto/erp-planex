@@ -171,13 +171,8 @@ try {
             }
             throw $e;
         }
-        $invoice = FinanceInvoiceService::fetchInvoiceById($localPdo, $invoiceId);
-        $links = FinanceObligationService::invoiceLinks($localPdo, $invoiceId);
-        $canEdit = true;
-        $canDelete = true;
-        $error = null;
-        require base_path('app/View/partials/company_invoice_modal_view.php');
-        exit;
+        $_SESSION['invoice_success'] = 'Счёт №' . $number . ' сохранён.';
+        redirect_to('/company/finance/invoices?direction=' . rawurlencode($direction));
     }
 
     $formError = implode(' ', array_values(array_unique($errors)));
