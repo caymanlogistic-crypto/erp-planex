@@ -49,6 +49,7 @@ foreach($editorMonths as $rows){foreach($rows as $row)$orderedPayloads[]=$payloa
 <style>
 .employee-report-table tbody tr.employee-ledger-editable{cursor:pointer}
 .employee-report-table tbody tr.employee-ledger-editable:hover{background:var(--surface-hover,#f5f2eb)}
+.employee-report-table tbody tr.is-muted{display:none!important}
 .employee-event-section{display:none!important}
 </style>
 
@@ -124,6 +125,14 @@ foreach($editorMonths as $rows){foreach($rows as $row)$orderedPayloads[]=$payloa
  rows.forEach((row,i)=>{
    const p=payloads[i];if(!p)return;row.classList.add('employee-ledger-editable');row.title='Двойной щелчок — изменить или удалить';
    row.addEventListener('dblclick',()=>{if(p.kind==='client')openClient(p);else if(p.kind==='transfer')openTransfer(p);else if(p.kind==='invoice')openInvoice(p);else if(p.kind==='personal')openPersonal(p);});
+ });
+ // Cancelled rows remain in the audit trail but disappear from the working journal.
+ document.querySelectorAll('.employee-report-table').forEach(table=>{
+   const visible=Array.from(table.querySelectorAll('tbody tr')).filter(row=>!row.classList.contains('is-muted')).length;
+   const scroll=table.closest('.table-scroll');
+   const head=scroll&&scroll.previousElementSibling;
+   const caption=head&&head.querySelector('.employee-month-title')?head.querySelector('.employee-month-title').nextElementSibling:null;
+   if(caption)caption.textContent=caption.textContent.replace(/^\d+ операций/u,visible+' операций');
  });
 })();
 </script>
