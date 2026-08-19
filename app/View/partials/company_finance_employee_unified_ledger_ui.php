@@ -1,8 +1,8 @@
 <?php
 /**
  * Employee workspace UI glue.
- * The page renders the journal semantically; this partial only promotes the two
- * action buttons whose modals live in the hidden event host.
+ * The page renders the journal semantically; this partial promotes action buttons
+ * and attaches the standard double-click editor to editable payment rows.
  */
 ?>
 <style>
@@ -25,3 +25,4 @@
     report.dataset.employeeActionMatrix='client-receipt,transfer,invoice-payment,personal-expense';
 })();
 </script>
+<?php require base_path('app/View/partials/company_finance_employee_ledger_editor.php'); ?>
