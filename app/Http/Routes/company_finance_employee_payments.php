@@ -6,6 +6,7 @@ require_once base_path('app/Service/FinanceEmployeePersonalExpenseEventService.p
 require_once base_path('app/Service/FinanceEmployeeMoneyAccountService.php');
 require_once base_path('app/Service/FinanceEmployeeBankSettlementService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectTransferService.php');
+require_once base_path('app/Service/FinanceEmployeeDirectTransferEditService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectExpenseService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectInvoicePaymentService.php');
 require_once base_path('app/Service/FinanceEmployeeClientReceiptService.php');
@@ -46,8 +47,12 @@ $router->post('/company/finance/employee-payments/client-receipt/cancel', static
 $router->post('/company/finance/employee-payments/transfer', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_submit.php');
 });
-$router->post('/company/finance/employee-payments/transfer/update', [$controller, 'transferUpdateSubmit']);
-$router->post('/company/finance/employee-payments/transfer/delete', [$controller, 'transferDeleteSubmit']);
+$router->post('/company/finance/employee-payments/transfer/update', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_update.php');
+});
+$router->post('/company/finance/employee-payments/transfer/delete', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_cancel.php');
+});
 
 $router->get('/company/finance/employee-payments/employee/{type}/{id}', [$controller, 'employeeDetail']);
 $router->post('/company/finance/employee-payments/movements/{id}/reassign', [$controller, 'reassignMovement']);
