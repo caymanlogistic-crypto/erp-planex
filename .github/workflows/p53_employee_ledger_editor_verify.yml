@@ -10,7 +10,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,10 +36,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install Chromium
+      - name: Prepare Playwright against runner Chrome
+        shell: bash
         run: |
+          set -euo pipefail
+          export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
           npm install --no-save playwright@1.54.2
-          npx playwright install --with-deps chromium
+          command -v google-chrome || command -v google-chrome-stable
       - name: Resolve OWNER credentials
         env:
           CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
@@ -66,11 +69,15 @@ jobs:
         run: |
           node - <<'NODE'
           const { chromium } = require('playwright');
+          const fs=require('fs');
           (async()=>{
             const creds=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
             const owner=creds.find(x=>String(x.role).toUpperCase()==='OWNER');
             if(!owner) throw new Error('OWNER credentials missing');
-            const browser=await chromium.launch({headless:true});
+            const candidates=['/usr/bin/google-chrome','/usr/bin/google-chrome-stable'];
+            const executablePath=candidates.find(fs.existsSync);
+            if(!executablePath) throw new Error('Runner Chrome missing');
+            const browser=await chromium.launch({headless:true,executablePath});
             const page=await browser.newPage({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow'});
             await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
             await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
@@ -85,34 +92,25 @@ jobs:
             const rows=page.locator('.employee-report-table tbody tr.employee-ledger-editable');
             const count=await rows.count();
             if(count<4) throw new Error('Not enough editable rows: '+count);
-
             const findRow=async(text)=>{
               const all=page.locator('.employee-report-table tbody tr.employee-ledger-editable');
               const n=await all.count();
-              for(let i=0;i<n;i++){
-                const t=(await all.nth(i).innerText()).trim();
-                if(t.includes(text)) return all.nth(i);
-              }
+              for(let i=0;i<n;i++){const t=(await all.nth(i).innerText()).trim();if(t.includes(text))return all.nth(i);}
               throw new Error('Editable row not found: '+text);
             };
-            const assertPopup=async(row, modalSelector, saveText, deleteText)=>{
-              await row.dblclick();
-              await page.waitForTimeout(180);
-              const modal=page.locator(modalSelector);
-              if(!(await modal.isVisible())) throw new Error('Modal not visible: '+modalSelector);
-              if(!(await modal.getByText(saveText,{exact:false}).first().isVisible())) throw new Error('Save action missing: '+saveText);
-              if(deleteText && !(await modal.getByText(deleteText,{exact:false}).first().isVisible())) throw new Error('Delete action missing: '+deleteText);
+            const assertPopup=async(row,modalSelector,saveText,deleteText)=>{
+              await row.dblclick();await page.waitForTimeout(180);
+              const modal=page.locator(modalSelector);if(!(await modal.isVisible()))throw new Error('Modal not visible: '+modalSelector);
+              if(!(await modal.getByText(saveText,{exact:false}).first().isVisible()))throw new Error('Save action missing: '+saveText);
+              if(deleteText&&!(await modal.getByText(deleteText,{exact:false}).first().isVisible()))throw new Error('Delete action missing: '+deleteText);
               const close=modal.locator('.modal-close,[data-client-edit-close],[data-transfer-edit-close],[data-invoice-payment-close],[data-personal-expense-close]').first();
-              if(await close.count()) await close.click();
-              else await page.keyboard.press('Escape');
+              if(await close.count())await close.click();else await page.keyboard.press('Escape');
               await page.waitForTimeout(80);
             };
-
             await assertPopup(await findRow('Получено от клиента'),'#employee-client-edit-modal','Сохранить','Удалить');
             await assertPopup(await findRow('Получено от сотрудника'),'#employee-transfer-edit-modal','Сохранить','Удалить');
             await assertPopup(await findRow('Оплатил счёт'),'#employee-invoice-payment-modal','Сохранить изменения',null);
             await assertPopup(await findRow('Прочий расход'),'.employee-personal-expense-modal','Сохранить изменения','Отменить операцию');
-
             console.log('P53_EDITABLE_ROWS='+count);
             console.log('P53_BUTTON_LABEL='+button);
             console.log('P53_EMPLOYEE_LEDGER_EDITOR_OK');
