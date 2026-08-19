@@ -26,3 +26,4 @@
 })();
 </script>
 <?php require base_path('app/View/partials/company_finance_employee_ledger_editor.php'); ?>
+<?php require base_path('app/View/partials/company_finance_employee_ledger_editor_polish.php'); ?>
