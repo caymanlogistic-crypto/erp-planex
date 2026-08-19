@@ -39,7 +39,6 @@ $payloadForRow = static function(array $row) use ($clientEditByMovement,$directT
     return null;
 };
 
-// Reproduce the page's month grouping so the payload array matches rendered TR order exactly.
 $editorMonths=[];
 foreach(($ledger??[]) as $row){$month=substr((string)($row['operation_date']??''),0,7);$editorMonths[$month][]=$row;}
 krsort($editorMonths);
@@ -121,12 +120,59 @@ foreach($editorMonths as $rows){foreach($rows as $row)$orderedPayloads[]=$payloa
    const button=candidates.find(btn=>{try{return Number(JSON.parse(btn.dataset.invoicePaymentEdit||'{}').id)===Number(p.event_id);}catch(e){return false;}});
    if(button)button.click();
  };
- const openPersonal=(p)=>{const button=document.querySelector('[data-personal-expense-edit="'+String(p.event_id)+'"]');if(button)button.click();};
+ const bindPersonalEditor=(host)=>{
+   const overlay=host.querySelector('.employee-personal-expense-modal');
+   if(!overlay)return false;
+   overlay.querySelectorAll('[data-personal-expense-close]').forEach(btn=>btn.addEventListener('click',()=>{host.innerHTML='';}));
+   overlay.addEventListener('click',e=>{if(e.target===overlay)host.innerHTML='';});
+   const form=overlay.querySelector('[data-personal-expense-form]');
+   const cfu=overlay.querySelector('[data-personal-expense-cfu]');
+   const dds=overlay.querySelector('[data-personal-expense-dds]');
+   if(form&&cfu&&dds){
+     let map={};try{map=JSON.parse(form.dataset.allowedExpenseDdsMap||'{}');}catch(e){}
+     const all=Array.from(dds.options).map(o=>({value:o.value,text:o.textContent}));
+     const sync=()=>{
+       const selected=dds.dataset.selectedDds||dds.value;dds.innerHTML='';
+       const first=document.createElement('option');first.value='';first.textContent='— Выберите статью —';dds.appendChild(first);
+       const allowed=(map[String(cfu.value)]||[]).map(String);
+       all.forEach(item=>{if(item.value&&allowed.includes(String(item.value))){const o=document.createElement('option');o.value=item.value;o.textContent=item.text;if(String(item.value)===String(selected))o.selected=true;dds.appendChild(o);}});
+       dds.dataset.selectedDds='';
+     };
+     cfu.addEventListener('change',sync);sync();
+   }
+   const cancel=overlay.querySelector('[data-personal-expense-cancel-event]');
+   if(cancel&&form){
+     cancel.addEventListener('click',()=>{
+       if(!confirm('Удалить прочий расход сотрудника?'))return;
+       const token=form.querySelector('input[name="_csrf_token"]');
+       const f=document.createElement('form');f.method='post';
+       f.action='<?= e(app_url('/company/finance/employee-payments/personal-expense/')) ?>'+cancel.dataset.personalExpenseCancelEvent+'/cancel';
+       const fields={_csrf_token:token?token.value:'',employee_ref:cancel.dataset.employeeRef||'<?= e((string)$selectedRef) ?>',reason:'Удалено пользователем из журнала взаиморасчётов'};
+       Object.entries(fields).forEach(([name,value])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;f.appendChild(input);});
+       document.body.appendChild(f);f.submit();
+     });
+   }
+   return true;
+ };
+ const openPersonal=async(p)=>{
+   const host=document.getElementById('employee-personal-expense-host');
+   if(!host)throw new Error('Не найден контейнер формы прочего расхода.');
+   const url='<?= e(app_url('/company/finance/employee-payments/personal-expense/')) ?>'+String(p.event_id)+'/edit';
+   const response=await fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}});
+   const html=await response.text();
+   if(!response.ok)throw new Error(html.replace(/<[^>]+>/g,' ').trim()||'Не удалось открыть прочий расход.');
+   host.innerHTML=html;
+   if(!bindPersonalEditor(host))throw new Error('Форма прочего расхода не получена.');
+ };
  rows.forEach((row,i)=>{
    const p=payloads[i];if(!p)return;row.classList.add('employee-ledger-editable');row.title='Двойной щелчок — изменить или удалить';
-   row.addEventListener('dblclick',()=>{if(p.kind==='client')openClient(p);else if(p.kind==='transfer')openTransfer(p);else if(p.kind==='invoice')openInvoice(p);else if(p.kind==='personal')openPersonal(p);});
+   row.addEventListener('dblclick',()=>{
+     if(p.kind==='client')openClient(p);
+     else if(p.kind==='transfer')openTransfer(p);
+     else if(p.kind==='invoice')openInvoice(p);
+     else if(p.kind==='personal')openPersonal(p).catch(error=>{console.error(error);alert(error.message||'Не удалось открыть прочий расход.');});
+   });
  });
- // Cancelled rows remain in the audit trail but disappear from the working journal.
  document.querySelectorAll('.employee-report-table').forEach(table=>{
    const visible=Array.from(table.querySelectorAll('tbody tr')).filter(row=>!row.classList.contains('is-muted')).length;
    const scroll=table.closest('.table-scroll');
