@@ -1,0 +1,121 @@
+name: P53 Employee Ledger Editor Verify
+
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact deployed marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 5803521c4284822d218133e423e7c32420a387a1
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p53"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p53" "$HOME/.ssh/known_hosts"
+          got="$(ssh -p "$PORT" -i "$HOME/.ssh/p53" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          echo "P53_DEPLOYED_SHA=$got"
+          test "$got" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p53_key
+            chmod 600 /tmp/p53_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p53_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          test -n "$cred"
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Verify production double-click editors
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const { chromium } = require('playwright');
+          (async()=>{
+            const creds=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
+            const owner=creds.find(x=>String(x.role).toUpperCase()==='OWNER');
+            if(!owner) throw new Error('OWNER credentials missing');
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow'});
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').fill(owner.password);
+            await page.locator('button[type="submit"],input[type="submit"]').first().click();
+            await page.waitForTimeout(700);
+            if(page.url().includes('/login')) throw new Error('login failed');
+            await page.goto('https://plan-ex.ru/erpv2/company/finance/employee-payments?employee_ref=TENANT_USER%3A1',{waitUntil:'domcontentloaded'});
+            await page.waitForTimeout(400);
+            const button=(await page.locator('#employee-invoice-payment-open').innerText()).trim();
+            if(button!=='Оплатить счёт') throw new Error('Unexpected invoice button label: '+button);
+            const rows=page.locator('.employee-report-table tbody tr.employee-ledger-editable');
+            const count=await rows.count();
+            if(count<4) throw new Error('Not enough editable rows: '+count);
+
+            const findRow=async(text)=>{
+              const all=page.locator('.employee-report-table tbody tr.employee-ledger-editable');
+              const n=await all.count();
+              for(let i=0;i<n;i++){
+                const t=(await all.nth(i).innerText()).trim();
+                if(t.includes(text)) return all.nth(i);
+              }
+              throw new Error('Editable row not found: '+text);
+            };
+            const assertPopup=async(row, modalSelector, saveText, deleteText)=>{
+              await row.dblclick();
+              await page.waitForTimeout(180);
+              const modal=page.locator(modalSelector);
+              if(!(await modal.isVisible())) throw new Error('Modal not visible: '+modalSelector);
+              if(!(await modal.getByText(saveText,{exact:false}).first().isVisible())) throw new Error('Save action missing: '+saveText);
+              if(deleteText && !(await modal.getByText(deleteText,{exact:false}).first().isVisible())) throw new Error('Delete action missing: '+deleteText);
+              const close=modal.locator('.modal-close,[data-client-edit-close],[data-transfer-edit-close],[data-invoice-payment-close],[data-personal-expense-close]').first();
+              if(await close.count()) await close.click();
+              else await page.keyboard.press('Escape');
+              await page.waitForTimeout(80);
+            };
+
+            await assertPopup(await findRow('Получено от клиента'),'#employee-client-edit-modal','Сохранить','Удалить');
+            await assertPopup(await findRow('Получено от сотрудника'),'#employee-transfer-edit-modal','Сохранить','Удалить');
+            await assertPopup(await findRow('Оплатил счёт'),'#employee-invoice-payment-modal','Сохранить изменения',null);
+            await assertPopup(await findRow('Прочий расход'),'.employee-personal-expense-modal','Сохранить изменения','Отменить операцию');
+
+            console.log('P53_EDITABLE_ROWS='+count);
+            console.log('P53_BUTTON_LABEL='+button);
+            console.log('P53_EMPLOYEE_LEDGER_EDITOR_OK');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1);});
+          NODE
