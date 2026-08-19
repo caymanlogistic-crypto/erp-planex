@@ -74,8 +74,7 @@ jobs:
             const creds=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
             const owner=creds.find(x=>String(x.role).toUpperCase()==='OWNER');
             if(!owner) throw new Error('OWNER credentials missing');
-            const candidates=['/usr/bin/google-chrome','/usr/bin/google-chrome-stable'];
-            const executablePath=candidates.find(fs.existsSync);
+            const executablePath=['/usr/bin/google-chrome','/usr/bin/google-chrome-stable'].find(fs.existsSync);
             if(!executablePath) throw new Error('Runner Chrome missing');
             const browser=await chromium.launch({headless:true,executablePath});
             const page=await browser.newPage({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow'});
@@ -99,8 +98,9 @@ jobs:
               throw new Error('Editable row not found: '+text);
             };
             const assertPopup=async(row,modalSelector,saveText,deleteText)=>{
-              await row.dblclick();await page.waitForTimeout(180);
-              const modal=page.locator(modalSelector);if(!(await modal.isVisible()))throw new Error('Modal not visible: '+modalSelector);
+              await row.dblclick();
+              const modal=page.locator(modalSelector);
+              await modal.waitFor({state:'visible',timeout:5000});
               if(!(await modal.getByText(saveText,{exact:false}).first().isVisible()))throw new Error('Save action missing: '+saveText);
               if(deleteText&&!(await modal.getByText(deleteText,{exact:false}).first().isVisible()))throw new Error('Delete action missing: '+deleteText);
               const close=modal.locator('.modal-close,[data-client-edit-close],[data-transfer-edit-close],[data-invoice-payment-close],[data-personal-expense-close]').first();
