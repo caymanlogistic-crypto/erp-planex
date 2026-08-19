@@ -6,9 +6,11 @@ require_once base_path('app/Service/FinanceEmployeePersonalExpenseEventService.p
 require_once base_path('app/Service/FinanceEmployeeMoneyAccountService.php');
 require_once base_path('app/Service/FinanceEmployeeBankSettlementService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectTransferService.php');
+require_once base_path('app/Service/FinanceEmployeeDirectTransferEditService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectExpenseService.php');
 require_once base_path('app/Service/FinanceEmployeeDirectInvoicePaymentService.php');
 require_once base_path('app/Service/FinanceEmployeeClientReceiptService.php');
+require_once base_path('app/Service/FinanceEmployeeClientReceiptEditService.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePaymentsController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeeInvoicePaymentController.php');
 require_once base_path('app/Http/Controllers/Company/FinanceEmployeePersonalExpenseController.php');
@@ -35,20 +37,21 @@ $router->post('/company/finance/employee-payments/create', static function (): v
 $router->post('/company/finance/employee-payments/client-receipt/create', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/client_receipt_create.php');
 });
+$router->post('/company/finance/employee-payments/client-receipt/update', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/client_receipt_update.php');
+});
+$router->post('/company/finance/employee-payments/client-receipt/cancel', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/client_receipt_cancel.php');
+});
+
 $router->post('/company/finance/employee-payments/transfer', static function () use ($config, $db): void {
     require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_submit.php');
 });
-$router->post('/company/finance/employee-payments/transfer/update', static function (): void {
-    requireRole(['company_owner']);
-    verifyCsrfRequest();
-    $_SESSION['employee_payments_error'] = 'Исторические передачи защищены от изменения. Для исправления создайте новую прямую операцию.';
-    redirect_to('/company/finance/employee-payments');
+$router->post('/company/finance/employee-payments/transfer/update', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_update.php');
 });
-$router->post('/company/finance/employee-payments/transfer/delete', static function (): void {
-    requireRole(['company_owner']);
-    verifyCsrfRequest();
-    $_SESSION['employee_payments_error'] = 'Исторические передачи защищены от удаления.';
-    redirect_to('/company/finance/employee-payments');
+$router->post('/company/finance/employee-payments/transfer/delete', static function () use ($config, $db): void {
+    require base_path('app/Http/Controllers/Company/FinanceEmployeeDirectActions/transfer_cancel.php');
 });
 
 $router->get('/company/finance/employee-payments/employee/{type}/{id}', [$controller, 'employeeDetail']);
