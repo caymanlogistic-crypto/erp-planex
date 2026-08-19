@@ -21,14 +21,6 @@ $fmtDue = static function (mixed $value) use ($fmtDate): string {
     return $value;
 };
 $fmtMoney = static fn(mixed $value): string => FinanceInvoiceService::formatAmount($value) . ' ₽';
-$paymentWord = static function (int $count): string {
-    $n100 = $count % 100;
-    $n10 = $count % 10;
-    if ($n100 >= 11 && $n100 <= 14) return 'платежей';
-    if ($n10 === 1) return 'платёж';
-    if ($n10 >= 2 && $n10 <= 4) return 'платежа';
-    return 'платежей';
-};
 $moneyToCents = static function (mixed $value): int {
     $normalized = trim(str_replace(',', '.', (string)$value));
     if (preg_match('/^-?\d+(?:\.\d+)?$/D', $normalized) !== 1) return 0;
@@ -43,20 +35,6 @@ $centsToMoney = static function (int $cents): string {
     $sign = $cents < 0 ? '-' : '';
     $cents = abs($cents);
     return $sign . intdiv($cents, 100) . '.' . str_pad((string)($cents % 100), 2, '0', STR_PAD_LEFT);
-};
-$settlementLabel = static function (array $part): array {
-    if (($part['kind'] ?? 'paid') === 'unpaid') {
-        $days = isset($part['overdue_days']) ? (int)$part['overdue_days'] : null;
-        if ($days === null) return ['text' => 'Не оплачено · срок не определён', 'class' => 'is-neutral'];
-        if ($days > 0) return ['text' => 'Не оплачено · просрочка ' . $days . ' дн.', 'class' => 'is-late'];
-        if ($days < 0) return ['text' => 'Не оплачено · срок через ' . abs($days) . ' дн.', 'class' => 'is-neutral'];
-        return ['text' => 'Не оплачено · срок сегодня', 'class' => 'is-neutral'];
-    }
-    $days = isset($part['delay_days']) ? (int)$part['delay_days'] : null;
-    if ($days === null) return ['text' => 'Оплачено · срок не определён', 'class' => 'is-neutral'];
-    if ($days > 0) return ['text' => 'Оплачено с просрочкой ' . $days . ' дн.', 'class' => 'is-late'];
-    if ($days < 0) return ['text' => 'Оплачено на ' . abs($days) . ' дн. раньше', 'class' => 'is-early'];
-    return ['text' => 'Оплачено в срок', 'class' => 'is-on-time'];
 };
 $successFlash = $_SESSION['invoice_success'] ?? null;
 unset($_SESSION['invoice_success']);
@@ -73,31 +51,22 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
 <div class="notice warn"><?= e($dbError) ?></div>
 <?php else: ?>
 <style>
-.invoice-pf-col{min-width:390px}
-.invoice-payment-timeline{min-width:370px;max-width:470px;font-size:11px;line-height:1.35;color:var(--text,#2f2b25)}
-.invoice-pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.invoice-pf-card{border:1px solid var(--border,#d8d2c7);border-radius:5px;background:rgba(255,255,255,.48);padding:7px 8px;min-width:0}
-.invoice-pf-card.is-fact{background:rgba(244,248,244,.72)}
-.invoice-pf-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
-.invoice-pf-label{font-size:9px;line-height:1;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#777067);font-weight:800}
-.invoice-pf-total{font-size:12px;font-weight:800;white-space:nowrap}
-.invoice-pf-meta{color:var(--muted,#777067);font-size:10px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.invoice-pf-item{display:flex;justify-content:space-between;gap:8px;align-items:baseline;white-space:nowrap;padding-top:2px}
-.invoice-pf-item-date{font-weight:700}
-.invoice-pf-empty{color:var(--muted,#777067);padding:3px 0}
-.invoice-pf-result{margin-top:6px;padding-top:6px;border-top:1px solid var(--border,#d8d2c7)}
-.invoice-pf-result-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
-.invoice-pf-balance{color:var(--muted,#777067);font-size:10px;font-weight:600;white-space:nowrap}
-.invoice-pf-balance.is-overdue{color:#8b2f22}
-.invoice-pf-result-row{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;min-height:20px}
-.invoice-pf-dates{color:var(--muted,#777067);white-space:nowrap;font-size:10px}
-.invoice-pf-result-amount{font-weight:700;white-space:nowrap}
-.invoice-pf-delay{justify-self:end;border-radius:10px;padding:2px 6px;font-size:10px;font-weight:800;white-space:nowrap}
-.invoice-pf-delay.is-late{color:#8b2f22;background:#f7e7e3}
-.invoice-pf-delay.is-on-time{color:#355d43;background:#e5f0e8}
-.invoice-pf-delay.is-early{color:#355d43;background:#e5f0e8}
-.invoice-pf-delay.is-neutral{color:var(--muted,#777067);background:#ece9e3}
-@media (max-width:1280px){.invoice-pf-grid{grid-template-columns:1fr}.invoice-pf-col{min-width:330px}.invoice-payment-timeline{min-width:310px}}
+.invoice-stages-col{min-width:390px}
+.invoice-stages{display:flex;flex-wrap:wrap;gap:6px;min-width:370px;max-width:520px;font-size:11px;line-height:1.35;color:var(--text)}
+.invoice-stage-card{flex:0 1 190px;min-width:170px;border:1px solid var(--border);border-radius:5px;padding:7px 8px;background:transparent}
+.invoice-stage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px}
+.invoice-stage-title{font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.invoice-stage-route{color:var(--muted);font-size:10px;white-space:nowrap}
+.invoice-stage-line{display:flex;justify-content:space-between;gap:8px;align-items:baseline;white-space:nowrap;padding-top:1px}
+.invoice-stage-line span:first-child{color:var(--muted)}
+.invoice-stage-line strong{font-weight:700}
+.invoice-stage-status{margin-top:6px;min-height:18px}
+.invoice-stage-status .badge{white-space:nowrap}
+.invoice-stage-empty{color:var(--muted);padding:3px 0}
+.invoice-status-cell{min-width:180px}
+.invoice-status-stack{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.invoice-status-sub{color:var(--muted);font-size:10px;line-height:1.25}
+@media (max-width:1280px){.invoice-stages-col{min-width:330px}.invoice-stages{min-width:310px}.invoice-stage-card{flex-basis:170px}}
 </style>
 <div class="page-head">
     <div class="page-head-left">
@@ -130,55 +99,142 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
     </div>
     <div class="table-scroll">
         <table class="table">
-            <thead><tr><th>№</th><th>Дата</th><th>Направление</th><th>Контрагент</th><th>Сумма</th><th>НДС</th><th>Срок оплаты</th><th>Оплачено</th><th class="invoice-pf-col">План / факт оплаты</th><th>Статус</th></tr></thead>
+            <thead><tr><th>№</th><th>Дата</th><th>Направление</th><th>Контрагент</th><th>Сумма</th><th>НДС</th><th>Срок оплаты</th><th class="invoice-stages-col">Этапы оплаты</th><th class="invoice-status-cell">Статус счёта</th></tr></thead>
             <tbody>
             <?php foreach ($invoices as $inv):
                 $displayStatus = (string)($inv['display_status'] ?? $inv['status'] ?? '');
                 $dueText = $fmtDue($inv['display_due_text'] ?? '—');
                 $timeline = is_array($inv['payment_timeline'] ?? null) ? $inv['payment_timeline'] : null;
-                $routeIds = [];
-                $displaySettlementParts = [];
-                $overdueRemainingCents = 0;
+                $today = new DateTimeImmutable('today');
+                $stageCards = [];
+                $paidParts = $timeline !== null && is_array($timeline['settlement_parts'] ?? null) ? array_values($timeline['settlement_parts']) : [];
+                $partIndex = 0;
+                $partRemainingCents = isset($paidParts[0]) ? $moneyToCents($paidParts[0]['amount'] ?? '0') : 0;
+
                 if ($timeline !== null) {
-                    foreach (($timeline['plans'] ?? []) as $plan) {
-                        $routeId = (int)($plan['route_id'] ?? 0);
-                        if ($routeId > 0) $routeIds[$routeId] = true;
-                    }
-                    foreach (($timeline['settlement_parts'] ?? []) as $part) {
-                        $part['kind'] = 'paid';
-                        $displaySettlementParts[] = $part;
-                    }
-                    $today = new DateTimeImmutable('today');
-                    foreach (($timeline['plans'] ?? []) as $plan) {
-                        $remainingCents = $moneyToCents($plan['remaining_amount'] ?? '0');
-                        if ($remainingCents <= 0) continue;
-                        $expectedDate = trim((string)($plan['expected_date'] ?? ''));
-                        $overdueDays = null;
-                        if ($expectedDate !== '') {
-                            $due = DateTimeImmutable::createFromFormat('!Y-m-d', $expectedDate);
-                            if ($due !== false && $due->format('Y-m-d') === $expectedDate) {
-                                $days = (int)$due->diff($today)->format('%a');
-                                $overdueDays = $today < $due ? -$days : $days;
-                                if ($today > $due) $overdueRemainingCents += $remainingCents;
+                    foreach (array_values($timeline['plans'] ?? []) as $stageIndex => $plan) {
+                        $plannedCents = max(0, $moneyToCents($plan['amount'] ?? '0'));
+                        $remainingCents = array_key_exists('remaining_amount', $plan)
+                            ? max(0, min($plannedCents, $moneyToCents($plan['remaining_amount'] ?? '0')))
+                            : $plannedCents;
+                        $paidCents = max(0, $plannedCents - $remainingCents);
+                        $needPaidCents = $paidCents;
+                        $actualDates = [];
+
+                        while ($needPaidCents > 0 && isset($paidParts[$partIndex])) {
+                            if ($partRemainingCents <= 0) {
+                                $partIndex++;
+                                if (!isset($paidParts[$partIndex])) break;
+                                $partRemainingCents = max(0, $moneyToCents($paidParts[$partIndex]['amount'] ?? '0'));
+                                continue;
+                            }
+                            $take = min($needPaidCents, $partRemainingCents);
+                            if ($take <= 0) break;
+                            $actualDate = trim((string)($paidParts[$partIndex]['actual_date'] ?? ''));
+                            if ($actualDate !== '') $actualDates[] = $actualDate;
+                            $needPaidCents -= $take;
+                            $partRemainingCents -= $take;
+                            if ($partRemainingCents <= 0) {
+                                $partIndex++;
+                                if (isset($paidParts[$partIndex])) {
+                                    $partRemainingCents = max(0, $moneyToCents($paidParts[$partIndex]['amount'] ?? '0'));
+                                }
                             }
                         }
-                        $displaySettlementParts[] = [
-                            'kind' => 'unpaid',
-                            'amount' => $centsToMoney($remainingCents),
-                            'expected_date' => $expectedDate !== '' ? $expectedDate : null,
-                            'actual_date' => null,
-                            'overdue_days' => $overdueDays,
+
+                        sort($actualDates);
+                        $lastActualDate = !empty($actualDates) ? end($actualDates) : null;
+                        $expectedDate = trim((string)($plan['expected_date'] ?? ''));
+                        $dueDate = null;
+                        if ($expectedDate !== '') {
+                            $candidateDue = DateTimeImmutable::createFromFormat('!Y-m-d', $expectedDate);
+                            if ($candidateDue !== false && $candidateDue->format('Y-m-d') === $expectedDate) $dueDate = $candidateDue;
+                        }
+
+                        $title = '';
+                        foreach (['payment_event_label', 'condition_label', 'payment_condition_label', 'event_label', 'due_label'] as $labelKey) {
+                            $candidate = trim((string)($plan[$labelKey] ?? ''));
+                            if ($candidate !== '') { $title = $candidate; break; }
+                        }
+                        if ($title === '') $title = ($stageIndex + 1) . ' платёж';
+
+                        $statusText = '';
+                        $statusClass = 'badge badge-neutral';
+                        if ($plannedCents > 0 && $remainingCents <= 0) {
+                            if ($dueDate !== null && $lastActualDate !== null) {
+                                $actual = DateTimeImmutable::createFromFormat('!Y-m-d', $lastActualDate);
+                                if ($actual !== false && $actual->format('Y-m-d') === $lastActualDate) {
+                                    $delta = (int)$dueDate->diff($actual)->format('%a');
+                                    if ($actual > $dueDate) {
+                                        $statusText = 'Оплачен с просрочкой ' . $delta . ' дн.';
+                                        $statusClass = 'badge badge-warning';
+                                    } elseif ($actual < $dueDate) {
+                                        $statusText = 'Оплачен на ' . $delta . ' дн. раньше';
+                                        $statusClass = 'badge badge-ok';
+                                    } else {
+                                        $statusText = 'Оплачен';
+                                        $statusClass = 'badge badge-ok';
+                                    }
+                                }
+                            }
+                            if ($statusText === '') {
+                                $statusText = 'Оплачен';
+                                $statusClass = 'badge badge-ok';
+                            }
+                        } elseif ($paidCents > 0) {
+                            if ($dueDate !== null && $today > $dueDate) {
+                                $days = (int)$dueDate->diff($today)->format('%a');
+                                $statusText = 'Частично · просрочка ' . $days . ' дн.';
+                                $statusClass = 'badge badge-danger';
+                            } else {
+                                $statusText = 'Частично';
+                                $statusClass = 'badge badge-warning';
+                            }
+                        } elseif ($dueDate === null) {
+                            $statusText = 'Ожидается событие';
+                            $statusClass = 'badge badge-neutral';
+                        } elseif ($today > $dueDate) {
+                            $days = (int)$dueDate->diff($today)->format('%a');
+                            $statusText = 'Просрочка ' . $days . ' дн.';
+                            $statusClass = 'badge badge-danger';
+                        } elseif ($today == $dueDate) {
+                            $statusText = 'Ожидается сегодня';
+                            $statusClass = 'badge badge-neutral';
+                        } else {
+                            $statusText = 'Ожидается до ' . $dueDate->format('d.m');
+                            $statusClass = 'badge badge-neutral';
+                        }
+
+                        $routeId = (int)($plan['route_id'] ?? 0);
+                        $stageCards[] = [
+                            'title' => $title,
+                            'route_id' => $routeId,
+                            'planned' => $plannedCents,
+                            'paid' => $paidCents,
+                            'remaining' => $remainingCents,
+                            'expected_date' => $dueDate?->format('Y-m-d'),
+                            'status_text' => $statusText,
+                            'status_class' => $statusClass,
+                            'actual_dates' => $actualDates,
                         ];
                     }
-                    usort($displaySettlementParts, static function (array $a, array $b): int {
-                        $ad = $a['expected_date'] ?? '9999-12-31';
-                        $bd = $b['expected_date'] ?? '9999-12-31';
-                        $ak = ($a['kind'] ?? 'paid') === 'unpaid' ? 1 : 0;
-                        $bk = ($b['kind'] ?? 'paid') === 'unpaid' ? 1 : 0;
-                        return [$ad, $ak, ($a['actual_date'] ?? '9999-12-31')] <=> [$bd, $bk, ($b['actual_date'] ?? '9999-12-31')];
-                    });
                 }
-                $routeText = count($routeIds) === 1 ? 'Рейс #' . (int)array_key_first($routeIds) : (count($routeIds) > 1 ? count($routeIds) . ' рейса' : '');
+
+                $statusLabel = FinanceInvoiceService::statusLabel($displayStatus);
+                $statusSub = '';
+                if ($displayStatus === 'paid') {
+                    $statusSub = 'Оплачен полностью';
+                } elseif ($displayStatus === 'overdue_partial') {
+                    $statusSub = 'Есть просрочка';
+                } elseif ($displayStatus === 'overdue') {
+                    $statusLabel = 'Не оплачен, просрочен';
+                    $statusSub = 'Есть просрочка';
+                } elseif ($displayStatus === 'partially_paid') {
+                    $statusSub = 'Ожидается следующий платёж';
+                } elseif (in_array($displayStatus, ['issued', 'received'], true)) {
+                    $statusLabel = 'Ожидается оплата';
+                    $statusSub = 'Не оплачен';
+                }
             ?>
                 <tr data-invoice-id="<?= (int)($inv['id'] ?? 0) ?>">
                     <td class="col-mono"><?= e($inv['number'] ?? '—') ?></td>
@@ -188,55 +244,39 @@ $selectedDirection = in_array($currentDirection, [FinanceInvoiceService::DIRECTI
                     <td class="col-mono"><?= e(FinanceInvoiceService::formatAmount($inv['amount'] ?? null)) ?></td>
                     <td><?= $inv['vat_rate'] !== null ? e(((float)$inv['vat_rate'] == 0.0 ? '0' : rtrim(rtrim((string)$inv['vat_rate'], '0'), '.')) . '%') : 'Без НДС' ?></td>
                     <td class="col-mono"><?= e($dueText) ?></td>
-                    <td class="col-mono"><?= e(FinanceInvoiceService::formatAmount($inv['paid_amount'] ?? null)) ?></td>
                     <td>
-                        <div class="invoice-payment-timeline">
-                        <?php if ($timeline === null || (int)($timeline['planned_count'] ?? 0) === 0): ?>
-                            <div class="invoice-pf-empty">Нет связанных платёжных обязательств.</div>
+                        <?php if (empty($stageCards)): ?>
+                            <div class="invoice-stage-empty">Нет связанных платёжных обязательств.</div>
                         <?php else: ?>
-                            <div class="invoice-pf-grid">
-                                <div class="invoice-pf-card is-plan">
-                                    <div class="invoice-pf-card-head"><span class="invoice-pf-label">План</span><span class="invoice-pf-total"><?= e($fmtMoney($timeline['planned_total'] ?? '0')) ?></span></div>
-                                    <div class="invoice-pf-meta"><?= (int)$timeline['planned_count'] ?> <?= e($paymentWord((int)$timeline['planned_count'])) ?><?= $routeText !== '' ? ' · ' . e($routeText) : '' ?></div>
-                                    <?php foreach (($timeline['plans'] ?? []) as $plan): ?>
-                                    <div class="invoice-pf-item"><span class="invoice-pf-item-date"><?= e(($plan['expected_date'] ?? null) ? $fmtDate($plan['expected_date']) : 'Дата ожидается') ?></span><span><?= e($fmtMoney($plan['amount'] ?? '0')) ?></span></div>
-                                    <?php endforeach; ?>
-                                </div>
-
-                                <div class="invoice-pf-card is-fact">
-                                    <div class="invoice-pf-card-head"><span class="invoice-pf-label">Факт оплаты</span><span class="invoice-pf-total"><?= e($fmtMoney($timeline['paid_total'] ?? '0')) ?></span></div>
-                                    <div class="invoice-pf-meta"><?= (int)($timeline['fact_count'] ?? 0) ?> <?= e($paymentWord((int)($timeline['fact_count'] ?? 0))) ?><?= (float)($timeline['remaining_total'] ?? 0) > 0 ? ' · осталось ' . e($fmtMoney($timeline['remaining_total'])) : ' · оплачено полностью' ?></div>
-                                    <?php if (empty($timeline['facts'])): ?>
-                                        <div class="invoice-pf-empty">Оплат пока нет.</div>
-                                    <?php else: ?>
-                                        <?php foreach ($timeline['facts'] as $fact): ?>
-                                        <div class="invoice-pf-item"><span class="invoice-pf-item-date"><?= e(($fact['actual_date'] ?? null) ? $fmtDate($fact['actual_date']) : 'Дата не определена') ?></span><span><?= e($fmtMoney($fact['amount'] ?? '0')) ?></span></div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
-                            <?php if (!empty($displaySettlementParts)): ?>
-                            <div class="invoice-pf-result">
-                                <div class="invoice-pf-result-head">
-                                    <span class="invoice-pf-label">Соблюдение сроков</span>
-                                    <?php if ($overdueRemainingCents > 0): ?><span class="invoice-pf-balance is-overdue">Просроченный остаток <?= e($fmtMoney($centsToMoney($overdueRemainingCents))) ?></span><?php endif; ?>
-                                </div>
-                                <?php foreach ($displaySettlementParts as $part): $delay = $settlementLabel($part); ?>
-                                <div class="invoice-pf-result-row">
-                                    <span class="invoice-pf-dates"><?= e(($part['expected_date'] ?? null) ? $fmtDate($part['expected_date']) : '—') ?> → <?= e(($part['actual_date'] ?? null) ? $fmtDate($part['actual_date']) : '—') ?></span>
-                                    <span class="invoice-pf-result-amount"><?= e($fmtMoney($part['amount'] ?? '0')) ?></span>
-                                    <span class="invoice-pf-delay <?= e($delay['class']) ?>"><?= e($delay['text']) ?></span>
+                            <div class="invoice-stages">
+                                <?php foreach ($stageCards as $stage):
+                                    $tooltip = '';
+                                    if (!empty($stage['actual_dates'])) {
+                                        $formattedActuals = array_map($fmtDate, array_values(array_unique($stage['actual_dates'])));
+                                        $tooltip = 'Фактические даты: ' . implode(', ', $formattedActuals);
+                                    }
+                                ?>
+                                <div class="invoice-stage-card"<?= $tooltip !== '' ? ' title="' . e($tooltip) . '"' : '' ?>>
+                                    <div class="invoice-stage-head">
+                                        <span class="invoice-stage-title"><?= e($stage['title']) ?></span>
+                                        <?php if ($stage['route_id'] > 0): ?><span class="invoice-stage-route">#<?= (int)$stage['route_id'] ?></span><?php endif; ?>
+                                    </div>
+                                    <div class="invoice-stage-line"><span>План:</span><strong><?= e($fmtMoney($centsToMoney($stage['planned']))) ?></strong></div>
+                                    <div class="invoice-stage-line"><span><?= ($inv['direction'] ?? '') === FinanceInvoiceService::DIRECTION_OUTGOING ? 'Получено:' : 'Оплачено:' ?></span><strong><?= e($fmtMoney($centsToMoney($stage['paid']))) ?></strong></div>
+                                    <?php if ($stage['remaining'] > 0 && $stage['paid'] > 0): ?><div class="invoice-stage-line"><span>Остаток:</span><strong><?= e($fmtMoney($centsToMoney($stage['remaining']))) ?></strong></div><?php endif; ?>
+                                    <div class="invoice-stage-line"><span>Срок:</span><strong><?= e($stage['expected_date'] !== null ? $fmtDate($stage['expected_date']) : 'по событию') ?></strong></div>
+                                    <div class="invoice-stage-status"><span class="<?= e($stage['status_class']) ?>"><span class="dot"></span><?= e($stage['status_text']) ?></span></div>
                                 </div>
                                 <?php endforeach; ?>
                             </div>
-                            <?php elseif ((float)($timeline['remaining_total'] ?? 0) > 0): ?>
-                            <div class="invoice-pf-result"><div class="invoice-pf-empty">Ожидается оплата по указанным срокам.</div></div>
-                            <?php endif; ?>
                         <?php endif; ?>
+                    </td>
+                    <td class="invoice-status-cell">
+                        <div class="invoice-status-stack">
+                            <span class="<?= e(FinanceInvoiceService::statusBadgeClass($displayStatus)) ?>"><span class="dot"></span><?= e($statusLabel) ?></span>
+                            <?php if ($statusSub !== ''): ?><span class="invoice-status-sub"><?= e($statusSub) ?></span><?php endif; ?>
                         </div>
                     </td>
-                    <td><span class="<?= e(FinanceInvoiceService::statusBadgeClass($displayStatus)) ?>"><span class="dot"></span><?= e(FinanceInvoiceService::statusLabel($displayStatus)) ?></span></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
