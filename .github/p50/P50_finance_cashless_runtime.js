@@ -50,7 +50,7 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
     const title = (await page.locator('h1.page-title').first().innerText()).trim();
     ok(title === 'Взаиморасчёты с сотрудниками', 'employee workspace title: ' + title);
     const normalized = (await page.locator('.employee-report .page-head-right button:visible').allTextContents()).map(v => v.trim()).filter(Boolean);
-    const expected = ['Получено от клиента', 'Передать деньги', 'Оплатил счёт', 'Прочий расход'];
+    const expected = ['Получено от клиента', 'Передать деньги', 'Оплатить счёт', 'Прочий расход'];
     ok(JSON.stringify(normalized) === JSON.stringify(expected), 'employee action matrix mismatch: ' + JSON.stringify(normalized));
     for (const id of ['employee-client-receipt-open','employee-transfer-open','employee-invoice-payment-open','employee-personal-expense-open']) {
       ok(await page.locator('#' + id).count() === 1, id + ' missing or duplicated');

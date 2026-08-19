@@ -17,7 +17,10 @@
     if(!headActions)return;
     const invoiceOpen=document.getElementById('employee-invoice-payment-open');
     const personalOpen=document.getElementById('employee-personal-expense-open');
-    if(invoiceOpen)headActions.appendChild(invoiceOpen);
+    if(invoiceOpen){
+        invoiceOpen.textContent='Оплатить счёт';
+        headActions.appendChild(invoiceOpen);
+    }
     if(personalOpen)headActions.appendChild(personalOpen);
     report.dataset.employeeActionMatrix='client-receipt,transfer,invoice-payment,personal-expense';
 })();
