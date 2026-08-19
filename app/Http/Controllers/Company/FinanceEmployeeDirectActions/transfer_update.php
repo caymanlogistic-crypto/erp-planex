@@ -3,7 +3,6 @@
 use App\Core\Database;
 use App\Service\FinanceEmployeeDirectTransferEditService;
 use App\Service\FinanceEmployeeTransferService;
-use PDO;
 
 requireRole(['company_owner']);
 verifyCsrfRequest();
@@ -14,7 +13,7 @@ try{
     $central=$db->connection();
     $stmt=$central->prepare("SELECT * FROM companies WHERE id=? AND status='active'");
     $stmt->execute([$companyId]);
-    $company=$stmt->fetch(PDO::FETCH_ASSOC);
+    $company=$stmt->fetch(\PDO::FETCH_ASSOC);
     if(!$company) throw new RuntimeException('Компания не найдена или неактивна.');
     $pdo=(new Database(companyDatabaseConfig($config,$company)))->connection();
     $groupId=trim((string)($_POST['transfer_group_id']??''));
