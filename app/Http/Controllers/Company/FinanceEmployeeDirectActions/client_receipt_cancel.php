@@ -2,7 +2,6 @@
 
 use App\Core\Database;
 use App\Service\FinanceEmployeeClientReceiptEditService;
-use PDO;
 
 requireRole(['company_owner']);
 verifyCsrfRequest();
@@ -13,7 +12,7 @@ try{
     $central=$db->connection();
     $stmt=$central->prepare("SELECT * FROM companies WHERE id=? AND status='active'");
     $stmt->execute([$companyId]);
-    $company=$stmt->fetch(PDO::FETCH_ASSOC);
+    $company=$stmt->fetch(\PDO::FETCH_ASSOC);
     if(!$company) throw new RuntimeException('Компания не найдена или неактивна.');
     $pdo=(new Database(companyDatabaseConfig($config,$company)))->connection();
     FinanceEmployeeClientReceiptEditService::cancel($pdo,(int)($_POST['movement_id']??0),[
