@@ -16,6 +16,7 @@ $ui = $read('app/View/partials/company_finance_employee_ledger_editor.php');
 $polish = $read('app/View/partials/company_finance_employee_ledger_editor_polish.php');
 $client = $read('app/Service/FinanceEmployeeClientReceiptEditService.php');
 $directTransfer = $read('app/Service/FinanceEmployeeDirectTransferEditService.php');
+$expenseController = $read('app/Http/Controllers/Company/FinanceEmployeePersonalExpenseController.php');
 
 foreach ([
     '/client-receipt/update',
@@ -37,6 +38,10 @@ $assert(str_contains($ui, "kind==='invoice'"), 'invoice payments must use the st
 $assert(str_contains($ui, "kind==='personal'"), 'personal expenses must use the standard double-click editor');
 $assert(str_contains($ui, "kind==='client'"), 'client receipts must use the standard double-click editor');
 $assert(str_contains($ui, "kind==='transfer'"), 'employee transfers must use the standard double-click editor');
+$assert(str_contains($ui, "const openPersonal=async"), 'personal expense double-click must use a direct async editor path');
+$assert(str_contains($ui, "fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}})"), 'personal expense editor must load its actual edit endpoint directly');
+$assert(str_contains($ui, 'bindPersonalEditor(host)'), 'personal expense editor must bind close/classification/delete controls after AJAX load');
+$assert(!str_contains($ui, "if(button)button.click();};\n rows.forEach"), 'personal expense editor must not depend on artificial click of hidden legacy button');
 $assert(str_contains($polish, "del.textContent='Удалить'"), 'invoice edit popup must expose delete action');
 $assert(str_contains($polish, "del.textContent='Удалить';"), 'personal expense edit popup must expose delete action');
 
@@ -46,5 +51,7 @@ $assert(!str_contains($client, 'finance_cash_resolutions'), 'client receipt corr
 $assert(!str_contains($directTransfer, 'finance_cash_resolutions'), 'direct transfer correction must not recreate retired account chain');
 $assert(str_contains($directTransfer, "status='CANCELLED'"), 'direct transfer delete must be soft cancellation');
 $assert(str_contains($directTransfer, 'FinanceAuditLogService::log'), 'direct transfer correction must be audited');
+$assert(!str_contains($expenseController, 'кассовыми проводками'), 'expense correction success message must use current business terminology');
+$assert(!str_contains($expenseController, 'расход в кассе'), 'expense cancellation success message must use current business terminology');
 
 fwrite(STDOUT, "FINANCE_EMPLOYEE_LEDGER_EDITING_OK\n");

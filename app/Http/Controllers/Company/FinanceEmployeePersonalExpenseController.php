@@ -46,7 +46,7 @@ final class FinanceEmployeePersonalExpenseController
             [$company, $pdo, $central] = $this->tenant();
             $employee = FinanceEmployeePaymentService::resolveActiveEmployee($pdo, $central, (int)$company['id'], $employeeRef);
             $event = FinanceEmployeePersonalExpenseEventService::create($pdo, $_POST, $this->user(), $employee);
-            $_SESSION['employee_payments_success'] = 'Расход из личных средств сохранён. В Основной кассе автоматически создано поступление от сотрудника и списание на расход.';
+            $_SESSION['employee_payments_success'] = 'Расход компании, оплаченный сотрудником, сохранён.';
             $employeeRef = FinanceEmployeePaymentService::makeEmployeeRef((string)$event['employee_identity_type'], (int)$event['employee_identity_id']);
         } catch (\Throwable $e) {
             $_SESSION['employee_payments_error'] = $e->getMessage();
@@ -86,7 +86,7 @@ final class FinanceEmployeePersonalExpenseController
             [, $pdo] = $this->tenant();
             $event = FinanceEmployeePersonalExpenseEventService::update($pdo, (int)$id, $_POST, $this->user());
             $employeeRef = FinanceEmployeePaymentService::makeEmployeeRef((string)$event['employee_identity_type'], (int)$event['employee_identity_id']);
-            $_SESSION['employee_payments_success'] = 'Операция изменена. Сумма и реквизиты автоматически синхронизированы с обеими кассовыми проводками.';
+            $_SESSION['employee_payments_success'] = 'Операция изменена. Взаиморасчёты сотрудника и расход компании синхронизированы.';
         } catch (\Throwable $e) {
             $_SESSION['employee_payments_error'] = $e->getMessage();
         }
@@ -102,7 +102,7 @@ final class FinanceEmployeePersonalExpenseController
             [, $pdo] = $this->tenant();
             $event = FinanceEmployeePersonalExpenseEventService::cancel($pdo, (int)$id, $this->user(), (string)($_POST['reason'] ?? ''));
             $employeeRef = FinanceEmployeePaymentService::makeEmployeeRef((string)$event['employee_identity_type'], (int)$event['employee_identity_id']);
-            $_SESSION['employee_payments_success'] = 'Операция отменена. Связанные поступление и расход в кассе также отменены.';
+            $_SESSION['employee_payments_success'] = 'Операция отменена. Влияние на взаиморасчёты сотрудника и расходы компании снято.';
         } catch (\Throwable $e) {
             $_SESSION['employee_payments_error'] = $e->getMessage();
         }
