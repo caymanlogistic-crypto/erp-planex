@@ -57,7 +57,7 @@ final class FinanceEmployeeClientReceiptEditService
             $current=self::loadForUpdate($pdo,$movementId);
             if((string)$current['status']!=='POSTED') throw new RuntimeException('Отменённый платёж нельзя редактировать.');
             $operationId=(int)$current['finance_operation_id'];
-            $oldInvoiceId=self::singleInvoiceId($pdo,$operationId,true);
+            $oldInvoiceId=self::singleInvoiceId($pdo,$operationId);
             FinanceOperationInvoiceSettlementService::cancelOperationInvoiceAllocations(
                 $pdo,$operationId,$oldInvoiceId,$user,'Корректировка оплаты клиента сотруднику'
             );
@@ -102,7 +102,7 @@ final class FinanceEmployeeClientReceiptEditService
             if((string)$current['status']==='CANCELLED'){if($owns)$pdo->commit();return $current;}
             if((string)$current['status']!=='POSTED') throw new RuntimeException('Удалить можно только проведённый платёж.');
             $operationId=(int)$current['finance_operation_id'];
-            $invoiceId=self::singleInvoiceId($pdo,$operationId,true);
+            $invoiceId=self::singleInvoiceId($pdo,$operationId);
             FinanceOperationInvoiceSettlementService::cancelOperationInvoiceAllocations($pdo,$operationId,$invoiceId,$user,$reason);
             $stmt=$pdo->prepare("UPDATE finance_operations
                 SET status='CANCELLED',cancelled_at=NOW(),cancelled_by_user_id=?,cancelled_by_role=?,cancellation_reason=?
@@ -133,12 +133,11 @@ final class FinanceEmployeeClientReceiptEditService
         return $row;
     }
 
-    private static function singleInvoiceId(PDO $pdo,int $operationId,bool $forUpdate=false):int
+    private static function singleInvoiceId(PDO $pdo,int $operationId):int
     {
-        $sql="SELECT DISTINCT invoice_id FROM finance_operation_allocations WHERE operation_id=? AND cancelled_at IS NULL ORDER BY invoice_id";
-        if($forUpdate)$sql.=' FOR UPDATE';
-        $stmt=$pdo->prepare($sql);$stmt->execute([$operationId]);
-        $ids=array_map('intval',$stmt->fetchAll(PDO::FETCH_COLUMN));
+        $stmt=$pdo->prepare("SELECT invoice_id FROM finance_operation_allocations WHERE operation_id=? AND cancelled_at IS NULL ORDER BY id");
+        $stmt->execute([$operationId]);
+        $ids=array_values(array_unique(array_map('intval',$stmt->fetchAll(PDO::FETCH_COLUMN))));
         if(count($ids)!==1 || $ids[0]<=0) throw new RuntimeException('Связь платежа со счётом не определена однозначно.');
         return $ids[0];
     }
