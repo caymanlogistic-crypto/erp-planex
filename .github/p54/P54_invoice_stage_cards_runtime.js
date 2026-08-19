@@ -55,7 +55,7 @@ const ok = (value, message) => { if (!value) throw new Error(message); };
       ok(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent', 'stage card uses state fill instead of neutral card: ' + bg);
     }
 
-    const statusCells = page.locator('.invoice-status-cell');
+    const statusCells = page.locator('table.table tbody td.invoice-status-cell');
     ok(await statusCells.count() === rowCount, 'invoice status cell count mismatch');
     ok(await statusCells.locator('.badge').count() >= rowCount, 'invoice overall statuses missing system badges');
 
