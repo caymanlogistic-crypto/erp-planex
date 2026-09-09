@@ -1,0 +1,72 @@
+name: P53B Personal Expense Editor Diagnostic
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Prepare Chrome
+        run: |
+          export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+          npm install --no-save playwright@1.54.2
+          command -v google-chrome
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p53b_key
+            chmod 600 /tmp/p53b_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p53b_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Inspect personal expense edit endpoint
+        run: |
+          node - <<'NODE'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const creds=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
+            const owner=creds.find(x=>String(x.role).toUpperCase()==='OWNER');
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome'});
+            const page=await browser.newPage();
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').fill(owner.password);
+            await page.locator('button[type="submit"],input[type="submit"]').first().click();
+            await page.waitForTimeout(500);
+            await page.goto('https://plan-ex.ru/erpv2/company/finance/employee-payments?employee_ref=TENANT_USER%3A1',{waitUntil:'domcontentloaded'});
+            const buttons=page.locator('[data-personal-expense-edit]');
+            const n=await buttons.count();
+            console.log('P53B_EDIT_BUTTONS='+n);
+            if(!n) throw new Error('No personal expense edit buttons');
+            const id=await buttons.first().getAttribute('data-personal-expense-edit');
+            console.log('P53B_EVENT_ID='+id);
+            const result=await page.evaluate(async(id)=>{
+              const r=await fetch('/erpv2/company/finance/employee-payments/personal-expense/'+id+'/edit',{headers:{'X-Requested-With':'XMLHttpRequest'}});
+              return {status:r.status,text:(await r.text()).slice(0,1000)};
+            },id);
+            console.log('P53B_STATUS='+result.status);
+            console.log('P53B_BODY='+result.text.replace(/\s+/g,' ').slice(0,900));
+            if(result.status!==200 || !result.text.includes('employee-personal-expense-modal')) throw new Error('Edit endpoint did not return modal');
+            console.log('P53B_PERSONAL_EDIT_ENDPOINT_OK');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
