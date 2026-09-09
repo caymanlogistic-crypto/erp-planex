@@ -1,0 +1,88 @@
+name: P54 Employee Ledger Editor Final
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Verify exact deployed marker
+        env:
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+          HOSTS: ${{ secrets.ERPV2_SSH_KNOWN_HOSTS }}
+          HOST: ${{ secrets.ERPV2_SSH_HOST }}
+          PORT: ${{ secrets.ERPV2_SSH_PORT }}
+          USER: ${{ secrets.ERPV2_SSH_USER }}
+          EXPECTED_SHA: 11f0cc905d3d5e057651fd419e79020fe073431b
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$KEY" > "$HOME/.ssh/p54"
+          printf '%s\n' "$HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/p54" "$HOME/.ssh/known_hosts"
+          got="$(ssh -p "$PORT" -i "$HOME/.ssh/p54" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USER@$HOST" 'cat /home/s/spugovxsim/planexp/deploy/P07_erpv2_deployed_commit.txt')"
+          echo "P54_DEPLOYED_SHA=$got"
+          test "$got" = "$EXPECTED_SHA"
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Prepare runner Chrome
+        run: |
+          export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+          npm install --no-save playwright@1.54.2
+          command -v google-chrome
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p54_key
+            chmod 600 /tmp/p54_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p54_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Verify four production editors without writes
+        run: |
+          node - <<'NODE'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const creds=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
+            const owner=creds.find(x=>String(x.role).toUpperCase()==='OWNER');
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome'});
+            const page=await browser.newPage({viewport:{width:1920,height:1080},locale:'ru-RU',timezoneId:'Europe/Moscow'});
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').fill(owner.password);
+            await page.locator('button[type="submit"],input[type="submit"]').first().click();
+            await page.waitForTimeout(700);
+            if(page.url().includes('/login'))throw new Error('login failed');
+            await page.goto('https://plan-ex.ru/erpv2/company/finance/employee-payments?employee_ref=TENANT_USER%3A1',{waitUntil:'domcontentloaded'});
+            await page.waitForTimeout(350);
+            const label=(await page.locator('#employee-invoice-payment-open').innerText()).trim();
+            if(label!=='Оплатить счёт')throw new Error('bad action label: '+label);
+            const findRow=async(text)=>{const rows=page.locator('.employee-report-table tbody tr.employee-ledger-editable');for(let i=0;i<await rows.count();i++){if((await rows.nth(i).innerText()).includes(text))return rows.nth(i);}throw new Error('row missing: '+text);};
+            const check=async(text,selector,save,del)=>{const row=await findRow(text);await row.dblclick();const modal=page.locator(selector);await modal.waitFor({state:'visible',timeout:6000});if(!(await modal.getByText(save,{exact:false}).first().isVisible()))throw new Error('save missing '+text);if(del&&!(await modal.getByText(del,{exact:false}).first().isVisible()))throw new Error('delete missing '+text);const close=modal.locator('.modal-close,[data-client-edit-close],[data-transfer-edit-close],[data-invoice-payment-close],[data-personal-expense-close]').first();await close.click();await page.waitForTimeout(80);console.log('P54_EDITOR_OK='+text);};
+            await check('Получено от клиента','#employee-client-edit-modal','Сохранить','Удалить');
+            await check('Получено от сотрудника','#employee-transfer-edit-modal','Сохранить','Удалить');
+            await check('Оплатил счёт','#employee-invoice-payment-modal','Сохранить изменения',null);
+            await check('Прочий расход','.employee-personal-expense-modal','Сохранить изменения','Удалить');
+            console.log('P54_BUTTON_LABEL='+label);
+            console.log('P54_EMPLOYEE_LEDGER_EDITOR_OK');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE

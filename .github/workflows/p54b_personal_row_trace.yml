@@ -1,0 +1,73 @@
+name: P54B Personal Row Trace
+on:
+  pull_request:
+    branches: [chatgpt/production-stabilization-20260802]
+permissions:
+  contents: read
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Prepare Chrome
+        run: |
+          export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+          npm install --no-save playwright@1.54.2
+          command -v google-chrome
+      - name: Resolve OWNER credentials
+        env:
+          CRED: ${{ secrets.P11_RUNTIME_CREDENTIALS_B64 }}
+          KEY: ${{ secrets.ERPV2_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cred="${CRED:-}"
+          if [ -z "$cred" ]; then
+            git fetch origin p11-audit-v2:refs/remotes/origin/p11-audit-v2
+            mkdir -p .github/p11
+            git show origin/p11-audit-v2:.github/p11/P11_decrypt_credentials.py > .github/p11/P11_decrypt_credentials.py
+            git show origin/p11-audit-v2:.github/p11/P11_runtime_credentials.enc.json > .github/p11/P11_runtime_credentials.enc.json
+            python -m pip install --quiet 'cryptography==46.0.3'
+            printf '%s\n' "$KEY" > /tmp/p54b_key && chmod 600 /tmp/p54b_key
+            cred="$(python .github/p11/P11_decrypt_credentials.py --key /tmp/p54b_key --input .github/p11/P11_runtime_credentials.enc.json)"
+          fi
+          echo "::add-mask::$cred"
+          echo "P12_CREDENTIALS_B64=$cred" >> "$GITHUB_ENV"
+      - name: Trace double click
+        run: |
+          node - <<'NODE'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const creds=JSON.parse(Buffer.from(process.env.P12_CREDENTIALS_B64,'base64').toString('utf8'));
+            const owner=creds.find(x=>String(x.role).toUpperCase()==='OWNER');
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome'});
+            const page=await browser.newPage();
+            const logs=[]; const requests=[]; const dialogs=[];
+            page.on('console',m=>logs.push(m.type()+': '+m.text()));
+            page.on('request',r=>{if(r.url().includes('/employee-payments'))requests.push(r.url());});
+            page.on('dialog',async d=>{dialogs.push(d.message());await d.dismiss();});
+            await page.goto('https://plan-ex.ru/erpv2/login',{waitUntil:'domcontentloaded'});
+            await page.locator('input[name="username"],input[name="email"],input[type="text"]').first().fill(owner.username);
+            await page.locator('input[type="password"]').fill(owner.password);
+            await page.locator('button[type="submit"],input[type="submit"]').first().click(); await page.waitForTimeout(600);
+            await page.goto('https://plan-ex.ru/erpv2/company/finance/employee-payments?employee_ref=TENANT_USER%3A1',{waitUntil:'domcontentloaded'}); await page.waitForTimeout(400);
+            const rows=page.locator('.employee-report-table tbody tr.employee-ledger-editable');
+            let row=null; for(let i=0;i<await rows.count();i++){const t=await rows.nth(i).innerText(); if(t.includes('Прочий расход')){row=rows.nth(i);console.log('P54B_ROW_INDEX='+i);console.log('P54B_ROW='+t.replace(/\s+/g,' '));break;}}
+            if(!row)throw new Error('personal row missing');
+            const hidden=page.locator('[data-personal-expense-edit]').first();
+            console.log('P54B_HIDDEN_EVENT_ID='+(await hidden.getAttribute('data-personal-expense-edit')));
+            await row.dblclick(); await page.waitForTimeout(2500);
+            console.log('P54B_REQUESTS='+JSON.stringify(requests));
+            console.log('P54B_CONSOLE='+JSON.stringify(logs));
+            console.log('P54B_DIALOGS='+JSON.stringify(dialogs));
+            for(const sel of ['#employee-client-edit-modal','#employee-transfer-edit-modal','#employee-invoice-payment-modal','.employee-personal-expense-modal']){
+              const l=page.locator(sel); console.log('P54B_MODAL '+sel+' count='+(await l.count())+' visible='+(await l.count()?await l.first().isVisible():false));
+            }
+            const host=page.locator('#employee-personal-expense-host');console.log('P54B_HOST_HTML='+(await host.innerHTML()).replace(/\s+/g,' ').slice(0,500));
+            console.log('P54B_PERSONAL_ROW_TRACE_OK'); await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
